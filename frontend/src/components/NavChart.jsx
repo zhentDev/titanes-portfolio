@@ -28,7 +28,7 @@ export default function NavChart({
   const seriesRef = useRef({});
   const [hoverValues, setHoverValues] = useState(null);
 
-  const { visibleSeries, toggleSeries, midcapsCapital } = usePortfolioStore();
+  const { visibleSeries, toggleSeries } = usePortfolioStore();
 
   const handleToggle = (key) => {
     toggleSeries(key);

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { usePortfolioStore } from '../store/portfolioStore';
 import { searchTicker } from '../api/client';
+import MidCapsChart from './MidCapsChart';
 
 const STORAGE_KEY = 'titanes_midcaps_rebalances';
 
@@ -231,7 +232,7 @@ export default function MidCapsStrategy({ onBack }) {
           <div className="summary-value large mono" style={{ color: 'var(--gain)', fontWeight: 800 }}>
             {unit === 'pct'
               ? '+1,062.6%'
-              : `+$${(simulatedCapital * 10.626).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              : `+$${(activeInvested * 10.626).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           </div>
         </div>
         <div className="summary-divider" />
@@ -240,7 +241,7 @@ export default function MidCapsStrategy({ onBack }) {
           <div className="summary-value mono" style={{ color: '#fbbf24', fontWeight: 700 }}>
             {unit === 'pct'
               ? '+280.8%'
-              : `+$${(simulatedCapital * 2.808).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              : `+$${(activeInvested * 2.808).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           </div>
         </div>
         <div className="summary-divider" />
@@ -254,20 +255,15 @@ export default function MidCapsStrategy({ onBack }) {
         </div>
         <div className="summary-divider" />
         <div className="summary-item">
-          <div className="summary-label">Cash Reservado Q ({numSlots - activeTickers.length} Slots)</div>
-          <div className="summary-value mono muted">
-            {unit === 'pct'
-              ? `${(((numSlots - activeTickers.length) / numSlots) * 100).toFixed(1)}%`
-              : `$${cashBuffer.toFixed(2)}`}
-          </div>
-        </div>
-        <div className="summary-divider" />
-        <div className="summary-item">
           <div className="summary-label">Regla de Asignación</div>
           <div className="summary-value mono" style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>
             5.0% / slot (${slotValue.toFixed(2)})
           </div>
         </div>
+      </div>
+
+      <div className="card fade-up" style={{ padding: '20px' }}>
+        <MidCapsChart activeInvested={activeInvested} />
       </div>
 
       {/* ── 20-Slots Constellation Grid Visualizer ─────────── */}
@@ -281,11 +277,11 @@ export default function MidCapsStrategy({ onBack }) {
               </span>
             </h3>
             <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-              Cada posición ocupa exactamente 1 slot (${slotValue.toFixed(2)} / 5.0%). Los slots vacíos se preservan en liquidez (Cash Q).
+              Cada posición ocupa exactamente 1 slot (${slotValue.toFixed(2)} / 5.0%).
             </span>
           </div>
           <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-primary)' }}>
-            {activeTickers.length} Asignados · {numSlots - activeTickers.length} en Cash
+            {activeTickers.length} Asignados · {numSlots - activeTickers.length} Disponibles
           </div>
         </div>
 
@@ -332,7 +328,7 @@ export default function MidCapsStrategy({ onBack }) {
                       fontWeight: 700,
                     }}
                   >
-                    {isOccupied ? '5.0%' : 'Cash Q'}
+                    {isOccupied ? '5.0%' : 'Vacío'}
                   </span>
                 </div>
 
