@@ -125,10 +125,11 @@ def calculate_nav(
     if not nav_series:
         return _empty_response(investment)
 
-    # Calculate percentages for the frontend
-    # Since the user adds cash, a simple percentage return is (current_value - total_invested) / total_invested
-    # But usually TWR is better. For simplicity, we just return the raw values and the frontend can plot the NAV curve
-    # and the 'Invested' base curve to show the gap (profit).
+    # Current holdings breakdown & active capital
+    from services.market_data import get_ticker_meta
+
+    last_rebalance = rebalances[-1]
+    active_tickers = last_rebalance["tickers"]
 
     # Active capital deployed in equities
     active_count = len([t for t in active_tickers if t in current_shares])
@@ -155,12 +156,8 @@ def calculate_nav(
         ]
         return points
 
-    # Current holdings breakdown con metadatos ricos
-    from services.market_data import get_ticker_meta
-
-    last_rebalance = rebalances[-1]
-    active_tickers = last_rebalance["tickers"]
     last_row = prices_pd.iloc[-1]
+
 
     holdings = []
     slot_weight_pct = 100.0 / num_slots
