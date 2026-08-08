@@ -24,16 +24,20 @@ function generateSyntheticData(baseActive, period) {
   const data = { sp500: [], nasdaq: [], mm20: [] };
   
   const today = new Date();
-  const startDate = new Date(today);
-  startDate.setDate(today.getDate() - pData.days);
+  // Set time to noon to avoid any timezone shift issues
+  today.setHours(12, 0, 0, 0);
 
   const pointsCount = pData.points;
   const dayStep = pData.days / pointsCount;
 
   for (let i = 0; i <= pointsCount; i++) {
-    const d = new Date(startDate);
-    d.setDate(d.getDate() + Math.round(i * dayStep));
-    const timeStr = d.toISOString().split('T')[0];
+    const d = new Date(today);
+    d.setDate(d.getDate() - pData.days + Math.round(i * dayStep));
+    
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const timeStr = `${year}-${month}-${day}`;
     
     // Curva exponencial suave con algo de ruido (simulado simple para visualización fluida)
     const progress = i / pointsCount;
@@ -44,7 +48,19 @@ function generateSyntheticData(baseActive, period) {
     data.mm20.push({ time: timeStr, value: baseActive * (1 + (pData.mm20 * curve)) });
   }
 
-  return data;
+  // Ensure unique dates in case of DST overlaps
+  const uniqueData = { sp500: [], nasdaq: [], mm20: [] };
+  const seenDates = new Set();
+  for (let i = 0; i < data.sp500.length; i++) {
+    if (!seenDates.has(data.sp500[i].time)) {
+      seenDates.add(data.sp500[i].time);
+      uniqueData.sp500.push(data.sp500[i]);
+      uniqueData.nasdaq.push(data.nasdaq[i]);
+      uniqueData.mm20.push(data.mm20[i]);
+    }
+  }
+
+  return uniqueData;
 }
 
 export default function MidCapsChart({ activeInvested }) {
@@ -98,8 +114,6 @@ export default function MidCapsChart({ activeInvested }) {
       },
       timeScale: {
         borderColor: 'rgba(255,255,255,0.08)',
-        fixLeftEdge: true,
-        fixRightEdge: true,
       },
     });
 
