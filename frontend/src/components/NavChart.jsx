@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { createChart, ColorType, LineStyle } from 'lightweight-charts';
+import { createChart, ColorType, LineStyle, PriceScaleMode } from 'lightweight-charts';
 import { usePortfolioStore } from '../store/portfolioStore';
 
 const COLORS = {
@@ -29,6 +29,10 @@ export default function NavChart({
   const [hoverValues, setHoverValues] = useState(null);
 
   const { visibleSeries, toggleSeries, mm20ActiveInvested } = usePortfolioStore();
+
+  const baseActive = navData?.[0]?.value ?? investment;
+  const mm20BaseActive = mm20ActiveInvested || 250;
+  const useLogScale = Math.abs(baseActive - mm20BaseActive) >= 100;
 
   const handleToggle = (key) => {
     toggleSeries(key);
@@ -60,7 +64,14 @@ export default function NavChart({
         vertLine: { color: 'rgba(0,229,255,0.4)', width: 1, style: LineStyle.Dashed },
         horzLine: { color: 'rgba(0,229,255,0.4)', width: 1, style: LineStyle.Dashed },
       },
+      leftPriceScale: {
+        visible: useLogScale,
+        mode: useLogScale ? PriceScaleMode.Logarithmic : PriceScaleMode.Normal,
+        borderColor: 'rgba(255,255,255,0.08)',
+        textColor: '#94a3b8',
+      },
       rightPriceScale: {
+        visible: !useLogScale,
         borderColor: 'rgba(255,255,255,0.08)',
         textColor: '#94a3b8',
       },
@@ -87,6 +98,7 @@ export default function NavChart({
       lastValueVisible: true,
       title: 'Portfolio',
       visible: true,
+      priceScaleId: useLogScale ? 'left' : 'right',
     });
 
     // S&P 500 — amber line
@@ -98,6 +110,7 @@ export default function NavChart({
       lastValueVisible: true,
       title: 'S&P 500',
       visible: true,
+      priceScaleId: useLogScale ? 'left' : 'right',
     });
 
     // NASDAQ — purple line
@@ -109,6 +122,7 @@ export default function NavChart({
       lastValueVisible: true,
       title: 'NASDAQ',
       visible: true,
+      priceScaleId: useLogScale ? 'left' : 'right',
     });
 
     // MM20 Mid-caps ProPicks curve — emerald line
@@ -120,6 +134,7 @@ export default function NavChart({
       lastValueVisible: true,
       title: 'MM20',
       visible: true,
+      priceScaleId: useLogScale ? 'left' : 'right',
     });
 
     // Base investment line
@@ -131,6 +146,7 @@ export default function NavChart({
       lastValueVisible: false,
       title: 'Base',
       visible: true,
+      priceScaleId: useLogScale ? 'left' : 'right',
     });
 
     // Crosshair move handler to update legend values live
@@ -171,6 +187,26 @@ export default function NavChart({
       chartRef.current = null;
     };
   }, [initChart]);
+
+  // Dynamically update scale if capitals diverge significantly
+  useEffect(() => {
+    if (!chartRef.current || !seriesRef.current) return;
+    
+    chartRef.current.applyOptions({
+      leftPriceScale: {
+        visible: useLogScale,
+        mode: useLogScale ? PriceScaleMode.Logarithmic : PriceScaleMode.Normal,
+      },
+      rightPriceScale: {
+        visible: !useLogScale,
+      }
+    });
+
+    const scaleId = useLogScale ? 'left' : 'right';
+    Object.values(seriesRef.current).forEach(series => {
+      if (series) series.applyOptions({ priceScaleId: scaleId });
+    });
+  }, [useLogScale]);
 
   // Helper to convert array to Lightweight Charts format
   const toSeries = (arr) =>
@@ -241,14 +277,10 @@ export default function NavChart({
     chartRef.current.timeScale().fitContent();
   }, [navData, sp500Data, nasdaqData, mm20Data, investment, mm20ActiveInvested]);
 
-  // Latest fallback values
   const lastNav = navData?.[navData.length - 1]?.value;
   const lastSP = sp500Data?.[sp500Data.length - 1]?.value;
   const lastNasdaq = nasdaqData?.[nasdaqData.length - 1]?.value;
   const lastMM20 = mm20Data?.[mm20Data.length - 1]?.value;
-  
-  const baseActive = navData?.[0]?.value ?? investment;
-  const mm20BaseActive = mm20ActiveInvested || 250;
 
   const currentNav = hoverValues?.nav ?? lastNav;
   const currentSP = hoverValues?.sp500 ?? lastSP;
