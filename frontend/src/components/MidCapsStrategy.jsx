@@ -12,17 +12,26 @@ const DEFAULT_REBALANCES = [
 ];
 
 export default function MidCapsStrategy({ onBack }) {
-  // Rebalance history for Mid-caps
+  // Rebalance history for Mid-caps persisted in storage and database
   const [rebalances, setRebalances] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : DEFAULT_REBALANCES;
+      if (saved !== null) {
+        return JSON.parse(saved);
+      }
+    } catch {}
+    return DEFAULT_REBALANCES;
+  });
+
+  const [simulatedCapital, setSimulatedCapital] = useState(() => {
+    try {
+      const saved = localStorage.getItem('titanes_midcaps_capital');
+      return saved ? Number(saved) : 1000;
     } catch {
-      return DEFAULT_REBALANCES;
+      return 1000;
     }
   });
 
-  const [simulatedCapital, setSimulatedCapital] = useState(1000);
   const [numSlots] = useState(20);
   const [unit, setUnit] = useState('pct');
 
@@ -38,10 +47,14 @@ export default function MidCapsStrategy({ onBack }) {
   const [searchError, setSearchError] = useState('');
   const [batchInput, setBatchInput] = useState('');
 
-  // Persist rebalances
+  // Persist rebalances and capital to storage
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(rebalances));
   }, [rebalances]);
+
+  useEffect(() => {
+    localStorage.setItem('titanes_midcaps_capital', String(simulatedCapital));
+  }, [simulatedCapital]);
 
   // Latest active rebalance
   const activeRebalance = rebalances[rebalances.length - 1] || { tickers: [], rebalance_date: date };
@@ -71,7 +84,6 @@ export default function MidCapsStrategy({ onBack }) {
         setFormTickers((prev) => [...prev, res.ticker]);
         setQuery('');
       } else {
-        // Allow adding anyway for custom mid-caps
         setFormTickers((prev) => [...prev, ticker]);
         setQuery('');
       }
@@ -181,21 +193,26 @@ export default function MidCapsStrategy({ onBack }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-surface)', padding: '6px 12px', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Simulado en:</span>
-            <span style={{ color: 'var(--text-secondary)' }}>$</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-surface)', padding: '6px 14px', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Capital Simulado:</span>
+            <span style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>$</span>
             <input
               type="number"
+              min={100}
+              step={100}
               value={simulatedCapital}
               onChange={(e) => setSimulatedCapital(Number(e.target.value) || 1000)}
               style={{
-                width: 70,
-                background: 'transparent',
-                border: 'none',
+                width: 90,
+                background: 'rgba(0,0,0,0.25)',
+                border: '1px solid var(--border)',
+                borderRadius: 4,
+                padding: '3px 8px',
                 color: 'var(--accent-primary)',
                 fontWeight: 700,
                 fontFamily: "'JetBrains Mono', monospace",
                 fontSize: '0.9rem',
+                textAlign: 'right',
               }}
             />
           </div>

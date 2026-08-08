@@ -186,6 +186,18 @@ def calculate_nav(
 
         meta = get_ticker_meta(t)
 
+        # Historial de factores diarios exactos para graficar la trayectoria real
+        t_history = []
+        if t in prices_df.columns:
+            s_t = prices_df.select(["date", t]).drop_nulls()
+            if not s_t.is_empty():
+                p0 = float(s_t[t][0])
+                if p0 > 0:
+                    t_history = [
+                        {"date": str(r["date"]), "factor": round(float(r[t]) / p0, 6)}
+                        for r in s_t.iter_rows(named=True)
+                    ]
+
         holdings.append(
             {
                 "ticker": t,
@@ -200,6 +212,7 @@ def calculate_nav(
                 "return_pct": round(return_pct, 4),
                 "return_usd": round(val - (shares * start_price), 2) if is_selected and start_price > 0 else 0.0,
                 "selected": is_selected,
+                "history": t_history,
             }
         )
 
