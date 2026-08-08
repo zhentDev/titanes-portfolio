@@ -69,8 +69,13 @@ export default function App() {
     const activeReturn = currentStockValue - activeInvested;
     const activeReturnPct = activeInvested > 0 ? (activeReturn / activeInvested) * 100 : 0;
 
-    // Rescale NAV series points smoothly
+    // Rescale all benchmarks to start from activeInvested so that the Y-axis scale is 100% harmonized
     const baseFirstVal = baseNavData.nav?.[0]?.value || investment;
+    const baseSP0 = baseNavData.sp500?.[0]?.value || baseFirstVal;
+    const baseND0 = baseNavData.nasdaq?.[0]?.value || baseFirstVal;
+    const baseMM0 = baseNavData.mm20?.[0]?.value || baseFirstVal;
+
+    // Rescaled Portfolio NAV
     const scaledNav = (baseNavData.nav || []).map((pt) => {
       const delta = pt.value - baseFirstVal;
       const ratio = allHoldings.length > 0 ? activeList.length / allHoldings.length : 1;
@@ -80,14 +85,44 @@ export default function App() {
       };
     });
 
-    const sp500End = baseNavData.summary?.sp500_return_pct || 0;
-    const sp500Usd = baseNavData.summary?.sp500_return || 0;
-    const nasdaqEnd = baseNavData.summary?.nasdaq_return_pct || 0;
-    const nasdaqUsd = baseNavData.summary?.nasdaq_return || 0;
+    // Rescaled S&P 500
+    const scaledSP500 = (baseNavData.sp500 || []).map((pt) => {
+      const pctGrowth = baseSP0 > 0 ? pt.value / baseSP0 : 1;
+      return {
+        ...pt,
+        value: activeInvested * pctGrowth,
+      };
+    });
+
+    // Rescaled NASDAQ
+    const scaledNasdaq = (baseNavData.nasdaq || []).map((pt) => {
+      const pctGrowth = baseND0 > 0 ? pt.value / baseND0 : 1;
+      return {
+        ...pt,
+        value: activeInvested * pctGrowth,
+      };
+    });
+
+    // Rescaled MM20
+    const scaledMM20 = (baseNavData.mm20 || []).map((pt) => {
+      const pctGrowth = baseMM0 > 0 ? pt.value / baseMM0 : 1;
+      return {
+        ...pt,
+        value: activeInvested * pctGrowth,
+      };
+    });
+
+    const sp500Pct = baseNavData.summary?.sp500_return_pct || 0;
+    const nasdaqPct = baseNavData.summary?.nasdaq_return_pct || 0;
+    const sp500ReturnUsd = (sp500Pct / 100) * activeInvested;
+    const nasdaqReturnUsd = (nasdaqPct / 100) * activeInvested;
 
     return {
       ...baseNavData,
       nav: scaledNav,
+      sp500: scaledSP500,
+      nasdaq: scaledNasdaq,
+      mm20: scaledMM20,
       holdings: updatedHoldings,
       summary: {
         ...baseNavData.summary,
@@ -95,10 +130,14 @@ export default function App() {
         active_stock_value: currentStockValue,
         active_return: activeReturn,
         active_return_pct: activeReturnPct,
-        alpha_sp500: Number((activeReturnPct - sp500End).toFixed(2)),
-        alpha_sp500_usd: Number((activeReturn - sp500Usd).toFixed(2)),
-        alpha_nasdaq: Number((activeReturnPct - nasdaqEnd).toFixed(2)),
-        alpha_nasdaq_usd: Number((activeReturn - nasdaqUsd).toFixed(2)),
+        sp500_return: sp500ReturnUsd,
+        sp500_return_pct: sp500Pct,
+        nasdaq_return: nasdaqReturnUsd,
+        nasdaq_return_pct: nasdaqPct,
+        alpha_sp500: Number((activeReturnPct - sp500Pct).toFixed(2)),
+        alpha_sp500_usd: Number((activeReturn - sp500ReturnUsd).toFixed(2)),
+        alpha_nasdaq: Number((activeReturnPct - nasdaqPct).toFixed(2)),
+        alpha_nasdaq_usd: Number((activeReturn - nasdaqReturnUsd).toFixed(2)),
         num_holdings: activeList.length,
         cash_reserved: investment - activeInvested,
       },
