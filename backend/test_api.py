@@ -1,5 +1,6 @@
-import requests
 import time
+
+import requests
 
 url = "http://localhost:8000/api/nav?tickers=AMD,AMAT,HPQ,INTC,ON,ORCL,POWI,QCOM,TXN,MRVL,HIMX,NTAP,KD,ARM&period=1y&investment=2000&num_slots=15"
 print(f"Requesting: {url}")

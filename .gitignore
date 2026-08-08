@@ -1,18 +1,22 @@
-# Node
+# Node / Bun
 frontend/node_modules/
 frontend/dist/
 .DS_Store
 
-# Python
+# Python & Tooling
 backend/.venv/
 backend/__pycache__/
 backend/*.pyc
 backend/.pytest_cache/
+.ruff_cache/
+backend/.ruff_cache/
 
 # Database
-# Ignoramos la base de datos local para que la otra máquina inicie limpia (opcional, si quieres migrar los datos puedes quitar esta línea)
-backend/titanes.duckdb
-backend/titanes.duckdb.wal
+# backend/titanes.duckdb
+backend/*.duckdb.wal
 
-# Environment
+# Environment & AI tools
 .env
+.aider*
+.continue/
+

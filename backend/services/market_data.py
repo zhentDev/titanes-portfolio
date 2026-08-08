@@ -4,10 +4,9 @@ Provides historical OHLCV data and real-time quotes.
 Cache is simple in-memory with TTL to avoid hammering Yahoo Finance.
 """
 
-import time
 import threading
+import time
 from datetime import datetime, timezone
-from typing import Optional
 
 import pandas as pd
 import polars as pl
@@ -17,22 +16,34 @@ import yfinance as yf
 # Default portfolio & benchmarks
 # ──────────────────────────────────────────────
 DEFAULT_TICKERS: list[str] = [
-    "AMD", "AMAT", "HPQ", "INTC", "ON",
-    "ORCL", "POWI", "QCOM", "TXN", "MRVL",
-    "HIMX", "NTAP", "KD", "ARM",
+    "AMD",
+    "AMAT",
+    "HPQ",
+    "INTC",
+    "ON",
+    "ORCL",
+    "POWI",
+    "QCOM",
+    "TXN",
+    "MRVL",
+    "HIMX",
+    "NTAP",
+    "KD",
+    "ARM",
 ]
 BENCHMARKS: list[str] = ["^GSPC", "^IXIC"]
 
 # ──────────────────────────────────────────────
 # Redis Cache Integration
 # ──────────────────────────────────────────────
-import os
-import redis
-import pickle
 import logging
+import os
+import pickle
+
+import redis
 
 try:
-    _redis_host = os.environ.get('REDIS_HOST', 'localhost')
+    _redis_host = os.environ.get("REDIS_HOST", "localhost")
     _redis_client = redis.Redis(host=_redis_host, port=6379, db=0, decode_responses=False)
     # Test connection
     _redis_client.ping()
@@ -43,11 +54,11 @@ except Exception as e:
 
 _memory_cache: dict[str, tuple[float, object]] = {}
 _cache_lock = threading.Lock()
-HISTORICAL_TTL = 3600        # 1 hour for daily historical data
-LIVE_TTL = 60                # 1 minute for live quotes
+HISTORICAL_TTL = 3600  # 1 hour for daily historical data
+LIVE_TTL = 60  # 1 minute for live quotes
 
 
-def _cache_get(key: str) -> Optional[object]:
+def _cache_get(key: str) -> object | None:
     if _use_redis:
         try:
             cached = _redis_client.get(key)
@@ -56,7 +67,7 @@ def _cache_get(key: str) -> Optional[object]:
             return None
         except Exception:
             pass
-            
+
     # Fallback to memory
     with _cache_lock:
         if key in _memory_cache:
@@ -75,7 +86,7 @@ def _cache_set(key: str, data: object) -> None:
             return
         except Exception:
             pass
-            
+
     # Fallback to memory
     with _cache_lock:
         _memory_cache[key] = (time.time(), data)
@@ -216,11 +227,14 @@ def get_intraday(ticker: str) -> list[dict]:
             # Check for NaN safely
             try:
                 val = float(row.iloc[0] if isinstance(row, pd.Series) else row["Close"])
-                if pd.isna(val): continue
-                records.append({
-                    "time": int(idx.timestamp()),
-                    "value": round(val, 4),
-                })
+                if pd.isna(val):
+                    continue
+                records.append(
+                    {
+                        "time": int(idx.timestamp()),
+                        "value": round(val, 4),
+                    }
+                )
             except Exception:
                 continue
     except Exception:
@@ -239,7 +253,7 @@ def _is_market_open() -> bool:
     Does NOT account for holidays — good enough for UI indicator.
     """
     now = datetime.now(timezone.utc)
-    if now.weekday() >= 5:       # Saturday / Sunday
+    if now.weekday() >= 5:  # Saturday / Sunday
         return False
     hour_utc = now.hour + now.minute / 60
     return 14.5 <= hour_utc < 21.0

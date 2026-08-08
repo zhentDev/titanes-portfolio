@@ -3,9 +3,9 @@
 /api/tickers — Ticker search/validation endpoint.
 """
 
-from fastapi import APIRouter, Query
-from services.market_data import get_live_quotes, get_intraday, DEFAULT_TICKERS
 import yfinance as yf
+from fastapi import APIRouter, Query
+from services.market_data import DEFAULT_TICKERS, get_intraday, get_live_quotes
 
 router = APIRouter(tags=["Prices"])
 
@@ -35,7 +35,9 @@ def intraday(ticker: str):
 
 
 @router.get("/tickers/search")
-def search_ticker(q: str = Query(..., min_length=1, description="Ticker symbol or company name")):
+def search_ticker(
+    q: str = Query(..., min_length=1, description="Ticker symbol or company name"),
+):
     """
     Validate a ticker and return basic info (name, price, exchange).
     Used by the PortfolioManager add-ticker search.

@@ -1,13 +1,9 @@
-/**
- * NavChart — TradingView Lightweight Charts integration.
- * Renders portfolio NAV vs S&P500 vs NASDAQ as a multi-line area chart.
- */
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { createChart, ColorType, LineStyle } from 'lightweight-charts';
 
 const COLORS = {
-  nav:    '#00e5ff',
-  sp500:  '#f59e0b',
+  nav: '#00e5ff',
+  sp500: '#f59e0b',
   nasdaq: '#a855f7',
 };
 
@@ -15,6 +11,7 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
   const containerRef = useRef(null);
   const chartRef = useRef(null);
   const seriesRef = useRef({});
+  const [hoverValues, setHoverValues] = useState(null);
 
   const initChart = useCallback(() => {
     if (!containerRef.current) return;
@@ -36,11 +33,11 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
       },
       rightPriceScale: {
         borderColor: 'rgba(255,255,255,0.08)',
-        textColor: '#6b7280',
+        textColor: '#94a3b8',
       },
       timeScale: {
         borderColor: 'rgba(255,255,255,0.08)',
-        barSpacing: 4,
+        barSpacing: 8,
         fixLeftEdge: true,
         fixRightEdge: true,
         timeVisible: true,
@@ -65,7 +62,7 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
     // S&P 500 — amber line
     seriesRef.current.sp500 = chart.addLineSeries({
       color: COLORS.sp500,
-      lineWidth: 1.5,
+      lineWidth: 2,
       lineStyle: LineStyle.Dashed,
       priceLineVisible: false,
       lastValueVisible: true,
@@ -75,7 +72,7 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
     // NASDAQ — purple line
     seriesRef.current.nasdaq = chart.addLineSeries({
       color: COLORS.nasdaq,
-      lineWidth: 1.5,
+      lineWidth: 2,
       lineStyle: LineStyle.Dotted,
       priceLineVisible: false,
       lastValueVisible: true,
@@ -84,12 +81,29 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
 
     // Base investment line
     seriesRef.current.base = chart.addLineSeries({
-      color: 'rgba(255,255,255,0.15)',
+      color: 'rgba(255,255,255,0.18)',
       lineWidth: 1,
       lineStyle: LineStyle.Dashed,
       priceLineVisible: false,
       lastValueVisible: false,
       title: 'Base',
+    });
+
+    // Crosshair move handler to update legend values live
+    chart.subscribeCrosshairMove((param) => {
+      if (!param.time || !param.seriesData) {
+        setHoverValues(null);
+        return;
+      }
+      const navVal = param.seriesData.get(seriesRef.current.nav)?.value;
+      const spVal = param.seriesData.get(seriesRef.current.sp500)?.value;
+      const nsdVal = param.seriesData.get(seriesRef.current.nasdaq)?.value;
+      setHoverValues({
+        date: param.time,
+        nav: navVal != null ? navVal : null,
+        sp500: spVal != null ? spVal : null,
+        nasdaq: nsdVal != null ? nsdVal : null,
+      });
     });
 
     const ro = new ResizeObserver(() => {
@@ -112,26 +126,32 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
     };
   }, [initChart]);
 
+  // Helper to convert array to Lightweight Charts format with YYYY-MM-DD
+  const toSeries = (arr) =>
+    (arr || [])
+      .filter((d) => d && d.date && d.value != null && !isNaN(d.value))
+      .map((d) => ({
+        time: String(d.date).slice(0, 10),
+        value: Number(d.value),
+      }))
+      .sort((a, b) => (a.time > b.time ? 1 : -1));
+
   // Update series data
   useEffect(() => {
     if (!chartRef.current || !navData?.length) return;
 
-    const toSeries = (arr) =>
-      arr
-        .map((d) => {
-          let t = d.date;
-          if (typeof t === 'string') {
-             // Convert string YYYY-MM-DD (or any date string) to UNIX timestamp in seconds
-             t = Math.floor(new Date(t).getTime() / 1000);
-          }
-          return { time: t, value: d.value };
-        })
-        .sort((a, b) => (a.time > b.time ? 1 : -1));
+    const sNav = toSeries(navData);
+    seriesRef.current.nav?.setData(sNav);
 
-    seriesRef.current.nav?.setData(toSeries(navData));
+    if (sp500Data?.length) {
+      const sSP500 = toSeries(sp500Data);
+      seriesRef.current.sp500?.setData(sSP500);
+    }
 
-    if (sp500Data?.length)  seriesRef.current.sp500?.setData(toSeries(sp500Data));
-    if (nasdaqData?.length) seriesRef.current.nasdaq?.setData(toSeries(nasdaqData));
+    if (nasdaqData?.length) {
+      const sNasdaq = toSeries(nasdaqData);
+      seriesRef.current.nasdaq?.setData(sNasdaq);
+    }
 
     // Base investment horizontal line
     if (navData.length > 1) {
@@ -145,26 +165,59 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
     chartRef.current.timeScale().fitContent();
   }, [navData, sp500Data, nasdaqData, investment]);
 
+  // Latest fallback values
+  const lastNav = navData?.[navData.length - 1]?.value;
+  const lastSP = sp500Data?.[sp500Data.length - 1]?.value;
+  const lastNasdaq = nasdaqData?.[nasdaqData.length - 1]?.value;
+
+  const currentNav = hoverValues?.nav ?? lastNav;
+  const currentSP = hoverValues?.sp500 ?? lastSP;
+  const currentNasdaq = hoverValues?.nasdaq ?? lastNasdaq;
+
   return (
     <div style={{ position: 'relative' }}>
-      {/* Legend */}
+      {/* Legend with interactive values */}
       <div style={{
-        display: 'flex', gap: '16px', marginBottom: '12px',
-        fontSize: '0.75rem', fontFamily: "'JetBrains Mono', monospace",
+        display: 'flex', flexWrap: 'wrap', gap: '16px', marginBottom: '12px',
+        fontSize: '0.78rem', fontFamily: "'JetBrains Mono', monospace",
       }}>
-        <LegendItem color={COLORS.nav}    label="Portfolio" />
-        <LegendItem color={COLORS.sp500}  label="S&P 500"   dashed />
-        <LegendItem color={COLORS.nasdaq} label="NASDAQ"    dotted />
-        <LegendItem color="rgba(255,255,255,0.2)" label="Base ($)" dashed />
+        <LegendItem
+          color={COLORS.nav}
+          label="Portfolio"
+          value={currentNav != null ? `$${Number(currentNav).toFixed(2)}` : null}
+        />
+        <LegendItem
+          color={COLORS.sp500}
+          label="S&P 500"
+          value={currentSP != null ? `$${Number(currentSP).toFixed(2)}` : null}
+          dashed
+        />
+        <LegendItem
+          color={COLORS.nasdaq}
+          label="NASDAQ"
+          value={currentNasdaq != null ? `$${Number(currentNasdaq).toFixed(2)}` : null}
+          dotted
+        />
+        <LegendItem
+          color="rgba(255,255,255,0.2)"
+          label="Base"
+          value={`$${Number(investment).toFixed(2)}`}
+          dashed
+        />
+        {hoverValues?.date && (
+          <span style={{ color: '#64748b', marginLeft: 'auto' }}>
+            📅 {String(hoverValues.date)}
+          </span>
+        )}
       </div>
       <div ref={containerRef} style={{ height: '340px', width: '100%' }} />
     </div>
   );
 }
 
-function LegendItem({ color, label, dashed, dotted }) {
+function LegendItem({ color, label, value, dashed, dotted }) {
   const style = {
-    width: 24, height: 2,
+    width: 20, height: 2,
     background: dashed || dotted ? 'none' : color,
     borderTop: dashed ? `2px dashed ${color}` : dotted ? `2px dotted ${color}` : 'none',
     borderRadius: 2, flexShrink: 0,
@@ -172,7 +225,9 @@ function LegendItem({ color, label, dashed, dotted }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#94a3b8' }}>
       <div style={style} />
-      <span>{label}</span>
+      <span style={{ color: '#cbd5e1' }}>{label}:</span>
+      {value && <strong style={{ color, fontWeight: 600 }}>{value}</strong>}
     </div>
   );
 }
+

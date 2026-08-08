@@ -33,5 +33,11 @@ def root():
     return {
         "name": "Titanes Portfolio API",
         "docs": "/docs",
-        "endpoints": ["/api/nav", "/api/prices/live", "/api/prices/intraday/{ticker}", "/api/tickers/search", "/api/rebalances"],
+        "endpoints": [
+            "/api/nav",
+            "/api/prices/live",
+            "/api/prices/intraday/{ticker}",
+            "/api/tickers/search",
+            "/api/rebalances",
+        ],
     }

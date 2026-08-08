@@ -33,7 +33,11 @@ export async function fetchNAV({ period, investment, numSlots }) {
     investment: String(investment),
     num_slots: String(numSlots),
   });
-  return fetchWithTimeout(`${BASE}/nav?${params}`);
+  const data = await fetchWithTimeout(`${BASE}/nav?${params}`);
+  console.log('[FRONTEND API /nav] Respuesta completa del Backend:', data);
+  console.log('[FRONTEND API /nav] Puntos SP500 recibidos:', data?.sp500?.length, data?.sp500);
+  console.log('[FRONTEND API /nav] Puntos NASDAQ recibidos:', data?.nasdaq?.length, data?.nasdaq);
+  return data;
 }
 
 /** GET /api/prices/live */

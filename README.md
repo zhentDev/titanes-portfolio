@@ -7,13 +7,14 @@
 
 | Capa | Tech | Por qué |
 |------|------|---------|
-| Frontend | React + Vite | UI premium, hot-reload |
+| Frontend | React + Vite + **Bun** (⚡) | UI premium, hot-reload instantáneo |
+| Linter/Format (Frontend) | **Biome** (Rust🦀) | Formateo y linter unificado ultra-rápido |
 | Charts | TradingView Lightweight Charts | Pro-grade, el mismo de TradingView |
 | Estado | Zustand | Ligero, persiste en localStorage |
 | Backend | FastAPI | Async, auto-docs en /docs |
 | Data engine | **Polars** (Rust🦀) | 5-10x más rápido que Pandas |
 | Market data | yfinance | Gratis, sin API key |
-| Package mgr | **uv** (Rust🦀) | Instalación ultrarrápida |
+| Python Tooling | **uv** + **ruff** (Rust🦀) | Gestión y linting instantáneo |
 
 ---
 
@@ -24,37 +25,35 @@
 ```bash
 cd backend
 
-# Crear venv e instalar (solo la primera vez)
-uv venv .venv
-uv pip install -r requirements.txt
+# 1. Instalar dependencias automáticamente y ejecutar servidor
+uv run uvicorn main:app --reload --port 8000
 
-# Activar el venv
-.venv\Scripts\activate        # Windows
-# source .venv/bin/activate   # Mac/Linux
-
-# Iniciar servidor (puerto 8000)
-uvicorn main:app --reload
-
-# ─── Atajo con uv (sin activar venv manualmente) ───
-uv run uvicorn main:app --reload
+# 2. Análisis y formato con Ruff
+uv run ruff check --fix .
+uv run ruff format .
 ```
 
-API disponible en: http://localhost:8000
-Swagger docs en:  http://localhost:8000/docs
+API disponible en: http://localhost:8000  
+Swagger docs en:  http://localhost:8000/docs  
 
 ### 2. Frontend
 
 ```bash
 cd frontend
 
-# Instalar dependencias (solo la primera vez)
-npm install
+# Instalar dependencias con Bun
+bun install
 
 # Iniciar dev server (puerto 5173)
-npm run dev
+bun run dev
+
+# Verificar y formatear con Biome
+bun run lint:fix
+bun run format
 ```
 
 Abrir en: http://localhost:5173
+
 
 ---
 

@@ -8,7 +8,7 @@ across different rebalance periods based on the user's rebalance history.
 from __future__ import annotations
 
 import polars as pl
-from datetime import datetime, date
+
 from services.db import get_all_rebalances
 
 
@@ -23,66 +23,70 @@ def calculate_nav(
     rebalances = get_all_rebalances()
     if not rebalances:
         return _empty_response(investment)
-    
+
     # Sort rebalances by date
-    rebalances.sort(key=lambda r: r['date'])
-    
+    rebalances.sort(key=lambda r: r["date"])
+
     # Initial state
     current_shares = {}
     rebalance_prices = {}
     current_cash = 0.0
     current_value = 0.0
     total_invested = investment
-    
+
     nav_series = []
-    
+
     # Process each day in prices_df
     # To do this efficiently in Polars, we can compute the value for each period between rebalances.
-    
+
     # Convert prices_df to a dictionary of {date_str: {ticker: price}} for fast row-by-row simulation
     # since rebalances are stateful.
     # We only care about dates >= first rebalance date
-    start_date_str = rebalances[0]['date']
-    
+    start_date_str = rebalances[0]["date"]
+
     prices_pd = prices_df.to_pandas()
     prices_pd["date_str"] = prices_pd["date"].astype(str).str[:10]
     prices_pd = prices_pd[prices_pd["date_str"] >= start_date_str]
     prices_pd.set_index("date_str", inplace=True)
-    
+
     # We will simulate day by day
     rebalance_idx = 0
     next_rebalance = rebalances[rebalance_idx]
-    
+
     for date_str, row in prices_pd.iterrows():
         # Check if today is a rebalance day
-        while next_rebalance and date_str >= next_rebalance['date']:
+        while next_rebalance and date_str >= next_rebalance["date"]:
             # Execute rebalance
             # 1. Determine cash to add (only on the very first rebalance)
             cash_to_add = investment if rebalance_idx == 0 else 0.0
-            
+
             # 2. Calculate total portfolio value before rebalance
             # Value = cash + value of all current shares
             stock_value = 0.0
             for t, shares in current_shares.items():
                 price = row.get(t)
-                if price is not None and not pl.Series([price]).is_null()[0] and not str(price) == 'nan':
-                     stock_value += shares * price
-            
+                if (
+                    price is not None
+                    and not pl.Series([price]).is_null()[0]
+                    and not str(price) == "nan"
+                ):
+                    stock_value += shares * price
+
             total_portfolio_value = stock_value + current_cash + cash_to_add
-            
+
             # 3. Distribute equally among the new tickers
-            new_tickers = next_rebalance['tickers']
+            new_tickers = next_rebalance["tickers"]
             # Filter out tickers that don't have price data today
             valid_tickers = []
             for t in new_tickers:
-                if t in row and not pl.Series([row[t]]).is_null()[0] and not str(row[t]) == 'nan':
+                if t in row and not pl.Series([row[t]]).is_null()[0] and not str(row[t]) == "nan":
                     valid_tickers.append(t)
-            
+
             allocated_slots = len(valid_tickers)
             unallocated_slots = num_slots - allocated_slots
-            
+
             slot_value = total_portfolio_value / num_slots
-            
+
             # Buy new shares
             current_shares = {}
             rebalance_prices = {}
@@ -90,30 +94,32 @@ def calculate_nav(
                 price = row[t]
                 current_shares[t] = slot_value / price
                 rebalance_prices[t] = price
-            
+
             # Remaining cash is unallocated slots
             current_cash = slot_value * unallocated_slots
-            
+
             # Advance to next rebalance
             rebalance_idx += 1
             if rebalance_idx < len(rebalances):
                 next_rebalance = rebalances[rebalance_idx]
             else:
                 next_rebalance = None
-        
+
         # Calculate end of day value
         eod_stock_value = 0.0
         for t, shares in current_shares.items():
             price = row.get(t)
-            if price is not None and not str(price) == 'nan':
+            if price is not None and not str(price) == "nan":
                 eod_stock_value += shares * price
-        
+
         eod_total_value = eod_stock_value + current_cash
-        nav_series.append({
-            "date": str(date_str),
-            "value": round(eod_total_value, 4),
-            "invested": round(total_invested, 4) # Base line
-        })
+        nav_series.append(
+            {
+                "date": str(date_str),
+                "value": round(eod_total_value, 4),
+                "invested": round(total_invested, 4),  # Base line
+            }
+        )
         current_value = eod_total_value
 
     if not nav_series:
@@ -123,63 +129,68 @@ def calculate_nav(
     # Since the user adds cash, a simple percentage return is (current_value - total_invested) / total_invested
     # But usually TWR is better. For simplicity, we just return the raw values and the frontend can plot the NAV curve
     # and the 'Invested' base curve to show the gap (profit).
-    
+
     initial_invested = investment
-    
+
     def _benchmark_series(col: str) -> list[dict]:
         if col not in prices_df.columns:
+            print(f"[NAV ENGINE] ⚠️ Columna '{col}' NO existe en prices_df. Columnas disponibles: {prices_df.columns}")
             return []
         bdf = (
-            prices_df
-            .filter(pl.col("date") >= start_date_obj)
+            prices_df.filter(pl.col("date").cast(pl.String) >= str(start_date_str))
             .select(["date", col])
             .drop_nulls()
         )
         if bdf.is_empty():
+            print(f"[NAV ENGINE] ⚠️ '{col}' quedó vacío tras filtrar por date >= {start_date_str}")
             return []
         b0 = float(bdf[col][0])
         bdf = bdf.with_columns(
             (pl.col(col) / b0 * initial_invested).alias("value"),
         )
-        return [
+        points = [
             {"date": str(r["date"]), "value": round(r["value"], 4)}
             for r in bdf.iter_rows(named=True)
         ]
+        print(f"[NAV ENGINE] ✅ '{col}' calculado: {len(points)} puntos. Primer punto: {points[0]}")
+        return points
 
     # Current holdings breakdown
     last_rebalance = rebalances[-1]
-    active_tickers = last_rebalance['tickers']
+    active_tickers = last_rebalance["tickers"]
     last_row = prices_pd.iloc[-1]
-    
+
     holdings = []
     slot_weight_pct = 100.0 / num_slots
-    
+
     for t in active_tickers:
         shares = current_shares.get(t, 0.0)
         current_price = last_row.get(t, 0.0)
-        if str(current_price) == 'nan':
+        if str(current_price) == "nan":
             current_price = 0.0
-        
+
         start_price = rebalance_prices.get(t, 0.0)
         val = shares * current_price
-        
+
         return_pct = 0.0
         if start_price > 0:
             return_pct = ((current_price - start_price) / start_price) * 100.0
-        
-        holdings.append({
-            "ticker": t,
-            "weight": round(slot_weight_pct, 2) if shares > 0 else 0.0,
-            "shares": round(shares, 6),
-            "start_price": round(start_price, 4),
-            "current_price": round(current_price, 4),
-            "current_value": round(val, 4),
-            "return_pct": round(return_pct, 4)
-        })
+
+        holdings.append(
+            {
+                "ticker": t,
+                "weight": round(slot_weight_pct, 2) if shares > 0 else 0.0,
+                "shares": round(shares, 6),
+                "start_price": round(start_price, 4),
+                "current_price": round(current_price, 4),
+                "current_value": round(val, 4),
+                "return_pct": round(return_pct, 4),
+            }
+        )
 
     unallocated_slots = num_slots - len([t for t in active_tickers if t in current_shares])
     cash_reserved = current_cash
-    
+
     total_return = current_value - total_invested
     total_return_pct = (total_return / total_invested * 100) if total_invested > 0 else 0.0
 
@@ -200,6 +211,7 @@ def calculate_nav(
             "unallocated_slots": unallocated_slots,
         },
     }
+
 
 def _empty_response(investment: float) -> dict:
     return {
