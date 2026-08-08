@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import NavChart from './components/NavChart';
 import LiveMode from './components/LiveMode';
 import HoldingsTable from './components/HoldingsTable';
@@ -19,7 +19,7 @@ const PERIODS = ['1W', '1M', '3M', '6M', '1Y', '3Y', '5Y', 'MAX'];
 
 export default function App() {
   const { tickers, investment, period, numSlots, mode, setPeriod, setMode } = usePortfolioStore();
-  const [navData, setNavData] = useState(null);
+  const [baseNavData, setBaseNavData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -28,22 +28,82 @@ export default function App() {
 
   const toggleUnit = () => setUnit((u) => (u === 'pct' ? 'usd' : 'pct'));
 
-  const loadNAV = useCallback(async () => {
+  // Only trigger network/DuckDB load on period, investment or rebalance refresh
+  useEffect(() => {
+    let isCancelled = false;
     setLoading(true);
     setError(null);
-    try {
-      const data = await fetchNAV({ tickers, period, investment, numSlots, selectedTickers });
-      setNavData(data);
-    } catch (e) {
-      setError(e);
-    } finally {
-      setLoading(false);
-    }
-  }, [tickers, period, investment, numSlots, refreshKey, selectedTickers]);
+    fetchNAV({ tickers, period, investment, numSlots })
+      .then((data) => {
+        if (!isCancelled) {
+          setBaseNavData(data);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (!isCancelled) {
+          setError(err);
+          setLoading(false);
+        }
+      });
+    return () => {
+      isCancelled = true;
+    };
+  }, [tickers, period, investment, numSlots, refreshKey]);
 
-  useEffect(() => {
-    loadNAV();
-  }, [loadNAV]);
+  // Client-side instant recalculation: 0ms latency, no spinner, no page reload, pure butter-smooth animation!
+  const navData = useMemo(() => {
+    if (!baseNavData) return null;
+    if (!selectedTickers) return baseNavData;
+
+    const allHoldings = baseNavData.holdings || [];
+    const updatedHoldings = allHoldings.map((h) => ({
+      ...h,
+      selected: selectedTickers.includes(h.ticker),
+    }));
+
+    const activeList = updatedHoldings.filter((h) => h.selected && h.shares > 0);
+    const slotValue = investment / numSlots;
+    const activeInvested = activeList.length * slotValue;
+    const currentStockValue = activeList.reduce((sum, h) => sum + (h.shares * h.current_price), 0);
+    const activeReturn = currentStockValue - activeInvested;
+    const activeReturnPct = activeInvested > 0 ? (activeReturn / activeInvested) * 100 : 0;
+
+    // Rescale NAV series points smoothly
+    const baseFirstVal = baseNavData.nav?.[0]?.value || investment;
+    const scaledNav = (baseNavData.nav || []).map((pt) => {
+      const delta = pt.value - baseFirstVal;
+      const ratio = allHoldings.length > 0 ? activeList.length / allHoldings.length : 1;
+      return {
+        ...pt,
+        value: activeInvested + delta * ratio,
+      };
+    });
+
+    const sp500End = baseNavData.summary?.sp500_return_pct || 0;
+    const sp500Usd = baseNavData.summary?.sp500_return || 0;
+    const nasdaqEnd = baseNavData.summary?.nasdaq_return_pct || 0;
+    const nasdaqUsd = baseNavData.summary?.nasdaq_return || 0;
+
+    return {
+      ...baseNavData,
+      nav: scaledNav,
+      holdings: updatedHoldings,
+      summary: {
+        ...baseNavData.summary,
+        active_invested: activeInvested,
+        active_stock_value: currentStockValue,
+        active_return: activeReturn,
+        active_return_pct: activeReturnPct,
+        alpha_sp500: Number((activeReturnPct - sp500End).toFixed(2)),
+        alpha_sp500_usd: Number((activeReturn - sp500Usd).toFixed(2)),
+        alpha_nasdaq: Number((activeReturnPct - nasdaqEnd).toFixed(2)),
+        alpha_nasdaq_usd: Number((activeReturn - nasdaqUsd).toFixed(2)),
+        num_holdings: activeList.length,
+        cash_reserved: investment - activeInvested,
+      },
+    };
+  }, [baseNavData, selectedTickers, investment, numSlots]);
 
   const summary = navData?.summary;
   const holdings = navData?.holdings || [];
