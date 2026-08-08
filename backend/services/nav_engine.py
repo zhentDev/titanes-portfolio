@@ -374,15 +374,6 @@ def calculate_nav(
         },
     }
 
-    # ── Radar 360 Cuantitativo por Factor ───────────────
-    radar_data = [
-        {"factor": "Momentum Relativo", "score": min(95, max(30, int(60 + active_return_pct * 4))), "benchmark": 55},
-        {"factor": "Resiliencia / Drawdown", "score": min(95, max(30, int(90 + max_dd * 5))), "benchmark": 60},
-        {"factor": "Alfa vs S&P 500", "score": min(98, max(30, int(65 + alpha_sp500 * 8))), "benchmark": 50},
-        {"factor": "Eficiencia Sharpe", "score": min(95, max(30, int(sharpe_ratio * 35 + 20))), "benchmark": 52},
-        {"factor": "Diversificación", "score": int(diversification_score * 9.5), "benchmark": 60},
-    ]
-
     # Max Drawdown histórico
     max_dd = 0.0
     peak = -1.0
@@ -395,6 +386,16 @@ def calculate_nav(
             max_dd = dd
 
     max_dd_usd = round((max_dd / 100.0) * peak, 2) if peak > 0 else 0.0
+
+    # ── Radar 360 Cuantitativo por Factor ───────────────
+    radar_data = [
+        {"factor": "Momentum Relativo", "score": min(95, max(30, int(60 + active_return_pct * 4))), "benchmark": 55},
+        {"factor": "Resiliencia / Drawdown", "score": min(95, max(30, int(90 + max_dd * 5))), "benchmark": 60},
+        {"factor": "Alfa vs S&P 500", "score": min(98, max(30, int(65 + alpha_sp500 * 8))), "benchmark": 50},
+        {"factor": "Eficiencia Sharpe", "score": min(95, max(30, int(sharpe_ratio * 35 + 20))), "benchmark": 52},
+        {"factor": "Diversificación", "score": int(diversification_score * 9.5), "benchmark": 60},
+    ]
+
     total_return = current_value - total_invested
     total_return_pct = (
         (total_return / total_invested * 100) if total_invested > 0 else 0.0
