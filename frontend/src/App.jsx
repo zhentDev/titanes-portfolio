@@ -10,6 +10,8 @@ import MonteCarloCard from './components/MonteCarloCard';
 import CorrelationHeatmap from './components/CorrelationHeatmap';
 import QuantRadar from './components/QuantRadar';
 import MidCapsStrategy from './components/MidCapsStrategy';
+import DynamicStrategyView from './components/DynamicStrategyView';
+import CreateStrategyModal from './components/CreateStrategyModal';
 import { exportPortfolioCSV } from './utils/exportReport';
 import { usePortfolioStore } from './store/portfolioStore';
 import { fetchNAV } from './api/client';
@@ -18,13 +20,14 @@ import './App.css';
 const PERIODS = ['1W', '1M', '3M', '6M', '1Y', '3Y', '5Y', 'MAX'];
 
 export default function App() {
-  const { tickers, investment, period, numSlots, mode, setPeriod, setMode } = usePortfolioStore();
+  const { tickers, investment, period, numSlots, mode, setPeriod, setMode, customStrategies, addCustomStrategy, deleteCustomStrategy } = usePortfolioStore();
   const [baseNavData, setBaseNavData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedTickers, setSelectedTickers] = useState(null); // null = all active tickers included
   const [unit, setUnit] = useState('pct'); // 'pct' | 'usd'
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const toggleUnit = () => setUnit((u) => (u === 'pct' ? 'usd' : 'pct'));
 
@@ -212,13 +215,16 @@ export default function App() {
             </button>
           )}
 
-          <div className="mode-toggle">
+          <div className="mode-toggle" style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+            {/* Core Inmutable Strategy 1: Titanes Tech */}
             <button
               className={mode === 'historical' ? 'active' : ''}
               onClick={() => setMode('historical')}
             >
               🏆 Titanes Tech
             </button>
+
+            {/* Core Inmutable Strategy 2: Mid-caps MM20 PRO */}
             <button
               className={mode === 'midcaps' ? 'active' : ''}
               onClick={() => setMode('midcaps')}
@@ -229,6 +235,41 @@ export default function App() {
                 PRO
               </span>
             </button>
+
+            {/* User-Created Dynamic Custom Strategies */}
+            {(customStrategies || []).map((strat) => (
+              <button
+                key={strat.id}
+                className={mode === strat.id ? 'active' : ''}
+                onClick={() => setMode(strat.id)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                <span>{strat.country || '🌎'}</span>
+                <span>{strat.name}</span>
+                <span style={{ fontSize: '0.62rem', padding: '1px 4px', borderRadius: 3, background: 'rgba(255,255,255,0.08)', color: '#94a3b8' }}>
+                  {strat.numSlots}
+                </span>
+              </button>
+            ))}
+
+            {/* Botón para crear nueva estrategia dinámica */}
+            <button
+              type="button"
+              className="btn-chip"
+              onClick={() => setIsModalOpen(true)}
+              style={{
+                border: '1px dashed rgba(0, 229, 255, 0.4)',
+                background: 'rgba(0, 229, 255, 0.08)',
+                color: 'var(--accent-primary)',
+                fontWeight: 700,
+                fontSize: '0.75rem',
+                padding: '5px 10px',
+              }}
+              title="Crear una nueva estrategia personalizada con país, nombre y slots"
+            >
+              + Nueva Estrategia
+            </button>
+
             <button
               className={mode === 'live' ? 'active' : ''}
               onClick={() => setMode('live')}
@@ -239,6 +280,15 @@ export default function App() {
         </div>
       </header>
 
+      {/* ── Modal Creador de Nueva Estrategia ─────────────── */}
+      <CreateStrategyModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onCreate={(stratData) => {
+          addCustomStrategy(stratData);
+        }}
+      />
+
       {/* ── Main layout ─────────────────────────────────── */}
       <main className="app-main">
 
@@ -246,6 +296,13 @@ export default function App() {
           <LiveMode key={refreshKey} navData={navData} investment={investment} />
         ) : mode === 'midcaps' ? (
           <MidCapsStrategy onBack={() => setMode('historical')} />
+        ) : customStrategies?.some((s) => s.id === mode) ? (
+          <DynamicStrategyView
+            key={mode}
+            strategy={customStrategies.find((s) => s.id === mode)}
+            onDelete={deleteCustomStrategy}
+            onBack={() => setMode('historical')}
+          />
         ) : (
           <>
             {/* ── Summary strip with % and $ Unit Toggle ─── */}
