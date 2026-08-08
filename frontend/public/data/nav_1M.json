@@ -1,0 +1,17 @@
+{
+  "nav": [],
+  "sp500": [],
+  "nasdaq": [],
+  "holdings": [],
+  "summary": {
+    "start_value": 2000.0,
+    "end_value": 2000.0,
+    "invested_value": 2000.0,
+    "cash_reserved": 0.0,
+    "total_return": 0.0,
+    "total_return_pct": 0.0,
+    "num_holdings": 0,
+    "num_slots": 15,
+    "unallocated_slots": 15
+  }
+}

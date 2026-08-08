@@ -143,91 +143,91 @@ export default function App() {
               const maxDDUsd = summary.max_drawdown_usd ?? 0;
 
               return (
-              <div className="summary-strip fade-up" style={{ position: 'relative' }}>
-                <SummaryItem
-                  label={`Capital Activo (${summary.num_holdings} Acciones)`}
-                  value={`$${activeInvested.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                  large mono
-                />
-                <div className="summary-divider" />
-                <SummaryItem
-                  label={
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                      <span>Rendimiento Titanes</span>
+                <div className="summary-strip fade-up" style={{ position: 'relative' }}>
+                  <SummaryItem
+                    label={`Capital Activo (${summary.num_holdings} Acciones)`}
+                    value={`$${activeInvested.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    large mono
+                  />
+                  <div className="summary-divider" />
+                  <SummaryItem
+                    label={
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                        <span>Rendimiento Titanes</span>
+                      </div>
+                    }
+                    value={
+                      <span
+                        className={`badge ${isActGain ? 'gain' : 'loss'}`}
+                        style={{ fontSize: '0.95rem', padding: '4px 10px', cursor: 'pointer' }}
+                        onClick={toggleUnit}
+                        title="Haz clic para alternar entre % y $"
+                      >
+                        {isActGain ? '▲' : '▼'} {unit === 'pct' ? `${Math.abs(activeReturnPct).toFixed(2)}%` : `$${Math.abs(activeReturnUsd).toFixed(2)}`}
+                      </span>
+                    }
+                  />
+                  <div className="summary-divider" />
+                  <SummaryItem
+                    label="Alfa vs S&P 500 (α)"
+                    value={
+                      <span
+                        className={`badge ${alphaSPPct >= 0 ? 'gain' : 'loss'}`}
+                        style={{ fontSize: '0.95rem', padding: '4px 10px', cursor: 'pointer' }}
+                        onClick={toggleUnit}
+                        title="Haz clic para alternar entre % y $"
+                      >
+                        {alphaSPPct >= 0 ? '+' : ''}{unit === 'pct' ? `${alphaSPPct.toFixed(2)}%` : `$${alphaSPUsd.toFixed(2)}`}
+                      </span>
+                    }
+                    mono
+                  />
+                  <div className="summary-divider" />
+                  <SummaryItem
+                    label="Alfa vs NASDAQ (α)"
+                    value={
+                      <span
+                        className={`badge ${alphaNDPct >= 0 ? 'gain' : 'loss'}`}
+                        style={{ fontSize: '0.95rem', padding: '4px 10px', cursor: 'pointer' }}
+                        onClick={toggleUnit}
+                        title="Haz clic para alternar entre % y $"
+                      >
+                        {alphaNDPct >= 0 ? '+' : ''}{unit === 'pct' ? `${alphaNDPct.toFixed(2)}%` : `$${alphaNDUsd.toFixed(2)}`}
+                      </span>
+                    }
+                    mono
+                  />
+                  <div className="summary-divider" />
+                  <SummaryItem
+                    label="Max Drawdown"
+                    value={
+                      <span
+                        style={{ color: maxDDPct < -5 ? '#ef4444' : '#94a3b8', fontWeight: 600, cursor: 'pointer' }}
+                        onClick={toggleUnit}
+                        title="Haz clic para alternar entre % y $"
+                      >
+                        {unit === 'pct' ? `${maxDDPct.toFixed(2)}%` : `-$${Math.abs(maxDDUsd).toFixed(2)}`}
+                      </span>
+                    }
+                    mono
+                  />
+                  <div className="summary-divider" />
+                  <SummaryItem
+                    label="Cash Reservado (Q)"
+                    value={`$${(summary.cash_reserved ?? 0).toFixed(2)}`}
+                    muted mono
+                  />
+                  <div className="summary-divider" />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center', justifyContent: 'center', padding: '0 10px' }}>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Unidad
+                    </span>
+                    <div className="unit-toggle" onClick={toggleUnit} title="Alternar métricas entre Porcentaje (%) y Dólares ($)">
+                      <button className={`unit-btn ${unit === 'pct' ? 'active' : ''}`}>%</button>
+                      <button className={`unit-btn ${unit === 'usd' ? 'active' : ''}`}>$</button>
                     </div>
-                  }
-                  value={
-                    <span
-                      className={`badge ${isActGain ? 'gain' : 'loss'}`}
-                      style={{ fontSize: '0.95rem', padding: '4px 10px', cursor: 'pointer' }}
-                      onClick={toggleUnit}
-                      title="Haz clic para alternar entre % y $"
-                    >
-                      {isActGain ? '▲' : '▼'} {unit === 'pct' ? `${Math.abs(activeReturnPct).toFixed(2)}%` : `$${Math.abs(activeReturnUsd).toFixed(2)}`}
-                    </span>
-                  }
-                />
-                <div className="summary-divider" />
-                <SummaryItem
-                  label="Alfa vs S&P 500 (α)"
-                  value={
-                    <span
-                      className={`badge ${alphaSPPct >= 0 ? 'gain' : 'loss'}`}
-                      style={{ fontSize: '0.95rem', padding: '4px 10px', cursor: 'pointer' }}
-                      onClick={toggleUnit}
-                      title="Haz clic para alternar entre % y $"
-                    >
-                      {alphaSPPct >= 0 ? '+' : ''}{unit === 'pct' ? `${alphaSPPct.toFixed(2)}%` : `$${alphaSPUsd.toFixed(2)}`}
-                    </span>
-                  }
-                  mono
-                />
-                <div className="summary-divider" />
-                <SummaryItem
-                  label="Alfa vs NASDAQ (α)"
-                  value={
-                    <span
-                      className={`badge ${alphaNDPct >= 0 ? 'gain' : 'loss'}`}
-                      style={{ fontSize: '0.95rem', padding: '4px 10px', cursor: 'pointer' }}
-                      onClick={toggleUnit}
-                      title="Haz clic para alternar entre % y $"
-                    >
-                      {alphaNDPct >= 0 ? '+' : ''}{unit === 'pct' ? `${alphaNDPct.toFixed(2)}%` : `$${alphaNDUsd.toFixed(2)}`}
-                    </span>
-                  }
-                  mono
-                />
-                <div className="summary-divider" />
-                <SummaryItem
-                  label="Max Drawdown"
-                  value={
-                    <span
-                      style={{ color: maxDDPct < -5 ? '#ef4444' : '#94a3b8', fontWeight: 600, cursor: 'pointer' }}
-                      onClick={toggleUnit}
-                      title="Haz clic para alternar entre % y $"
-                    >
-                      {unit === 'pct' ? `${maxDDPct.toFixed(2)}%` : `-$${Math.abs(maxDDUsd).toFixed(2)}`}
-                    </span>
-                  }
-                  mono
-                />
-                <div className="summary-divider" />
-                <SummaryItem
-                  label="Cash Reservado (Q)"
-                  value={`$${(summary.cash_reserved ?? 0).toFixed(2)}`}
-                  muted mono
-                />
-                <div className="summary-divider" />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center', justifyContent: 'center', padding: '0 10px' }}>
-                  <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Unidad
-                  </span>
-                  <div className="unit-toggle" onClick={toggleUnit} title="Alternar métricas entre Porcentaje (%) y Dólares ($)">
-                    <button className={`unit-btn ${unit === 'pct' ? 'active' : ''}`}>%</button>
-                    <button className={`unit-btn ${unit === 'usd' ? 'active' : ''}`}>$</button>
                   </div>
                 </div>
-              </div>
               );
             })()}
 
@@ -352,22 +352,6 @@ export default function App() {
               )}
             </div>
 
-            {/* ── Quantitative Intelligence & Allocation Grid ── */}
-            {summary && !loading && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '20px' }}>
-                <QuantitativeCard summary={summary} />
-                <SectorAllocation
-                  holdings={navData?.holdings}
-                  investment={investment}
-                  numSlots={numSlots}
-                />
-                <RebalanceTimer
-                  rebalances={navData?.rebalances}
-                  holdings={navData?.holdings}
-                />
-              </div>
-            )}
-
             {/* ── Bottom grid ───────────────────────────── */}
             <div className="bottom-grid">
               {/* Holdings table */}
@@ -393,6 +377,23 @@ export default function App() {
                 <RebalanceManager onRefresh={() => setRefreshKey((k) => k + 1)} />
               </div>
             </div>
+
+            {/* ── Quantitative Intelligence & Allocation Grid ── */}
+            {summary && !loading && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '20px' }}>
+                <QuantitativeCard summary={summary} />
+                <SectorAllocation
+                  holdings={navData?.holdings}
+                  investment={investment}
+                  numSlots={numSlots}
+                />
+                <RebalanceTimer
+                  rebalances={navData?.rebalances}
+                  holdings={navData?.holdings}
+                />
+              </div>
+            )}
+
           </>
         )}
       </main>

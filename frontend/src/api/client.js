@@ -1,47 +1,47 @@
 /**
  * API client — wraps fetch calls to the FastAPI backend.
+ * Automatically falls back to static pre-calculated JSON data on GitHub Pages or when backend is offline!
  */
 
 const BASE = 'http://localhost:8000/api';
-const TIMEOUT_MS = 30_000; // 30 seconds
+const TIMEOUT_MS = 5000; // 5 seconds before checking static fallback
 
-async function fetchWithTimeout(url, options = {}) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+// Helper to get relative static data path on GitHub Pages
+function getStaticDataPath(file) {
+  const base = import.meta.env.BASE_URL || './';
+  const cleanBase = base.endsWith('/') ? base : `${base}/`;
+  return `${cleanBase}data/${file}`;
+}
+
+async function fetchWithFallback(endpoint, staticFile, options = {}) {
+  // If explicitly in static hosting or local backend is not available
   try {
-    const res = await fetch(url, { ...options, signal: controller.signal });
-    if (!res.ok) {
-      let errorData;
-      try {
-        errorData = await res.json();
-      } catch {
-        errorData = null;
-      }
-      const err = new Error(errorData?.message || `Error ${res.status} en backend`);
-      err.backendError = errorData;
-      err.status = res.status;
-      throw err;
-    }
-    return res.json();
-  } catch (err) {
-    if (err.name === 'AbortError') {
-      const e = new Error('Timeout (30s) — el backend tardó demasiado en responder.');
-      e.isConnectionError = true;
-      throw e;
-    }
-    if (err.message.includes('Failed to fetch') || err.message.includes('fetch')) {
-      const e = new Error('No se pudo conectar al servidor en localhost:8000. Verifica que el backend esté encendido.');
-      e.isConnectionError = true;
-      throw e;
-    }
-    throw err;
-  } finally {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    const res = await fetch(`${BASE}${endpoint}`, { ...options, signal: controller.signal });
     clearTimeout(timer);
+
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // Backend offline or running in static GitHub Pages environment
   }
+
+  // Seamless static fallback
+  if (staticFile) {
+    const staticUrl = getStaticDataPath(staticFile);
+    const staticRes = await fetch(staticUrl);
+    if (staticRes.ok) {
+      return await staticRes.json();
+    }
+  }
+
+  throw new Error(`No se pudo cargar datos desde el backend ni desde el archivo estático ${staticFile}`);
 }
 
 /** GET /api/nav */
-export async function fetchNAV({ period, investment, numSlots, selectedTickers }) {
+export async function fetchNAV({ period = '1Y', investment = 2000, numSlots = 15, selectedTickers }) {
   const params = new URLSearchParams({
     period,
     investment: String(investment),
@@ -50,43 +50,80 @@ export async function fetchNAV({ period, investment, numSlots, selectedTickers }
   if (selectedTickers && selectedTickers.length > 0) {
     params.set('selected_tickers', selectedTickers.join(','));
   }
-  const data = await fetchWithTimeout(`${BASE}/nav?${params}`);
+
+  const staticFile = `nav_${period}.json`;
+  let data = await fetchWithFallback(`/nav?${params}`, staticFile);
+
+  // If running on static data and selectedTickers is provided, do client-side what-if simulation
+  if (selectedTickers && data?.holdings) {
+    const validTickers = selectedTickers.map((t) => t.toUpperCase());
+    const filteredHoldings = data.holdings.map((h) => ({
+      ...h,
+      selected: validTickers.includes(h.ticker.toUpperCase()),
+    }));
+
+    const activeSelected = filteredHoldings.filter((h) => h.selected);
+    const activeCount = activeSelected.length;
+    const activeInvested = Number(((investment * activeCount) / numSlots).toFixed(2));
+    const activeStockValue = activeSelected.reduce((sum, h) => sum + (h.current_value || 0), 0);
+    const activeReturn = activeStockValue - activeInvested;
+    const activeReturnPct = activeInvested > 0 ? (activeReturn / activeInvested) * 100 : 0;
+
+    data = {
+      ...data,
+      holdings: filteredHoldings,
+      summary: {
+        ...data.summary,
+        num_holdings: activeCount,
+        active_invested: activeInvested,
+        active_stock_value: Number(activeStockValue.toFixed(2)),
+        active_return: Number(activeReturn.toFixed(2)),
+        active_return_pct: Number(activeReturnPct.toFixed(2)),
+      },
+    };
+  }
+
   return data;
 }
 
 /** GET /api/prices/live */
 export async function fetchLiveQuotes(tickers) {
   const params = new URLSearchParams({ tickers: tickers.join(',') });
-  return fetchWithTimeout(`${BASE}/prices/live?${params}`);
+  return fetchWithFallback(`/prices/live?${params}`, 'nav_1W.json');
 }
 
 /** GET /api/prices/intraday/:ticker */
 export async function fetchIntraday(ticker) {
-  return fetchWithTimeout(`${BASE}/prices/intraday/${ticker}`);
+  return fetchWithFallback(`/prices/intraday/${ticker}`, 'nav_1W.json');
 }
 
 /** GET /api/tickers/search?q=... */
 export async function searchTicker(q) {
-  return fetchWithTimeout(`${BASE}/tickers/search?q=${encodeURIComponent(q)}`);
+  return fetchWithFallback(`/tickers/search?q=${encodeURIComponent(q)}`, 'nav_1W.json');
 }
 
 /** GET /api/rebalances */
 export async function fetchRebalances() {
-  return fetchWithTimeout(`${BASE}/rebalances`);
+  return fetchWithFallback('/rebalances', 'rebalances.json');
 }
 
 /** POST /api/rebalances */
 export async function createRebalance({ rebalance_date, cash_added, tickers }) {
-  return fetchWithTimeout(`${BASE}/rebalances`, {
+  const res = await fetch(`${BASE}/rebalances`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ rebalance_date, cash_added, tickers })
+    body: JSON.stringify({ rebalance_date, cash_added, tickers }),
   });
+  if (!res.ok) throw new Error('Error al registrar rebalanceo');
+  return res.json();
 }
 
 /** DELETE /api/rebalances/:date */
 export async function deleteRebalance(date) {
-  return fetchWithTimeout(`${BASE}/rebalances/${date}`, {
-    method: 'DELETE'
+  const res = await fetch(`${BASE}/rebalances/${date}`, {
+    method: 'DELETE',
   });
+  if (!res.ok) throw new Error('Error al eliminar rebalanceo');
+  return res.json();
 }
+

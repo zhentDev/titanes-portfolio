@@ -3,6 +3,10 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  base: './', // Ensures relative assets work on GitHub Pages whether on root or /titanes-portfolio/
+  build: {
+    emptyOutDir: false,
+  },
   server: {
     port: 5173,
   },
