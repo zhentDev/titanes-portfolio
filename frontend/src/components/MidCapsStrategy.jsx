@@ -18,7 +18,7 @@ const DEFAULT_REBALANCES = [
 ];
 
 export default function MidCapsStrategy({ onBack }) {
-  const { midcapsCapital, setMidcapsCapital, period, setPeriod } = usePortfolioStore();
+  const { midcapsCapital, setMidcapsCapital, period, setPeriod, setMm20ActiveInvested } = usePortfolioStore();
 
   const [localCapital, setLocalCapital] = useState(midcapsCapital || 2000);
 
@@ -70,6 +70,10 @@ export default function MidCapsStrategy({ onBack }) {
   const slotValue = simulatedCapital / numSlots;
   const activeInvested = activeTickers.length * slotValue;
   const cashBuffer = simulatedCapital - activeInvested;
+
+  useEffect(() => {
+    setMm20ActiveInvested(activeInvested);
+  }, [activeInvested, setMm20ActiveInvested]);
 
   const currentReturns = SYNTHETIC_RETURNS[period] || SYNTHETIC_RETURNS['MAX'];
   

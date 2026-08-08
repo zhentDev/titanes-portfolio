@@ -28,7 +28,7 @@ export default function NavChart({
   const seriesRef = useRef({});
   const [hoverValues, setHoverValues] = useState(null);
 
-  const { visibleSeries, toggleSeries } = usePortfolioStore();
+  const { visibleSeries, toggleSeries, mm20ActiveInvested } = usePortfolioStore();
 
   const handleToggle = (key) => {
     toggleSeries(key);
@@ -203,18 +203,27 @@ export default function NavChart({
       seriesRef.current.nasdaq?.setData(sNasdaq);
     }
 
-    // MM20 Mid-caps curve: Real market price fluctuation
+    // MM20 Mid-caps curve: Independent active capital
     if (mm20Data?.length) {
       const sMM20 = toSeries(mm20Data);
       seriesRef.current.mm20?.setData(sMM20);
     } else if (navData?.length > 1) {
-      const baseVal = navData[0].value;
+      const titanesBaseVal = navData[0].value;
+      const mm20Base = mm20ActiveInvested || 250; // Use its own capital
+      
       const sMM20 = navData.map((pt, idx) => {
+        // Calculate the percentage growth of the S&P 500 curve relative to Titanes base
         const spPt = sp500Data?.[idx]?.value ?? pt.value;
-        const spBase = sp500Data?.[0]?.value ?? baseVal;
-        const marketDelta = (spPt - spBase) * 1.18; // Mid-caps beta = 1.18 vs market
-        const alphaTrend = (idx / (navData.length - 1)) * (baseVal * 0.045);
-        return { date: pt.date || pt.time, value: baseVal + marketDelta + alphaTrend };
+        const spBase = sp500Data?.[0]?.value ?? titanesBaseVal;
+        
+        const spPctGrowth = (spPt - spBase) / spBase; // e.g. +0.02 (2%)
+        const mm20PctGrowth = spPctGrowth * 1.18 + ((idx / (navData.length - 1)) * 0.045);
+        
+        // Apply that relative growth to the mm20 independent base capital
+        return { 
+          date: pt.date || pt.time, 
+          value: mm20Base * (1 + mm20PctGrowth) 
+        };
       });
       seriesRef.current.mm20?.setData(toSeries(sMM20));
     }
@@ -230,14 +239,16 @@ export default function NavChart({
     }
 
     chartRef.current.timeScale().fitContent();
-  }, [navData, sp500Data, nasdaqData, mm20Data, investment]);
+  }, [navData, sp500Data, nasdaqData, mm20Data, investment, mm20ActiveInvested]);
 
   // Latest fallback values
   const lastNav = navData?.[navData.length - 1]?.value;
   const lastSP = sp500Data?.[sp500Data.length - 1]?.value;
   const lastNasdaq = nasdaqData?.[nasdaqData.length - 1]?.value;
   const lastMM20 = mm20Data?.[mm20Data.length - 1]?.value;
+  
   const baseActive = navData?.[0]?.value ?? investment;
+  const mm20BaseActive = mm20ActiveInvested || 250;
 
   const currentNav = hoverValues?.nav ?? lastNav;
   const currentSP = hoverValues?.sp500 ?? lastSP;
@@ -248,12 +259,14 @@ export default function NavChart({
   const navPct = currentNav && baseActive ? ((currentNav - baseActive) / baseActive) * 100 : null;
   const spPct = currentSP && baseActive ? ((currentSP - baseActive) / baseActive) * 100 : null;
   const nasdaqPct = currentNasdaq && baseActive ? ((currentNasdaq - baseActive) / baseActive) * 100 : null;
-  const mm20Pct = currentMM20 && baseActive ? ((currentMM20 - baseActive) / baseActive) * 100 : 8.2;
+  
+  // MM20 uses its OWN base capital to calculate return percentage
+  const mm20Pct = currentMM20 && mm20BaseActive ? ((currentMM20 - mm20BaseActive) / mm20BaseActive) * 100 : 8.2;
 
   // Exact dollar value calculated on the ACTIVE capital in play (so it is 100% comparable)
   const displayMM20Usd = currentMM20 != null
     ? currentMM20.toFixed(2)
-    : (baseActive * (1 + (mm20Pct || 8.2) / 100)).toFixed(2);
+    : (mm20BaseActive * (1 + (mm20Pct || 8.2) / 100)).toFixed(2);
 
   return (
     <div>
