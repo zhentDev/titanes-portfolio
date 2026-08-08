@@ -155,9 +155,10 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
 
     // Base investment horizontal line
     if (navData.length > 1) {
+      const baseVal = navData[0].value;
       const baseLine = [
-        { date: navData[0].date, value: investment },
-        { date: navData[navData.length - 1].date, value: investment },
+        { date: navData[0].date, value: baseVal },
+        { date: navData[navData.length - 1].date, value: baseVal },
       ];
       seriesRef.current.base?.setData(toSeries(baseLine));
     }
@@ -169,6 +170,7 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
   const lastNav = navData?.[navData.length - 1]?.value;
   const lastSP = sp500Data?.[sp500Data.length - 1]?.value;
   const lastNasdaq = nasdaqData?.[nasdaqData.length - 1]?.value;
+  const baseActive = navData?.[0]?.value ?? investment;
 
   const currentNav = hoverValues?.nav ?? lastNav;
   const currentSP = hoverValues?.sp500 ?? lastSP;
@@ -183,7 +185,7 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
       }}>
         <LegendItem
           color={COLORS.nav}
-          label="Portfolio"
+          label="Titanes (Activo)"
           value={currentNav != null ? `$${Number(currentNav).toFixed(2)}` : null}
         />
         <LegendItem
@@ -199,9 +201,9 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
           dotted
         />
         <LegendItem
-          color="rgba(255,255,255,0.2)"
-          label="Base"
-          value={`$${Number(investment).toFixed(2)}`}
+          color="rgba(255,255,255,0.25)"
+          label="Base Activa"
+          value={`$${Number(baseActive).toFixed(2)}`}
           dashed
         />
         {hoverValues?.date && (

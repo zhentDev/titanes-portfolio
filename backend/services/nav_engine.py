@@ -116,8 +116,10 @@ def calculate_nav(
         nav_series.append(
             {
                 "date": str(date_str),
-                "value": round(eod_total_value, 4),
-                "invested": round(total_invested, 4),  # Base line
+                "value": round(eod_stock_value, 4),  # Curva activa alineada con S&P500 y NASDAQ ($666.67)
+                "total_value": round(eod_total_value, 4),  # Total con cash no desplegado
+                "stock_value": round(eod_stock_value, 4),
+                "cash": round(current_cash, 4),
             }
         )
         current_value = eod_total_value
@@ -131,9 +133,10 @@ def calculate_nav(
     last_rebalance = rebalances[-1]
     active_tickers = last_rebalance["tickers"]
 
-    # Active capital deployed in equities
+    # Active capital deployed in equities (ej. $2,000 * 5/15 = $666.67)
     active_count = len([t for t in active_tickers if t in current_shares])
     active_invested = round(investment * (active_count / num_slots), 4) if num_slots > 0 else investment
+
 
     def _benchmark_series(col: str) -> list[dict]:
         if col not in prices_df.columns:
