@@ -33,10 +33,15 @@ export default function NavChart({
 
   const handleToggle = (key) => {
     toggleSeries(key);
-    if (seriesRef.current[key]) {
-      seriesRef.current[key].applyOptions({ visible: !visibleSeries[key] });
-    }
   };
+
+  // Dedicated effect to toggle line visibility without destroying the chart canvas
+  useEffect(() => {
+    if (!chartRef.current || !seriesRef.current) return;
+    Object.entries(visibleSeries || {}).forEach(([key, isVis]) => {
+      seriesRef.current[key]?.applyOptions({ visible: !!isVis });
+    });
+  }, [visibleSeries]);
 
   const initChart = useCallback(() => {
     if (!containerRef.current) return;
@@ -82,7 +87,7 @@ export default function NavChart({
       priceLineVisible: false,
       lastValueVisible: true,
       title: 'Portfolio',
-      visible: visibleSeries?.nav ?? true,
+      visible: true,
     });
 
     // S&P 500 — amber line
@@ -93,7 +98,7 @@ export default function NavChart({
       priceLineVisible: false,
       lastValueVisible: true,
       title: 'S&P 500',
-      visible: visibleSeries?.sp500 ?? true,
+      visible: true,
     });
 
     // NASDAQ — purple line
@@ -104,7 +109,7 @@ export default function NavChart({
       priceLineVisible: false,
       lastValueVisible: true,
       title: 'NASDAQ',
-      visible: visibleSeries?.nasdaq ?? true,
+      visible: true,
     });
 
     // MM20 Mid-caps ProPicks curve — emerald line
@@ -115,7 +120,7 @@ export default function NavChart({
       priceLineVisible: false,
       lastValueVisible: true,
       title: 'MM20',
-      visible: visibleSeries?.mm20 ?? true,
+      visible: true,
     });
 
     // Base investment line
@@ -126,7 +131,7 @@ export default function NavChart({
       priceLineVisible: false,
       lastValueVisible: false,
       title: 'Base',
-      visible: visibleSeries?.base ?? true,
+      visible: true,
     });
 
     // Crosshair move handler to update legend values live
@@ -156,9 +161,9 @@ export default function NavChart({
     ro.observe(containerRef.current);
 
     return () => ro.disconnect();
-  }, [visibleSeries]);
+  }, []);
 
-  // Init chart once
+  // Init chart once on component mount
   useEffect(() => {
     const cleanup = initChart();
     return () => {
