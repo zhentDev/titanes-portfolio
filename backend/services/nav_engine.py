@@ -16,9 +16,11 @@ def calculate_nav(
     prices_df: pl.DataFrame,
     investment: float = 2000.0,
     num_slots: int = 15,
+    selected_tickers: list[str] | None = None,
 ) -> dict:
     """
     Calculate portfolio NAV using DuckDB rebalance history.
+    Supports dynamic ticker selection / what-if simulations.
     """
     rebalances = get_all_rebalances()
     if not rebalances:
@@ -37,10 +39,6 @@ def calculate_nav(
     nav_series = []
 
     # Process each day in prices_df
-    # To do this efficiently in Polars, we can compute the value for each period between rebalances.
-
-    # Convert prices_df to a dictionary of {date_str: {ticker: price}} for fast row-by-row simulation
-    # since rebalances are stateful.
     # We only care about dates >= first rebalance date
     start_date_str = rebalances[0]["date"]
 
@@ -61,7 +59,6 @@ def calculate_nav(
             cash_to_add = investment if rebalance_idx == 0 else 0.0
 
             # 2. Calculate total portfolio value before rebalance
-            # Value = cash + value of all current shares
             stock_value = 0.0
             for t, shares in current_shares.items():
                 price = row.get(t)
@@ -74,12 +71,17 @@ def calculate_nav(
 
             total_portfolio_value = stock_value + current_cash + cash_to_add
 
-            # 3. Distribute equally among the new tickers
+            # 3. Distribute equally among the selected tickers
             new_tickers = next_rebalance["tickers"]
-            # Filter out tickers that don't have price data today
+            # Filter out tickers that don't have price data today OR are excluded by the user
             valid_tickers = []
             for t in new_tickers:
-                if t in row and not pl.Series([row[t]]).is_null()[0] and not str(row[t]) == "nan":
+                if (
+                    (selected_tickers is None or t in selected_tickers)
+                    and t in row
+                    and not pl.Series([row[t]]).is_null()[0]
+                    and not str(row[t]) == "nan"
+                ):
                     valid_tickers.append(t)
 
             allocated_slots = len(valid_tickers)
@@ -111,6 +113,7 @@ def calculate_nav(
             price = row.get(t)
             if price is not None and not str(price) == "nan":
                 eod_stock_value += shares * price
+
 
         eod_total_value = eod_stock_value + current_cash
         nav_series.append(
@@ -167,13 +170,14 @@ def calculate_nav(
 
     current_stock_value = 0.0
     for t in active_tickers:
+        is_selected = selected_tickers is None or t in selected_tickers
         shares = current_shares.get(t, 0.0)
         current_price = last_row.get(t, 0.0)
         if str(current_price) == "nan":
             current_price = 0.0
 
         start_price = rebalance_prices.get(t, 0.0)
-        val = shares * current_price
+        val = shares * current_price if is_selected else 0.0
         current_stock_value += val
 
         return_pct = 0.0
@@ -188,12 +192,13 @@ def calculate_nav(
                 "name": meta.get("name", t),
                 "sector": meta.get("sector", "Tecnología"),
                 "exchange": meta.get("exchange", "NASDAQ"),
-                "weight": round(slot_weight_pct, 2) if shares > 0 else 0.0,
-                "shares": round(shares, 6),
+                "weight": round(slot_weight_pct, 2) if is_selected and shares > 0 else 0.0,
+                "shares": round(shares, 6) if is_selected else 0.0,
                 "start_price": round(start_price, 4),
                 "current_price": round(current_price, 4),
                 "current_value": round(val, 4),
                 "return_pct": round(return_pct, 4),
+                "selected": is_selected,
             }
         )
 

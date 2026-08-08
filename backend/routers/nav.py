@@ -17,13 +17,19 @@ def nav_endpoint(
     num_slots: int = Query(
         default=15, ge=1, description="Fixed number of portfolio slots (default 15)"
     ),
+    selected_tickers: str = Query(
+        default=None,
+        description="Comma-separated list of active tickers to include in simulation",
+    ),
 ):
     rebalances = get_all_rebalances()
-    print(f"\n[BACKEND NAV] === Petición /api/nav (period={period}, inv={investment}) ===")
-    print(f"[BACKEND NAV] 1. Rebalanceos en DuckDB: {len(rebalances) if rebalances else 0}")
     if not rebalances:
-        print("[BACKEND NAV] ⚠️ No hay rebalanceos en DuckDB. Devolviendo arrays vacíos.")
         return calculate_nav(None, investment=investment, num_slots=num_slots)
+
+    # Parse selected tickers list
+    selected_list = None
+    if selected_tickers:
+        selected_list = [t.strip().upper() for t in selected_tickers.split(",") if t.strip()]
 
     # Collect all unique tickers ever held in the portfolio
     all_tickers = set()
@@ -31,17 +37,13 @@ def nav_endpoint(
         all_tickers.update(r["tickers"])
 
     ticker_list = list(all_tickers)
-    print(f"[BACKEND NAV] 2. Tickers del portafolio ({len(ticker_list)}): {ticker_list}")
     prices_df = get_historical_prices(ticker_list, period=period)
-    print(f"[BACKEND NAV] 3. Columnas en prices_df ({len(prices_df)} filas): {prices_df.columns}")
 
-    result = calculate_nav(prices_df, investment=investment, num_slots=num_slots)
-    sp500_res = result.get("sp500", [])
-    nasdaq_res = result.get("nasdaq", [])
-    nav_res = result.get("nav", [])
-    print(f"[BACKEND NAV] 4. Puntos calculados -> NAV: {len(nav_res)} | S&P500: {len(sp500_res)} | NASDAQ: {len(nasdaq_res)}")
-    if sp500_res:
-        print(f"[BACKEND NAV]    Muestra S&P500 (primer punto): {sp500_res[0]}")
-    else:
-        print("[BACKEND NAV] ⚠️ 'sp500' devolvió un array vacío []")
+    result = calculate_nav(
+        prices_df,
+        investment=investment,
+        num_slots=num_slots,
+        selected_tickers=selected_list,
+    )
     return result
+

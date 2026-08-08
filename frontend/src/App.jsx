@@ -15,26 +15,60 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedTickers, setSelectedTickers] = useState(null); // null = all active tickers included
 
   const loadNAV = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchNAV({ tickers, period, investment, numSlots });
+      const data = await fetchNAV({ tickers, period, investment, numSlots, selectedTickers });
       setNavData(data);
     } catch (e) {
       setError(e);
     } finally {
       setLoading(false);
     }
-  }, [tickers, period, investment, numSlots, refreshKey]);
+  }, [tickers, period, investment, numSlots, refreshKey, selectedTickers]);
 
   useEffect(() => {
     loadNAV();
   }, [loadNAV]);
 
   const summary = navData?.summary;
-  const isGain = (summary?.total_return_pct ?? 0) >= 0;
+  const holdings = navData?.holdings || [];
+  const activeHoldings = holdings.filter((h) => h.selected !== false);
+  const allTickers = holdings.map((h) => h.ticker);
+
+  // Toggle single ticker
+  const toggleTicker = (ticker) => {
+    const current = selectedTickers ?? allTickers;
+    let next;
+    if (current.includes(ticker)) {
+      if (current.length <= 1) return; // keep at least 1
+      next = current.filter((t) => t !== ticker);
+    } else {
+      next = [...current, ticker];
+    }
+    setSelectedTickers(next.length === allTickers.length ? null : next);
+  };
+
+  // Quick filter presets
+  const selectAll = () => setSelectedTickers(null);
+  const selectGainers = () => {
+    const gainers = holdings.filter((h) => (h.return_pct ?? 0) >= 0).map((h) => h.ticker);
+    if (gainers.length > 0) setSelectedTickers(gainers);
+  };
+  const selectLosers = () => {
+    const losers = holdings.filter((h) => (h.return_pct ?? 0) < 0).map((h) => h.ticker);
+    if (losers.length > 0) setSelectedTickers(losers);
+  };
+  const invertSelection = () => {
+    const current = selectedTickers ?? allTickers;
+    const inverted = allTickers.filter((t) => !current.includes(t));
+    if (inverted.length > 0) setSelectedTickers(inverted);
+  };
+
+  const isSimulating = selectedTickers !== null && selectedTickers.length < allTickers.length;
 
   return (
     <div className="app-wrapper">
@@ -82,7 +116,7 @@ export default function App() {
               return (
               <div className="summary-strip fade-up">
                 <SummaryItem
-                  label="Capital Activo (5 Acciones)"
+                  label={`Capital Activo (${summary.num_holdings} Acciones)`}
                   value={`$${activeInvested.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                   large mono
                 />
@@ -141,10 +175,71 @@ export default function App() {
               );
             })()}
 
+            {/* ── Interactive Simulation Bar (What-If Ticker Toggling) ── */}
+            {allTickers.length > 0 && (
+              <div className="simulation-bar fade-up">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: isSimulating ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>
+                    🎯 Simulación What-If:
+                  </span>
+                  {isSimulating && (
+                    <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: 4, background: 'rgba(0,229,255,0.1)', color: 'var(--accent-primary)', fontWeight: 600 }}>
+                      {activeHoldings.length} de {allTickers.length} acciones activas
+                    </span>
+                  )}
+                </div>
+
+                <div className="sim-btn-group">
+                  <button className="btn-chip" onClick={selectAll} title="Incluir todas las posiciones">
+                    ⚡ Todos
+                  </button>
+                  <button className="btn-chip" onClick={selectGainers} title="Simular solo con las acciones en ganancia">
+                    🚀 Ganadoras
+                  </button>
+                  <button className="btn-chip" onClick={selectLosers} title="Simular solo con las acciones en pérdida">
+                    🛑 Perdedoras
+                  </button>
+                  <button className="btn-chip" onClick={invertSelection} title="Invertir selección actual">
+                    🔄 Invertir
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginLeft: 'auto', alignItems: 'center' }}>
+                  {holdings.map((h) => {
+                    const isSelected = h.selected !== false;
+                    const isGain = (h.return_pct ?? 0) >= 0;
+                    return (
+                      <button
+                        key={h.ticker}
+                        className={`ticker-chip ${isSelected ? 'active' : 'inactive'}`}
+                        onClick={() => toggleTicker(h.ticker)}
+                        title={`Clic para ${isSelected ? 'excluir' : 'incluir'} ${h.name || h.ticker} de la simulación`}
+                      >
+                        <span>{isSelected ? '✓' : '＋'}</span>
+                        <span>{h.ticker}</span>
+                        {h.return_pct !== undefined && (
+                          <span style={{ fontSize: '0.65rem', opacity: 0.9, color: isGain ? 'var(--gain)' : 'var(--loss)' }}>
+                            {isGain ? '+' : ''}{h.return_pct.toFixed(1)}%
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* ── Chart card ────────────────────────────── */}
             <div className="card fade-up" style={{ animationDelay: '50ms' }}>
               <div className="chart-header">
-                <h2>Valor del Portafolio</h2>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Valor del Portafolio</h2>
+                  {isSimulating && (
+                    <span style={{ fontSize: '0.72rem', color: 'var(--accent-primary)', marginTop: 2, display: 'block' }}>
+                      ⚡ Gráfico recalculado dinámicamente para las {activeHoldings.length} acciones seleccionadas
+                    </span>
+                  )}
+                </div>
                 <div className="period-selector">
                   {PERIODS.map((p) => (
                     <button
@@ -161,7 +256,7 @@ export default function App() {
               {loading ? (
                 <div className="chart-loading">
                   <div className="spinner" />
-                  <span>Descargando datos de Yahoo Finance…</span>
+                  <span>Calculando simulación interactiva…</span>
                 </div>
               ) : error ? (
                 <div className="chart-error" style={{ textAlign: 'left', padding: '24px 28px', background: 'rgba(239, 68, 68, 0.04)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 'var(--radius)' }}>
@@ -210,6 +305,7 @@ export default function App() {
                     holdings={navData.holdings}
                     investment={investment}
                     numSlots={numSlots}
+                    onToggleTicker={toggleTicker}
                   />
                 ) : loading ? (
                   <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
@@ -247,3 +343,4 @@ function SummaryItem({ label, value, mono, large, muted }) {
     </div>
   );
 }
+

@@ -41,16 +41,16 @@ async function fetchWithTimeout(url, options = {}) {
 }
 
 /** GET /api/nav */
-export async function fetchNAV({ period, investment, numSlots }) {
+export async function fetchNAV({ period, investment, numSlots, selectedTickers }) {
   const params = new URLSearchParams({
     period,
     investment: String(investment),
     num_slots: String(numSlots),
   });
+  if (selectedTickers && selectedTickers.length > 0) {
+    params.set('selected_tickers', selectedTickers.join(','));
+  }
   const data = await fetchWithTimeout(`${BASE}/nav?${params}`);
-  console.log('[FRONTEND API /nav] Respuesta completa del Backend:', data);
-  console.log('[FRONTEND API /nav] Puntos SP500 recibidos:', data?.sp500?.length, data?.sp500);
-  console.log('[FRONTEND API /nav] Puntos NASDAQ recibidos:', data?.nasdaq?.length, data?.nasdaq);
   return data;
 }
 
