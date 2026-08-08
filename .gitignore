@@ -1,0 +1,18 @@
+# Node
+frontend/node_modules/
+frontend/dist/
+.DS_Store
+
+# Python
+backend/.venv/
+backend/__pycache__/
+backend/*.pyc
+backend/.pytest_cache/
+
+# Database
+# Ignoramos la base de datos local para que la otra máquina inicie limpia (opcional, si quieres migrar los datos puedes quitar esta línea)
+backend/titanes.duckdb
+backend/titanes.duckdb.wal
+
+# Environment
+.env

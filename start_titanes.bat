@@ -1,0 +1,13 @@
+@echo off
+echo Iniciando Servidores de Titanes...
+
+echo Levantiendo Backend (FastAPI)...
+start cmd /k "cd backend && uv run uvicorn main:app --reload --port 8000"
+
+echo Esperando 3 segundos...
+timeout /t 3 /nobreak >nul
+
+echo Levantiendo Frontend (Vite/React)...
+start cmd /k "cd frontend && npm run dev"
+
+echo Listo! Puedes minimizar esta ventana.

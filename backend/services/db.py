@@ -1,0 +1,69 @@
+import duckdb
+from datetime import date
+from typing import List, Dict
+
+DB_PATH = "titanes.duckdb"
+
+def get_connection():
+    return duckdb.connect(DB_PATH)
+
+def init_db():
+    with get_connection() as con:
+        # Table to store rebalance events
+        con.execute("""
+            CREATE TABLE IF NOT EXISTS rebalances (
+                rebalance_date DATE PRIMARY KEY,
+                cash_added DOUBLE
+            )
+        """)
+        # Table to store the 15 tickers for each rebalance event
+        con.execute("""
+            CREATE TABLE IF NOT EXISTS rebalance_tickers (
+                rebalance_date DATE,
+                ticker VARCHAR,
+                FOREIGN KEY (rebalance_date) REFERENCES rebalances(rebalance_date)
+            )
+        """)
+
+def add_rebalance(rebalance_date: date, cash_added: float, tickers: List[str]):
+    with get_connection() as con:
+        # Upsert rebalance event
+        con.execute("""
+            INSERT INTO rebalances (rebalance_date, cash_added) 
+            VALUES (?, ?)
+            ON CONFLICT (rebalance_date) DO UPDATE SET cash_added = EXCLUDED.cash_added
+        """, [rebalance_date, cash_added])
+        
+        # Delete old tickers for this date if overwriting
+        con.execute("DELETE FROM rebalance_tickers WHERE rebalance_date = ?", [rebalance_date])
+        
+        # Insert new tickers
+        for ticker in tickers:
+            con.execute("INSERT INTO rebalance_tickers (rebalance_date, ticker) VALUES (?, ?)", [rebalance_date, ticker])
+
+def get_all_rebalances() -> List[Dict]:
+    with get_connection() as con:
+        results = con.execute("""
+            SELECT r.rebalance_date, r.cash_added, list(t.ticker) as tickers
+            FROM rebalances r
+            LEFT JOIN rebalance_tickers t ON r.rebalance_date = t.rebalance_date
+            GROUP BY r.rebalance_date, r.cash_added
+            ORDER BY r.rebalance_date ASC
+        """).fetchall()
+        
+        rebalances = []
+        for row in results:
+            rebalances.append({
+                "date": row[0].isoformat(),
+                "cash_added": row[1],
+                "tickers": row[2]
+            })
+        return rebalances
+
+def delete_rebalance(rebalance_date: date):
+    with get_connection() as con:
+        con.execute("DELETE FROM rebalance_tickers WHERE rebalance_date = ?", [rebalance_date])
+        con.execute("DELETE FROM rebalances WHERE rebalance_date = ?", [rebalance_date])
+
+# Initialize the database when the module is imported
+init_db()
