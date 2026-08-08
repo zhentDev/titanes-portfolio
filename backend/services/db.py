@@ -26,6 +26,29 @@ def init_db():
                 FOREIGN KEY (rebalance_date) REFERENCES rebalances(rebalance_date)
             )
         """)
+        
+        # New tables for Individual Purchases
+        con.execute("""
+            CREATE TABLE IF NOT EXISTS purchase_portfolios (
+                id VARCHAR PRIMARY KEY,
+                name VARCHAR,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        con.execute("""
+            CREATE TABLE IF NOT EXISTS individual_purchases (
+                id VARCHAR PRIMARY KEY,
+                portfolio_id VARCHAR,
+                ticker VARCHAR,
+                date DATE,
+                purchase_price DOUBLE,
+                shares DOUBLE,
+                manual_current_price DOUBLE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (portfolio_id) REFERENCES purchase_portfolios(id)
+            )
+        """)
 
 
 def add_rebalance(rebalance_date: date, cash_added: float, tickers: list[str]):

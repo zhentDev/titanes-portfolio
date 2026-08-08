@@ -43,7 +43,7 @@ def indices_history(start_date: str = Query("2020-01-01", description="Start dat
     Returns daily historical prices for S&P 500 and NASDAQ from start_date to today.
     """
     from services.market_data import get_historical_prices
-    df = get_historical_prices(["^GSPC", "^IXIC"], period="MAX")
+    df = get_historical_prices(["^GSPC", "^IXIC"], period="MAX", include_benchmarks=False)
     df_pd = df.to_pandas()
     df_pd["date_str"] = df_pd["date"].astype(str).str[:10]
     df_pd = df_pd[df_pd["date_str"] >= start_date]

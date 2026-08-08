@@ -4,7 +4,7 @@
  */
 
 const BASE = 'http://localhost:8000/api';
-const TIMEOUT_MS = 5000; // 5 seconds before checking static fallback
+const TIMEOUT_MS = 15000; // 15 seconds before checking static fallback
 
 // Helper to get relative static data path on GitHub Pages
 function getStaticDataPath(file) {
@@ -155,6 +155,59 @@ export async function deleteRebalance(date) {
     method: 'DELETE',
   });
   if (!res.ok) throw new Error('Error al eliminar rebalanceo');
+  return res.json();
+}
+
+/** PURCHASES API */
+export async function fetchPurchasesData() {
+  const res = await fetch(`${BASE}/purchases/data`);
+  if (!res.ok) throw new Error('Error fetching purchases data');
+  return res.json();
+}
+
+export async function createPurchasePortfolio(id, name) {
+  const res = await fetch(`${BASE}/purchases/portfolios`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, name }),
+  });
+  return res.json();
+}
+
+export async function deletePurchasePortfolioApi(id) {
+  const res = await fetch(`${BASE}/purchases/portfolios/${id}`, { method: 'DELETE' });
+  return res.json();
+}
+
+export async function createPurchaseLot(lot) {
+  const res = await fetch(`${BASE}/purchases/lots`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(lot),
+  });
+  return res.json();
+}
+
+export async function updatePurchaseLots(lots) {
+  const res = await fetch(`${BASE}/purchases/lots`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(lots),
+  });
+  return res.json();
+}
+
+export async function deletePurchaseLot(id) {
+  const res = await fetch(`${BASE}/purchases/lots/${id}`, { method: 'DELETE' });
+  return res.json();
+}
+
+export async function syncPurchasesMigration(purchasePortfolios, individualPurchases) {
+  const res = await fetch(`${BASE}/purchases/sync`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ purchasePortfolios, individualPurchases }),
+  });
   return res.json();
 }
 
