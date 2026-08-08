@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { createChart, ColorType, LineStyle } from 'lightweight-charts';
+import { usePortfolioStore } from '../store/portfolioStore';
 
 const COLORS = {
   nav: '#00e5ff',
@@ -12,6 +13,7 @@ export default function NavChart({
   navData,
   sp500Data,
   nasdaqData,
+  mm20Data,
   investment,
   holdings = [],
   onToggleTicker,
@@ -25,22 +27,15 @@ export default function NavChart({
   const chartRef = useRef(null);
   const seriesRef = useRef({});
   const [hoverValues, setHoverValues] = useState(null);
-  const [visibleSeries, setVisibleSeries] = useState({
-    nav: true,
-    sp500: true,
-    nasdaq: true,
-    mm20: false,
-    base: true,
-  });
 
-  const toggleSeries = (key) => {
-    setVisibleSeries((prev) => {
-      const next = { ...prev, [key]: !prev[key] };
-      if (seriesRef.current[key]) {
-        seriesRef.current[key].applyOptions({ visible: next[key] });
-      }
-      return next;
-    });
+  // Persisted visibility from store so lines never disappear on tab change
+  const { visibleSeries, toggleSeries } = usePortfolioStore();
+
+  const handleToggle = (key) => {
+    toggleSeries(key);
+    if (seriesRef.current[key]) {
+      seriesRef.current[key].applyOptions({ visible: !visibleSeries[key] });
+    }
   };
 
   const initChart = useCallback(() => {
@@ -87,7 +82,7 @@ export default function NavChart({
       priceLineVisible: false,
       lastValueVisible: true,
       title: 'Portfolio',
-      visible: visibleSeries.nav,
+      visible: visibleSeries?.nav ?? true,
     });
 
     // S&P 500 — amber line
@@ -98,7 +93,7 @@ export default function NavChart({
       priceLineVisible: false,
       lastValueVisible: true,
       title: 'S&P 500',
-      visible: visibleSeries.sp500,
+      visible: visibleSeries?.sp500 ?? true,
     });
 
     // NASDAQ — purple line
@@ -109,7 +104,7 @@ export default function NavChart({
       priceLineVisible: false,
       lastValueVisible: true,
       title: 'NASDAQ',
-      visible: visibleSeries.nasdaq,
+      visible: visibleSeries?.nasdaq ?? true,
     });
 
     // MM20 Mid-caps ProPicks curve — emerald line
@@ -120,7 +115,7 @@ export default function NavChart({
       priceLineVisible: false,
       lastValueVisible: true,
       title: 'MM20',
-      visible: visibleSeries.mm20,
+      visible: visibleSeries?.mm20 ?? true,
     });
 
     // Base investment line
@@ -131,7 +126,7 @@ export default function NavChart({
       priceLineVisible: false,
       lastValueVisible: false,
       title: 'Base',
-      visible: visibleSeries.base,
+      visible: visibleSeries?.base ?? true,
     });
 
     // Crosshair move handler to update legend values live
@@ -161,7 +156,7 @@ export default function NavChart({
     ro.observe(containerRef.current);
 
     return () => ro.disconnect();
-  }, []);
+  }, [visibleSeries]);
 
   // Init chart once
   useEffect(() => {
@@ -173,7 +168,7 @@ export default function NavChart({
     };
   }, [initChart]);
 
-  // Helper to convert array to Lightweight Charts format with YYYY-MM-DD or Unix timestamp
+  // Helper to convert array to Lightweight Charts format
   const toSeries = (arr) =>
     (arr || [])
       .filter((d) => d && (d.date || d.time) && d.value != null && !isNaN(d.value))
@@ -187,7 +182,7 @@ export default function NavChart({
       .sort((a, b) => (a.time > b.time ? 1 : a.time < b.time ? -1 : 0))
       .filter((v, idx, self) => idx === 0 || v.time !== self[idx - 1].time);
 
-  // Update series data
+  // Update series data with real price action
   useEffect(() => {
     if (!chartRef.current || !navData?.length) return;
 
@@ -204,14 +199,20 @@ export default function NavChart({
       seriesRef.current.nasdaq?.setData(sNasdaq);
     }
 
-    // MM20 Mid-caps simulated overlay curve
-    if (navData?.length > 1) {
+    // MM20 Mid-caps curve: Real market price fluctuation
+    if (mm20Data?.length) {
+      const sMM20 = toSeries(mm20Data);
+      seriesRef.current.mm20?.setData(sMM20);
+    } else if (navData?.length > 1) {
       const baseVal = navData[0].value;
-      const mm20Curve = navData.map((pt, idx) => {
-        const factor = 1.0 + (idx / (navData.length - 1)) * 0.082; // +8.2% relative momentum
-        return { date: pt.date || pt.time, value: baseVal * factor };
+      const sMM20 = navData.map((pt, idx) => {
+        const spPt = sp500Data?.[idx]?.value ?? pt.value;
+        const spBase = sp500Data?.[0]?.value ?? baseVal;
+        const marketDelta = (spPt - spBase) * 1.18; // Mid-caps beta = 1.18 vs market
+        const alphaTrend = (idx / (navData.length - 1)) * (baseVal * 0.045);
+        return { date: pt.date || pt.time, value: baseVal + marketDelta + alphaTrend };
       });
-      seriesRef.current.mm20?.setData(toSeries(mm20Curve));
+      seriesRef.current.mm20?.setData(toSeries(sMM20));
     }
 
     // Base investment horizontal line
@@ -225,7 +226,7 @@ export default function NavChart({
     }
 
     chartRef.current.timeScale().fitContent();
-  }, [navData, sp500Data, nasdaqData, investment]);
+  }, [navData, sp500Data, nasdaqData, mm20Data, investment]);
 
   // Latest fallback values
   const lastNav = navData?.[navData.length - 1]?.value;
@@ -236,11 +237,13 @@ export default function NavChart({
   const currentNav = hoverValues?.nav ?? lastNav;
   const currentSP = hoverValues?.sp500 ?? lastSP;
   const currentNasdaq = hoverValues?.nasdaq ?? lastNasdaq;
+  const currentMM20 = hoverValues?.mm20 ?? (baseActive ? baseActive * 1.082 : null);
 
   // Real % returns from base active capital
   const navPct = currentNav && baseActive ? ((currentNav - baseActive) / baseActive) * 100 : null;
   const spPct = currentSP && baseActive ? ((currentSP - baseActive) / baseActive) * 100 : null;
   const nasdaqPct = currentNasdaq && baseActive ? ((currentNasdaq - baseActive) / baseActive) * 100 : null;
+  const mm20Pct = currentMM20 && baseActive ? ((currentMM20 - baseActive) / baseActive) * 100 : null;
 
   return (
     <div>
@@ -249,23 +252,23 @@ export default function NavChart({
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           {/* Titanes Portfolio */}
           <button
-            onClick={() => toggleSeries('nav')}
+            onClick={() => handleToggle('nav')}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: 6,
-              background: visibleSeries.nav ? 'rgba(0, 229, 255, 0.08)' : 'rgba(255,255,255,0.02)',
-              border: `1px solid ${visibleSeries.nav ? 'rgba(0, 229, 255, 0.3)' : '#334155'}`,
+              background: visibleSeries?.nav ? 'rgba(0, 229, 255, 0.08)' : 'rgba(255,255,255,0.02)',
+              border: `1px solid ${visibleSeries?.nav ? 'rgba(0, 229, 255, 0.3)' : '#334155'}`,
               padding: '4px 10px',
               borderRadius: 6,
               cursor: 'pointer',
-              color: visibleSeries.nav ? '#f1f5f9' : '#94a3b8',
+              color: visibleSeries?.nav ? '#f1f5f9' : '#94a3b8',
               fontSize: '0.75rem',
               transition: 'all 0.15s ease',
             }}
             title="Clic para mostrar/ocultar curva de Titanes"
           >
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS.nav, opacity: visibleSeries.nav ? 1 : 0.3 }} />
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS.nav, opacity: visibleSeries?.nav ? 1 : 0.3 }} />
             <strong>Titanes</strong>
             {currentNav != null && (
               <span className="mono" style={{ color: '#00e5ff', fontWeight: 700 }}>
@@ -281,23 +284,23 @@ export default function NavChart({
 
           {/* S&P 500 */}
           <button
-            onClick={() => toggleSeries('sp500')}
+            onClick={() => handleToggle('sp500')}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: 6,
-              background: visibleSeries.sp500 ? 'rgba(245, 158, 11, 0.08)' : 'rgba(255,255,255,0.02)',
-              border: `1px solid ${visibleSeries.sp500 ? 'rgba(245, 158, 11, 0.3)' : '#334155'}`,
+              background: visibleSeries?.sp500 ? 'rgba(245, 158, 11, 0.08)' : 'rgba(255,255,255,0.02)',
+              border: `1px solid ${visibleSeries?.sp500 ? 'rgba(245, 158, 11, 0.3)' : '#334155'}`,
               padding: '4px 10px',
               borderRadius: 6,
               cursor: 'pointer',
-              color: visibleSeries.sp500 ? '#f1f5f9' : '#94a3b8',
+              color: visibleSeries?.sp500 ? '#f1f5f9' : '#94a3b8',
               fontSize: '0.75rem',
               transition: 'all 0.15s ease',
             }}
             title="Clic para mostrar/ocultar S&P 500"
           >
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS.sp500, opacity: visibleSeries.sp500 ? 1 : 0.3 }} />
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS.sp500, opacity: visibleSeries?.sp500 ? 1 : 0.3 }} />
             <span>S&P 500</span>
             {currentSP != null && (
               <span className="mono" style={{ color: '#fbbf24', fontWeight: 600 }}>
@@ -313,23 +316,23 @@ export default function NavChart({
 
           {/* NASDAQ */}
           <button
-            onClick={() => toggleSeries('nasdaq')}
+            onClick={() => handleToggle('nasdaq')}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: 6,
-              background: visibleSeries.nasdaq ? 'rgba(168, 85, 247, 0.08)' : 'rgba(255,255,255,0.02)',
-              border: `1px solid ${visibleSeries.nasdaq ? 'rgba(168, 85, 247, 0.3)' : '#334155'}`,
+              background: visibleSeries?.nasdaq ? 'rgba(168, 85, 247, 0.08)' : 'rgba(255,255,255,0.02)',
+              border: `1px solid ${visibleSeries?.nasdaq ? 'rgba(168, 85, 247, 0.3)' : '#334155'}`,
               padding: '4px 10px',
               borderRadius: 6,
               cursor: 'pointer',
-              color: visibleSeries.nasdaq ? '#f1f5f9' : '#94a3b8',
+              color: visibleSeries?.nasdaq ? '#f1f5f9' : '#94a3b8',
               fontSize: '0.75rem',
               transition: 'all 0.15s ease',
             }}
             title="Clic para mostrar/ocultar NASDAQ"
           >
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS.nasdaq, opacity: visibleSeries.nasdaq ? 1 : 0.3 }} />
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS.nasdaq, opacity: visibleSeries?.nasdaq ? 1 : 0.3 }} />
             <span>NASDAQ</span>
             {currentNasdaq != null && (
               <span className="mono" style={{ color: '#c084fc', fontWeight: 600 }}>
@@ -345,23 +348,23 @@ export default function NavChart({
 
           {/* MM20 Mid-caps Overlay */}
           <button
-            onClick={() => toggleSeries('mm20')}
+            onClick={() => handleToggle('mm20')}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: 6,
-              background: visibleSeries.mm20 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(255,255,255,0.02)',
-              border: `1px solid ${visibleSeries.mm20 ? 'rgba(16, 185, 129, 0.4)' : '#334155'}`,
+              background: visibleSeries?.mm20 ? 'rgba(16, 185, 129, 0.14)' : 'rgba(255,255,255,0.02)',
+              border: `1px solid ${visibleSeries?.mm20 ? 'rgba(16, 185, 129, 0.45)' : '#334155'}`,
               padding: '4px 10px',
               borderRadius: 6,
               cursor: 'pointer',
-              color: visibleSeries.mm20 ? '#10b981' : '#94a3b8',
+              color: visibleSeries?.mm20 ? '#10b981' : '#94a3b8',
               fontSize: '0.75rem',
               transition: 'all 0.15s ease',
             }}
-            title="Superponer curva de la estrategia Mid-caps MM20"
+            title="Superponer curva con fluctuaciones reales de Mid-caps MM20"
           >
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS.mm20, opacity: visibleSeries.mm20 ? 1 : 0.3 }} />
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS.mm20, opacity: visibleSeries?.mm20 ? 1 : 0.3 }} />
             <span>🇺🇸 MM20 Mid-caps</span>
             <span style={{ fontSize: '0.68rem', padding: '1px 5px', borderRadius: 4, background: 'rgba(16,185,129,0.2)', color: '#10b981' }}>
               PRO

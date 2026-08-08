@@ -1,6 +1,6 @@
 /**
  * Zustand store — portfolio state.
- * Persists to localStorage so the user's ticker list survives page refreshes.
+ * Persists to localStorage so the user's ticker list and chart settings survive page refreshes and tab switches.
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -19,7 +19,14 @@ export const usePortfolioStore = create(
       investment: 2000,
       period: '1Y',
       numSlots: 15,          // fixed denominator — weight = 1/15 per ticker
-      mode: 'historical',    // 'historical' | 'live'
+      mode: 'historical',    // 'historical' | 'midcaps' | 'live'
+      visibleSeries: {
+        nav: true,
+        sp500: true,
+        nasdaq: true,
+        mm20: true,
+        base: true,
+      },
 
       // ── Actions ──────────────────────────────────────
       addTicker: (ticker) => {
@@ -39,8 +46,21 @@ export const usePortfolioStore = create(
 
       setMode: (mode) => set({ mode }),
 
+      toggleSeries: (key) =>
+        set((s) => ({
+          visibleSeries: {
+            ...s.visibleSeries,
+            [key]: !s.visibleSeries[key],
+          },
+        })),
+
       resetToDefaults: () =>
-        set({ tickers: DEFAULT_TICKERS, investment: 2000, period: '1Y' }),
+        set({
+          tickers: DEFAULT_TICKERS,
+          investment: 2000,
+          period: '1Y',
+          visibleSeries: { nav: true, sp500: true, nasdaq: true, mm20: true, base: true },
+        }),
     }),
     {
       name: 'titanes-portfolio',
@@ -49,7 +69,10 @@ export const usePortfolioStore = create(
         investment: s.investment,
         period: s.period,
         numSlots: s.numSlots,
+        mode: s.mode,
+        visibleSeries: s.visibleSeries,
       }),
     }
   )
 );
+

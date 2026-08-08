@@ -31,9 +31,9 @@ DEFAULT_TICKERS: list[str] = [
     "KD",
     "ARM",
 ]
-BENCHMARKS: list[str] = ["^GSPC", "^IXIC"]
+BENCHMARKS: list[str] = ["^GSPC", "^IXIC", "IJH", "^MID"]
 
-# Catálogo oficial de metadatos para Titanes Tecnológicos y acciones líderes
+# Catálogo oficial de metadatos para Titanes Tecnológicos y acciones de MM20
 TICKER_METADATA: dict[str, dict[str, str]] = {
     "AMD": {"name": "Advanced Micro Devices, Inc.", "sector": "Semiconductores & GPUs", "exchange": "NASDAQ"},
     "AMAT": {"name": "Applied Materials, Inc.", "sector": "Equipamiento de Semiconductores", "exchange": "NASDAQ"},
@@ -49,14 +49,17 @@ TICKER_METADATA: dict[str, dict[str, str]] = {
     "NTAP": {"name": "NetApp, Inc.", "sector": "Almacenamiento Híbrido & Nube", "exchange": "NASDAQ"},
     "KD": {"name": "Kyndryl Holdings, Inc.", "sector": "Infraestructura TI & Servicios", "exchange": "NYSE"},
     "ARM": {"name": "Arm Holdings plc", "sector": "Arquitectura de Microchips", "exchange": "NASDAQ"},
-    "NVDA": {"name": "NVIDIA Corporation", "sector": "IA, Computación & GPUs", "exchange": "NASDAQ"},
-    "MSFT": {"name": "Microsoft Corporation", "sector": "Software, Nube & IA", "exchange": "NASDAQ"},
-    "AAPL": {"name": "Apple Inc.", "sector": "Electrónica & Ecosistema", "exchange": "NASDAQ"},
-    "GOOGL": {"name": "Alphabet Inc.", "sector": "Búsqueda, Nube & IA", "exchange": "NASDAQ"},
-    "META": {"name": "Meta Platforms, Inc.", "sector": "Redes Sociales & Metaverso", "exchange": "NASDAQ"},
-    "TSM": {"name": "Taiwan Semiconductor Mfg.", "sector": "Fundición Global de Chips", "exchange": "NYSE"},
-    "AVGO": {"name": "Broadcom Inc.", "sector": "Semiconductores & Software", "exchange": "NASDAQ"},
-    "ASML": {"name": "ASML Holding N.V.", "sector": "Litografía EUV", "exchange": "NASDAQ"},
+    # Mid-caps MM20
+    "ARLP": {"name": "Alliance Resource Partners", "sector": "Energía / Carbón", "exchange": "NASDAQ"},
+    "ACLS": {"name": "Axcelis Technologies", "sector": "Semiconductores", "exchange": "NASDAQ"},
+    "BHC": {"name": "Bausch Health", "sector": "Salud / Farmacéutica", "exchange": "NYSE"},
+    "DIOD": {"name": "Diodes Inc", "sector": "Semiconductores", "exchange": "NASDAQ"},
+    "HAE": {"name": "Haemonetics Corp", "sector": "Dispositivos Médicos", "exchange": "NYSE"},
+    "NSIT": {"name": "Insight Enterprises", "sector": "Soluciones IT & Cloud", "exchange": "NASDAQ"},
+    "VECO": {"name": "Veeco Instruments", "sector": "Equipamiento de Chips", "exchange": "NASDAQ"},
+    "OSK": {"name": "Oshkosh Corp", "sector": "Maquinaria Industrial", "exchange": "NYSE"},
+    "SM": {"name": "SM Energy", "sector": "Petróleo & Gas", "exchange": "NYSE"},
+    "IJH": {"name": "iShares Core S&P Mid-Cap ETF", "sector": "Benchmark S&P MidCap 400", "exchange": "NYSE"},
 }
 
 

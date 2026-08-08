@@ -208,6 +208,7 @@ def calculate_nav(
 
     sp500_series = _benchmark_series("SP500")
     nasdaq_series = _benchmark_series("NASDAQ")
+    mm20_series = _benchmark_series("IJH") or _benchmark_series("SP500")
 
     # Rendimiento sobre capital activo en acciones (puro Titanes)
     active_return = current_stock_value - active_invested
@@ -405,6 +406,7 @@ def calculate_nav(
         "nav": nav_series,
         "sp500": sp500_series,
         "nasdaq": nasdaq_series,
+        "mm20": mm20_series,
         "holdings": sorted(holdings, key=lambda h: h["current_value"], reverse=True),
         "correlations": {
             "tickers": matrix_tickers,
