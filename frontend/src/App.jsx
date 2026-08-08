@@ -6,6 +6,9 @@ import RebalanceManager from './components/RebalanceManager';
 import QuantitativeCard from './components/QuantitativeCard';
 import SectorAllocation from './components/SectorAllocation';
 import RebalanceTimer from './components/RebalanceTimer';
+import MonteCarloCard from './components/MonteCarloCard';
+import CorrelationHeatmap from './components/CorrelationHeatmap';
+import QuantRadar from './components/QuantRadar';
 import { exportPortfolioCSV } from './utils/exportReport';
 import { usePortfolioStore } from './store/portfolioStore';
 import { fetchNAV } from './api/client';
@@ -352,6 +355,35 @@ export default function App() {
               )}
             </div>
 
+            {/* ── Quantitative Intelligence & Allocation Grid ── */}
+            {summary && !loading && (
+              <>
+                {/* Row 1: Institutional Quant Suite, 360 Radar & Sector Allocation */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '20px' }}>
+                  <QuantitativeCard summary={summary} />
+                  <QuantRadar radar={navData?.radar} />
+                  <SectorAllocation
+                    holdings={navData?.holdings}
+                    investment={investment}
+                    numSlots={numSlots}
+                  />
+                </div>
+
+                {/* Row 2: Monte Carlo Simulation & Correlation Heatmap & Rebalance Timer */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '20px' }}>
+                  <MonteCarloCard
+                    monteCarlo={navData?.monte_carlo}
+                    activeInvested={summary.active_invested}
+                  />
+                  <CorrelationHeatmap correlations={navData?.correlations} />
+                  <RebalanceTimer
+                    rebalances={navData?.rebalances}
+                    holdings={navData?.holdings}
+                  />
+                </div>
+              </>
+            )}
+
             {/* ── Bottom grid ───────────────────────────── */}
             <div className="bottom-grid">
               {/* Holdings table */}
@@ -377,22 +409,6 @@ export default function App() {
                 <RebalanceManager onRefresh={() => setRefreshKey((k) => k + 1)} />
               </div>
             </div>
-
-            {/* ── Quantitative Intelligence & Allocation Grid ── */}
-            {summary && !loading && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '20px' }}>
-                <QuantitativeCard summary={summary} />
-                <SectorAllocation
-                  holdings={navData?.holdings}
-                  investment={investment}
-                  numSlots={numSlots}
-                />
-                <RebalanceTimer
-                  rebalances={navData?.rebalances}
-                  holdings={navData?.holdings}
-                />
-              </div>
-            )}
 
           </>
         )}
