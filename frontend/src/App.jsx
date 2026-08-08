@@ -23,7 +23,7 @@ export default function App() {
       const data = await fetchNAV({ tickers, period, investment, numSlots });
       setNavData(data);
     } catch (e) {
-      setError(e.message);
+      setError(e);
     } finally {
       setLoading(false);
     }
@@ -164,16 +164,32 @@ export default function App() {
                   <span>Descargando datos de Yahoo Finance…</span>
                 </div>
               ) : error ? (
-                <div className="chart-error" style={{ textAlign: 'left', padding: '20px 40px', lineHeight: '1.6' }}>
-                  <div style={{ fontSize: '1.2rem', marginBottom: 12, fontWeight: 'bold' }}>⚠️ {error}</div>
-                  <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                    <strong>Soluciones comunes:</strong>
-                    <ul style={{ marginTop: 8, paddingLeft: 24, listStyleType: 'disc' }}>
-                      <li>Asegúrate de haber ejecutado <code>start_titanes.bat</code> para encender el backend.</li>
-                      <li>Revisa que el programa <strong>DBeaver</strong> no esté abierto bloqueando la base de datos DuckDB. Si lo está, dale clic derecho a la conexión y selecciona "Desconectar".</li>
-                      <li>Verifica si el puerto 8000 ya está siendo usado por otro programa (o si hay dos consolas abiertas intentando correr el backend al mismo tiempo).</li>
-                    </ul>
-                  </div>
+                <div className="chart-error" style={{ textAlign: 'left', padding: '24px 28px', background: 'rgba(239, 68, 68, 0.04)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 'var(--radius)' }}>
+                  {error.backendError ? (
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                        <span style={{ padding: '3px 8px', borderRadius: 4, background: '#ef4444', color: '#fff', fontSize: '0.75rem', fontWeight: 700 }}>
+                          {error.backendError.error_type || 'Python Error'}
+                        </span>
+                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.85rem', color: '#fca5a5' }}>
+                          {error.backendError.file}:{error.backendError.line}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '1rem', fontWeight: 600, color: '#fee2e2', marginBottom: 12 }}>
+                        {error.backendError.message}
+                      </div>
+                      {error.backendError.code && (
+                        <div style={{ background: 'rgba(0,0,0,0.5)', padding: '12px 16px', borderRadius: 6, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.82rem', color: '#fecaca', borderLeft: '3px solid #ef4444' }}>
+                          <span style={{ color: '#94a3b8', marginRight: 14 }}>Línea {error.backendError.line}</span>
+                          <code>{error.backendError.code}</code>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ color: '#fca5a5', fontSize: '0.95rem' }}>
+                      ⚠️ {error.message || String(error)}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <NavChart

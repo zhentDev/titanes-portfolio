@@ -5,20 +5,34 @@
 const BASE = 'http://localhost:8000/api';
 const TIMEOUT_MS = 30_000; // 30 seconds
 
-/** Fetch with timeout */
 async function fetchWithTimeout(url, options = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
     const res = await fetch(url, { ...options, signal: controller.signal });
-    if (!res.ok) throw new Error(`Error ${res.status} — ¿está corriendo el backend en localhost:8000?`);
+    if (!res.ok) {
+      let errorData;
+      try {
+        errorData = await res.json();
+      } catch {
+        errorData = null;
+      }
+      const err = new Error(errorData?.message || `Error ${res.status} en backend`);
+      err.backendError = errorData;
+      err.status = res.status;
+      throw err;
+    }
     return res.json();
   } catch (err) {
     if (err.name === 'AbortError') {
-      throw new Error('Timeout (30s) — el backend no respondió. Ejecuta: uv run uvicorn main:app --reload');
+      const e = new Error('Timeout (30s) — el backend tardó demasiado en responder.');
+      e.isConnectionError = true;
+      throw e;
     }
     if (err.message.includes('Failed to fetch') || err.message.includes('fetch')) {
-      throw new Error('No se pudo conectar al servidor. El backend está apagado o colapsó (Ej. DBeaver bloqueando la Base de Datos).');
+      const e = new Error('No se pudo conectar al servidor en localhost:8000. Verifica que el backend esté encendido.');
+      e.isConnectionError = true;
+      throw e;
     }
     throw err;
   } finally {

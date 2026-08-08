@@ -237,7 +237,7 @@ def calculate_nav(
         "nasdaq": nasdaq_series,
         "holdings": sorted(holdings, key=lambda h: h["current_value"], reverse=True),
         "summary": {
-            "start_value": round(initial_invested, 2),
+            "start_value": round(investment, 2),
             "end_value": round(current_value, 2),
             "invested_value": round(total_invested, 2),
             "active_invested": round(active_invested, 2),
