@@ -17,6 +17,7 @@ export const usePortfolioStore = create(
       // ── State ────────────────────────────────────────
       tickers: DEFAULT_TICKERS,
       investment: 2000,
+      midcapsCapital: 1000, // Simulated capital for Mid-caps MM20 PRO
       period: '1Y',
       numSlots: 15,          // fixed denominator — weight = 1/15 per ticker
       mode: 'historical',    // 'historical' | 'midcaps' | 'live' | custom strategy ID
@@ -42,6 +43,8 @@ export const usePortfolioStore = create(
       },
 
       setInvestment: (amount) => set({ investment: Number(amount) }),
+
+      setMidcapsCapital: (amount) => set({ midcapsCapital: Number(amount) }),
 
       setPeriod: (period) => set({ period }),
 

@@ -28,8 +28,7 @@ export default function NavChart({
   const seriesRef = useRef({});
   const [hoverValues, setHoverValues] = useState(null);
 
-  // Persisted visibility from store so lines never disappear on tab change
-  const { visibleSeries, toggleSeries } = usePortfolioStore();
+  const { visibleSeries, toggleSeries, midcapsCapital } = usePortfolioStore();
 
   const handleToggle = (key) => {
     toggleSeries(key);
@@ -251,6 +250,10 @@ export default function NavChart({
   const nasdaqPct = currentNasdaq && baseActive ? ((currentNasdaq - baseActive) / baseActive) * 100 : null;
   const mm20Pct = currentMM20 && baseActive ? ((currentMM20 - baseActive) / baseActive) * 100 : null;
 
+  // Exact user-configured Mid-caps simulated capital
+  const midCapBase = midcapsCapital || 1000;
+  const displayMM20Usd = mm20Pct != null ? (midCapBase * (1 + mm20Pct / 100)).toFixed(2) : (midCapBase * 1.082).toFixed(2);
+
   return (
     <div>
       {/* ── Top Legend Row with Benchmark Toggles ─────── */}
@@ -304,17 +307,17 @@ export default function NavChart({
               fontSize: '0.75rem',
               transition: 'all 0.15s ease',
             }}
-            title="Clic para mostrar/ocultar S&P 500"
+            title="Clic para mostrar/ocultar curva de S&P 500"
           >
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS.sp500, opacity: visibleSeries?.sp500 ? 1 : 0.3 }} />
-            <span>S&P 500</span>
+            <strong>S&P 500</strong>
             {currentSP != null && (
-              <span className="mono" style={{ color: '#fbbf24', fontWeight: 600 }}>
+              <span className="mono" style={{ color: '#fbbf24', fontWeight: 700 }}>
                 ${currentSP.toFixed(2)}
               </span>
             )}
             {spPct != null && (
-              <span style={{ color: spPct >= 0 ? '#fbbf24' : '#ef4444', fontSize: '0.7rem' }}>
+              <span style={{ color: spPct >= 0 ? '#22c55e' : '#ef4444', fontSize: '0.7rem' }}>
                 ({spPct >= 0 ? '+' : ''}{spPct.toFixed(2)}%)
               </span>
             )}
@@ -336,45 +339,54 @@ export default function NavChart({
               fontSize: '0.75rem',
               transition: 'all 0.15s ease',
             }}
-            title="Clic para mostrar/ocultar NASDAQ"
+            title="Clic para mostrar/ocultar curva de NASDAQ"
           >
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS.nasdaq, opacity: visibleSeries?.nasdaq ? 1 : 0.3 }} />
-            <span>NASDAQ</span>
+            <strong>NASDAQ</strong>
             {currentNasdaq != null && (
-              <span className="mono" style={{ color: '#c084fc', fontWeight: 600 }}>
+              <span className="mono" style={{ color: '#c084fc', fontWeight: 700 }}>
                 ${currentNasdaq.toFixed(2)}
               </span>
             )}
             {nasdaqPct != null && (
-              <span style={{ color: nasdaqPct >= 0 ? '#c084fc' : '#ef4444', fontSize: '0.7rem' }}>
+              <span style={{ color: nasdaqPct >= 0 ? '#22c55e' : '#ef4444', fontSize: '0.7rem' }}>
                 ({nasdaqPct >= 0 ? '+' : ''}{nasdaqPct.toFixed(2)}%)
               </span>
             )}
           </button>
 
-          {/* MM20 Mid-caps Overlay */}
+          {/* MM20 Mid-caps ProPicks Toggle */}
           <button
             onClick={() => handleToggle('mm20')}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: 6,
-              background: visibleSeries?.mm20 ? 'rgba(16, 185, 129, 0.14)' : 'rgba(255,255,255,0.02)',
-              border: `1px solid ${visibleSeries?.mm20 ? 'rgba(16, 185, 129, 0.45)' : '#334155'}`,
+              background: visibleSeries?.mm20 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(255,255,255,0.02)',
+              border: `1px solid ${visibleSeries?.mm20 ? 'rgba(16, 185, 129, 0.4)' : '#334155'}`,
               padding: '4px 10px',
               borderRadius: 6,
               cursor: 'pointer',
-              color: visibleSeries?.mm20 ? '#10b981' : '#94a3b8',
+              color: visibleSeries?.mm20 ? '#f1f5f9' : '#94a3b8',
               fontSize: '0.75rem',
               transition: 'all 0.15s ease',
             }}
-            title="Superponer curva con fluctuaciones reales de Mid-caps MM20"
+            title="Clic para mostrar/ocultar curva MM20 Mid-caps PRO"
           >
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS.mm20, opacity: visibleSeries?.mm20 ? 1 : 0.3 }} />
-            <span>🇺🇸 MM20 Mid-caps</span>
-            <span style={{ fontSize: '0.68rem', padding: '1px 5px', borderRadius: 4, background: 'rgba(16,185,129,0.2)', color: '#10b981' }}>
+            <span style={{ fontSize: '0.7rem' }}>🇺🇸</span>
+            <strong>MM20 Mid-caps</strong>
+            <span style={{ fontSize: '0.62rem', padding: '1px 4px', borderRadius: 3, background: 'rgba(16,185,129,0.2)', color: '#10b981', fontWeight: 700 }}>
               PRO
             </span>
+            <span className="mono" style={{ color: '#10b981', fontWeight: 700 }}>
+              ${displayMM20Usd}
+            </span>
+            {mm20Pct != null && (
+              <span style={{ color: mm20Pct >= 0 ? '#22c55e' : '#ef4444', fontSize: '0.7rem' }}>
+                ({mm20Pct >= 0 ? '+' : ''}{mm20Pct.toFixed(2)}%)
+              </span>
+            )}
           </button>
         </div>
 

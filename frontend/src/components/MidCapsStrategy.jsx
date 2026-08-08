@@ -1,17 +1,23 @@
 import { useState, useEffect } from 'react';
+import { usePortfolioStore } from '../store/portfolioStore';
 import { searchTicker } from '../api/client';
 
 const STORAGE_KEY = 'titanes_midcaps_rebalances';
 
 const DEFAULT_REBALANCES = [
   {
-    rebalance_date: '2026-08-03',
+    rebalance_date: '2026-08-01',
     cash_added: 0,
-    tickers: ['ARLP', 'ACLS', 'BHC', 'DIOD', 'HAE', 'NSIT', 'POWI', 'VECO', 'OSK', 'SM'],
+    tickers: [
+      'ARLP', 'ACLS', 'BHC', 'DIOD', 'HAE',
+      'NSIT', 'POWI', 'VECO', 'OSK', 'SM',
+    ],
   },
 ];
 
 export default function MidCapsStrategy({ onBack }) {
+  const { midcapsCapital, setMidcapsCapital } = usePortfolioStore();
+
   // Rebalance history for Mid-caps persisted in storage and database
   const [rebalances, setRebalances] = useState(() => {
     try {
@@ -23,14 +29,8 @@ export default function MidCapsStrategy({ onBack }) {
     return DEFAULT_REBALANCES;
   });
 
-  const [simulatedCapital, setSimulatedCapital] = useState(() => {
-    try {
-      const saved = localStorage.getItem('titanes_midcaps_capital');
-      return saved ? Number(saved) : 1000;
-    } catch {
-      return 1000;
-    }
-  });
+  const simulatedCapital = midcapsCapital || 1000;
+  const setSimulatedCapital = (val) => setMidcapsCapital(val);
 
   const [numSlots] = useState(20);
   const [unit, setUnit] = useState('pct');
