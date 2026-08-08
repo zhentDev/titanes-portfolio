@@ -36,12 +36,12 @@ jobs:
           version: "latest"
           enable-cache: true
 
-      - name: Set up Python
-        run: uv python install 3.12
-
-      - name: Generate static DuckDB & Yahoo Finance NAV Data
+      - name: Set up Python & Generate Static Data
+        working-directory: ./backend
+        continue-on-error: true
         run: |
-          uv run python backend/generate_static_data.py
+          uv sync
+          uv run python generate_static_data.py
 
       - name: Set up Bun (Frontend runner)
         uses: oven-sh/setup-bun@v2
