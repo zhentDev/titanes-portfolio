@@ -237,12 +237,13 @@ export default function NavChart({
   const lastNav = navData?.[navData.length - 1]?.value;
   const lastSP = sp500Data?.[sp500Data.length - 1]?.value;
   const lastNasdaq = nasdaqData?.[nasdaqData.length - 1]?.value;
+  const lastMM20 = mm20Data?.[mm20Data.length - 1]?.value;
   const baseActive = navData?.[0]?.value ?? investment;
 
   const currentNav = hoverValues?.nav ?? lastNav;
   const currentSP = hoverValues?.sp500 ?? lastSP;
   const currentNasdaq = hoverValues?.nasdaq ?? lastNasdaq;
-  const currentMM20 = hoverValues?.mm20 ?? (baseActive ? baseActive * 1.082 : null);
+  const currentMM20 = hoverValues?.mm20 ?? lastMM20 ?? (baseActive ? baseActive * 1.082 : null);
 
   // Real % returns from base active capital
   const navPct = currentNav && baseActive ? ((currentNav - baseActive) / baseActive) * 100 : null;
