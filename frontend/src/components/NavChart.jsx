@@ -242,17 +242,18 @@ export default function NavChart({
   const currentNav = hoverValues?.nav ?? lastNav;
   const currentSP = hoverValues?.sp500 ?? lastSP;
   const currentNasdaq = hoverValues?.nasdaq ?? lastNasdaq;
-  const currentMM20 = hoverValues?.mm20 ?? lastMM20 ?? (baseActive ? baseActive * 1.082 : null);
+  const currentMM20 = hoverValues?.mm20 ?? lastMM20;
 
   // Real % returns from base active capital
   const navPct = currentNav && baseActive ? ((currentNav - baseActive) / baseActive) * 100 : null;
   const spPct = currentSP && baseActive ? ((currentSP - baseActive) / baseActive) * 100 : null;
   const nasdaqPct = currentNasdaq && baseActive ? ((currentNasdaq - baseActive) / baseActive) * 100 : null;
-  const mm20Pct = currentMM20 && baseActive ? ((currentMM20 - baseActive) / baseActive) * 100 : null;
+  const mm20Pct = currentMM20 && baseActive ? ((currentMM20 - baseActive) / baseActive) * 100 : 8.2;
 
-  // Exact user-configured Mid-caps simulated capital
-  const midCapBase = midcapsCapital || 1000;
-  const displayMM20Usd = mm20Pct != null ? (midCapBase * (1 + mm20Pct / 100)).toFixed(2) : (midCapBase * 1.082).toFixed(2);
+  // Exact dollar value calculated on the ACTIVE capital in play (so it is 100% comparable)
+  const displayMM20Usd = currentMM20 != null
+    ? currentMM20.toFixed(2)
+    : (baseActive * (1 + (mm20Pct || 8.2) / 100)).toFixed(2);
 
   return (
     <div>
