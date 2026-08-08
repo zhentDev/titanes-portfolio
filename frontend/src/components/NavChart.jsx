@@ -98,7 +98,7 @@ export default function NavChart({
       lastValueVisible: true,
       title: 'Portfolio',
       visible: true,
-      priceScaleId: useLogScale ? 'left' : 'right',
+      priceScaleId: 'right',
     });
 
     // S&P 500 — amber line
@@ -110,7 +110,7 @@ export default function NavChart({
       lastValueVisible: true,
       title: 'S&P 500',
       visible: true,
-      priceScaleId: useLogScale ? 'left' : 'right',
+      priceScaleId: 'right',
     });
 
     // NASDAQ — purple line
@@ -122,7 +122,7 @@ export default function NavChart({
       lastValueVisible: true,
       title: 'NASDAQ',
       visible: true,
-      priceScaleId: useLogScale ? 'left' : 'right',
+      priceScaleId: 'right',
     });
 
     // MM20 Mid-caps ProPicks curve — emerald line
@@ -146,7 +146,7 @@ export default function NavChart({
       lastValueVisible: false,
       title: 'Base',
       visible: true,
-      priceScaleId: useLogScale ? 'left' : 'right',
+      priceScaleId: 'right',
     });
 
     // Crosshair move handler to update legend values live
@@ -198,14 +198,15 @@ export default function NavChart({
         mode: useLogScale ? PriceScaleMode.Logarithmic : PriceScaleMode.Normal,
       },
       rightPriceScale: {
-        visible: !useLogScale,
+        visible: true,
+        mode: PriceScaleMode.Normal,
       }
     });
 
-    const scaleId = useLogScale ? 'left' : 'right';
-    Object.values(seriesRef.current).forEach(series => {
-      if (series) series.applyOptions({ priceScaleId: scaleId });
-    });
+    // Only MM20 moves to the left scale when there's a big difference
+    if (seriesRef.current.mm20) {
+      seriesRef.current.mm20.applyOptions({ priceScaleId: useLogScale ? 'left' : 'right' });
+    }
   }, [useLogScale]);
 
   // Helper to convert array to Lightweight Charts format
