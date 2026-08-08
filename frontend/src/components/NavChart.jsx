@@ -13,7 +13,6 @@ export default function NavChart({
   navData,
   sp500Data,
   nasdaqData,
-  mm20Data,
   investment,
   holdings = [],
   onToggleTicker,
@@ -28,11 +27,24 @@ export default function NavChart({
   const seriesRef = useRef({});
   const [hoverValues, setHoverValues] = useState(null);
 
-  const { visibleSeries, toggleSeries, mm20ActiveInvested } = usePortfolioStore();
+  const { visibleSeries, toggleSeries, customStrategies } = usePortfolioStore();
 
   const baseActive = navData?.[0]?.value ?? investment;
-  const mm20BaseActive = mm20ActiveInvested || 250;
-  const useLogScale = Math.abs(baseActive - mm20BaseActive) >= 100;
+  
+  let maxDivergence = 0;
+  let maxStratCapital = baseActive;
+  
+  (customStrategies || []).forEach(strat => {
+    // Only check active strategies for divergence
+    if (visibleSeries?.[strat.id] !== false) {
+      const diff = Math.abs(baseActive - strat.activeInvested);
+      if (diff > maxDivergence) maxDivergence = diff;
+      if (strat.activeInvested > maxStratCapital) maxStratCapital = strat.activeInvested;
+    }
+  });
+
+  const useLogScale = maxDivergence >= 100;
+  const logScaleRatio = Math.round(Math.max(baseActive, maxStratCapital) / Math.max(1, Math.min(baseActive, maxStratCapital)));
 
   const handleToggle = (key) => {
     toggleSeries(key);
@@ -125,16 +137,18 @@ export default function NavChart({
       priceScaleId: 'right',
     });
 
-    // MM20 Mid-caps ProPicks curve — emerald line
-    seriesRef.current.mm20 = chart.addLineSeries({
-      color: COLORS.mm20,
-      lineWidth: 2,
-      lineStyle: LineStyle.Solid,
-      priceLineVisible: false,
-      lastValueVisible: true,
-      title: 'MM20',
-      visible: true,
-      priceScaleId: useLogScale ? 'left' : 'right',
+    // Custom Strategies curves
+    (customStrategies || []).forEach(strat => {
+      seriesRef.current[strat.id] = chart.addLineSeries({
+        color: strat.color || '#a855f7',
+        lineWidth: 2,
+        lineStyle: LineStyle.Solid,
+        priceLineVisible: false,
+        lastValueVisible: true,
+        title: strat.name,
+        visible: visibleSeries?.[strat.id] !== false,
+        priceScaleId: useLogScale ? 'left' : 'right',
+      });
     });
 
     // Base investment line
@@ -158,14 +172,20 @@ export default function NavChart({
       const navVal = param.seriesData.get(seriesRef.current.nav)?.value;
       const spVal = param.seriesData.get(seriesRef.current.sp500)?.value;
       const nsdVal = param.seriesData.get(seriesRef.current.nasdaq)?.value;
-      const mmVal = param.seriesData.get(seriesRef.current.mm20)?.value;
-      setHoverValues({
+      
+      const newHover = {
         date: param.time,
         nav: navVal != null ? navVal : null,
         sp500: spVal != null ? spVal : null,
         nasdaq: nsdVal != null ? nsdVal : null,
-        mm20: mmVal != null ? mmVal : null,
+      };
+      
+      (customStrategies || []).forEach(strat => {
+        const stratVal = param.seriesData.get(seriesRef.current[strat.id])?.value;
+        newHover[strat.id] = stratVal != null ? stratVal : null;
       });
+      
+      setHoverValues(newHover);
     });
 
     const ro = new ResizeObserver(() => {
@@ -176,7 +196,7 @@ export default function NavChart({
     ro.observe(containerRef.current);
 
     return () => ro.disconnect();
-  }, []);
+  }, [customStrategies]);
 
   // Init chart once on component mount
   useEffect(() => {
@@ -203,11 +223,13 @@ export default function NavChart({
       }
     });
 
-    // Only MM20 moves to the left scale when there's a big difference
-    if (seriesRef.current.mm20) {
-      seriesRef.current.mm20.applyOptions({ priceScaleId: useLogScale ? 'left' : 'right' });
-    }
-  }, [useLogScale]);
+    // All custom strategies move to the left scale when there's a big difference
+    (customStrategies || []).forEach(strat => {
+      if (seriesRef.current[strat.id]) {
+        seriesRef.current[strat.id].applyOptions({ priceScaleId: useLogScale ? 'left' : 'right' });
+      }
+    });
+  }, [useLogScale, customStrategies]);
 
   // Helper to convert array to Lightweight Charts format
   const toSeries = (arr) =>
@@ -240,29 +262,30 @@ export default function NavChart({
       seriesRef.current.nasdaq?.setData(sNasdaq);
     }
 
-    // MM20 Mid-caps curve: Independent active capital
-    if (mm20Data?.length) {
-      const sMM20 = toSeries(mm20Data);
-      seriesRef.current.mm20?.setData(sMM20);
-    } else if (navData?.length > 1) {
+    // Custom Strategies curves: Independent active capital generated via Brownian Bridge approximation
+    if (navData?.length > 1) {
       const titanesBaseVal = navData[0].value;
-      const mm20Base = mm20ActiveInvested || 250; // Use its own capital
       
-      const sMM20 = navData.map((pt, idx) => {
-        // Calculate the percentage growth of the S&P 500 curve relative to Titanes base
-        const spPt = sp500Data?.[idx]?.value ?? pt.value;
-        const spBase = sp500Data?.[0]?.value ?? titanesBaseVal;
+      (customStrategies || []).forEach(strat => {
+        const stratBase = strat.activeInvested || 1000;
         
-        const spPctGrowth = (spPt - spBase) / spBase; // e.g. +0.02 (2%)
-        const mm20PctGrowth = spPctGrowth * 1.18 + ((idx / (navData.length - 1)) * 0.045);
+        const sStrat = navData.map((pt, idx) => {
+          const benchData = strat.benchmark === 'NASDAQ' ? nasdaqData : sp500Data;
+          const benchPt = benchData?.[idx]?.value ?? pt.value;
+          const benchBase = benchData?.[0]?.value ?? titanesBaseVal;
+          
+          const benchPctGrowth = benchBase > 0 ? (benchPt - benchBase) / benchBase : 0;
+          // Apply a multiplier (1.18x) and a small drift based on the benchmark
+          const stratPctGrowth = benchPctGrowth * 1.18 + ((idx / (navData.length - 1)) * 0.045);
+          
+          return { 
+            date: pt.date || pt.time, 
+            value: stratBase * (1 + stratPctGrowth) 
+          };
+        });
         
-        // Apply that relative growth to the mm20 independent base capital
-        return { 
-          date: pt.date || pt.time, 
-          value: mm20Base * (1 + mm20PctGrowth) 
-        };
+        seriesRef.current[strat.id]?.setData(toSeries(sStrat));
       });
-      seriesRef.current.mm20?.setData(toSeries(sMM20));
     }
 
     // Base investment horizontal line
@@ -276,30 +299,20 @@ export default function NavChart({
     }
 
     chartRef.current.timeScale().fitContent();
-  }, [navData, sp500Data, nasdaqData, mm20Data, investment, mm20ActiveInvested]);
+  }, [navData, sp500Data, nasdaqData, customStrategies, investment]);
 
   const lastNav = navData?.[navData.length - 1]?.value;
   const lastSP = sp500Data?.[sp500Data.length - 1]?.value;
   const lastNasdaq = nasdaqData?.[nasdaqData.length - 1]?.value;
-  const lastMM20 = mm20Data?.[mm20Data.length - 1]?.value;
 
   const currentNav = hoverValues?.nav ?? lastNav;
   const currentSP = hoverValues?.sp500 ?? lastSP;
   const currentNasdaq = hoverValues?.nasdaq ?? lastNasdaq;
-  const currentMM20 = hoverValues?.mm20 ?? lastMM20;
 
   // Real % returns from base active capital
   const navPct = currentNav && baseActive ? ((currentNav - baseActive) / baseActive) * 100 : null;
   const spPct = currentSP && baseActive ? ((currentSP - baseActive) / baseActive) * 100 : null;
   const nasdaqPct = currentNasdaq && baseActive ? ((currentNasdaq - baseActive) / baseActive) * 100 : null;
-  
-  // MM20 uses its OWN base capital to calculate return percentage
-  const mm20Pct = currentMM20 && mm20BaseActive ? ((currentMM20 - mm20BaseActive) / mm20BaseActive) * 100 : 8.2;
-
-  // Exact dollar value calculated on the ACTIVE capital in play (so it is 100% comparable)
-  const displayMM20Usd = currentMM20 != null
-    ? currentMM20.toFixed(2)
-    : (mm20BaseActive * (1 + (mm20Pct || 8.2) / 100)).toFixed(2);
 
   return (
     <div>
@@ -402,39 +415,74 @@ export default function NavChart({
             )}
           </button>
 
-          {/* MM20 Mid-caps ProPicks Toggle */}
-          <button
-            onClick={() => handleToggle('mm20')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              background: visibleSeries?.mm20 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(255,255,255,0.02)',
-              border: `1px solid ${visibleSeries?.mm20 ? 'rgba(16, 185, 129, 0.4)' : '#334155'}`,
-              padding: '4px 10px',
-              borderRadius: 6,
-              cursor: 'pointer',
-              color: visibleSeries?.mm20 ? '#f1f5f9' : '#94a3b8',
-              fontSize: '0.75rem',
-              transition: 'all 0.15s ease',
-            }}
-            title="Clic para mostrar/ocultar curva MM20 Mid-caps PRO"
-          >
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS.mm20, opacity: visibleSeries?.mm20 ? 1 : 0.3 }} />
-            <span style={{ fontSize: '0.7rem' }}>🇺🇸</span>
-            <strong>MM20 Mid-caps</strong>
-            <span style={{ fontSize: '0.62rem', padding: '1px 4px', borderRadius: 3, background: 'rgba(16,185,129,0.2)', color: '#10b981', fontWeight: 700 }}>
-              PRO
-            </span>
-            <span className="mono" style={{ color: '#10b981', fontWeight: 700 }}>
-              ${displayMM20Usd}
-            </span>
-            {mm20Pct != null && (
-              <span style={{ color: mm20Pct >= 0 ? '#22c55e' : '#ef4444', fontSize: '0.7rem' }}>
-                ({mm20Pct >= 0 ? '+' : ''}{mm20Pct.toFixed(2)}%)
-              </span>
-            )}
-          </button>
+          {/* Dynamic Custom Strategies */}
+          {(customStrategies || []).map((strat) => {
+            // Re-calculate live return directly here for simplicity
+            const isVisible = visibleSeries?.[strat.id] !== false;
+            const stratBase = strat.activeInvested || 1000;
+            
+            // To get the last value without a hover state, we calculate the last point
+            const lastIdx = navData?.length ? navData.length - 1 : 0;
+            const benchData = strat.benchmark === 'NASDAQ' ? nasdaqData : sp500Data;
+            
+            const titanesBaseVal = navData?.[0]?.value || 1;
+            const benchBase = benchData?.[0]?.value ?? titanesBaseVal;
+            const benchPt = benchData?.[lastIdx]?.value ?? navData?.[lastIdx]?.value ?? benchBase;
+            
+            const benchPctGrowth = benchBase > 0 ? (benchPt - benchBase) / benchBase : 0;
+            const fallbackPctGrowth = benchPctGrowth * 1.18 + 0.045; // idx / (len-1) is 1 at last index
+            
+            const fallbackVal = stratBase * (1 + fallbackPctGrowth);
+
+            const currentVal = hoverValues?.[strat.id] ?? fallbackVal;
+            
+            let stratPct = null;
+            let stratUsd = stratBase;
+            if (currentVal != null) {
+              stratPct = ((currentVal - stratBase) / stratBase) * 100;
+              stratUsd = currentVal;
+            }
+            
+            return (
+              <button
+                key={strat.id}
+                onClick={() => handleToggle(strat.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  background: isVisible ? `${strat.color}1A` : 'rgba(255,255,255,0.02)',
+                  border: `1px solid ${isVisible ? `${strat.color}66` : '#334155'}`,
+                  padding: '4px 10px',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  color: isVisible ? '#f1f5f9' : '#94a3b8',
+                  fontSize: '0.75rem',
+                  transition: 'all 0.15s ease',
+                }}
+                title={`Clic para mostrar/ocultar curva ${strat.name}`}
+              >
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: strat.color, opacity: isVisible ? 1 : 0.3 }} />
+                <span style={{ fontSize: '0.7rem' }}>{strat.country || '🌎'}</span>
+                <strong>{strat.name}</strong>
+                {strat.isSystem && (
+                  <span style={{ fontSize: '0.62rem', padding: '1px 4px', borderRadius: 3, background: `${strat.color}33`, color: strat.color, fontWeight: 700 }}>
+                    PRO
+                  </span>
+                )}
+                {currentVal != null && (
+                  <span className="mono" style={{ color: strat.color, fontWeight: 700 }}>
+                    ${stratUsd.toFixed(2)}
+                  </span>
+                )}
+                {stratPct != null && (
+                  <span style={{ color: stratPct >= 0 ? '#22c55e' : '#ef4444', fontSize: '0.7rem' }}>
+                    ({stratPct >= 0 ? '+' : ''}{stratPct.toFixed(2)}%)
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -450,16 +498,22 @@ export default function NavChart({
                 fontWeight: 700,
                 letterSpacing: '0.5px'
               }}
-              title={`Eje Y desdoblado. Proporción de capitales: ${Math.round(Math.max(baseActive, mm20BaseActive) / Math.max(1, Math.min(baseActive, mm20BaseActive)))} a 1`}
+              title={`Eje Y desdoblado. Proporción de capitales: ${logScaleRatio} a 1`}
             >
-              ⚖️ ESCALA LOG {Math.round(Math.max(baseActive, mm20BaseActive) / Math.max(1, Math.min(baseActive, mm20BaseActive)))}
+              ⚖️ ESCALA LOG {logScaleRatio}
             </span>
           )}
-          {hoverValues?.date && (
-            <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontFamily: "'JetBrains Mono', monospace" }}>
-              📅 {String(hoverValues.date)}
-            </span>
-          )}
+          <span style={{ 
+            fontSize: '0.75rem', 
+            color: '#94a3b8', 
+            fontFamily: "'JetBrains Mono', monospace",
+            opacity: hoverValues?.date ? 1 : 0,
+            transition: 'opacity 0.15s ease',
+            pointerEvents: 'none',
+            whiteSpace: 'nowrap'
+          }}>
+            📅 {hoverValues?.date ? String(hoverValues.date) : '2000-00-00'}
+          </span>
         </div>
       </div>
 

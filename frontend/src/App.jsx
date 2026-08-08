@@ -9,12 +9,13 @@ import RebalanceTimer from './components/RebalanceTimer';
 import MonteCarloCard from './components/MonteCarloCard';
 import CorrelationHeatmap from './components/CorrelationHeatmap';
 import QuantRadar from './components/QuantRadar';
-import MidCapsStrategy from './components/MidCapsStrategy';
 import DynamicStrategyView from './components/DynamicStrategyView';
 import CreateStrategyModal from './components/CreateStrategyModal';
+import IndividualPurchasesView from './components/IndividualPurchasesView';
 import { exportPortfolioCSV } from './utils/exportReport';
 import { usePortfolioStore } from './store/portfolioStore';
 import { fetchNAV } from './api/client';
+import { Toaster } from 'react-hot-toast';
 import './App.css';
 
 const PERIODS = ['1W', '1M', '3M', '6M', '1Y', '3Y', '5Y', 'MAX'];
@@ -76,7 +77,6 @@ export default function App() {
     const baseFirstVal = baseNavData.nav?.[0]?.value || investment;
     const baseSP0 = baseNavData.sp500?.[0]?.value || baseFirstVal;
     const baseND0 = baseNavData.nasdaq?.[0]?.value || baseFirstVal;
-    const baseMM0 = baseNavData.mm20?.[0]?.value || baseFirstVal;
 
     // Rescaled Portfolio NAV using exact individual ticker price action
     const tickerSeriesMap = baseNavData.ticker_series || {};
@@ -113,15 +113,6 @@ export default function App() {
       };
     });
 
-    // Rescaled MM20
-    const scaledMM20 = (baseNavData.mm20 || []).map((pt) => {
-      const pctGrowth = baseMM0 > 0 ? pt.value / baseMM0 : 1;
-      return {
-        ...pt,
-        value: Number((activeInvested * pctGrowth).toFixed(4)),
-      };
-    });
-
     const sp500Pct = baseNavData.summary?.sp500_return_pct || 0;
     const nasdaqPct = baseNavData.summary?.nasdaq_return_pct || 0;
     const sp500ReturnUsd = (sp500Pct / 100) * activeInvested;
@@ -132,7 +123,6 @@ export default function App() {
       nav: scaledNav,
       sp500: scaledSP500,
       nasdaq: scaledNasdaq,
-      mm20: scaledMM20,
       holdings: updatedHoldings,
       summary: {
         ...baseNavData.summary,
@@ -192,6 +182,16 @@ export default function App() {
 
   return (
     <div className="app-wrapper">
+      <Toaster 
+        position="bottom-right" 
+        toastOptions={{
+          style: {
+            background: 'var(--bg-surface)',
+            color: '#fff',
+            border: '1px solid var(--border)'
+          }
+        }} 
+      />
       {/* ── Header ──────────────────────────────────────── */}
       <header className="app-header">
         <div className="header-left">
@@ -202,79 +202,115 @@ export default function App() {
           <div className="header-subtitle">Custom ETF & ProPicks AI Terminal</div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          {navData && (
-            <button
-              className="btn btn-sm btn-ghost"
-              onClick={() => exportPortfolioCSV(navData, investment)}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', padding: '6px 12px' }}
-              title="Descargar informe completo del portafolio en formato CSV"
-            >
-              <span>📥</span>
-              <span>Exportar Reporte CSV</span>
-            </button>
-          )}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12 }}>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            {navData && (
+              <button
+                className="btn btn-sm btn-ghost"
+                onClick={() => exportPortfolioCSV(navData, investment)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', padding: '6px 12px' }}
+                title="Descargar informe completo del portafolio en formato CSV"
+              >
+                <span>📥</span>
+                <span>Exportar Reporte CSV</span>
+              </button>
+            )}
+
+            <div className="mode-toggle" style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, margin: '0 8px', letterSpacing: '0.5px' }}>PORTAFOLIOS:</span>
+              
+              {/* Core Inmutable Strategy 1: Titanes Tech */}
+              <button
+                className={mode === 'historical' ? 'active' : ''}
+                onClick={() => setMode('historical')}
+              >
+                🏆 Titanes Tech
+              </button>
+
+              {/* User-Created Dynamic Custom Strategies (incluye MM20 por defecto) */}
+              {(customStrategies || []).map((strat) => (
+                <button
+                  key={strat.id}
+                  className={mode === strat.id ? 'active' : ''}
+                  onClick={() => setMode(strat.id)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                  <span>{strat.country || '🌎'}</span>
+                  <span>{strat.name}</span>
+                  {strat.isSystem && (
+                    <span style={{ fontSize: '0.65rem', padding: '1px 5px', borderRadius: 4, background: `${strat.color}33`, color: strat.color }}>
+                      PRO
+                    </span>
+                  )}
+                  {!strat.isSystem && (
+                    <span style={{ fontSize: '0.62rem', padding: '1px 4px', borderRadius: 3, background: 'rgba(255,255,255,0.08)', color: '#94a3b8' }}>
+                      {strat.numSlots}
+                    </span>
+                  )}
+                </button>
+              ))}
+
+              {/* Botón para crear nueva estrategia dinámica */}
+              <button
+                type="button"
+                className="btn-chip"
+                onClick={() => setIsModalOpen(true)}
+                style={{
+                  border: '1px dashed rgba(0, 229, 255, 0.4)',
+                  background: 'rgba(0, 229, 255, 0.08)',
+                  color: 'var(--accent-primary)',
+                  fontWeight: 700,
+                  fontSize: '0.75rem',
+                  padding: '5px 10px',
+                }}
+                title="Crear una nueva estrategia personalizada con país, nombre y slots"
+              >
+                + Nueva Estrategia
+              </button>
+            </div>
+          </div>
 
           <div className="mode-toggle" style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-            {/* Core Inmutable Strategy 1: Titanes Tech */}
-            <button
-              className={mode === 'historical' ? 'active' : ''}
-              onClick={() => setMode('historical')}
-            >
-              🏆 Titanes Tech
-            </button>
-
-            {/* Core Inmutable Strategy 2: Mid-caps MM20 PRO */}
-            <button
-              className={mode === 'midcaps' ? 'active' : ''}
-              onClick={() => setMode('midcaps')}
-              style={{ display: 'flex', alignItems: 'center', gap: 4 }}
-            >
-              <span>🇺🇸 Mid-caps MM20</span>
-              <span style={{ fontSize: '0.65rem', padding: '1px 5px', borderRadius: 4, background: 'rgba(16,185,129,0.2)', color: '#10b981' }}>
-                PRO
-              </span>
-            </button>
-
-            {/* User-Created Dynamic Custom Strategies */}
-            {(customStrategies || []).map((strat) => (
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, margin: '0 8px', letterSpacing: '0.5px' }}>OPERACIONES:</span>
+            
+            {(usePortfolioStore.getState().purchasePortfolios || []).map((port) => (
               <button
-                key={strat.id}
-                className={mode === strat.id ? 'active' : ''}
-                onClick={() => setMode(strat.id)}
+                key={port.id}
+                className={mode === port.id ? 'active' : ''}
+                onClick={() => setMode(port.id)}
                 style={{ display: 'flex', alignItems: 'center', gap: 6 }}
               >
-                <span>{strat.country || '🌎'}</span>
-                <span>{strat.name}</span>
-                <span style={{ fontSize: '0.62rem', padding: '1px 4px', borderRadius: 3, background: 'rgba(255,255,255,0.08)', color: '#94a3b8' }}>
-                  {strat.numSlots}
-                </span>
+                <span>🛒</span>
+                <span>{port.name}</span>
               </button>
             ))}
 
-            {/* Botón para crear nueva estrategia dinámica */}
             <button
               type="button"
               className="btn-chip"
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => {
+                const name = prompt("Nombre del nuevo Histórico de Compras:");
+                if (name) usePortfolioStore.getState().addPurchasePortfolio(name);
+              }}
               style={{
-                border: '1px dashed rgba(0, 229, 255, 0.4)',
-                background: 'rgba(0, 229, 255, 0.08)',
-                color: 'var(--accent-primary)',
+                border: '1px dashed rgba(255, 165, 0, 0.4)',
+                background: 'rgba(255, 165, 0, 0.08)',
+                color: '#ffa500',
                 fontWeight: 700,
                 fontSize: '0.75rem',
                 padding: '5px 10px',
               }}
-              title="Crear una nueva estrategia personalizada con país, nombre y slots"
+              title="Crear un nuevo portafolio de compras individuales"
             >
-              + Nueva Estrategia
+              + Nuevo Histórico
             </button>
 
             <button
               className={mode === 'live' ? 'active' : ''}
               onClick={() => setMode('live')}
             >
-              ⚡ Live
+              ⚡ Live Tracker
             </button>
           </div>
         </div>
@@ -292,10 +328,10 @@ export default function App() {
       {/* ── Main layout ─────────────────────────────────── */}
       <main className="app-main">
 
-        {mode === 'live' ? (
+        {(usePortfolioStore.getState().purchasePortfolios || []).some(p => p.id === mode) ? (
+          <IndividualPurchasesView portfolioId={mode} />
+        ) : mode === 'live' ? (
           <LiveMode key={refreshKey} navData={navData} investment={investment} />
-        ) : mode === 'midcaps' ? (
-          <MidCapsStrategy onBack={() => setMode('historical')} />
         ) : customStrategies?.some((s) => s.id === mode) ? (
           <DynamicStrategyView
             key={mode}

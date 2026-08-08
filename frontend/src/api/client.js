@@ -97,9 +97,40 @@ export async function fetchIntraday(ticker) {
   return fetchWithFallback(`/prices/intraday/${ticker}`, 'nav_1W.json');
 }
 
+/** GET /api/prices/indices_history?start_date=YYYY-MM-DD */
+export async function fetchIndicesHistory(startDate) {
+  try {
+    const res = await fetch(`${BASE}/prices/indices_history?start_date=${startDate}`);
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {}
+  return {};
+}
+
+/** GET /api/prices/historical/:ticker?date=YYYY-MM-DD */
+export async function fetchHistoricalPrice(ticker, date) {
+  // Try to fetch from backend. If offline, return a mock object.
+  try {
+    const res = await fetch(`${BASE}/prices/historical/${encodeURIComponent(ticker)}?date=${date}`);
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // If backend offline, just return a mock response or null so the UI can gracefully fallback
+  }
+  return { price: null, error: 'Backend offline' };
+}
+
 /** GET /api/tickers/search?q=... */
 export async function searchTicker(q) {
-  return fetchWithFallback(`/tickers/search?q=${encodeURIComponent(q)}`, 'nav_1W.json');
+  const res = await fetch(`${BASE}/tickers/search?q=${encodeURIComponent(q)}`);
+  return res.json();
+}
+
+export async function searchTickersMultiple(q) {
+  const res = await fetch(`${BASE}/tickers/search_multiple?q=${encodeURIComponent(q)}`);
+  return res.json();
 }
 
 /** GET /api/rebalances */

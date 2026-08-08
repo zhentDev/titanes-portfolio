@@ -7,10 +7,15 @@ Cache is simple in-memory with TTL to avoid hammering Yahoo Finance.
 import threading
 import time
 from datetime import datetime, timezone
+import traceback
+from typing import Any, Dict
 
 import pandas as pd
 import polars as pl
 import yfinance as yf
+
+def get_yf_ticker(ticker: str) -> yf.Ticker:
+    return yf.Ticker(ticker)
 
 # ──────────────────────────────────────────────
 # Default portfolio & benchmarks
@@ -69,7 +74,7 @@ def get_ticker_meta(ticker: str) -> dict[str, str]:
     if t_clean in TICKER_METADATA:
         return {"ticker": t_clean, **TICKER_METADATA[t_clean]}
     try:
-        t = yf.Ticker(t_clean)
+        t = get_yf_ticker(t_clean)
         info = getattr(t, "info", {}) or {}
         name = info.get("longName") or info.get("shortName") or t_clean
         sector = info.get("sector") or info.get("industry") or "Tecnología"
@@ -224,15 +229,22 @@ def get_live_quotes(tickers: list[str]) -> list[dict]:
     results: list[dict] = []
     for ticker in tickers:
         try:
-            t = yf.Ticker(ticker)
+            t = get_yf_ticker(ticker)
             fi = t.fast_info
+            info = t.info
             price: float = fi.last_price or 0.0
             prev: float = fi.previous_close or price
             change = price - prev
             change_pct = (change / prev * 100) if prev else 0.0
+            meta = get_ticker_meta(ticker)
             results.append(
                 {
                     "ticker": ticker,
+                    "name": meta.get("name") or info.get("longName") or info.get("shortName") or ticker,
+                    "sector": meta.get("sector") or info.get("sector") or info.get("industry") or "Desconocido",
+                    "exchange": meta.get("exchange") or info.get("exchange") or "US",
+                    "currency": info.get("currency") or "USD",
+                    "quoteType": info.get("quoteType") or "EQUITY",
                     "price": round(price, 4),
                     "change": round(change, 4),
                     "change_pct": round(change_pct, 4),
@@ -241,9 +253,15 @@ def get_live_quotes(tickers: list[str]) -> list[dict]:
                 }
             )
         except Exception as exc:
+            meta = get_ticker_meta(ticker)
             results.append(
                 {
                     "ticker": ticker,
+                    "name": meta.get("name") or ticker,
+                    "sector": meta.get("sector") or "Desconocido",
+                    "exchange": "US",
+                    "currency": "USD",
+                    "quoteType": "EQUITY",
                     "price": None,
                     "change": None,
                     "change_pct": None,

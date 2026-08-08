@@ -22,6 +22,7 @@
     "lightweight-charts": "^4.2.3",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "react-hot-toast": "^2.6.0",
     "zustand": "^5.0.14"
   }
 }

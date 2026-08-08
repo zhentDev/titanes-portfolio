@@ -9,14 +9,14 @@ const COLORS = {
 };
 
 export const SYNTHETIC_RETURNS = {
-  '1W': { sp: 0.005, nasdaq: 0.008, mm20: 0.015, days: 7, points: 7 },
-  '1M': { sp: 0.02, nasdaq: 0.03, mm20: 0.05, days: 30, points: 30 },
-  '3M': { sp: 0.05, nasdaq: 0.08, mm20: 0.12, days: 90, points: 45 },
-  '6M': { sp: 0.08, nasdaq: 0.12, mm20: 0.20, days: 180, points: 60 },
-  '1Y': { sp: 0.143, nasdaq: 0.162, mm20: 0.278, days: 365, points: 90 },
-  '3Y': { sp: 0.45, nasdaq: 0.55, mm20: 1.10, days: 1095, points: 120 },
-  '5Y': { sp: 0.85, nasdaq: 1.10, mm20: 2.50, days: 1825, points: 150 },
-  'MAX': { sp: 2.808, nasdaq: 3.50, mm20: 10.626, days: 3650, points: 180 },
+  '1W': { sp: 0.005, nasdaq: 0.008, strat: 0.015, days: 7, points: 7 },
+  '1M': { sp: 0.02, nasdaq: 0.03, strat: 0.05, days: 30, points: 30 },
+  '3M': { sp: 0.05, nasdaq: 0.08, strat: 0.12, days: 90, points: 45 },
+  '6M': { sp: 0.08, nasdaq: 0.12, strat: 0.20, days: 180, points: 60 },
+  '1Y': { sp: 0.143, nasdaq: 0.162, strat: 0.278, days: 365, points: 90 },
+  '3Y': { sp: 0.45, nasdaq: 0.55, strat: 1.10, days: 1095, points: 120 },
+  '5Y': { sp: 0.85, nasdaq: 1.10, strat: 2.50, days: 1825, points: 150 },
+  'MAX': { sp: 2.808, nasdaq: 3.50, strat: 10.626, days: 3650, points: 180 },
 };
 
 // Generador pseudoaleatorio predecible para que la curva no salte con cada render
@@ -27,7 +27,7 @@ function seededRandom(seed) {
 
 function generateSyntheticData(baseActive, period) {
   const pData = SYNTHETIC_RETURNS[period] || SYNTHETIC_RETURNS['MAX'];
-  const data = { sp500: [], nasdaq: [], mm20: [] };
+  const data = { sp500: [], nasdaq: [], strat: [] };
   
   const today = new Date();
   today.setHours(12, 0, 0, 0);
@@ -36,7 +36,7 @@ function generateSyntheticData(baseActive, period) {
   const dayStep = pData.days / pointsCount;
 
   // 1. Generate standard random walks
-  const rawWalks = { sp500: [0], nasdaq: [0], mm20: [0] };
+  const rawWalks = { sp500: [0], nasdaq: [0], strat: [0] };
   let seed = pData.days; // seed based on period length
   
   for (let i = 1; i <= pointsCount; i++) {
@@ -60,14 +60,14 @@ function generateSyntheticData(baseActive, period) {
 
     rawWalks.sp500.push(rawWalks.sp500[i - 1] + stepSP);
     rawWalks.nasdaq.push(rawWalks.nasdaq[i - 1] + stepND);
-    rawWalks.mm20.push(rawWalks.mm20[i - 1] + stepMM);
+    rawWalks.strat.push(rawWalks.strat[i - 1] + stepMM);
   }
 
   // 2. Tie the random walks to the exact target returns (Brownian bridge concept)
   // End values of the raw walks
   const endSP = rawWalks.sp500[pointsCount];
   const endND = rawWalks.nasdaq[pointsCount];
-  const endMM = rawWalks.mm20[pointsCount];
+  const endMM = rawWalks.strat[pointsCount];
 
   for (let i = 0; i <= pointsCount; i++) {
     const d = new Date(today);
@@ -82,30 +82,30 @@ function generateSyntheticData(baseActive, period) {
     // Calculate the correction needed to force the endpoint to exactly match pData target
     const correctionSP = (pData.sp - endSP) * progress;
     const correctionND = (pData.nasdaq - endND) * progress;
-    const correctionMM = (pData.mm20 - endMM) * progress;
+    const correctionMM = (pData.strat - endMM) * progress;
 
     // Apply the structural curve (e.g. exponential baseline) + the corrected random walk
     // We scale down the random walk amplitude based on period to keep it looking like a stock chart
-    const volScale = Math.min(0.2, pData.mm20 / 10);
+    const volScale = Math.min(0.2, pData.strat / 10);
     
     const valSP = baseActive * (1 + pData.sp * Math.pow(progress, 1.2) + (rawWalks.sp500[i] + correctionSP) * volScale * 0.5);
     const valND = baseActive * (1 + pData.nasdaq * Math.pow(progress, 1.2) + (rawWalks.nasdaq[i] + correctionND) * volScale * 0.7);
-    const valMM = baseActive * (1 + pData.mm20 * Math.pow(progress, 1.4) + (rawWalks.mm20[i] + correctionMM) * volScale);
+    const valMM = baseActive * (1 + pData.strat * Math.pow(progress, 1.4) + (rawWalks.strat[i] + correctionMM) * volScale);
 
     data.sp500.push({ time: timeStr, value: Math.max(1, valSP) });
     data.nasdaq.push({ time: timeStr, value: Math.max(1, valND) });
-    data.mm20.push({ time: timeStr, value: Math.max(1, valMM) });
+    data.strat.push({ time: timeStr, value: Math.max(1, valMM) });
   }
 
   // Ensure unique dates in case of DST overlaps
-  const uniqueData = { sp500: [], nasdaq: [], mm20: [] };
+  const uniqueData = { sp500: [], nasdaq: [], strat: [] };
   const seenDates = new Set();
   for (let i = 0; i < data.sp500.length; i++) {
     if (!seenDates.has(data.sp500[i].time)) {
       seenDates.add(data.sp500[i].time);
       uniqueData.sp500.push(data.sp500[i]);
       uniqueData.nasdaq.push(data.nasdaq[i]);
-      uniqueData.mm20.push(data.mm20[i]);
+      uniqueData.strat.push(data.strat[i]);
     }
   }
 
@@ -113,18 +113,18 @@ function generateSyntheticData(baseActive, period) {
   if (uniqueData.sp500.length > 0) {
     uniqueData.sp500[0].value = baseActive;
     uniqueData.nasdaq[0].value = baseActive;
-    uniqueData.mm20[0].value = baseActive;
+    uniqueData.strat[0].value = baseActive;
 
     const last = uniqueData.sp500.length - 1;
     uniqueData.sp500[last].value = baseActive * (1 + pData.sp);
     uniqueData.nasdaq[last].value = baseActive * (1 + pData.nasdaq);
-    uniqueData.mm20[last].value = baseActive * (1 + pData.mm20);
+    uniqueData.strat[last].value = baseActive * (1 + pData.strat);
   }
 
   return uniqueData;
 }
 
-export default function MidCapsChart({ activeInvested }) {
+export default function StrategyChart({ strategy, activeInvested }) {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
   const seriesRef = useRef({});
@@ -133,9 +133,9 @@ export default function MidCapsChart({ activeInvested }) {
   const { period } = usePortfolioStore();
 
   const [visibleSeries, setVisibleSeries] = useState({
-    sp500: true,
-    nasdaq: true,
-    mm20: true,
+    sp500: strategy?.benchmark !== 'NASDAQ',
+    nasdaq: strategy?.benchmark === 'NASDAQ',
+    strat: true,
   });
 
   const handleToggle = (key) => {
@@ -196,13 +196,13 @@ export default function MidCapsChart({ activeInvested }) {
       title: 'NASDAQ',
     });
 
-    seriesRef.current.mm20 = chart.addAreaSeries({
-      lineColor: COLORS.mm20,
-      topColor: 'rgba(16, 185, 129, 0.25)',
-      bottomColor: 'rgba(16, 185, 129, 0.0)',
+    seriesRef.current.strat = chart.addAreaSeries({
+      lineColor: strategy?.color || COLORS.mm20,
+      topColor: `${strategy?.color || COLORS.mm20}40`,
+      bottomColor: `${strategy?.color || COLORS.mm20}00`,
       lineWidth: 2,
       priceLineVisible: false,
-      title: 'MM20',
+      title: strategy?.name || 'Estrategia',
     });
 
     chart.subscribeCrosshairMove((param) => {
@@ -212,12 +212,12 @@ export default function MidCapsChart({ activeInvested }) {
       }
       const spVal = param.seriesData.get(seriesRef.current.sp500)?.value;
       const nsdVal = param.seriesData.get(seriesRef.current.nasdaq)?.value;
-      const mmVal = param.seriesData.get(seriesRef.current.mm20)?.value;
+      const mmVal = param.seriesData.get(seriesRef.current.strat)?.value;
       setHoverValues({
         date: param.time,
         sp500: spVal,
         nasdaq: nsdVal,
-        mm20: mmVal,
+        strat: mmVal,
       });
     });
 
@@ -244,23 +244,23 @@ export default function MidCapsChart({ activeInvested }) {
     if (!chartRef.current || !chartData) return;
     seriesRef.current.sp500?.setData(chartData.sp500);
     seriesRef.current.nasdaq?.setData(chartData.nasdaq);
-    seriesRef.current.mm20?.setData(chartData.mm20);
+    seriesRef.current.strat?.setData(chartData.strat);
     chartRef.current.timeScale().fitContent();
   }, [chartData]);
 
   const lastSP = chartData.sp500[chartData.sp500.length - 1]?.value;
   const lastNasdaq = chartData.nasdaq[chartData.nasdaq.length - 1]?.value;
-  const lastMM20 = chartData.mm20[chartData.mm20.length - 1]?.value;
+  const lastStrat = chartData.strat[chartData.strat.length - 1]?.value;
 
   const currentSP = hoverValues?.sp500 ?? lastSP;
   const currentNasdaq = hoverValues?.nasdaq ?? lastNasdaq;
-  const currentMM20 = hoverValues?.mm20 ?? lastMM20;
+  const currentStrat = hoverValues?.strat ?? lastStrat;
 
   const baseVal = activeInvested || 500;
 
   const spPct = currentSP ? ((currentSP - baseVal) / baseVal) * 100 : 0;
   const nasdaqPct = currentNasdaq ? ((currentNasdaq - baseVal) / baseVal) * 100 : 0;
-  const mm20Pct = currentMM20 ? ((currentMM20 - baseVal) / baseVal) * 100 : 0;
+  const stratPct = currentStrat ? ((currentStrat - baseVal) / baseVal) * 100 : 0;
 
   return (
     <div>
@@ -298,19 +298,19 @@ export default function MidCapsChart({ activeInvested }) {
         </button>
 
         <button
-          onClick={() => handleToggle('mm20')}
+          onClick={() => handleToggle('strat')}
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
-            background: visibleSeries.mm20 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(255,255,255,0.02)',
-            border: `1px solid ${visibleSeries.mm20 ? 'rgba(16, 185, 129, 0.4)' : '#334155'}`,
+            background: visibleSeries.strat ? `${strategy?.color || COLORS.mm20}20` : 'rgba(255,255,255,0.02)',
+            border: `1px solid ${visibleSeries.strat ? `${strategy?.color || COLORS.mm20}66` : '#334155'}`,
             padding: '4px 10px', borderRadius: 6, cursor: 'pointer',
-            color: visibleSeries.mm20 ? '#f1f5f9' : '#94a3b8', fontSize: '0.75rem',
+            color: visibleSeries.strat ? '#f1f5f9' : '#94a3b8', fontSize: '0.75rem',
           }}
         >
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS.mm20, opacity: visibleSeries.mm20 ? 1 : 0.3 }} />
-          <strong>MM20 PRO</strong>
-          <span className="mono" style={{ color: '#10b981', fontWeight: 700 }}>${currentMM20?.toFixed(2)}</span>
-          <span style={{ color: mm20Pct >= 0 ? '#22c55e' : '#ef4444', fontSize: '0.7rem' }}>({mm20Pct >= 0 ? '+' : ''}{mm20Pct.toFixed(2)}%)</span>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: strategy?.color || COLORS.mm20, opacity: visibleSeries.strat ? 1 : 0.3 }} />
+          <strong>{strategy?.name || 'Estrategia'} {strategy?.isSystem ? 'PRO' : ''}</strong>
+          <span className="mono" style={{ color: strategy?.color || COLORS.mm20, fontWeight: 700 }}>${currentStrat?.toFixed(2)}</span>
+          <span style={{ color: stratPct >= 0 ? '#22c55e' : '#ef4444', fontSize: '0.7rem' }}>({stratPct >= 0 ? '+' : ''}{stratPct.toFixed(2)}%)</span>
         </button>
       </div>
 

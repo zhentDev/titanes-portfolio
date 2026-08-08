@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { fetchRebalances, createRebalance, deleteRebalance, searchTicker } from '../api/client';
+import toast from 'react-hot-toast';
+import { toastConfirm } from '../utils/toastAlerts';
 import { usePortfolioStore } from '../store/portfolioStore';
 
 export default function RebalanceManager({ onRefresh }) {
@@ -12,6 +14,7 @@ export default function RebalanceManager({ onRefresh }) {
   const [localInvestment, setLocalInvestment] = useState(investment);
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [formTickers, setFormTickers] = useState([]);
+  const [selectedForDeletion, setSelectedForDeletion] = useState([]);
   const [batchInput, setBatchInput] = useState('');
 
   // Search State
@@ -92,19 +95,33 @@ export default function RebalanceManager({ onRefresh }) {
   };
 
   const handleRemoveTicker = (ticker) => {
-    setFormTickers(formTickers.filter((t) => t !== ticker));
+    setFormTickers((prev) => prev.filter((t) => t !== ticker));
+    setSelectedForDeletion((prev) => prev.filter((t) => t !== ticker));
   };
 
-  const handleClearAll = () => {
+  const toggleForDeletion = (ticker) => {
+    setSelectedForDeletion((prev) =>
+      prev.includes(ticker) ? prev.filter((t) => t !== ticker) : [...prev, ticker]
+    );
+  };
+
+  const handleDeleteSelected = () => {
+    setFormTickers((prev) => prev.filter((t) => !selectedForDeletion.includes(t)));
+    setSelectedForDeletion([]);
+  };
+
+  const handleClearAll = async () => {
     if (formTickers.length === 0) return;
-    if (confirm('¿Vaciar todas las posiciones seleccionadas de este borrador?')) {
+    const isConfirmed = await toastConfirm('¿Vaciar todas las posiciones seleccionadas de este borrador?');
+    if (isConfirmed) {
       setFormTickers([]);
+      setSelectedForDeletion([]);
     }
   };
 
   const handleSubmit = async () => {
     if (formTickers.length === 0) {
-      alert('Debes agregar al menos 1 posición al rebalanceo');
+      toast.error('Debes agregar al menos 1 posición al rebalanceo');
       return;
     }
     try {
@@ -115,20 +132,21 @@ export default function RebalanceManager({ onRefresh }) {
       });
       await loadRebalances();
       onRefresh?.();
-      alert(`Rebalanceo de Titanes guardado con éxito para el ${date} (${formTickers.length} posiciones)`);
+      toast.success(`Rebalanceo de Titanes guardado con éxito para el ${date} (${formTickers.length} posiciones)`);
     } catch (e) {
-      alert('Error guardando el rebalanceo: ' + e.message);
+      toast.error('Error guardando el rebalanceo: ' + e.message);
     }
   };
 
   const handleDelete = async (delDate) => {
-    if (!confirm(`¿Estás seguro de eliminar por completo el grupo de rebalanceo del ${delDate}?`)) return;
+    const isConfirmed = await toastConfirm(`¿Estás seguro de eliminar por completo el grupo de rebalanceo del ${delDate}?`);
+    if (!isConfirmed) return;
     try {
       await deleteRebalance(delDate);
       await loadRebalances();
       onRefresh?.();
     } catch (e) {
-      alert('Error eliminando: ' + e.message);
+      toast.error('Error eliminando: ' + e.message);
     }
   };
 
@@ -279,7 +297,7 @@ export default function RebalanceManager({ onRefresh }) {
           <div style={{ display: 'flex', gap: '8px' }}>
             <input
               type="text"
-              placeholder="ORCL, HPQ, ON, NTAP, AMAT..."
+              placeholder="ORCL HPQ ON NTAP AMAT..."
               value={batchInput}
               onChange={(e) => setBatchInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleBatchAdd()}
@@ -304,7 +322,7 @@ export default function RebalanceManager({ onRefresh }) {
             </button>
           </div>
           <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
-            Pega múltiples acciones separadas por coma o espacio para agregarlas al instante.
+            Pega múltiples acciones separadas por espacio para agregarlas al instante.
           </span>
         </div>
 
@@ -372,13 +390,34 @@ export default function RebalanceManager({ onRefresh }) {
               Empresas en este rebalanceo: <strong>{formTickers.length}/{numSlots} slots</strong>
             </span>
             {formTickers.length > 0 && (
-              <button
-                type="button"
-                onClick={handleClearAll}
-                style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.72rem', cursor: 'pointer', fontWeight: 600 }}
-              >
-                Limpiar todo
-              </button>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={handleDeleteSelected}
+                  style={{ 
+                    background: '#ef444422', 
+                    border: '1px solid #ef444455', 
+                    color: '#ef4444', 
+                    fontSize: '0.7rem', 
+                    cursor: 'pointer', 
+                    padding: '2px 8px', 
+                    borderRadius: 4, 
+                    fontWeight: 700,
+                    opacity: selectedForDeletion.length > 0 ? 1 : 0,
+                    pointerEvents: selectedForDeletion.length > 0 ? 'auto' : 'none',
+                    transition: 'opacity 0.2s ease',
+                  }}
+                >
+                  Borrar seleccionados ({Math.max(selectedForDeletion.length, 1)})
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClearAll}
+                  style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.72rem', cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }}
+                >
+                  Limpiar todo
+                </button>
+              </div>
             )}
           </div>
 
@@ -389,21 +428,25 @@ export default function RebalanceManager({ onRefresh }) {
               formTickers.map((ticker) => (
                 <div
                   key={ticker}
+                  onClick={() => toggleForDeletion(ticker)}
                   style={{
-                    background: 'var(--bg-surface)',
-                    border: '1px solid var(--border)',
+                    background: selectedForDeletion.includes(ticker) ? '#ef444426' : 'var(--bg-surface)',
+                    border: `1px solid ${selectedForDeletion.includes(ticker) ? '#ef444459' : 'var(--border)'}`,
                     padding: '4px 8px',
                     borderRadius: '4px',
                     fontSize: '0.75rem',
                     display: 'flex',
                     gap: '6px',
                     alignItems: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
                   }}
+                  title="Clic para seleccionar/deseleccionar para borrar"
                 >
-                  <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold' }}>{ticker}</span>
+                  <span style={{ color: selectedForDeletion.includes(ticker) ? '#ef4444' : 'var(--accent-primary)', fontWeight: 'bold' }}>{ticker}</span>
                   <button
-                    style={{ background: 'none', border: 'none', color: 'var(--loss)', cursor: 'pointer', fontSize: '0.8rem', padding: 0 }}
-                    onClick={() => handleRemoveTicker(ticker)}
+                    style={{ background: 'none', border: 'none', color: selectedForDeletion.includes(ticker) ? '#ef4444' : 'var(--loss)', cursor: 'pointer', fontSize: '0.8rem', padding: 0, opacity: 0.7 }}
+                    onClick={(e) => { e.stopPropagation(); handleRemoveTicker(ticker); }}
                   >
                     ✕
                   </button>

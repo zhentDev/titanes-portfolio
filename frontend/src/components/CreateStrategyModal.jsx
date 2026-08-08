@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 
 const COUNTRIES = [
   { code: '🇺🇸', name: 'Estados Unidos (USA)' },
@@ -31,7 +32,7 @@ export default function CreateStrategyModal({ isOpen, onClose, onCreate }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!name.trim()) {
-      alert('Por favor ingresa un nombre para la estrategia');
+      toast.error('Por favor ingresa un nombre para la estrategia');
       return;
     }
     onCreate({

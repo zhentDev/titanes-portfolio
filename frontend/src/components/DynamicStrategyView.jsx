@@ -1,8 +1,13 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
+import { toastConfirm } from '../utils/toastAlerts';
+import { usePortfolioStore } from '../store/portfolioStore';
 import { searchTicker } from '../api/client';
+import StrategyChart, { SYNTHETIC_RETURNS } from './StrategyChart';
+
+const PERIODS = ['1W', '1M', '3M', '6M', '1Y', '3Y', '5Y', 'MAX'];
 
 export default function DynamicStrategyView({ strategy, onDelete, onBack }) {
-  if (!strategy) return null;
 
   const storageKey = `titanes_strat_${strategy.id}_rebalances`;
   const capitalKey = `titanes_strat_${strategy.id}_capital`;
@@ -22,12 +27,14 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack }) {
     ];
   });
 
-  const [simulatedCapital, setSimulatedCapital] = useState(() => {
+  const { period, setPeriod, updateStrategyCapital } = usePortfolioStore();
+
+  const [simulatedCapital, setLocalSimulatedCapital] = useState(() => {
     try {
       const saved = localStorage.getItem(capitalKey);
-      return saved ? Number(saved) : (strategy.capital || 1000);
+      return saved ? Number(saved) : (strategy.activeInvested || 1000);
     } catch {
-      return strategy.capital || 1000;
+      return strategy.activeInvested || 1000;
     }
   });
 
@@ -39,6 +46,7 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack }) {
   const [formTickers, setFormTickers] = useState(() => {
     return rebalances.length > 0 ? [...(rebalances[rebalances.length - 1].tickers || [])] : [];
   });
+  const [selectedForDeletion, setSelectedForDeletion] = useState([]);
 
   // Search & Batch paste input
   const [query, setQuery] = useState('');
@@ -62,6 +70,35 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack }) {
   const activeInvested = activeTickers.length * slotValue;
   const cashBuffer = simulatedCapital - activeInvested;
   const weightPerSlot = (100 / numSlots).toFixed(1);
+
+  const [tickerMetadata, setTickerMetadata] = useState({});
+
+  useEffect(() => {
+    if (activeTickers.length > 0) {
+      import('../api/client').then(({ fetchLiveQuotes }) => {
+        fetchLiveQuotes(activeTickers)
+          .then((res) => {
+            if (Array.isArray(res)) {
+              const map = {};
+              res.forEach((q) => {
+                map[q.ticker] = q;
+              });
+              setTickerMetadata(map);
+            }
+          })
+          .catch(console.error);
+      });
+    }
+  }, [activeTickers.join(',')]);
+
+  // Sync to global store (NavChart needs this)
+  useEffect(() => {
+    if (strategy?.id) {
+      updateStrategyCapital(strategy.id, simulatedCapital, activeInvested);
+    }
+  }, [simulatedCapital, activeInvested, strategy?.id, updateStrategyCapital]);
+
+  const currentReturns = SYNTHETIC_RETURNS[period] || SYNTHETIC_RETURNS['MAX'];
 
   const handleSearchAndAdd = async (e) => {
     e?.preventDefault();
@@ -108,17 +145,29 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack }) {
     setBatchInput('');
   };
 
-  const handleRemoveTicker = (ticker) => {
-    setFormTickers((prev) => prev.filter((t) => t !== ticker));
+  const handleRemoveTicker = (tickerToRemove) => {
+    setFormTickers((prev) => prev.filter((t) => t !== tickerToRemove));
+    setSelectedForDeletion((prev) => prev.filter((t) => t !== tickerToRemove));
+  };
+
+  const toggleForDeletion = (ticker) => {
+    setSelectedForDeletion((prev) =>
+      prev.includes(ticker) ? prev.filter((t) => t !== ticker) : [...prev, ticker]
+    );
+  };
+
+  const handleDeleteSelected = () => {
+    setFormTickers((prev) => prev.filter((t) => !selectedForDeletion.includes(t)));
+    setSelectedForDeletion([]);
   };
 
   const handleSaveRebalance = () => {
     if (!date) {
-      alert('Por favor selecciona una fecha válida');
+      toast.error('Por favor selecciona una fecha válida');
       return;
     }
     if (formTickers.length === 0) {
-      alert('Debes agregar al menos 1 posición al rebalanceo');
+      toast.error('Debes agregar al menos 1 posición al rebalanceo');
       return;
     }
 
@@ -132,20 +181,22 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack }) {
     ].sort((a, b) => (a.rebalance_date > b.rebalance_date ? 1 : -1));
 
     setRebalances(updated);
-    alert(`Rebalanceo del ${date} guardado con éxito (${formTickers.length} posiciones)`);
+    toast.success(`Rebalanceo del ${date} guardado con éxito (${formTickers.length} posiciones)`);
   };
 
-  const handleDeleteRebalance = (delDate) => {
-    if (!confirm(`¿Eliminar el rebalanceo de la fecha ${delDate}?`)) return;
+  const handleDeleteRebalance = async (delDate) => {
+    const isConfirmed = await toastConfirm(`¿Eliminar el rebalanceo de la fecha ${delDate}?`);
+    if (!isConfirmed) return;
     setRebalances((prev) => prev.filter((r) => r.rebalance_date !== delDate));
   };
 
-  const handleDeleteStrategy = () => {
+  const handleDeleteStrategy = async () => {
     if (strategy.isSystem) {
-      alert('Esta es una estrategia base del sistema y no puede eliminarse.');
+      toast.error('Esta es una estrategia base del sistema y no puede eliminarse.');
       return;
     }
-    if (confirm(`¿Estás seguro de eliminar por completo la estrategia "${strategy.name}"?`)) {
+    const isConfirmed = await toastConfirm(`¿Estás seguro de eliminar por completo la estrategia "${strategy.name}"?`);
+    if (isConfirmed) {
       onDelete(strategy.id);
     }
   };
@@ -157,8 +208,8 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack }) {
         className="card"
         style={{
           padding: '24px',
-          background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.08) 0%, rgba(0, 0, 0, 0.4) 100%)',
-          border: '1px solid rgba(0, 229, 255, 0.25)',
+          background: `linear-gradient(135deg, ${strategy.color}14 0%, rgba(0, 0, 0, 0.4) 100%)`,
+          border: `1px solid ${strategy.color}40`,
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -172,15 +223,30 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack }) {
             <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: '#f1f5f9' }}>
               {strategy.name}
             </h2>
+            {strategy.isSystem && (
+              <span
+                style={{
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  background: `${strategy.color}33`,
+                  color: strategy.color,
+                  border: `1px solid ${strategy.color}4D`,
+                }}
+              >
+                PRO
+              </span>
+            )}
             <span
               style={{
                 fontSize: '0.72rem',
                 fontWeight: 800,
                 padding: '2px 8px',
                 borderRadius: '4px',
-                background: 'rgba(0, 229, 255, 0.2)',
-                color: 'var(--accent-primary)',
-                border: '1px solid rgba(0, 229, 255, 0.3)',
+                background: 'rgba(255,255,255,0.1)',
+                color: '#fff',
+                border: '1px solid rgba(255,255,255,0.2)',
               }}
             >
               {numSlots} SLOTS
@@ -205,20 +271,20 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-surface)', padding: '6px 14px', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
             <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Capital Simulado:</span>
-            <span style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>$</span>
+            <span style={{ color: strategy.color, fontWeight: 700 }}>$</span>
             <input
               type="number"
               min={100}
               step={100}
               value={simulatedCapital}
-              onChange={(e) => setSimulatedCapital(Number(e.target.value) || 1000)}
+              onChange={(e) => setLocalSimulatedCapital(Number(e.target.value))}
               style={{
                 width: 90,
                 background: 'rgba(0,0,0,0.25)',
                 border: '1px solid var(--border)',
                 borderRadius: 4,
                 padding: '3px 8px',
-                color: 'var(--accent-primary)',
+                color: strategy.color,
                 fontWeight: 700,
                 fontFamily: "'JetBrains Mono', monospace",
                 fontSize: '0.9rem',
@@ -228,8 +294,8 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack }) {
           </div>
 
           <div className="unit-toggle" onClick={() => setUnit((u) => (u === 'pct' ? 'usd' : 'pct'))}>
-            <button className={`unit-btn ${unit === 'pct' ? 'active' : ''}`}>%</button>
-            <button className={`unit-btn ${unit === 'usd' ? 'active' : ''}`}>$</button>
+            <button className={`unit-btn ${unit === 'pct' ? 'active' : ''}`} style={unit === 'pct' ? { color: strategy.color } : {}}>%</button>
+            <button className={`unit-btn ${unit === 'usd' ? 'active' : ''}`} style={unit === 'usd' ? { color: strategy.color } : {}}>$</button>
           </div>
 
           {!strategy.isSystem && (
@@ -245,18 +311,28 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack }) {
         </div>
       </div>
 
-      {/* ── Summary Strip ────────────────────────────── */}
       <div className="summary-strip fade-up">
         <div className="summary-item">
-          <div className="summary-label">Capital Total Simulado</div>
-          <div className="summary-value large mono" style={{ color: 'var(--accent-primary)', fontWeight: 800 }}>
-            ${simulatedCapital.toFixed(2)}
+          <div className="summary-label">Rentabilidad {strategy.name} ({period})</div>
+          <div className="summary-value large mono" style={{ color: currentReturns.strat >= 0 ? 'var(--gain)' : 'var(--loss)', fontWeight: 800 }}>
+            {unit === 'pct'
+              ? `${currentReturns.strat >= 0 ? '+' : ''}${(currentReturns.strat * 100).toFixed(1)}%`
+              : `${currentReturns.strat >= 0 ? '+' : '-'}$${Math.abs(activeInvested * currentReturns.strat).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          </div>
+        </div>
+        <div className="summary-divider" />
+        <div className="summary-item">
+          <div className="summary-label">Benchmark ({strategy.benchmark}) ({period})</div>
+          <div className="summary-value mono" style={{ color: '#fbbf24', fontWeight: 700 }}>
+            {unit === 'pct'
+              ? `${currentReturns[strategy.benchmark === 'NASDAQ' ? 'nasdaq' : 'sp'] >= 0 ? '+' : ''}${(currentReturns[strategy.benchmark === 'NASDAQ' ? 'nasdaq' : 'sp'] * 100).toFixed(1)}%`
+              : `${currentReturns[strategy.benchmark === 'NASDAQ' ? 'nasdaq' : 'sp'] >= 0 ? '+' : '-'}$${Math.abs(activeInvested * currentReturns[strategy.benchmark === 'NASDAQ' ? 'nasdaq' : 'sp']).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           </div>
         </div>
         <div className="summary-divider" />
         <div className="summary-item">
           <div className="summary-label">Capital Activo ({activeTickers.length}/{numSlots} Slots)</div>
-          <div className="summary-value mono large" style={{ color: 'var(--gain)', fontWeight: 800 }}>
+          <div className="summary-value mono large" style={{ color: strategy.color, fontWeight: 800 }}>
             {unit === 'pct'
               ? `${((activeTickers.length / numSlots) * 100).toFixed(1)}%`
               : `$${activeInvested.toFixed(2)}`}
@@ -264,20 +340,30 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack }) {
         </div>
         <div className="summary-divider" />
         <div className="summary-item">
-          <div className="summary-label">Cash Reservado Q ({numSlots - activeTickers.length} Slots)</div>
-          <div className="summary-value mono muted">
-            {unit === 'pct'
-              ? `${(((numSlots - activeTickers.length) / numSlots) * 100).toFixed(1)}%`
-              : `$${cashBuffer.toFixed(2)}`}
-          </div>
-        </div>
-        <div className="summary-divider" />
-        <div className="summary-item">
           <div className="summary-label">Regla de Asignación</div>
-          <div className="summary-value mono" style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>
+          <div className="summary-value mono" style={{ color: strategy.color, fontWeight: 700 }}>
             {weightPerSlot}% / slot (${slotValue.toFixed(2)})
           </div>
         </div>
+      </div>
+
+      <div className="card fade-up" style={{ padding: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>📊 Crecimiento Histórico</h3>
+          <div className="period-selector" style={{ margin: 0, padding: 0, background: 'transparent' }}>
+            {PERIODS.map((p) => (
+              <button
+                key={p}
+                className={`period-btn ${p === period ? 'active' : ''}`}
+                onClick={() => setPeriod(p)}
+                style={{ padding: '4px 10px', fontSize: '0.75rem' }}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+        </div>
+        <StrategyChart strategy={strategy} activeInvested={activeInvested} />
       </div>
 
       {/* ── Constellation Grid Visualizer (Slots) ────── */}
@@ -286,7 +372,7 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack }) {
           <div>
             <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
               <span>🧩 Matriz de Asignación de {numSlots} Slots</span>
-              <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: 4, background: 'rgba(0, 229, 255, 0.15)', color: 'var(--accent-primary)', fontWeight: 700 }}>
+              <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: 4, background: `${strategy.color}26`, color: strategy.color, fontWeight: 700 }}>
                 1 / {numSlots} = {weightPerSlot}% Equiponderado
               </span>
             </h3>
@@ -294,7 +380,7 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack }) {
               Cada posición ocupa exactamente 1 slot (${slotValue.toFixed(2)} / {weightPerSlot}%). Los slots vacíos se preservan en liquidez (Cash Q).
             </span>
           </div>
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-primary)' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: strategy.color }}>
             {activeTickers.length} Asignados · {numSlots - activeTickers.length} en Cash
           </div>
         </div>
@@ -317,10 +403,10 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack }) {
                   padding: '10px 12px',
                   borderRadius: 'var(--radius)',
                   border: isOccupied
-                    ? '1px solid rgba(0, 229, 255, 0.4)'
+                    ? `1px solid ${strategy.color}66`
                     : '1px dashed rgba(255, 255, 255, 0.1)',
                   background: isOccupied
-                    ? 'linear-gradient(135deg, rgba(0, 229, 255, 0.12) 0%, rgba(0,0,0,0.3) 100%)'
+                    ? `linear-gradient(135deg, ${strategy.color}20 0%, rgba(0,0,0,0.3) 100%)`
                     : 'rgba(255, 255, 255, 0.02)',
                   display: 'flex',
                   flexDirection: 'column',
@@ -337,8 +423,8 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack }) {
                       fontSize: '0.62rem',
                       padding: '1px 5px',
                       borderRadius: 4,
-                      background: isOccupied ? 'rgba(0, 229, 255, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                      color: isOccupied ? 'var(--accent-primary)' : 'var(--text-muted)',
+                      background: isOccupied ? `${strategy.color}40` : 'rgba(255, 255, 255, 0.05)',
+                      color: isOccupied ? strategy.color : 'var(--text-muted)',
                       fontWeight: 700,
                     }}
                   >
@@ -348,10 +434,15 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack }) {
 
                 {isOccupied ? (
                   <>
-                    <strong className="mono" style={{ fontSize: '1.05rem', color: 'var(--accent-primary)' }}>
+                    <strong className="mono" style={{ fontSize: '1.05rem', color: strategy.color, lineHeight: 1.1 }}>
                       {ticker}
                     </strong>
-                    <div style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
+                    {tickerMetadata[ticker] && (
+                      <div style={{ fontSize: '0.62rem', color: '#cbd5e1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={tickerMetadata[ticker].name}>
+                        {tickerMetadata[ticker].name}
+                      </div>
+                    )}
+                    <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: 2 }}>
                       ${slotValue.toFixed(2)} asignados
                     </div>
                   </>
@@ -413,7 +504,7 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack }) {
             <form onSubmit={handleSearchAndAdd} style={{ display: 'flex', gap: 8 }}>
               <input
                 type="text"
-                placeholder="Ej. AAPL, NVDA, MSFT..."
+                placeholder="Ej. AAPL NVDA MSFT..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 style={{
@@ -441,12 +532,12 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack }) {
           {/* Pegar Grupo de Tickers en Bloque */}
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
-              O pegar grupo de tickers separados por comas:
+              O pegar grupo de tickers separados por espacio:
             </label>
             <div style={{ display: 'flex', gap: 8 }}>
               <input
                 type="text"
-                placeholder="AAPL, NVDA, MSFT, GOOGL, AMZN..."
+                placeholder="AAPL NVDA MSFT GOOGL AMZN..."
                 value={batchInput}
                 onChange={(e) => setBatchInput(e.target.value)}
                 style={{
@@ -473,13 +564,37 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack }) {
                 Posiciones asignadas ({formTickers.length}):
               </span>
               {formTickers.length > 0 && (
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                 <button
                   type="button"
-                  onClick={() => setFormTickers([])}
-                  style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.7rem', cursor: 'pointer' }}
+                  onClick={handleDeleteSelected}
+                  style={{ 
+                    background: '#ef444422', 
+                    border: '1px solid #ef444455', 
+                    color: '#ef4444', 
+                    fontSize: '0.7rem', 
+                    cursor: 'pointer', 
+                    padding: '2px 8px', 
+                    borderRadius: 4, 
+                    fontWeight: 700,
+                    opacity: selectedForDeletion.length > 0 ? 1 : 0,
+                    pointerEvents: selectedForDeletion.length > 0 ? 'auto' : 'none',
+                    transition: 'opacity 0.2s ease',
+                  }}
                 >
-                  Limpiar todo
+                  Borrar seleccionados ({Math.max(selectedForDeletion.length, 1)})
                 </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormTickers([]);
+                      setSelectedForDeletion([]);
+                    }}
+                    style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}
+                  >
+                    Limpiar todo
+                  </button>
+                </div>
               )}
             </div>
 
@@ -490,25 +605,29 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack }) {
                 formTickers.map((t) => (
                   <span
                     key={t}
+                    onClick={() => toggleForDeletion(t)}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 6,
                       padding: '4px 10px',
                       borderRadius: 16,
-                      background: 'rgba(0, 229, 255, 0.15)',
-                      border: '1px solid rgba(0, 229, 255, 0.35)',
-                      color: 'var(--accent-primary)',
+                      background: selectedForDeletion.includes(t) ? '#ef444426' : `${strategy.color}26`,
+                      border: `1px solid ${selectedForDeletion.includes(t) ? '#ef444459' : `${strategy.color}59`}`,
+                      color: selectedForDeletion.includes(t) ? '#ef4444' : strategy.color,
                       fontSize: '0.75rem',
                       fontWeight: 700,
                       fontFamily: "'JetBrains Mono', monospace",
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
                     }}
+                    title="Clic para seleccionar/deseleccionar para borrar"
                   >
                     <span>{t}</span>
                     <button
                       type="button"
-                      onClick={() => handleRemoveTicker(t)}
-                      style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.75rem', padding: 0 }}
+                      onClick={(e) => { e.stopPropagation(); handleRemoveTicker(t); }}
+                      style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, padding: 0, opacity: 0.7 }}
                       title="Eliminar posición"
                     >
                       ×
@@ -545,17 +664,17 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack }) {
                   style={{
                     padding: '14px',
                     borderRadius: 'var(--radius)',
-                    background: isCurrent ? 'rgba(0, 229, 255, 0.06)' : 'var(--bg-surface)',
-                    border: `1px solid ${isCurrent ? 'rgba(0, 229, 255, 0.3)' : 'var(--border)'}`,
+                    background: isCurrent ? `${strategy.color}10` : 'var(--bg-surface)',
+                    border: `1px solid ${isCurrent ? `${strategy.color}4D` : 'var(--border)'}`,
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span className="mono" style={{ fontWeight: 800, fontSize: '0.9rem', color: isCurrent ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
+                      <span className="mono" style={{ fontWeight: 800, fontSize: '0.9rem', color: isCurrent ? strategy.color : 'var(--text-primary)' }}>
                         {reb.rebalance_date}
                       </span>
                       {isCurrent && (
-                        <span style={{ fontSize: '0.65rem', padding: '1px 6px', borderRadius: 4, background: 'rgba(0, 229, 255, 0.2)', color: 'var(--accent-primary)', fontWeight: 700 }}>
+                        <span style={{ fontSize: '0.65rem', padding: '1px 6px', borderRadius: 4, background: `${strategy.color}33`, color: strategy.color, fontWeight: 700 }}>
                           VIGENTE
                         </span>
                       )}
