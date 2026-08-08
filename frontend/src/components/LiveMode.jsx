@@ -27,7 +27,7 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
     try {
       setError(null);
 
-      // 1. If navData is not yet loaded, fetch it
+      // 1. Ensure navData is available
       let currentNav = navData;
       if (!currentNav || !currentNav.holdings || currentNav.holdings.length === 0) {
         try {
@@ -47,7 +47,7 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
         return;
       }
 
-      // 2. Fetch live quotes for active positions
+      // 2. Fetch live quotes for active positions only
       const quotesData = await fetchLiveQuotes(activeTickers);
       if (Array.isArray(quotesData) && quotesData.length > 0) {
         setQuotes(quotesData);
@@ -55,60 +55,68 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
       }
       setLastUpdate(new Date());
 
-      // 3. Attempt Intraday 5m candle aggregation (safe fallback if market is closed)
-      try {
-        const intradayPromises = activeTickers.map((t) =>
-          fetchIntraday(t).catch(() => [])
-        );
-        const intradayResults = await Promise.all(intradayPromises);
+      // 3. Intraday chart: Only build if market is actively open and data is consistent
+      const isLiveTrading = quotesData?.[0]?.market_open;
+      if (isLiveTrading) {
+        try {
+          const intradayPromises = activeTickers.map((t) =>
+            fetchIntraday(t).catch(() => [])
+          );
+          const intradayResults = await Promise.all(intradayPromises);
 
-        const allTimes = new Set();
-        intradayResults.forEach((series) => {
-          if (Array.isArray(series)) {
-            series.forEach((p) => {
-              if (p && p.time) allTimes.add(p.time);
-            });
-          }
-        });
+          // Only plot if all active tickers returned intraday points
+          const allHaveData = intradayResults.every((res) => Array.isArray(res) && res.length > 2);
 
-        const sortedTimes = Array.from(allTimes).sort((a, b) => a - b);
-
-        if (sortedTimes.length > 1) {
-          const lastPrice = {};
-          const chartSeries = [];
-
-          for (const t of sortedTimes) {
-            let stockValue = 0;
-            intradayResults.forEach((series, i) => {
-              const ticker = activeTickers[i];
-              const holding = activeHoldings.find((h) => h.ticker === ticker);
-              const shares = holding ? holding.shares : 0;
-
-              const point = (series || []).find((p) => p.time === t);
-              if (point && !isNaN(point.value)) {
-                lastPrice[ticker] = point.value;
-              }
-              const price =
-                lastPrice[ticker] ??
-                quotesData?.find((q) => q.ticker === ticker)?.price ??
-                holding?.current_price ??
-                0;
-              if (!isNaN(price)) {
-                stockValue += price * shares;
-              }
-            });
-
-            if (!isNaN(stockValue) && stockValue > 0) {
-              chartSeries.push({
-                time: t,
-                value: stockValue,
+          if (allHaveData) {
+            const allTimes = new Set();
+            intradayResults.forEach((series) => {
+              series.forEach((p) => {
+                if (p && p.time) allTimes.add(p.time);
               });
+            });
+
+            const sortedTimes = Array.from(allTimes).sort((a, b) => a - b);
+            const chartSeries = [];
+
+            for (const t of sortedTimes) {
+              let stockValue = 0;
+              let validPoint = true;
+
+              intradayResults.forEach((series, i) => {
+                const ticker = activeTickers[i];
+                const holding = activeHoldings.find((h) => h.ticker === ticker);
+                const shares = holding ? holding.shares : 0;
+
+                const point = series.find((p) => p.time === t);
+                const price = point?.value ?? quotesData?.find((q) => q.ticker === ticker)?.price;
+
+                if (price && !isNaN(price)) {
+                  stockValue += price * shares;
+                } else {
+                  validPoint = false;
+                }
+              });
+
+              // Strictly active equity only (no uninvested cash added)
+              if (validPoint && stockValue > 0) {
+                chartSeries.push({
+                  time: t,
+                  value: round2(stockValue),
+                });
+              }
             }
+
+            setIntradayChart(chartSeries);
+          } else {
+            setIntradayChart([]);
           }
-          setIntradayChart(chartSeries);
+        } catch (intradayErr) {
+          console.warn('[LIVE MODE] Velas intradía no disponibles:', intradayErr);
+          setIntradayChart([]);
         }
-      } catch (intradayErr) {
-        console.warn('[LIVE MODE] Velas intradía no disponibles:', intradayErr);
+      } else {
+        // Market is closed (weekend/after-hours) — no fake fluctuating curves
+        setIntradayChart([]);
       }
     } catch (e) {
       console.error('[LIVE MODE] Error:', e);
@@ -125,14 +133,14 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
     return () => clearInterval(interval);
   }, [load]);
 
-  // Derived metrics
+  // Derived metrics — ONLY ACTIVE INVESTED CAPITAL (no flat uninvested cash)
   const holdings = navData?.holdings || [];
   const cashReserved = navData?.summary?.cash_reserved ?? 0;
   const activeInvested =
     navData?.summary?.active_invested ??
     (holdings.length > 0 ? (investment * holdings.length) / 15 : investment);
 
-  // Live stock portfolio value
+  // Live stock portfolio value (Pure active positions: sum of shares * current price)
   const liveStockValue = holdings.reduce((sum, h) => {
     const q = quotes.find((quote) => quote.ticker === h.ticker);
     const price = q?.price ?? q?.previous_close ?? h.current_price ?? 0;
@@ -199,7 +207,7 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
               {isGain ? '▲' : '▼'} ${Math.abs(totalReturn).toFixed(2)} ({Math.abs(totalReturnPct).toFixed(2)}%)
             </span>
             <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-              base: ${activeInvested.toFixed(2)} ({holdings.length} posiciones abiertas)
+              base: ${activeInvested.toFixed(2)} ({holdings.length} posiciones activas de 15)
             </span>
           </div>
         </div>
@@ -216,7 +224,7 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.82rem' }}>
             <span className={`market-dot ${marketOpen ? 'open' : 'closed'}`} />
             <span style={{ color: marketOpen ? 'var(--gain)' : '#94a3b8', fontWeight: 600 }}>
-              {marketOpen ? 'NYSE / NASDAQ En Vivo' : 'Mercado Cerrado (Último Cierre)'}
+              {marketOpen ? 'NYSE / NASDAQ En Vivo' : 'Mercado Cerrado (Último Cierre Oficial)'}
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -263,11 +271,11 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
         </div>
       )}
 
-      {/* ── Intraday Chart (if 5m candles exist) ────────── */}
+      {/* ── Intraday Chart (Only during active market sessions) ────────── */}
       {intradayChart.length > 1 && (
         <div className="card" style={{ paddingBottom: '30px' }}>
           <h3 style={{ marginBottom: 16, fontSize: '1rem', fontWeight: 600 }}>
-            Gráfica Intradía de Hoy (5m)
+            Gráfica Intradía de Hoy (5m) — Capital Activo
           </h3>
           <div style={{ height: '340px' }}>
             <NavChart navData={intradayChart} investment={activeInvested} />
@@ -408,13 +416,13 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
               }}
             >
               <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                Q (Cash Reservado)
+                Q (Cash Plano No Invertido)
               </div>
               <div className="mono" style={{ fontSize: '1.3rem', color: 'var(--text-muted)', fontWeight: 700 }}>
                 ${cashReserved.toFixed(2)}
               </div>
               <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                {15 - holdings.length} slots de liquidez protegida
+                {15 - holdings.length} slots de liquidez no expuesta al mercado
               </div>
             </div>
           )}
@@ -422,4 +430,8 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
       </div>
     </div>
   );
+}
+
+function round2(num) {
+  return Math.round((num + Number.EPSILON) * 100) / 100;
 }
