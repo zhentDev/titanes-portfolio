@@ -1,4 +1,11 @@
-export default function HoldingsTable({ holdings, investment, numSlots, onToggleTicker }) {
+export default function HoldingsTable({
+  holdings,
+  investment,
+  numSlots,
+  onToggleTicker,
+  unit = 'pct',
+  onToggleUnit,
+}) {
   if (!holdings?.length) return null;
 
   const slotValue = investment / numSlots;
@@ -7,15 +14,21 @@ export default function HoldingsTable({ holdings, investment, numSlots, onToggle
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
         <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Detalle de Posiciones Activas</h3>
-        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-          Haz clic en cualquier acción para incluirla o excluirla de la simulación
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            Unidad:
+          </span>
+          <div className="unit-toggle" onClick={onToggleUnit} title="Alternar entre Porcentaje y Dólares">
+            <button className={`unit-btn ${unit === 'pct' ? 'active' : ''}`}>%</button>
+            <button className={`unit-btn ${unit === 'usd' ? 'active' : ''}`}>$</button>
+          </div>
+        </div>
       </div>
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
-              {['Simulación', 'Empresa / Ticker', 'Sector', 'Peso', 'Acciones', 'Precio inicio', 'Precio actual', 'Valor actual', 'Retorno'].map((h) => (
+              {['Simulación', 'Empresa / Ticker', 'Sector', 'Peso', 'Acciones', 'Precio inicio', 'Precio actual', 'Valor actual'].map((h) => (
                 <th key={h} style={{
                   padding: '10px 12px', textAlign: h === 'Simulación' || h.startsWith('Empresa') || h === 'Sector' ? 'left' : 'right',
                   color: 'var(--text-muted)', fontWeight: 500, fontSize: '0.72rem',
@@ -25,13 +38,31 @@ export default function HoldingsTable({ holdings, investment, numSlots, onToggle
                   {h}
                 </th>
               ))}
+              <th
+                style={{
+                  padding: '10px 12px',
+                  textAlign: 'right',
+                  color: 'var(--accent-primary)',
+                  fontWeight: 600,
+                  fontSize: '0.72rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                }}
+                onClick={onToggleUnit}
+                title="Haz clic para alternar entre % y $"
+              >
+                Retorno ({unit === 'pct' ? '%' : '$'}) ⇄
+              </th>
             </tr>
           </thead>
           <tbody>
             {holdings.map((h, i) => {
               const isSelected = h.selected !== false;
               const returnPct = h.return_pct ?? 0;
-              const isGain = returnPct >= 0;
+              const returnUsd = h.return_usd ?? ((h.current_price - h.start_price) * (h.shares || 0));
+              const isGain = (unit === 'pct' ? returnPct : returnUsd) >= 0;
               return (
                 <tr
                   key={h.ticker}
@@ -53,7 +84,7 @@ export default function HoldingsTable({ holdings, investment, numSlots, onToggle
                       <input
                         type="checkbox"
                         checked={isSelected}
-                        onChange={() => {}} // handled by row click
+                        onChange={() => {}}
                         style={{ cursor: 'pointer', accentColor: 'var(--accent-primary)', width: 15, height: 15 }}
                       />
                       <span style={{ fontSize: '0.68rem', color: isSelected ? 'var(--gain)' : 'var(--text-muted)', fontWeight: 600 }}>
@@ -123,14 +154,14 @@ export default function HoldingsTable({ holdings, investment, numSlots, onToggle
                     </span>
                   </td>
 
-                  {/* Return % */}
+                  {/* Return % or $ */}
                   <td style={{ padding: '10px 12px', textAlign: 'right' }}>
-                    {h.return_pct !== undefined ? (
-                      <span className={`badge ${isGain ? 'gain' : 'loss'}`}>
-                        {isGain ? '▲' : '▼'} {Math.abs(returnPct).toFixed(2)}%
+                    {isSelected ? (
+                      <span className={`badge ${isGain ? 'gain' : 'loss'}`} style={{ cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); onToggleUnit && onToggleUnit(); }}>
+                        {isGain ? '▲' : '▼'} {unit === 'pct' ? `${Math.abs(returnPct).toFixed(2)}%` : `$${Math.abs(returnUsd).toFixed(2)}`}
                       </span>
                     ) : (
-                      <span className="badge" style={{ background: 'rgba(107,114,128,0.15)', color: 'var(--neutral)' }}>N/A</span>
+                      <span className="badge" style={{ background: 'rgba(107,114,128,0.15)', color: 'var(--neutral)' }}>Excluida</span>
                     )}
                   </td>
                 </tr>
@@ -158,7 +189,9 @@ export default function HoldingsTable({ holdings, investment, numSlots, onToggle
                 <span className="mono" style={{ fontWeight: 600 }}>${(slotValue * (numSlots - holdings.length)).toFixed(2)}</span>
               </td>
               <td style={{ padding: '10px 12px', textAlign: 'right' }}>
-                <span className="badge" style={{ background: 'rgba(107,114,128,0.15)', color: 'var(--neutral)' }}>0.00%</span>
+                <span className="badge" style={{ background: 'rgba(107,114,128,0.15)', color: 'var(--neutral)' }}>
+                  {unit === 'pct' ? '0.00%' : '$0.00'}
+                </span>
               </td>
             </tr>
           </tbody>

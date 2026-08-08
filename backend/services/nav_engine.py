@@ -198,6 +198,7 @@ def calculate_nav(
                 "current_price": round(current_price, 4),
                 "current_value": round(val, 4),
                 "return_pct": round(return_pct, 4),
+                "return_usd": round(val - (shares * start_price), 2) if is_selected and start_price > 0 else 0.0,
                 "selected": is_selected,
             }
         )
@@ -214,14 +215,19 @@ def calculate_nav(
 
     # Rendimiento de los benchmarks sobre ese mismo capital
     sp500_end_val = sp500_series[-1]["value"] if sp500_series else active_invested
+    sp500_return = sp500_end_val - active_invested
     sp500_return_pct = ((sp500_end_val - active_invested) / active_invested * 100) if active_invested > 0 else 0.0
 
     nasdaq_end_val = nasdaq_series[-1]["value"] if nasdaq_series else active_invested
+    nasdaq_return = nasdaq_end_val - active_invested
     nasdaq_return_pct = ((nasdaq_end_val - active_invested) / active_invested * 100) if active_invested > 0 else 0.0
 
-    # Métricas ProPicks AI: Alfa (Exceso de retorno sobre benchmarks)
+    # Métricas ProPicks AI: Alfa en Porcentaje (%) y en Dólares ($)
     alpha_sp500 = round(active_return_pct - sp500_return_pct, 2)
+    alpha_sp500_usd = round(active_return - sp500_return, 2)
+
     alpha_nasdaq = round(active_return_pct - nasdaq_return_pct, 2)
+    alpha_nasdaq_usd = round(active_return - nasdaq_return, 2)
 
     # Max Drawdown histórico
     max_dd = 0.0
@@ -234,6 +240,7 @@ def calculate_nav(
         if dd < max_dd:
             max_dd = dd
 
+    max_dd_usd = round((max_dd / 100.0) * peak, 2) if peak > 0 else 0.0
     total_return = current_value - total_invested
     total_return_pct = (
         (total_return / total_invested * 100) if total_invested > 0 else 0.0
@@ -250,12 +257,18 @@ def calculate_nav(
             "invested_value": round(total_invested, 2),
             "active_invested": round(active_invested, 2),
             "active_stock_value": round(current_stock_value, 2),
+            "active_return": round(active_return, 2),
             "active_return_pct": round(active_return_pct, 2),
+            "sp500_return": round(sp500_return, 2),
             "sp500_return_pct": round(sp500_return_pct, 2),
+            "nasdaq_return": round(nasdaq_return, 2),
             "nasdaq_return_pct": round(nasdaq_return_pct, 2),
             "alpha_sp500": alpha_sp500,
+            "alpha_sp500_usd": alpha_sp500_usd,
             "alpha_nasdaq": alpha_nasdaq,
+            "alpha_nasdaq_usd": alpha_nasdaq_usd,
             "max_drawdown_pct": round(max_dd, 2),
+            "max_drawdown_usd": max_dd_usd,
             "cash_reserved": round(cash_reserved, 2),
             "total_return": round(total_return, 2),
             "total_return_pct": round(total_return_pct, 2),

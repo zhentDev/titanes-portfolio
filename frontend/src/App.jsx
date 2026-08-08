@@ -16,6 +16,9 @@ export default function App() {
   const [error, setError] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedTickers, setSelectedTickers] = useState(null); // null = all active tickers included
+  const [unit, setUnit] = useState('pct'); // 'pct' | 'usd'
+
+  const toggleUnit = () => setUnit((u) => (u === 'pct' ? 'usd' : 'pct'));
 
   const loadNAV = useCallback(async () => {
     setLoading(true);
@@ -105,16 +108,24 @@ export default function App() {
           <LiveMode key={refreshKey} navData={navData} investment={investment} />
         ) : (
           <>
-            {/* ── Summary strip ─────────────────────────── */}
+            {/* ── Summary strip with % and $ Unit Toggle ─── */}
             {summary && !loading && (() => {
               const activeInvested = summary.active_invested || (investment - (summary.cash_reserved || 0));
               const activeReturnPct = summary.active_return_pct ?? 0;
-              const isActGain = activeReturnPct >= 0;
-              const alphaSP = summary.alpha_sp500 ?? 0;
-              const alphaND = summary.alpha_nasdaq ?? 0;
+              const activeReturnUsd = summary.active_return ?? ((summary.active_stock_value || activeInvested) - activeInvested);
+              const isActGain = (unit === 'pct' ? activeReturnPct : activeReturnUsd) >= 0;
+
+              const alphaSPPct = summary.alpha_sp500 ?? 0;
+              const alphaSPUsd = summary.alpha_sp500_usd ?? (activeReturnUsd - (summary.sp500_return || 0));
+
+              const alphaNDPct = summary.alpha_nasdaq ?? 0;
+              const alphaNDUsd = summary.alpha_nasdaq_usd ?? (activeReturnUsd - (summary.nasdaq_return || 0));
+
+              const maxDDPct = summary.max_drawdown_pct ?? 0;
+              const maxDDUsd = summary.max_drawdown_usd ?? 0;
 
               return (
-              <div className="summary-strip fade-up">
+              <div className="summary-strip fade-up" style={{ position: 'relative' }}>
                 <SummaryItem
                   label={`Capital Activo (${summary.num_holdings} Acciones)`}
                   value={`$${activeInvested.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
@@ -122,10 +133,19 @@ export default function App() {
                 />
                 <div className="summary-divider" />
                 <SummaryItem
-                  label="Rendimiento Titanes"
+                  label={
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                      <span>Rendimiento Titanes</span>
+                    </div>
+                  }
                   value={
-                    <span className={`badge ${isActGain ? 'gain' : 'loss'}`} style={{ fontSize: '0.95rem', padding: '4px 10px' }}>
-                      {isActGain ? '▲' : '▼'} {Math.abs(activeReturnPct).toFixed(2)}%
+                    <span
+                      className={`badge ${isActGain ? 'gain' : 'loss'}`}
+                      style={{ fontSize: '0.95rem', padding: '4px 10px', cursor: 'pointer' }}
+                      onClick={toggleUnit}
+                      title="Haz clic para alternar entre % y $"
+                    >
+                      {isActGain ? '▲' : '▼'} {unit === 'pct' ? `${Math.abs(activeReturnPct).toFixed(2)}%` : `$${Math.abs(activeReturnUsd).toFixed(2)}`}
                     </span>
                   }
                 />
@@ -133,8 +153,13 @@ export default function App() {
                 <SummaryItem
                   label="Alfa vs S&P 500 (α)"
                   value={
-                    <span className={`badge ${alphaSP >= 0 ? 'gain' : 'loss'}`} style={{ fontSize: '0.95rem', padding: '4px 10px' }}>
-                      {alphaSP >= 0 ? '+' : ''}{alphaSP.toFixed(2)}%
+                    <span
+                      className={`badge ${alphaSPPct >= 0 ? 'gain' : 'loss'}`}
+                      style={{ fontSize: '0.95rem', padding: '4px 10px', cursor: 'pointer' }}
+                      onClick={toggleUnit}
+                      title="Haz clic para alternar entre % y $"
+                    >
+                      {alphaSPPct >= 0 ? '+' : ''}{unit === 'pct' ? `${alphaSPPct.toFixed(2)}%` : `$${alphaSPUsd.toFixed(2)}`}
                     </span>
                   }
                   mono
@@ -143,8 +168,13 @@ export default function App() {
                 <SummaryItem
                   label="Alfa vs NASDAQ (α)"
                   value={
-                    <span className={`badge ${alphaND >= 0 ? 'gain' : 'loss'}`} style={{ fontSize: '0.95rem', padding: '4px 10px' }}>
-                      {alphaND >= 0 ? '+' : ''}{alphaND.toFixed(2)}%
+                    <span
+                      className={`badge ${alphaNDPct >= 0 ? 'gain' : 'loss'}`}
+                      style={{ fontSize: '0.95rem', padding: '4px 10px', cursor: 'pointer' }}
+                      onClick={toggleUnit}
+                      title="Haz clic para alternar entre % y $"
+                    >
+                      {alphaNDPct >= 0 ? '+' : ''}{unit === 'pct' ? `${alphaNDPct.toFixed(2)}%` : `$${alphaNDUsd.toFixed(2)}`}
                     </span>
                   }
                   mono
@@ -153,8 +183,12 @@ export default function App() {
                 <SummaryItem
                   label="Max Drawdown"
                   value={
-                    <span style={{ color: summary.max_drawdown_pct < -5 ? '#ef4444' : '#94a3b8', fontWeight: 600 }}>
-                      {summary.max_drawdown_pct ? `${summary.max_drawdown_pct.toFixed(2)}%` : '0.00%'}
+                    <span
+                      style={{ color: maxDDPct < -5 ? '#ef4444' : '#94a3b8', fontWeight: 600, cursor: 'pointer' }}
+                      onClick={toggleUnit}
+                      title="Haz clic para alternar entre % y $"
+                    >
+                      {unit === 'pct' ? `${maxDDPct.toFixed(2)}%` : `-$${Math.abs(maxDDUsd).toFixed(2)}`}
                     </span>
                   }
                   mono
@@ -166,11 +200,15 @@ export default function App() {
                   muted mono
                 />
                 <div className="summary-divider" />
-                <SummaryItem
-                  label="Slots Ocupados"
-                  value={`${summary.num_holdings}/${summary.num_slots}`}
-                  muted
-                />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center', justifyContent: 'center', padding: '0 10px' }}>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Unidad
+                  </span>
+                  <div className="unit-toggle" onClick={toggleUnit} title="Alternar métricas entre Porcentaje (%) y Dólares ($)">
+                    <button className={`unit-btn ${unit === 'pct' ? 'active' : ''}`}>%</button>
+                    <button className={`unit-btn ${unit === 'usd' ? 'active' : ''}`}>$</button>
+                  </div>
+                </div>
               </div>
               );
             })()}
@@ -306,6 +344,8 @@ export default function App() {
                     investment={investment}
                     numSlots={numSlots}
                     onToggleTicker={toggleTicker}
+                    unit={unit}
+                    onToggleUnit={toggleUnit}
                   />
                 ) : loading ? (
                   <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
