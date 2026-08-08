@@ -20,6 +20,12 @@ const DEFAULT_REBALANCES = [
 export default function MidCapsStrategy({ onBack }) {
   const { midcapsCapital, setMidcapsCapital, period, setPeriod } = usePortfolioStore();
 
+  const [localCapital, setLocalCapital] = useState(midcapsCapital || 2000);
+
+  useEffect(() => {
+    setLocalCapital(midcapsCapital || 2000);
+  }, [midcapsCapital]);
+
   // Rebalance history for Mid-caps persisted in storage and database
   const [rebalances, setRebalances] = useState(() => {
     try {
@@ -31,7 +37,7 @@ export default function MidCapsStrategy({ onBack }) {
     return DEFAULT_REBALANCES;
   });
 
-  const simulatedCapital = midcapsCapital || 1000;
+  const simulatedCapital = midcapsCapital || 2000;
   const setSimulatedCapital = (val) => setMidcapsCapital(val);
 
   const [numSlots] = useState(20);
@@ -197,28 +203,41 @@ export default function MidCapsStrategy({ onBack }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-surface)', padding: '6px 14px', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Capital Simulado:</span>
-            <span style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>$</span>
-            <input
-              type="number"
-              min={100}
-              step={100}
-              value={simulatedCapital}
-              onChange={(e) => setSimulatedCapital(Number(e.target.value) || 1000)}
-              style={{
-                width: 90,
-                background: 'rgba(0,0,0,0.25)',
-                border: '1px solid var(--border)',
-                borderRadius: 4,
-                padding: '3px 8px',
-                color: 'var(--accent-primary)',
-                fontWeight: 700,
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: '0.9rem',
-                textAlign: 'right',
-              }}
-            />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>$</span>
+              <input
+                type="number"
+                value={localCapital}
+                min={100}
+                step={100}
+                onChange={(e) => setLocalCapital(Number(e.target.value) || 100)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') setSimulatedCapital(localCapital);
+                }}
+                style={{
+                  width: 90,
+                  background: 'rgba(0,0,0,0.25)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 4,
+                  padding: '3px 8px',
+                  color: 'var(--accent-primary)',
+                  fontWeight: 700,
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: '0.9rem',
+                  textAlign: 'right',
+                }}
+              />
+              <button 
+                className="btn btn-primary" 
+                style={{ padding: '4px 8px', fontSize: '0.7rem' }}
+                onClick={() => setSimulatedCapital(localCapital)}
+                disabled={Number(localCapital) === Number(simulatedCapital)}
+              >
+                Aplicar
+              </button>
+            </div>
           </div>
 
           <div className="unit-toggle" onClick={() => setUnit((u) => (u === 'pct' ? 'usd' : 'pct'))}>

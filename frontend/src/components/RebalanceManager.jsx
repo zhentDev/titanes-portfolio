@@ -9,6 +9,7 @@ export default function RebalanceManager({ onRefresh }) {
   const [error, setError] = useState(null);
 
   // Form State
+  const [localInvestment, setLocalInvestment] = useState(investment);
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [formTickers, setFormTickers] = useState([]);
   const [batchInput, setBatchInput] = useState('');
@@ -39,6 +40,10 @@ export default function RebalanceManager({ onRefresh }) {
   useEffect(() => {
     loadRebalances();
   }, []);
+
+  useEffect(() => {
+    setLocalInvestment(investment);
+  }, [investment]);
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -138,15 +143,29 @@ export default function RebalanceManager({ onRefresh }) {
           <span style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>$</span>
           <input
             type="number"
-            value={investment}
+            value={localInvestment}
             min={1}
             step={100}
-            onChange={(e) => {
-              setInvestment(e.target.value);
-              onRefresh?.();
+            onChange={(e) => setLocalInvestment(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                setInvestment(localInvestment);
+                onRefresh?.();
+              }
             }}
             style={{ maxWidth: '140px', textAlign: 'right', fontWeight: 700 }}
           />
+          <button 
+            className="btn btn-primary" 
+            style={{ padding: '4px 10px', fontSize: '0.75rem' }}
+            onClick={() => {
+              setInvestment(localInvestment);
+              onRefresh?.();
+            }}
+            disabled={Number(localInvestment) === Number(investment)}
+          >
+            Aplicar
+          </button>
           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
             = ${(investment / numSlots).toFixed(2)} / slot ({numSlots} slots)
           </span>
