@@ -437,11 +437,30 @@ export default function NavChart({
           </button>
         </div>
 
-        {hoverValues?.date && (
-          <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontFamily: "'JetBrains Mono', monospace" }}>
-            📅 {String(hoverValues.date)}
-          </span>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {useLogScale && (
+            <span
+              style={{
+                fontSize: '0.65rem',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                background: 'rgba(16, 185, 129, 0.1)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                color: '#10b981',
+                fontWeight: 700,
+                letterSpacing: '0.5px'
+              }}
+              title="Escala logarítmica de doble eje activada para alinear capitales con gran diferencia"
+            >
+              ⚖️ DOBLE ESCALA
+            </span>
+          )}
+          {hoverValues?.date && (
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontFamily: "'JetBrains Mono', monospace" }}>
+              📅 {String(hoverValues.date)}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* ── Integrated Interactive Ticker Activator Bar (Position Switchers with Smooth Animations) ── */}

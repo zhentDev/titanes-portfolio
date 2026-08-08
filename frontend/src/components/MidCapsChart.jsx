@@ -19,33 +19,82 @@ export const SYNTHETIC_RETURNS = {
   'MAX': { sp: 2.808, nasdaq: 3.50, mm20: 10.626, days: 3650, points: 180 },
 };
 
+// Generador pseudoaleatorio predecible para que la curva no salte con cada render
+function seededRandom(seed) {
+  let x = Math.sin(seed++) * 10000;
+  return x - Math.floor(x);
+}
+
 function generateSyntheticData(baseActive, period) {
   const pData = SYNTHETIC_RETURNS[period] || SYNTHETIC_RETURNS['MAX'];
   const data = { sp500: [], nasdaq: [], mm20: [] };
   
   const today = new Date();
-  // Set time to noon to avoid any timezone shift issues
   today.setHours(12, 0, 0, 0);
 
   const pointsCount = pData.points;
   const dayStep = pData.days / pointsCount;
 
+  // 1. Generate standard random walks
+  const rawWalks = { sp500: [0], nasdaq: [0], mm20: [0] };
+  let seed = pData.days; // seed based on period length
+  
+  for (let i = 1; i <= pointsCount; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - pData.days + Math.round(i * dayStep));
+    const year = d.getFullYear();
+    
+    // Base random step (-0.5 to 0.5)
+    let stepSP = seededRandom(seed++) - 0.5;
+    let stepND = seededRandom(seed++) - 0.5;
+    let stepMM = seededRandom(seed++) - 0.5;
+    
+    // Simulate historical shocks if the date falls in known bear markets
+    if (year === 2020 && d.getMonth() === 2) { // COVID crash March 2020
+      stepSP -= 3; stepND -= 2; stepMM -= 4;
+    } else if (year === 2022) { // 2022 Bear Market
+      stepSP -= 0.2; stepND -= 0.3; stepMM -= 0.4;
+    } else if (year === 2018 && d.getMonth() === 11) { // Late 2018 crash
+      stepSP -= 2; stepND -= 2; stepMM -= 3;
+    }
+
+    rawWalks.sp500.push(rawWalks.sp500[i - 1] + stepSP);
+    rawWalks.nasdaq.push(rawWalks.nasdaq[i - 1] + stepND);
+    rawWalks.mm20.push(rawWalks.mm20[i - 1] + stepMM);
+  }
+
+  // 2. Tie the random walks to the exact target returns (Brownian bridge concept)
+  // End values of the raw walks
+  const endSP = rawWalks.sp500[pointsCount];
+  const endND = rawWalks.nasdaq[pointsCount];
+  const endMM = rawWalks.mm20[pointsCount];
+
   for (let i = 0; i <= pointsCount; i++) {
     const d = new Date(today);
     d.setDate(d.getDate() - pData.days + Math.round(i * dayStep));
-    
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     const timeStr = `${year}-${month}-${day}`;
     
-    // Curva exponencial suave con algo de ruido (simulado simple para visualización fluida)
     const progress = i / pointsCount;
-    const curve = Math.pow(progress, 1.5); 
     
-    data.sp500.push({ time: timeStr, value: baseActive * (1 + (pData.sp * curve)) });
-    data.nasdaq.push({ time: timeStr, value: baseActive * (1 + (pData.nasdaq * curve)) });
-    data.mm20.push({ time: timeStr, value: baseActive * (1 + (pData.mm20 * curve)) });
+    // Calculate the correction needed to force the endpoint to exactly match pData target
+    const correctionSP = (pData.sp - endSP) * progress;
+    const correctionND = (pData.nasdaq - endND) * progress;
+    const correctionMM = (pData.mm20 - endMM) * progress;
+
+    // Apply the structural curve (e.g. exponential baseline) + the corrected random walk
+    // We scale down the random walk amplitude based on period to keep it looking like a stock chart
+    const volScale = Math.min(0.2, pData.mm20 / 10);
+    
+    const valSP = baseActive * (1 + pData.sp * Math.pow(progress, 1.2) + (rawWalks.sp500[i] + correctionSP) * volScale * 0.5);
+    const valND = baseActive * (1 + pData.nasdaq * Math.pow(progress, 1.2) + (rawWalks.nasdaq[i] + correctionND) * volScale * 0.7);
+    const valMM = baseActive * (1 + pData.mm20 * Math.pow(progress, 1.4) + (rawWalks.mm20[i] + correctionMM) * volScale);
+
+    data.sp500.push({ time: timeStr, value: Math.max(1, valSP) });
+    data.nasdaq.push({ time: timeStr, value: Math.max(1, valND) });
+    data.mm20.push({ time: timeStr, value: Math.max(1, valMM) });
   }
 
   // Ensure unique dates in case of DST overlaps
@@ -58,6 +107,18 @@ function generateSyntheticData(baseActive, period) {
       uniqueData.nasdaq.push(data.nasdaq[i]);
       uniqueData.mm20.push(data.mm20[i]);
     }
+  }
+
+  // Ensure first point exactly matches baseActive and last point exactly matches target return
+  if (uniqueData.sp500.length > 0) {
+    uniqueData.sp500[0].value = baseActive;
+    uniqueData.nasdaq[0].value = baseActive;
+    uniqueData.mm20[0].value = baseActive;
+
+    const last = uniqueData.sp500.length - 1;
+    uniqueData.sp500[last].value = baseActive * (1 + pData.sp);
+    uniqueData.nasdaq[last].value = baseActive * (1 + pData.nasdaq);
+    uniqueData.mm20[last].value = baseActive * (1 + pData.mm20);
   }
 
   return uniqueData;
