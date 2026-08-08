@@ -1,68 +1,132 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { searchTicker } from '../api/client';
 
-const MM20_STOCKS = [
-  { ticker: 'ARLP', name: 'Alliance Resource Partners', sector: 'Energía / Carbón', pe: '12.0x', weight: 5.0, return_pct: 18.4, shares: 2.15, price: 23.25 },
-  { ticker: 'ACLS', name: 'Axcelis Technologies', sector: 'Semiconductores', pe: '46.7x', weight: 5.0, return_pct: 34.2, shares: 0.62, price: 80.50 },
-  { ticker: 'BHC', name: 'Bausch Health', sector: 'Salud / Farmacéutica', pe: '-2.1x', weight: 5.0, return_pct: -6.4, shares: 6.85, price: 7.30 },
-  { ticker: 'DIOD', name: 'Diodes Inc', sector: 'Semiconductores', pe: '56.3x', weight: 5.0, return_pct: 12.8, shares: 0.74, price: 67.40 },
-  { ticker: 'HAE', name: 'Haemonetics Corp', sector: 'Dispositivos Médicos', pe: '41.5x', weight: 5.0, return_pct: 8.5, shares: 0.65, price: 76.80 },
-  { ticker: 'NSIT', name: 'Insight Enterprises', sector: 'Soluciones IT & Cloud', pe: '21.4x', weight: 5.0, return_pct: 22.1, shares: 0.28, price: 178.50 },
-  { ticker: 'POWI', name: 'Power Integrations', sector: 'Semiconductores de Potencia', pe: '143.6x', weight: 5.0, return_pct: 14.6, shares: 0.78, price: 64.10 },
-  { ticker: 'VECO', name: 'Veeco Instruments', sector: 'Equipamiento de Semiconductores', pe: '138.8x', weight: 5.0, return_pct: 42.1, shares: 1.25, price: 40.20 },
-  { ticker: 'OSK', name: 'Oshkosh Corp', sector: 'Maquinaria Industrial', pe: '17.2x', weight: 5.0, return_pct: 19.3, shares: 0.42, price: 119.00 },
-  { ticker: 'SM', name: 'SM Energy', sector: 'Petróleo & Gas', pe: '6.9x', weight: 5.0, return_pct: 11.2, shares: 1.15, price: 43.50 },
+const STORAGE_KEY = 'titanes_midcaps_rebalances';
+
+const DEFAULT_REBALANCES = [
+  {
+    rebalance_date: '2026-08-03',
+    cash_added: 0,
+    tickers: ['ARLP', 'ACLS', 'BHC', 'DIOD', 'HAE', 'NSIT', 'POWI', 'VECO', 'OSK', 'SM'],
+  },
 ];
 
 export default function MidCapsStrategy({ onBack }) {
-  const [holdings, setHoldings] = useState(
-    MM20_STOCKS.map((s) => ({ ...s, selected: true }))
-  );
-  const [simulatedCapital, setSimulatedCapital] = useState(1000);
-  const [unit, setUnit] = useState('pct');
-  const [newTickerInput, setNewTickerInput] = useState('');
+  // Rebalance history for Mid-caps
+  const [rebalances, setRebalances] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved) : DEFAULT_REBALANCES;
+    } catch {
+      return DEFAULT_REBALANCES;
+    }
+  });
 
-  const numSlots = 20;
-  const activeCount = holdings.filter((h) => h.selected).length;
+  const [simulatedCapital, setSimulatedCapital] = useState(1000);
+  const [numSlots] = useState(20);
+  const [unit, setUnit] = useState('pct');
+
+  // Form state to add new dated rebalance
+  const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [formTickers, setFormTickers] = useState(() => {
+    return rebalances.length > 0 ? [...rebalances[rebalances.length - 1].tickers] : [];
+  });
+
+  // Search & Batch paste input
+  const [query, setQuery] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState('');
+  const [batchInput, setBatchInput] = useState('');
+
+  // Persist rebalances
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(rebalances));
+  }, [rebalances]);
+
+  // Latest active rebalance
+  const activeRebalance = rebalances[rebalances.length - 1] || { tickers: [], rebalance_date: date };
+  const activeTickers = activeRebalance.tickers || [];
   const slotValue = simulatedCapital / numSlots;
-  const activeInvested = activeCount * slotValue;
+  const activeInvested = activeTickers.length * slotValue;
   const cashBuffer = simulatedCapital - activeInvested;
 
-  const toggleTicker = (ticker) => {
-    setHoldings((prev) =>
-      prev.map((h) => (h.ticker === ticker ? { ...h, selected: !h.selected } : h))
-    );
+  const handleSearchAndAdd = async (e) => {
+    e?.preventDefault();
+    if (!query.trim()) return;
+    const ticker = query.trim().toUpperCase();
+    if (formTickers.includes(ticker)) {
+      setSearchError(`${ticker} ya está en la lista`);
+      return;
+    }
+    if (formTickers.length >= numSlots) {
+      setSearchError(`Límite máximo de ${numSlots} slots alcanzado`);
+      return;
+    }
+
+    setSearching(true);
+    setSearchError('');
+    try {
+      const res = await searchTicker(ticker);
+      if (res.valid) {
+        setFormTickers((prev) => [...prev, res.ticker]);
+        setQuery('');
+      } else {
+        // Allow adding anyway for custom mid-caps
+        setFormTickers((prev) => [...prev, ticker]);
+        setQuery('');
+      }
+    } catch {
+      setFormTickers((prev) => [...prev, ticker]);
+      setQuery('');
+    } finally {
+      setSearching(false);
+    }
   };
 
-  const addCustomStock = (e) => {
-    e.preventDefault();
-    if (!newTickerInput.trim()) return;
-    const t = newTickerInput.trim().toUpperCase();
-    if (holdings.some((h) => h.ticker === t)) return;
-    setHoldings((prev) => [
-      ...prev,
+  const handleBatchAdd = () => {
+    if (!batchInput.trim()) return;
+    const extracted = batchInput
+      .split(/[\s,;]+/)
+      .map((t) => t.trim().toUpperCase())
+      .filter((t) => t.length > 0 && /^[A-Z0-9.-]+$/.test(t));
+
+    const uniqueNew = extracted.filter((t) => !formTickers.includes(t));
+    const combined = [...formTickers, ...uniqueNew].slice(0, numSlots);
+    setFormTickers(combined);
+    setBatchInput('');
+  };
+
+  const handleRemoveTicker = (ticker) => {
+    setFormTickers((prev) => prev.filter((t) => t !== ticker));
+  };
+
+  const handleSaveRebalance = () => {
+    if (!date) {
+      alert('Por favor selecciona una fecha válida');
+      return;
+    }
+    if (formTickers.length === 0) {
+      alert('Debes agregar al menos 1 ticker al rebalanceo');
+      return;
+    }
+
+    const updated = [
+      ...rebalances.filter((r) => r.rebalance_date !== date),
       {
-        ticker: t,
-        name: `${t} Holding`,
-        sector: 'Mid-Cap Tech / Growth',
-        pe: '25.0x',
-        weight: 5.0,
-        return_pct: 5.0,
-        shares: 1.0,
-        price: 50.0,
-        selected: true,
+        rebalance_date: date,
+        cash_added: 0,
+        tickers: formTickers,
       },
-    ]);
-    setNewTickerInput('');
+    ].sort((a, b) => (a.rebalance_date > b.rebalance_date ? 1 : -1));
+
+    setRebalances(updated);
+    alert(`Rebalanceo del ${date} guardado con éxito (${formTickers.length} posiciones)`);
   };
 
-  // Average return of selected stocks
-  const activeStocks = holdings.filter((h) => h.selected);
-  const avgReturnPct =
-    activeStocks.length > 0
-      ? activeStocks.reduce((sum, h) => sum + h.return_pct, 0) / activeStocks.length
-      : 0;
-
-  const returnUsd = (avgReturnPct / 100) * activeInvested;
+  const handleDeleteRebalance = (delDate) => {
+    if (!confirm(`¿Eliminar el rebalanceo de la fecha ${delDate}?`)) return;
+    setRebalances((prev) => prev.filter((r) => r.rebalance_date !== delDate));
+  };
 
   return (
     <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -81,10 +145,10 @@ export default function MidCapsStrategy({ onBack }) {
         }}
       >
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
             <span style={{ fontSize: '1.4rem' }}>🇺🇸</span>
-            <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, color: '#f1f5f9' }}>
-              Oportunidades en Mid-caps
+            <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: '#f1f5f9' }}>
+              Oportunidades en Mid-caps (MM20)
             </h2>
             <span
               style={{
@@ -97,7 +161,7 @@ export default function MidCapsStrategy({ onBack }) {
                 border: '1px solid rgba(59, 130, 246, 0.3)',
               }}
             >
-              MM20 PRO
+              PRO
             </span>
             <span
               style={{
@@ -108,18 +172,32 @@ export default function MidCapsStrategy({ onBack }) {
                 color: '#fbbf24',
               }}
             >
-              👁️ Modo Vigilancia (Sin capital real)
+              👁️ Estrategia Vigilada (20 Slots)
             </span>
           </div>
           <p style={{ margin: 0, fontSize: '0.8125rem', color: '#94a3b8' }}>
-            Estrategia de 20 posiciones equiponderadas frente al índice de referencia <strong>S&P MidCap 400</strong>.
+            Registra grupos de rebalanceo fechados para seguir las posiciones exactas frente al índice <strong>S&P MidCap 400</strong>.
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-surface)', padding: '6px 12px', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Simulado en:</span>
-            <span className="mono" style={{ fontWeight: 700, color: 'var(--text-primary)' }}>${simulatedCapital}</span>
+            <span style={{ color: 'var(--text-secondary)' }}>$</span>
+            <input
+              type="number"
+              value={simulatedCapital}
+              onChange={(e) => setSimulatedCapital(Number(e.target.value) || 1000)}
+              style={{
+                width: 70,
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--accent-primary)',
+                fontWeight: 700,
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: '0.9rem',
+              }}
+            />
           </div>
 
           <div className="unit-toggle" onClick={() => setUnit((u) => (u === 'pct' ? 'usd' : 'pct'))}>
@@ -129,7 +207,7 @@ export default function MidCapsStrategy({ onBack }) {
         </div>
       </div>
 
-      {/* ── Summary Strip for Mid-caps ───────────────── */}
+      {/* ── Summary Strip ────────────────────────────── */}
       <div className="summary-strip fade-up">
         <div className="summary-item">
           <div className="summary-label">Backtesting Histórico</div>
@@ -155,170 +233,244 @@ export default function MidCapsStrategy({ onBack }) {
         </div>
         <div className="summary-divider" />
         <div className="summary-item">
-          <div className="summary-label">Rendimiento Simulado Actual</div>
+          <div className="summary-label">Posiciones Activas</div>
           <div className="summary-value mono">
-            <span className="badge gain" style={{ fontSize: '0.9rem', padding: '3px 8px' }}>
-              ▲ {unit === 'pct' ? `+${avgReturnPct.toFixed(2)}%` : `+$${returnUsd.toFixed(2)}`}
-            </span>
+            {activeTickers.length} de {numSlots} ({((activeTickers.length / numSlots) * 100).toFixed(0)}%)
           </div>
         </div>
         <div className="summary-divider" />
         <div className="summary-item">
-          <div className="summary-label">Slots Asignados</div>
-          <div className="summary-value mono">
-            {activeCount}/{numSlots} ({((activeCount / numSlots) * 100).toFixed(0)}%)
+          <div className="summary-label">Capital por Posición</div>
+          <div className="summary-value mono muted">
+            ${slotValue.toFixed(2)} / slot
           </div>
         </div>
       </div>
 
-      {/* ── Mid-caps Constituent Holdings & Position Simulator ── */}
-      <div className="card fade-up" style={{ padding: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: 10 }}>
-          <div>
-            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>
-              Acciones Actuales en MM20 ({activeCount} activas)
-            </h3>
-            <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-              Haz clic en cualquier acción para simular incluirla o excluirla de la cesta
-            </span>
-          </div>
+      {/* ── Grid: Formulario de Rebalanceo Fechado + Historial ── */}
+      <div className="bottom-grid">
+        {/* Formulario para agregar rebalanceo con fecha específica */}
+        <div className="card fade-up" style={{ padding: '20px' }}>
+          <h3 style={{ margin: '0 0 12px 0', fontSize: '1.05rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span>📅</span>
+            <span>Registrar Nuevo Rebalanceo Fechado</span>
+          </h3>
+          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 16 }}>
+            Define la fecha de entrada en vigor y la lista exacta de posiciones que componen esta estrategia.
+          </p>
 
-          {/* Quick simulator input */}
-          <form onSubmit={addCustomStock} style={{ display: 'flex', gap: 6 }}>
+          {/* Fecha del Rebalanceo */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+              Fecha del Rebalanceo / Compra:
+            </label>
             <input
-              type="text"
-              placeholder="Añadir ticker (ej. SM)..."
-              value={newTickerInput}
-              onChange={(e) => setNewTickerInput(e.target.value)}
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
               style={{
-                background: 'var(--bg-surface)',
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: 'var(--radius)',
                 border: '1px solid var(--border)',
-                borderRadius: '6px',
-                padding: '5px 10px',
-                color: '#fff',
-                fontSize: '0.75rem',
+                background: 'var(--bg-surface)',
+                color: 'var(--text-primary)',
                 fontFamily: "'JetBrains Mono', monospace",
-                width: 170,
+                fontSize: '0.85rem',
               }}
             />
-            <button type="submit" className="btn btn-sm btn-ghost" style={{ fontSize: '0.75rem' }}>
-              + Simular
-            </button>
-          </form>
-        </div>
+          </div>
 
-        {/* Ticker chips bar */}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: '16px' }}>
-          {holdings.map((h) => {
-            const isGain = h.return_pct >= 0;
-            return (
-              <button
-                key={h.ticker}
-                className={`ticker-chip ${h.selected ? 'active' : 'inactive'}`}
-                onClick={() => toggleTicker(h.ticker)}
+          {/* Búsqueda y Adición Individual */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+              Buscar y agregar ticker ({formTickers.length}/{numSlots} slots):
+            </label>
+            <form onSubmit={handleSearchAndAdd} style={{ display: 'flex', gap: 8 }}>
+              <input
+                type="text"
+                placeholder="Ej. ARLP, ACLS, BHC..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
                 style={{
-                  background: h.selected ? 'rgba(16, 185, 129, 0.12)' : 'rgba(255,255,255,0.02)',
-                  borderColor: h.selected ? 'rgba(16, 185, 129, 0.4)' : 'var(--border)',
-                  color: h.selected ? 'var(--gain)' : 'var(--text-muted)',
+                  flex: 1,
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius)',
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg-surface)',
+                  color: '#fff',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: '0.85rem',
                 }}
-              >
-                <span>{h.selected ? '✓' : '＋'}</span>
-                <strong>{h.ticker}</strong>
-                <span style={{ fontSize: '0.65rem', opacity: 0.9 }}>
-                  {isGain ? '+' : ''}{h.return_pct}%
-                </span>
+              />
+              <button type="submit" className="btn btn-ghost" disabled={searching}>
+                {searching ? 'Buscando…' : '+ Agregar'}
               </button>
-            );
-          })}
+            </form>
+            {searchError && (
+              <span style={{ fontSize: '0.72rem', color: '#ef4444', marginTop: 4, display: 'block' }}>
+                {searchError}
+              </span>
+            )}
+          </div>
+
+          {/* Pegar Grupo de Tickers en Bloque */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+              O pegar grupo de tickers separados por comas:
+            </label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                type="text"
+                placeholder="ARLP, ACLS, BHC, DIOD, HAE, NSIT, POWI, VECO, OSK, SM"
+                value={batchInput}
+                onChange={(e) => setBatchInput(e.target.value)}
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius)',
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg-surface)',
+                  color: '#fff',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: '0.78rem',
+                }}
+              />
+              <button type="button" className="btn btn-ghost" onClick={handleBatchAdd} style={{ fontSize: '0.75rem' }}>
+                Cargar Grupo
+              </button>
+            </div>
+          </div>
+
+          {/* Chips de Tickers en este Rebalanceo */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                Posiciones asignadas ({formTickers.length}):
+              </span>
+              {formTickers.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setFormTickers([])}
+                  style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.7rem', cursor: 'pointer' }}
+                >
+                  Limpiar todo
+                </button>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', minHeight: 40, padding: 10, background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+              {formTickers.length === 0 ? (
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>No hay posiciones agregadas para esta fecha.</span>
+              ) : (
+                formTickers.map((t) => (
+                  <span
+                    key={t}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '4px 10px',
+                      borderRadius: 16,
+                      background: 'rgba(16, 185, 129, 0.15)',
+                      border: '1px solid rgba(16, 185, 129, 0.35)',
+                      color: 'var(--gain)',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      fontFamily: "'JetBrains Mono', monospace",
+                    }}
+                  >
+                    <span>{t}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTicker(t)}
+                      style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.75rem', padding: 0 }}
+                      title="Eliminar posición"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))
+              )}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={handleSaveRebalance}
+            style={{ width: '100%', padding: '12px', fontSize: '0.85rem', fontWeight: 700 }}
+          >
+            💾 Guardar Rebalanceo de Mid-caps ({date})
+          </button>
         </div>
 
-        {/* Table of constituents */}
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                {['Simulación', 'Empresa / Ticker', 'Sector', 'Ratio P/E', 'Peso %', 'Precio', 'Retorno Estimado'].map((head) => (
-                  <th
-                    key={head}
-                    style={{
-                      padding: '10px 12px',
-                      textAlign: head === 'Simulación' || head.startsWith('Empresa') || head === 'Sector' ? 'left' : 'right',
-                      color: 'var(--text-muted)',
-                      fontSize: '0.72rem',
-                      fontWeight: 600,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.04em',
-                    }}
-                  >
-                    {head}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {holdings.map((h) => {
-                const isGain = h.return_pct >= 0;
-                return (
-                  <tr
-                    key={h.ticker}
-                    style={{
-                      borderBottom: '1px solid var(--border)',
-                      opacity: h.selected ? 1 : 0.4,
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => toggleTicker(h.ticker)}
-                  >
-                    <td style={{ padding: '10px 12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <input
-                          type="checkbox"
-                          checked={h.selected}
-                          onChange={() => {}}
-                          style={{ cursor: 'pointer', accentColor: 'var(--gain)' }}
-                        />
-                        <span style={{ fontSize: '0.7rem', color: h.selected ? 'var(--gain)' : 'var(--text-muted)' }}>
-                          {h.selected ? 'Vigilada' : 'Pausada'}
+        {/* Historial de Rebalanceos Fechados */}
+        <div className="card fade-up" style={{ padding: '20px' }}>
+          <h3 style={{ margin: '0 0 14px 0', fontSize: '1.05rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span>📜</span>
+            <span>Historial de Rebalanceos ({rebalances.length})</span>
+          </h3>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 520, overflowY: 'auto' }}>
+            {rebalances.map((reb, idx) => {
+              const isCurrent = idx === rebalances.length - 1;
+              return (
+                <div
+                  key={reb.rebalance_date}
+                  style={{
+                    padding: '14px',
+                    borderRadius: 'var(--radius)',
+                    background: isCurrent ? 'rgba(16, 185, 129, 0.06)' : 'var(--bg-surface)',
+                    border: `1px solid ${isCurrent ? 'rgba(16, 185, 129, 0.3)' : 'var(--border)'}`,
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span className="mono" style={{ fontWeight: 800, fontSize: '0.9rem', color: isCurrent ? 'var(--gain)' : 'var(--text-primary)' }}>
+                        {reb.rebalance_date}
+                      </span>
+                      {isCurrent && (
+                        <span style={{ fontSize: '0.65rem', padding: '1px 6px', borderRadius: 4, background: 'rgba(16, 185, 129, 0.2)', color: 'var(--gain)', fontWeight: 700 }}>
+                          VIGENTE
                         </span>
-                      </div>
-                    </td>
-                    <td style={{ padding: '10px 12px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <strong style={{ color: h.selected ? 'var(--gain)' : 'var(--text-muted)' }}>{h.ticker}</strong>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{h.name}</span>
-                      </div>
-                    </td>
-                    <td style={{ padding: '10px 12px' }}>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteRebalance(reb.rebalance_date)}
+                      style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.72rem', cursor: 'pointer' }}
+                      title="Eliminar este evento"
+                    >
+                      🗑️ Eliminar
+                    </button>
+                  </div>
+
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 8 }}>
+                    {reb.tickers.length} acciones asignadas (${((reb.tickers.length / numSlots) * simulatedCapital).toFixed(2)} simulado)
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    {reb.tickers.map((t) => (
                       <span
+                        key={t}
+                        className="mono"
                         style={{
                           fontSize: '0.68rem',
-                          padding: '2px 8px',
-                          borderRadius: '10px',
-                          background: 'rgba(255,255,255,0.05)',
+                          padding: '2px 6px',
+                          borderRadius: 4,
+                          background: 'rgba(255, 255, 255, 0.05)',
                           color: '#cbd5e1',
                         }}
                       >
-                        {h.sector}
+                        {t}
                       </span>
-                    </td>
-                    <td style={{ padding: '10px 12px', textAlign: 'right' }}>
-                      <span className="mono" style={{ color: '#fbbf24', fontWeight: 600 }}>{h.pe}</span>
-                    </td>
-                    <td style={{ padding: '10px 12px', textAlign: 'right' }}>
-                      <span className="mono">{h.selected ? `${h.weight.toFixed(1)}%` : '0.0%'}</span>
-                    </td>
-                    <td style={{ padding: '10px 12px', textAlign: 'right' }}>
-                      <span className="mono">${h.price.toFixed(2)}</span>
-                    </td>
-                    <td style={{ padding: '10px 12px', textAlign: 'right' }}>
-                      <span className={`badge ${isGain ? 'gain' : 'loss'}`}>
-                        {isGain ? '▲ +' : '▼ '}{Math.abs(h.return_pct).toFixed(1)}%
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
