@@ -39,19 +39,33 @@ def search_ticker(
     q: str = Query(..., min_length=1, description="Ticker symbol or company name"),
 ):
     """
-    Validate a ticker and return basic info (name, price, exchange).
+    Validate a ticker and return basic info (name, price, exchange, sector).
     Used by the PortfolioManager add-ticker search.
     """
+    from services.market_data import get_ticker_meta
+
+    ticker_clean = q.strip().upper()
+    meta = get_ticker_meta(ticker_clean)
+
     try:
-        t = yf.Ticker(q.upper())
+        t = yf.Ticker(ticker_clean)
         info = t.fast_info
-        name = getattr(t, "info", {}).get("longName", q.upper())
+        last_price = info.last_price
         return {
-            "ticker": q.upper(),
-            "name": name,
-            "price": round(info.last_price or 0.0, 4),
-            "exchange": getattr(info, "exchange", ""),
-            "valid": info.last_price is not None,
+            "ticker": ticker_clean,
+            "name": meta.get("name") or ticker_clean,
+            "sector": meta.get("sector") or "Tecnología",
+            "exchange": meta.get("exchange") or getattr(info, "exchange", "US"),
+            "price": round(last_price or 0.0, 2),
+            "valid": last_price is not None,
         }
     except Exception as exc:
-        return {"ticker": q.upper(), "valid": False, "error": str(exc)}
+        return {
+            "ticker": ticker_clean,
+            "name": meta.get("name", ticker_clean),
+            "sector": meta.get("sector", "Tecnología"),
+            "exchange": "US",
+            "valid": False,
+            "error": str(exc),
+        }
+

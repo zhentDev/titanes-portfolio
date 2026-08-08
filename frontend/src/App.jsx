@@ -73,49 +73,67 @@ export default function App() {
           <>
             {/* ── Summary strip ─────────────────────────── */}
             {summary && !loading && (() => {
-              const activeInvested = investment - (summary.cash_reserved || 0);
-              const activeReturnPct = activeInvested > 0 ? (summary.total_return / activeInvested) * 100 : 0;
+              const activeInvested = summary.active_invested || (investment - (summary.cash_reserved || 0));
+              const activeReturnPct = summary.active_return_pct ?? 0;
+              const isActGain = activeReturnPct >= 0;
+              const alphaSP = summary.alpha_sp500 ?? 0;
+              const alphaND = summary.alpha_nasdaq ?? 0;
+
               return (
               <div className="summary-strip fade-up">
                 <SummaryItem
-                  label="Capital Activo (Real)"
+                  label="Capital Activo (5 Acciones)"
                   value={`$${activeInvested.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                   large mono
                 />
                 <div className="summary-divider" />
                 <SummaryItem
-                  label="Rendimiento (Real)"
+                  label="Rendimiento Titanes"
                   value={
-                    <span className={`badge ${isGain ? 'gain' : 'loss'}`} style={{ fontSize: '1rem', padding: '4px 10px' }}>
-                      {isGain ? '▲' : '▼'} {Math.abs(activeReturnPct).toFixed(2)}%
+                    <span className={`badge ${isActGain ? 'gain' : 'loss'}`} style={{ fontSize: '0.95rem', padding: '4px 10px' }}>
+                      {isActGain ? '▲' : '▼'} {Math.abs(activeReturnPct).toFixed(2)}%
                     </span>
                   }
                 />
                 <div className="summary-divider" />
                 <SummaryItem
-                  label="Ganancia Neta"
+                  label="Alfa vs S&P 500 (α)"
                   value={
-                    <span className={isGain ? 'gain' : 'loss'} style={{ fontWeight: 'bold' }}>
-                      {isGain ? '▲' : '▼'} ${Math.abs(summary.total_return).toFixed(2)}
+                    <span className={`badge ${alphaSP >= 0 ? 'gain' : 'loss'}`} style={{ fontSize: '0.95rem', padding: '4px 10px' }}>
+                      {alphaSP >= 0 ? '+' : ''}{alphaSP.toFixed(2)}%
                     </span>
                   }
                   mono
                 />
                 <div className="summary-divider" />
                 <SummaryItem
-                  label="Base Portafolio"
-                  value={`$${summary.start_value.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
-                  muted mono
+                  label="Alfa vs NASDAQ (α)"
+                  value={
+                    <span className={`badge ${alphaND >= 0 ? 'gain' : 'loss'}`} style={{ fontSize: '0.95rem', padding: '4px 10px' }}>
+                      {alphaND >= 0 ? '+' : ''}{alphaND.toFixed(2)}%
+                    </span>
+                  }
+                  mono
                 />
                 <div className="summary-divider" />
                 <SummaryItem
-                  label="Cash reservado"
+                  label="Max Drawdown"
+                  value={
+                    <span style={{ color: summary.max_drawdown_pct < -5 ? '#ef4444' : '#94a3b8', fontWeight: 600 }}>
+                      {summary.max_drawdown_pct ? `${summary.max_drawdown_pct.toFixed(2)}%` : '0.00%'}
+                    </span>
+                  }
+                  mono
+                />
+                <div className="summary-divider" />
+                <SummaryItem
+                  label="Cash Reservado (Q)"
                   value={`$${(summary.cash_reserved ?? 0).toFixed(2)}`}
                   muted mono
                 />
                 <div className="summary-divider" />
                 <SummaryItem
-                  label="Posiciones"
+                  label="Slots Ocupados"
                   value={`${summary.num_holdings}/${summary.num_slots}`}
                   muted
                 />

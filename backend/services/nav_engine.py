@@ -130,11 +130,12 @@ def calculate_nav(
     # But usually TWR is better. For simplicity, we just return the raw values and the frontend can plot the NAV curve
     # and the 'Invested' base curve to show the gap (profit).
 
-    initial_invested = investment
+    # Active capital deployed in equities
+    active_count = len([t for t in active_tickers if t in current_shares])
+    active_invested = round(investment * (active_count / num_slots), 4) if num_slots > 0 else investment
 
     def _benchmark_series(col: str) -> list[dict]:
         if col not in prices_df.columns:
-            print(f"[NAV ENGINE] ⚠️ Columna '{col}' NO existe en prices_df. Columnas disponibles: {prices_df.columns}")
             return []
         bdf = (
             prices_df.filter(pl.col("date").cast(pl.String) >= str(start_date_str))
@@ -142,20 +143,21 @@ def calculate_nav(
             .drop_nulls()
         )
         if bdf.is_empty():
-            print(f"[NAV ENGINE] ⚠️ '{col}' quedó vacío tras filtrar por date >= {start_date_str}")
             return []
         b0 = float(bdf[col][0])
+        # Escala el benchmark al capital real invertido en acciones
         bdf = bdf.with_columns(
-            (pl.col(col) / b0 * initial_invested).alias("value"),
+            (pl.col(col) / b0 * active_invested).alias("value"),
         )
         points = [
             {"date": str(r["date"]), "value": round(r["value"], 4)}
             for r in bdf.iter_rows(named=True)
         ]
-        print(f"[NAV ENGINE] ✅ '{col}' calculado: {len(points)} puntos. Primer punto: {points[0]}")
         return points
 
-    # Current holdings breakdown
+    # Current holdings breakdown con metadatos ricos
+    from services.market_data import get_ticker_meta
+
     last_rebalance = rebalances[-1]
     active_tickers = last_rebalance["tickers"]
     last_row = prices_pd.iloc[-1]
@@ -163,6 +165,7 @@ def calculate_nav(
     holdings = []
     slot_weight_pct = 100.0 / num_slots
 
+    current_stock_value = 0.0
     for t in active_tickers:
         shares = current_shares.get(t, 0.0)
         current_price = last_row.get(t, 0.0)
@@ -171,14 +174,20 @@ def calculate_nav(
 
         start_price = rebalance_prices.get(t, 0.0)
         val = shares * current_price
+        current_stock_value += val
 
         return_pct = 0.0
         if start_price > 0:
             return_pct = ((current_price - start_price) / start_price) * 100.0
 
+        meta = get_ticker_meta(t)
+
         holdings.append(
             {
                 "ticker": t,
+                "name": meta.get("name", t),
+                "sector": meta.get("sector", "Tecnología"),
+                "exchange": meta.get("exchange", "NASDAQ"),
                 "weight": round(slot_weight_pct, 2) if shares > 0 else 0.0,
                 "shares": round(shares, 6),
                 "start_price": round(start_price, 4),
@@ -191,18 +200,57 @@ def calculate_nav(
     unallocated_slots = num_slots - len([t for t in active_tickers if t in current_shares])
     cash_reserved = current_cash
 
+    sp500_series = _benchmark_series("SP500")
+    nasdaq_series = _benchmark_series("NASDAQ")
+
+    # Rendimiento sobre capital activo en acciones (puro Titanes)
+    active_return = current_stock_value - active_invested
+    active_return_pct = (active_return / active_invested * 100) if active_invested > 0 else 0.0
+
+    # Rendimiento de los benchmarks sobre ese mismo capital
+    sp500_end_val = sp500_series[-1]["value"] if sp500_series else active_invested
+    sp500_return_pct = ((sp500_end_val - active_invested) / active_invested * 100) if active_invested > 0 else 0.0
+
+    nasdaq_end_val = nasdaq_series[-1]["value"] if nasdaq_series else active_invested
+    nasdaq_return_pct = ((nasdaq_end_val - active_invested) / active_invested * 100) if active_invested > 0 else 0.0
+
+    # Métricas ProPicks AI: Alfa (Exceso de retorno sobre benchmarks)
+    alpha_sp500 = round(active_return_pct - sp500_return_pct, 2)
+    alpha_nasdaq = round(active_return_pct - nasdaq_return_pct, 2)
+
+    # Max Drawdown histórico
+    max_dd = 0.0
+    peak = -1.0
+    for pt in nav_series:
+        v = pt["value"]
+        if v > peak:
+            peak = v
+        dd = ((v - peak) / peak * 100.0) if peak > 0 else 0.0
+        if dd < max_dd:
+            max_dd = dd
+
     total_return = current_value - total_invested
-    total_return_pct = (total_return / total_invested * 100) if total_invested > 0 else 0.0
+    total_return_pct = (
+        (total_return / total_invested * 100) if total_invested > 0 else 0.0
+    )
 
     return {
         "nav": nav_series,
-        "sp500": _benchmark_series("SP500"),
-        "nasdaq": _benchmark_series("NASDAQ"),
+        "sp500": sp500_series,
+        "nasdaq": nasdaq_series,
         "holdings": sorted(holdings, key=lambda h: h["current_value"], reverse=True),
         "summary": {
             "start_value": round(initial_invested, 2),
             "end_value": round(current_value, 2),
             "invested_value": round(total_invested, 2),
+            "active_invested": round(active_invested, 2),
+            "active_stock_value": round(current_stock_value, 2),
+            "active_return_pct": round(active_return_pct, 2),
+            "sp500_return_pct": round(sp500_return_pct, 2),
+            "nasdaq_return_pct": round(nasdaq_return_pct, 2),
+            "alpha_sp500": alpha_sp500,
+            "alpha_nasdaq": alpha_nasdaq,
+            "max_drawdown_pct": round(max_dd, 2),
             "cash_reserved": round(cash_reserved, 2),
             "total_return": round(total_return, 2),
             "total_return_pct": round(total_return_pct, 2),
@@ -211,6 +259,7 @@ def calculate_nav(
             "unallocated_slots": unallocated_slots,
         },
     }
+
 
 
 def _empty_response(investment: float) -> dict:

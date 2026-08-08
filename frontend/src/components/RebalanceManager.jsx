@@ -188,16 +188,32 @@ export default function RebalanceManager({ onRefresh }) {
           
           {searchResult && (
             <div style={{
-              marginTop: 8, padding: '10px 14px',
-              background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border-accent)',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+              marginTop: 10, padding: '12px 16px',
+              background: 'rgba(0, 229, 255, 0.04)', borderRadius: 'var(--radius-sm)',
+              border: '1px solid rgba(0, 229, 255, 0.25)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
+              animation: 'fadeUp 0.2s ease',
             }}>
               <div>
-                <strong style={{ color: 'var(--accent-primary)' }}>{searchResult.ticker}</strong>
-                <span style={{ fontSize: '0.8rem', marginLeft: 8, color: 'var(--text-secondary)' }}>{searchResult.name}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <strong style={{ color: 'var(--accent-primary)', fontSize: '1rem' }}>{searchResult.ticker}</strong>
+                  <span style={{ fontSize: '0.7rem', padding: '1px 6px', borderRadius: '4px', background: 'rgba(255,255,255,0.08)', color: '#94a3b8' }}>
+                    {searchResult.exchange}
+                  </span>
+                  <span style={{ fontSize: '0.7rem', padding: '1px 6px', borderRadius: '4px', background: 'rgba(0,229,255,0.1)', color: 'var(--accent-primary)' }}>
+                    {searchResult.sector}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.85rem', marginTop: 2, color: 'var(--text-primary)', fontWeight: 500 }}>
+                  {searchResult.name}
+                </div>
+                <div style={{ fontSize: '0.75rem', marginTop: 2, color: 'var(--text-muted)' }}>
+                  Precio de mercado: <strong style={{ color: '#fff' }}>${searchResult.price}</strong>
+                </div>
               </div>
-              <button className="btn btn-primary" onClick={handleAddTicker}>Agregar</button>
+              <button className="btn btn-primary" style={{ padding: '8px 16px', whiteSpace: 'nowrap' }} onClick={handleAddTicker}>
+                + Agregar a este mes
+              </button>
             </div>
           )}
         </div>

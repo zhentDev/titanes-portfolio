@@ -33,6 +33,49 @@ DEFAULT_TICKERS: list[str] = [
 ]
 BENCHMARKS: list[str] = ["^GSPC", "^IXIC"]
 
+# Catálogo oficial de metadatos para Titanes Tecnológicos y acciones líderes
+TICKER_METADATA: dict[str, dict[str, str]] = {
+    "AMD": {"name": "Advanced Micro Devices, Inc.", "sector": "Semiconductores & GPUs", "exchange": "NASDAQ"},
+    "AMAT": {"name": "Applied Materials, Inc.", "sector": "Equipamiento de Semiconductores", "exchange": "NASDAQ"},
+    "HPQ": {"name": "HP Inc.", "sector": "Hardware, PCs & Impresión", "exchange": "NYSE"},
+    "INTC": {"name": "Intel Corporation", "sector": "Procesadores & Fabricación", "exchange": "NASDAQ"},
+    "ON": {"name": "ON Semiconductor Corporation", "sector": "Semiconductores & Automoción", "exchange": "NASDAQ"},
+    "ORCL": {"name": "Oracle Corporation", "sector": "Software Empresarial & Nube", "exchange": "NYSE"},
+    "POWI": {"name": "Power Integrations, Inc.", "sector": "Chips de Alta Eficiencia", "exchange": "NASDAQ"},
+    "QCOM": {"name": "Qualcomm Incorporated", "sector": "Chips Móviles & 5G", "exchange": "NASDAQ"},
+    "TXN": {"name": "Texas Instruments Incorporated", "sector": "Semiconductores Analógicos", "exchange": "NASDAQ"},
+    "MRVL": {"name": "Marvell Technology, Inc.", "sector": "Infraestructura & Centros de Datos", "exchange": "NASDAQ"},
+    "HIMX": {"name": "Himax Technologies, Inc.", "sector": "Controladores de Pantalla", "exchange": "NASDAQ"},
+    "NTAP": {"name": "NetApp, Inc.", "sector": "Almacenamiento Híbrido & Nube", "exchange": "NASDAQ"},
+    "KD": {"name": "Kyndryl Holdings, Inc.", "sector": "Infraestructura TI & Servicios", "exchange": "NYSE"},
+    "ARM": {"name": "Arm Holdings plc", "sector": "Arquitectura de Microchips", "exchange": "NASDAQ"},
+    "NVDA": {"name": "NVIDIA Corporation", "sector": "IA, Computación & GPUs", "exchange": "NASDAQ"},
+    "MSFT": {"name": "Microsoft Corporation", "sector": "Software, Nube & IA", "exchange": "NASDAQ"},
+    "AAPL": {"name": "Apple Inc.", "sector": "Electrónica & Ecosistema", "exchange": "NASDAQ"},
+    "GOOGL": {"name": "Alphabet Inc.", "sector": "Búsqueda, Nube & IA", "exchange": "NASDAQ"},
+    "META": {"name": "Meta Platforms, Inc.", "sector": "Redes Sociales & Metaverso", "exchange": "NASDAQ"},
+    "TSM": {"name": "Taiwan Semiconductor Mfg.", "sector": "Fundición Global de Chips", "exchange": "NYSE"},
+    "AVGO": {"name": "Broadcom Inc.", "sector": "Semiconductores & Software", "exchange": "NASDAQ"},
+    "ASML": {"name": "ASML Holding N.V.", "sector": "Litografía EUV", "exchange": "NASDAQ"},
+}
+
+
+def get_ticker_meta(ticker: str) -> dict[str, str]:
+    """Retorna el nombre completo, sector y bolsa para un símbolo dado."""
+    t_clean = ticker.strip().upper()
+    if t_clean in TICKER_METADATA:
+        return {"ticker": t_clean, **TICKER_METADATA[t_clean]}
+    try:
+        t = yf.Ticker(t_clean)
+        info = getattr(t, "info", {}) or {}
+        name = info.get("longName") or info.get("shortName") or t_clean
+        sector = info.get("sector") or info.get("industry") or "Tecnología"
+        exchange = info.get("exchange") or "US"
+        return {"ticker": t_clean, "name": name, "sector": sector, "exchange": exchange}
+    except Exception:
+        return {"ticker": t_clean, "name": t_clean, "sector": "Tecnología", "exchange": "US"}
+
+
 # ──────────────────────────────────────────────
 # Redis Cache Integration
 # ──────────────────────────────────────────────
