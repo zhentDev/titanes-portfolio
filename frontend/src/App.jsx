@@ -75,13 +75,20 @@ export default function App() {
     const baseND0 = baseNavData.nasdaq?.[0]?.value || baseFirstVal;
     const baseMM0 = baseNavData.mm20?.[0]?.value || baseFirstVal;
 
-    // Rescaled Portfolio NAV
-    const scaledNav = (baseNavData.nav || []).map((pt) => {
-      const delta = pt.value - baseFirstVal;
-      const ratio = allHoldings.length > 0 ? activeList.length / allHoldings.length : 1;
+    // Rescaled Portfolio NAV using exact individual ticker price action
+    const tickerSeriesMap = baseNavData.ticker_series || {};
+    const datePoints = baseNavData.nav || [];
+    
+    const scaledNav = datePoints.map((pt, idx) => {
+      let totalStockVal = 0;
+      for (const h of activeList) {
+        const seriesForT = tickerSeriesMap[h.ticker];
+        const factor = seriesForT?.[idx]?.factor ?? (1 + (h.return_pct || 0) / 100);
+        totalStockVal += slotValue * factor;
+      }
       return {
         ...pt,
-        value: activeInvested + delta * ratio,
+        value: Number(totalStockVal.toFixed(4)),
       };
     });
 
@@ -90,7 +97,7 @@ export default function App() {
       const pctGrowth = baseSP0 > 0 ? pt.value / baseSP0 : 1;
       return {
         ...pt,
-        value: activeInvested * pctGrowth,
+        value: Number((activeInvested * pctGrowth).toFixed(4)),
       };
     });
 
@@ -99,7 +106,7 @@ export default function App() {
       const pctGrowth = baseND0 > 0 ? pt.value / baseND0 : 1;
       return {
         ...pt,
-        value: activeInvested * pctGrowth,
+        value: Number((activeInvested * pctGrowth).toFixed(4)),
       };
     });
 
@@ -108,7 +115,7 @@ export default function App() {
       const pctGrowth = baseMM0 > 0 ? pt.value / baseMM0 : 1;
       return {
         ...pt,
-        value: activeInvested * pctGrowth,
+        value: Number((activeInvested * pctGrowth).toFixed(4)),
       };
     });
 

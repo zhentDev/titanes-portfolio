@@ -402,11 +402,25 @@ def calculate_nav(
         (total_return / total_invested * 100) if total_invested > 0 else 0.0
     )
 
+    # Series de rendimiento relativo individual para cada ticker
+    ticker_series = {}
+    for t in active_tickers:
+        if t in prices_df.columns:
+            s_t = prices_df.select(["date", t]).drop_nulls()
+            if not s_t.is_empty():
+                p0 = float(s_t[t][0])
+                if p0 > 0:
+                    ticker_series[t] = [
+                        {"date": str(r["date"]), "factor": round(float(r[t]) / p0, 6)}
+                        for r in s_t.iter_rows(named=True)
+                    ]
+
     return {
         "nav": nav_series,
         "sp500": sp500_series,
         "nasdaq": nasdaq_series,
         "mm20": mm20_series,
+        "ticker_series": ticker_series,
         "holdings": sorted(holdings, key=lambda h: h["current_value"], reverse=True),
         "correlations": {
             "tickers": matrix_tickers,
