@@ -126,15 +126,19 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
     };
   }, [initChart]);
 
-  // Helper to convert array to Lightweight Charts format with YYYY-MM-DD
+  // Helper to convert array to Lightweight Charts format with YYYY-MM-DD or Unix timestamp
   const toSeries = (arr) =>
     (arr || [])
-      .filter((d) => d && d.date && d.value != null && !isNaN(d.value))
-      .map((d) => ({
-        time: String(d.date).slice(0, 10),
-        value: Number(d.value),
-      }))
-      .sort((a, b) => (a.time > b.time ? 1 : -1));
+      .filter((d) => d && (d.date || d.time) && d.value != null && !isNaN(d.value))
+      .map((d) => {
+        const rawTime = d.time ?? d.date;
+        if (typeof rawTime === 'number') {
+          return { time: Math.floor(rawTime), value: Number(d.value) };
+        }
+        return { time: String(rawTime).slice(0, 10), value: Number(d.value) };
+      })
+      .sort((a, b) => (a.time > b.time ? 1 : a.time < b.time ? -1 : 0))
+      .filter((v, idx, self) => idx === 0 || v.time !== self[idx - 1].time);
 
   // Update series data
   useEffect(() => {
