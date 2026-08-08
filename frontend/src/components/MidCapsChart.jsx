@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { createChart, ColorType, LineStyle } from 'lightweight-charts';
+import { usePortfolioStore } from '../store/portfolioStore';
 
 const COLORS = {
   sp500: '#f59e0b',
@@ -7,40 +8,40 @@ const COLORS = {
   mm20: '#10b981',
 };
 
-// Generador de datos sintéticos visuales para 10 años (2014-2024)
-function generateSyntheticData(baseActive) {
-  const points = 120; // 120 meses = 10 años
-  const startDate = new Date('2014-01-01');
-  
-  const sp500TotalReturn = 2.808; // +280.8%
-  const nasdaqTotalReturn = 3.500; // +350.0% aprox
-  const mm20TotalReturn = 10.626; // +1,062.6%
+export const SYNTHETIC_RETURNS = {
+  '1W': { sp: 0.005, nasdaq: 0.008, mm20: 0.015, days: 7, points: 7 },
+  '1M': { sp: 0.02, nasdaq: 0.03, mm20: 0.05, days: 30, points: 30 },
+  '3M': { sp: 0.05, nasdaq: 0.08, mm20: 0.12, days: 90, points: 45 },
+  '6M': { sp: 0.08, nasdaq: 0.12, mm20: 0.20, days: 180, points: 60 },
+  '1Y': { sp: 0.143, nasdaq: 0.162, mm20: 0.278, days: 365, points: 90 },
+  '3Y': { sp: 0.45, nasdaq: 0.55, mm20: 1.10, days: 1095, points: 120 },
+  '5Y': { sp: 0.85, nasdaq: 1.10, mm20: 2.50, days: 1825, points: 150 },
+  'MAX': { sp: 2.808, nasdaq: 3.50, mm20: 10.626, days: 3650, points: 180 },
+};
 
+function generateSyntheticData(baseActive, period) {
+  const pData = SYNTHETIC_RETURNS[period] || SYNTHETIC_RETURNS['MAX'];
   const data = { sp500: [], nasdaq: [], mm20: [] };
+  
+  const today = new Date();
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - pData.days);
 
-  for (let i = 0; i <= points; i++) {
+  const pointsCount = pData.points;
+  const dayStep = pData.days / pointsCount;
+
+  for (let i = 0; i <= pointsCount; i++) {
     const d = new Date(startDate);
-    d.setMonth(d.getMonth() + i);
+    d.setDate(d.getDate() + Math.round(i * dayStep));
     const timeStr = d.toISOString().split('T')[0];
     
     // Curva exponencial suave con algo de ruido (simulado simple para visualización fluida)
-    const progress = i / points;
+    const progress = i / pointsCount;
     const curve = Math.pow(progress, 1.5); 
     
-    data.sp500.push({
-      time: timeStr,
-      value: baseActive * (1 + (sp500TotalReturn * curve))
-    });
-    
-    data.nasdaq.push({
-      time: timeStr,
-      value: baseActive * (1 + (nasdaqTotalReturn * curve))
-    });
-    
-    data.mm20.push({
-      time: timeStr,
-      value: baseActive * (1 + (mm20TotalReturn * curve))
-    });
+    data.sp500.push({ time: timeStr, value: baseActive * (1 + (pData.sp * curve)) });
+    data.nasdaq.push({ time: timeStr, value: baseActive * (1 + (pData.nasdaq * curve)) });
+    data.mm20.push({ time: timeStr, value: baseActive * (1 + (pData.mm20 * curve)) });
   }
 
   return data;
@@ -52,6 +53,8 @@ export default function MidCapsChart({ activeInvested }) {
   const seriesRef = useRef({});
   const [hoverValues, setHoverValues] = useState(null);
 
+  const { period } = usePortfolioStore();
+
   const [visibleSeries, setVisibleSeries] = useState({
     sp500: true,
     nasdaq: true,
@@ -62,7 +65,7 @@ export default function MidCapsChart({ activeInvested }) {
     setVisibleSeries(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const chartData = useMemo(() => generateSyntheticData(activeInvested || 500), [activeInvested]);
+  const chartData = useMemo(() => generateSyntheticData(activeInvested || 500, period), [activeInvested, period]);
 
   useEffect(() => {
     if (!chartRef.current || !seriesRef.current) return;
@@ -118,7 +121,6 @@ export default function MidCapsChart({ activeInvested }) {
       title: 'NASDAQ',
     });
 
-    // Curva principal MM20
     seriesRef.current.mm20 = chart.addAreaSeries({
       lineColor: COLORS.mm20,
       topColor: 'rgba(16, 185, 129, 0.25)',
@@ -163,7 +165,6 @@ export default function MidCapsChart({ activeInvested }) {
     };
   }, [initChart]);
 
-  // Actualizar datos
   useEffect(() => {
     if (!chartRef.current || !chartData) return;
     seriesRef.current.sp500?.setData(chartData.sp500);
@@ -172,7 +173,6 @@ export default function MidCapsChart({ activeInvested }) {
     chartRef.current.timeScale().fitContent();
   }, [chartData]);
 
-  // Cálculos de cabecera
   const lastSP = chartData.sp500[chartData.sp500.length - 1]?.value;
   const lastNasdaq = chartData.nasdaq[chartData.nasdaq.length - 1]?.value;
   const lastMM20 = chartData.mm20[chartData.mm20.length - 1]?.value;
@@ -190,7 +190,6 @@ export default function MidCapsChart({ activeInvested }) {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
-        {/* S&P MidCap */}
         <button
           onClick={() => handleToggle('sp500')}
           style={{
@@ -207,7 +206,6 @@ export default function MidCapsChart({ activeInvested }) {
           <span style={{ color: spPct >= 0 ? '#22c55e' : '#ef4444', fontSize: '0.7rem' }}>({spPct >= 0 ? '+' : ''}{spPct.toFixed(2)}%)</span>
         </button>
 
-        {/* NASDAQ */}
         <button
           onClick={() => handleToggle('nasdaq')}
           style={{
@@ -224,7 +222,6 @@ export default function MidCapsChart({ activeInvested }) {
           <span style={{ color: nasdaqPct >= 0 ? '#22c55e' : '#ef4444', fontSize: '0.7rem' }}>({nasdaqPct >= 0 ? '+' : ''}{nasdaqPct.toFixed(2)}%)</span>
         </button>
 
-        {/* MM20 */}
         <button
           onClick={() => handleToggle('mm20')}
           style={{

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { usePortfolioStore } from '../store/portfolioStore';
 import { searchTicker } from '../api/client';
-import MidCapsChart from './MidCapsChart';
+import MidCapsChart, { SYNTHETIC_RETURNS } from './MidCapsChart';
 
 const STORAGE_KEY = 'titanes_midcaps_rebalances';
+const PERIODS = ['1W', '1M', '3M', '6M', '1Y', '3Y', '5Y', 'MAX'];
 
 const DEFAULT_REBALANCES = [
   {
@@ -17,7 +18,7 @@ const DEFAULT_REBALANCES = [
 ];
 
 export default function MidCapsStrategy({ onBack }) {
-  const { midcapsCapital, setMidcapsCapital } = usePortfolioStore();
+  const { midcapsCapital, setMidcapsCapital, period, setPeriod } = usePortfolioStore();
 
   // Rebalance history for Mid-caps persisted in storage and database
   const [rebalances, setRebalances] = useState(() => {
@@ -64,6 +65,8 @@ export default function MidCapsStrategy({ onBack }) {
   const activeInvested = activeTickers.length * slotValue;
   const cashBuffer = simulatedCapital - activeInvested;
 
+  const currentReturns = SYNTHETIC_RETURNS[period] || SYNTHETIC_RETURNS['MAX'];
+  
   const handleSearchAndAdd = async (e) => {
     e?.preventDefault();
     if (!query.trim()) return;
@@ -228,20 +231,20 @@ export default function MidCapsStrategy({ onBack }) {
       {/* ── Summary Strip (Calculado a 20 Slots) ──────────────── */}
       <div className="summary-strip fade-up">
         <div className="summary-item">
-          <div className="summary-label">Backtesting Histórico (MM20)</div>
+          <div className="summary-label">Rentabilidad MM20 ({period})</div>
           <div className="summary-value large mono" style={{ color: 'var(--gain)', fontWeight: 800 }}>
             {unit === 'pct'
-              ? '+1,062.6%'
-              : `+$${(activeInvested * 10.626).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              ? `+${(currentReturns.mm20 * 100).toFixed(1)}%`
+              : `+$${(activeInvested * currentReturns.mm20).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           </div>
         </div>
         <div className="summary-divider" />
         <div className="summary-item">
-          <div className="summary-label">S&P MidCap 400 (Benchmark)</div>
+          <div className="summary-label">S&P MidCap 400 ({period})</div>
           <div className="summary-value mono" style={{ color: '#fbbf24', fontWeight: 700 }}>
             {unit === 'pct'
-              ? '+280.8%'
-              : `+$${(activeInvested * 2.808).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              ? `+${(currentReturns.sp * 100).toFixed(1)}%`
+              : `+$${(activeInvested * currentReturns.sp).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           </div>
         </div>
         <div className="summary-divider" />
@@ -263,6 +266,21 @@ export default function MidCapsStrategy({ onBack }) {
       </div>
 
       <div className="card fade-up" style={{ padding: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>📊 Crecimiento Histórico de MM20</h3>
+          <div className="period-selector" style={{ margin: 0, padding: 0, background: 'transparent' }}>
+            {PERIODS.map((p) => (
+              <button
+                key={p}
+                className={`period-btn ${p === period ? 'active' : ''}`}
+                onClick={() => setPeriod(p)}
+                style={{ padding: '4px 10px', fontSize: '0.75rem' }}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+        </div>
         <MidCapsChart activeInvested={activeInvested} />
       </div>
 
