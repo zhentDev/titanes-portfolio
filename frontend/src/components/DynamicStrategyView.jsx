@@ -257,14 +257,18 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack }) {
         <div className="summary-item">
           <div className="summary-label">Capital Activo ({activeTickers.length}/{numSlots} Slots)</div>
           <div className="summary-value mono large" style={{ color: 'var(--gain)', fontWeight: 800 }}>
-            ${activeInvested.toFixed(2)}
+            {unit === 'pct'
+              ? `${((activeTickers.length / numSlots) * 100).toFixed(1)}%`
+              : `$${activeInvested.toFixed(2)}`}
           </div>
         </div>
         <div className="summary-divider" />
         <div className="summary-item">
           <div className="summary-label">Cash Reservado Q ({numSlots - activeTickers.length} Slots)</div>
           <div className="summary-value mono muted">
-            ${cashBuffer.toFixed(2)}
+            {unit === 'pct'
+              ? `${(((numSlots - activeTickers.length) / numSlots) * 100).toFixed(1)}%`
+              : `$${cashBuffer.toFixed(2)}`}
           </div>
         </div>
         <div className="summary-divider" />
