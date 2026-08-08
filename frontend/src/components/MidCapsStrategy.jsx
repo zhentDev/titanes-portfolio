@@ -207,7 +207,7 @@ export default function MidCapsStrategy({ onBack }) {
         </div>
       </div>
 
-      {/* ── Summary Strip ────────────────────────────── */}
+      {/* ── Summary Strip (Calculado a 20 Slots) ──────────────── */}
       <div className="summary-strip fade-up">
         <div className="summary-item">
           <div className="summary-label">Backtesting Histórico</div>
@@ -224,26 +224,115 @@ export default function MidCapsStrategy({ onBack }) {
         </div>
         <div className="summary-divider" />
         <div className="summary-item">
-          <div className="summary-label">Alfa Histórico vs Benchmark</div>
-          <div className="summary-value mono">
-            <span className="badge gain" style={{ fontSize: '0.9rem', padding: '3px 8px' }}>
-              +781.8%
+          <div className="summary-label">Capital Activo ({activeTickers.length}/20 Slots)</div>
+          <div className="summary-value mono large" style={{ color: 'var(--gain)', fontWeight: 800 }}>
+            ${activeInvested.toFixed(2)}
+          </div>
+        </div>
+        <div className="summary-divider" />
+        <div className="summary-item">
+          <div className="summary-label">Cash Reservado Q ({numSlots - activeTickers.length} Slots)</div>
+          <div className="summary-value mono muted">
+            ${cashBuffer.toFixed(2)}
+          </div>
+        </div>
+        <div className="summary-divider" />
+        <div className="summary-item">
+          <div className="summary-label">Regla de Asignación</div>
+          <div className="summary-value mono" style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>
+            5.0% / slot (${slotValue.toFixed(2)})
+          </div>
+        </div>
+      </div>
+
+      {/* ── 20-Slots Constellation Grid Visualizer ─────────── */}
+      <div className="card fade-up" style={{ padding: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: 8 }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>🧩 Matriz de Asignación de 20 Slots (MM20)</span>
+              <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: 4, background: 'rgba(16,185,129,0.15)', color: 'var(--gain)', fontWeight: 700 }}>
+                1 / 20 = 5.0% Equiponderado
+              </span>
+            </h3>
+            <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+              Cada posición ocupa exactamente 1 slot ($50.00 / 5%). Los slots vacíos se preservan en liquidez (Cash Q).
             </span>
           </div>
-        </div>
-        <div className="summary-divider" />
-        <div className="summary-item">
-          <div className="summary-label">Posiciones Activas</div>
-          <div className="summary-value mono">
-            {activeTickers.length} de {numSlots} ({((activeTickers.length / numSlots) * 100).toFixed(0)}%)
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-primary)' }}>
+            {activeTickers.length} Asignados · {numSlots - activeTickers.length} en Cash
           </div>
         </div>
-        <div className="summary-divider" />
-        <div className="summary-item">
-          <div className="summary-label">Capital por Posición</div>
-          <div className="summary-value mono muted">
-            ${slotValue.toFixed(2)} / slot
-          </div>
+
+        {/* 20 Slots Box Grid */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(135px, 1fr))',
+            gap: '10px',
+          }}
+        >
+          {Array.from({ length: numSlots }).map((_, i) => {
+            const ticker = activeTickers[i];
+            const isOccupied = !!ticker;
+            return (
+              <div
+                key={i}
+                style={{
+                  padding: '10px 12px',
+                  borderRadius: 'var(--radius)',
+                  border: isOccupied
+                    ? '1px solid rgba(16, 185, 129, 0.4)'
+                    : '1px dashed rgba(255, 255, 255, 0.1)',
+                  background: isOccupied
+                    ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(0,0,0,0.3) 100%)'
+                    : 'rgba(255, 255, 255, 0.02)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4,
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                    Slot {i + 1}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '0.62rem',
+                      padding: '1px 5px',
+                      borderRadius: 4,
+                      background: isOccupied ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                      color: isOccupied ? 'var(--gain)' : 'var(--text-muted)',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {isOccupied ? '5.0%' : 'Cash Q'}
+                  </span>
+                </div>
+
+                {isOccupied ? (
+                  <>
+                    <strong className="mono" style={{ fontSize: '1.05rem', color: 'var(--gain)' }}>
+                      {ticker}
+                    </strong>
+                    <div style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
+                      ${slotValue.toFixed(2)} asignados
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                      Disponible
+                    </span>
+                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                      ${slotValue.toFixed(2)} en reserva
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
