@@ -9,6 +9,7 @@ import RebalanceTimer from './components/RebalanceTimer';
 import MonteCarloCard from './components/MonteCarloCard';
 import CorrelationHeatmap from './components/CorrelationHeatmap';
 import QuantRadar from './components/QuantRadar';
+import MidCapsStrategy from './components/MidCapsStrategy';
 import { exportPortfolioCSV } from './utils/exportReport';
 import { usePortfolioStore } from './store/portfolioStore';
 import { fetchNAV } from './api/client';
@@ -89,10 +90,10 @@ export default function App() {
             <span className="logo-icon">◈</span>
             <span className="logo-text">Titanes<span>Tech</span></span>
           </div>
-          <div className="header-subtitle">Custom ETF & ProPicks AI Tracker</div>
+          <div className="header-subtitle">Custom ETF & ProPicks AI Terminal</div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           {navData && (
             <button
               className="btn btn-sm btn-ghost"
@@ -110,7 +111,17 @@ export default function App() {
               className={mode === 'historical' ? 'active' : ''}
               onClick={() => setMode('historical')}
             >
-              📈 Histórico
+              🏆 Titanes Tech
+            </button>
+            <button
+              className={mode === 'midcaps' ? 'active' : ''}
+              onClick={() => setMode('midcaps')}
+              style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+            >
+              <span>🇺🇸 Mid-caps MM20</span>
+              <span style={{ fontSize: '0.65rem', padding: '1px 5px', borderRadius: 4, background: 'rgba(16,185,129,0.2)', color: '#10b981' }}>
+                PRO
+              </span>
             </button>
             <button
               className={mode === 'live' ? 'active' : ''}
@@ -127,6 +138,8 @@ export default function App() {
 
         {mode === 'live' ? (
           <LiveMode key={refreshKey} navData={navData} investment={investment} />
+        ) : mode === 'midcaps' ? (
+          <MidCapsStrategy onBack={() => setMode('historical')} />
         ) : (
           <>
             {/* ── Summary strip with % and $ Unit Toggle ─── */}
@@ -234,86 +247,23 @@ export default function App() {
               );
             })()}
 
-            {/* ── Interactive Simulation Bar (What-If Ticker Toggling) ── */}
-            {allTickers.length > 0 && (
-              <div className="simulation-bar fade-up">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: isSimulating ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>
-                    🎯 Simulación What-If:
-                  </span>
-                  {isSimulating && (
-                    <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: 4, background: 'rgba(0,229,255,0.1)', color: 'var(--accent-primary)', fontWeight: 600 }}>
-                      {activeHoldings.length} de {allTickers.length} acciones activas
-                    </span>
-                  )}
-                </div>
+            {/* ── Period selector ──────────────────────────── */}
+            <div className="period-selector fade-up">
+              {PERIODS.map((p) => (
+                <button
+                  key={p}
+                  className={`period-btn ${p === period ? 'active' : ''}`}
+                  onClick={() => setPeriod(p)}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
 
-                <div className="sim-btn-group">
-                  <button className="btn-chip" onClick={selectAll} title="Incluir todas las posiciones">
-                    ⚡ Todos
-                  </button>
-                  <button className="btn-chip" onClick={selectGainers} title="Simular solo con las acciones en ganancia">
-                    🚀 Ganadoras
-                  </button>
-                  <button className="btn-chip" onClick={selectLosers} title="Simular solo con las acciones en pérdida">
-                    🛑 Perdedoras
-                  </button>
-                  <button className="btn-chip" onClick={invertSelection} title="Invertir selección actual">
-                    🔄 Invertir
-                  </button>
-                </div>
-
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginLeft: 'auto', alignItems: 'center' }}>
-                  {holdings.map((h) => {
-                    const isSelected = h.selected !== false;
-                    const isGain = (h.return_pct ?? 0) >= 0;
-                    return (
-                      <button
-                        key={h.ticker}
-                        className={`ticker-chip ${isSelected ? 'active' : 'inactive'}`}
-                        onClick={() => toggleTicker(h.ticker)}
-                        title={`Clic para ${isSelected ? 'excluir' : 'incluir'} ${h.name || h.ticker} de la simulación`}
-                      >
-                        <span>{isSelected ? '✓' : '＋'}</span>
-                        <span>{h.ticker}</span>
-                        {h.return_pct !== undefined && (
-                          <span style={{ fontSize: '0.65rem', opacity: 0.9, color: isGain ? 'var(--gain)' : 'var(--loss)' }}>
-                            {isGain ? '+' : ''}{h.return_pct.toFixed(1)}%
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* ── Chart card ────────────────────────────── */}
-            <div className="card fade-up" style={{ animationDelay: '50ms' }}>
-              <div className="chart-header">
-                <div>
-                  <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Valor del Portafolio vs Benchmarks</h2>
-                  {isSimulating && (
-                    <span style={{ fontSize: '0.72rem', color: 'var(--accent-primary)', marginTop: 2, display: 'block' }}>
-                      ⚡ Gráfico recalculado dinámicamente para las {activeHoldings.length} acciones seleccionadas
-                    </span>
-                  )}
-                </div>
-                <div className="period-selector">
-                  {PERIODS.map((p) => (
-                    <button
-                      key={p}
-                      className={`period-btn ${period === p ? 'active' : ''}`}
-                      onClick={() => setPeriod(p)}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {loading ? (
-                <div className="chart-loading">
+            {/* ── Main Chart Card ─────────────────────────────── */}
+            <div className="card chart-card fade-up">
+              {loading && !navData ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 360, gap: 14, color: 'var(--text-muted)' }}>
                   <div className="spinner" />
                   <span>Calculando simulación interactiva…</span>
                 </div>
@@ -351,6 +301,13 @@ export default function App() {
                   sp500Data={navData?.sp500}
                   nasdaqData={navData?.nasdaq}
                   investment={investment}
+                  holdings={holdings}
+                  onToggleTicker={toggleTicker}
+                  selectAll={selectAll}
+                  selectGainers={selectGainers}
+                  selectLosers={selectLosers}
+                  invertSelection={invertSelection}
+                  isSimulating={isSimulating}
                 />
               )}
             </div>

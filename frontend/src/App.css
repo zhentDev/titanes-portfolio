@@ -253,36 +253,50 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 11px;
+  padding: 5px 12px;
   border-radius: 20px;
   font-size: 0.75rem;
   font-weight: 700;
   cursor: pointer;
   user-select: none;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid var(--border);
   background: var(--bg-surface);
   color: var(--text-muted);
 }
 
 .ticker-chip.active {
-  background: rgba(0, 229, 255, 0.1);
-  border-color: rgba(0, 229, 255, 0.35);
+  background: rgba(0, 229, 255, 0.12);
+  border-color: rgba(0, 229, 255, 0.4);
   color: var(--accent-primary);
-  box-shadow: 0 0 10px rgba(0, 229, 255, 0.1);
+  box-shadow: 0 0 14px rgba(0, 229, 255, 0.18);
+  transform: translateY(-1px);
+  animation: chipPulse 0.3s ease-out;
 }
 
 .ticker-chip.inactive {
-  opacity: 0.45;
+  opacity: 0.4;
   background: rgba(255, 255, 255, 0.02);
-  border-color: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.05);
   color: var(--text-muted);
   text-decoration: line-through;
+  transform: scale(0.96);
 }
 
 .ticker-chip:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px) scale(1.03);
   opacity: 1;
+  border-color: var(--accent-primary);
+}
+
+.ticker-chip:active {
+  transform: scale(0.95);
+}
+
+@keyframes chipPulse {
+  0% { transform: scale(0.92); box-shadow: 0 0 0 rgba(0, 229, 255, 0.5); }
+  70% { transform: scale(1.05); box-shadow: 0 0 16px rgba(0, 229, 255, 0.35); }
+  100% { transform: scale(1); box-shadow: 0 0 14px rgba(0, 229, 255, 0.18); }
 }
 
 /* ── Footer ───────────────────────────── */
@@ -294,4 +308,5 @@
   border-top: 1px solid var(--border);
   letter-spacing: 0.02em;
 }
+
 

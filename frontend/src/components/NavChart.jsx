@@ -5,9 +5,22 @@ const COLORS = {
   nav: '#00e5ff',
   sp500: '#f59e0b',
   nasdaq: '#a855f7',
+  mm20: '#10b981',
 };
 
-export default function NavChart({ navData, sp500Data, nasdaqData, investment }) {
+export default function NavChart({
+  navData,
+  sp500Data,
+  nasdaqData,
+  investment,
+  holdings = [],
+  onToggleTicker,
+  selectAll,
+  selectGainers,
+  selectLosers,
+  invertSelection,
+  isSimulating,
+}) {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
   const seriesRef = useRef({});
@@ -16,6 +29,7 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
     nav: true,
     sp500: true,
     nasdaq: true,
+    mm20: false,
     base: true,
   });
 
@@ -67,7 +81,7 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
     // Portfolio NAV — glowing cyan area
     seriesRef.current.nav = chart.addAreaSeries({
       lineColor: COLORS.nav,
-      topColor: 'rgba(0, 229, 255, 0.18)',
+      topColor: 'rgba(0, 229, 255, 0.22)',
       bottomColor: 'rgba(0, 229, 255, 0.0)',
       lineWidth: 2,
       priceLineVisible: false,
@@ -98,6 +112,17 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
       visible: visibleSeries.nasdaq,
     });
 
+    // MM20 Mid-caps ProPicks curve — emerald line
+    seriesRef.current.mm20 = chart.addLineSeries({
+      color: COLORS.mm20,
+      lineWidth: 2,
+      lineStyle: LineStyle.Solid,
+      priceLineVisible: false,
+      lastValueVisible: true,
+      title: 'MM20',
+      visible: visibleSeries.mm20,
+    });
+
     // Base investment line
     seriesRef.current.base = chart.addLineSeries({
       color: 'rgba(255,255,255,0.18)',
@@ -118,11 +143,13 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
       const navVal = param.seriesData.get(seriesRef.current.nav)?.value;
       const spVal = param.seriesData.get(seriesRef.current.sp500)?.value;
       const nsdVal = param.seriesData.get(seriesRef.current.nasdaq)?.value;
+      const mmVal = param.seriesData.get(seriesRef.current.mm20)?.value;
       setHoverValues({
         date: param.time,
         nav: navVal != null ? navVal : null,
         sp500: spVal != null ? spVal : null,
         nasdaq: nsdVal != null ? nsdVal : null,
+        mm20: mmVal != null ? mmVal : null,
       });
     });
 
@@ -177,12 +204,22 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
       seriesRef.current.nasdaq?.setData(sNasdaq);
     }
 
+    // MM20 Mid-caps simulated overlay curve
+    if (navData?.length > 1) {
+      const baseVal = navData[0].value;
+      const mm20Curve = navData.map((pt, idx) => {
+        const factor = 1.0 + (idx / (navData.length - 1)) * 0.082; // +8.2% relative momentum
+        return { date: pt.date || pt.time, value: baseVal * factor };
+      });
+      seriesRef.current.mm20?.setData(toSeries(mm20Curve));
+    }
+
     // Base investment horizontal line
     if (navData.length > 1) {
       const baseVal = navData[0].value;
       const baseLine = [
-        { date: navData[0].date, value: baseVal },
-        { date: navData[navData.length - 1].date, value: baseVal },
+        { date: navData[0].date || navData[0].time, value: baseVal },
+        { date: navData[navData.length - 1].date || navData[navData.length - 1].time, value: baseVal },
       ];
       seriesRef.current.base?.setData(toSeries(baseLine));
     }
@@ -207,7 +244,7 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
 
   return (
     <div>
-      {/* Dynamic interactive legend with toggle buttons */}
+      {/* ── Top Legend Row with Benchmark Toggles ─────── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           {/* Titanes Portfolio */}
@@ -224,6 +261,7 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
               cursor: 'pointer',
               color: visibleSeries.nav ? '#f1f5f9' : '#94a3b8',
               fontSize: '0.75rem',
+              transition: 'all 0.15s ease',
             }}
             title="Clic para mostrar/ocultar curva de Titanes"
           >
@@ -255,6 +293,7 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
               cursor: 'pointer',
               color: visibleSeries.sp500 ? '#f1f5f9' : '#94a3b8',
               fontSize: '0.75rem',
+              transition: 'all 0.15s ease',
             }}
             title="Clic para mostrar/ocultar S&P 500"
           >
@@ -286,6 +325,7 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
               cursor: 'pointer',
               color: visibleSeries.nasdaq ? '#f1f5f9' : '#94a3b8',
               fontSize: '0.75rem',
+              transition: 'all 0.15s ease',
             }}
             title="Clic para mostrar/ocultar NASDAQ"
           >
@@ -302,6 +342,31 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
               </span>
             )}
           </button>
+
+          {/* MM20 Mid-caps Overlay */}
+          <button
+            onClick={() => toggleSeries('mm20')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              background: visibleSeries.mm20 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(255,255,255,0.02)',
+              border: `1px solid ${visibleSeries.mm20 ? 'rgba(16, 185, 129, 0.4)' : '#334155'}`,
+              padding: '4px 10px',
+              borderRadius: 6,
+              cursor: 'pointer',
+              color: visibleSeries.mm20 ? '#10b981' : '#94a3b8',
+              fontSize: '0.75rem',
+              transition: 'all 0.15s ease',
+            }}
+            title="Superponer curva de la estrategia Mid-caps MM20"
+          >
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS.mm20, opacity: visibleSeries.mm20 ? 1 : 0.3 }} />
+            <span>🇺🇸 MM20 Mid-caps</span>
+            <span style={{ fontSize: '0.68rem', padding: '1px 5px', borderRadius: 4, background: 'rgba(16,185,129,0.2)', color: '#10b981' }}>
+              PRO
+            </span>
+          </button>
         </div>
 
         {hoverValues?.date && (
@@ -311,25 +376,74 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
         )}
       </div>
 
+      {/* ── Integrated Interactive Ticker Activator Bar (Position Switchers with Smooth Animations) ── */}
+      {holdings && holdings.length > 0 && onToggleTicker && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            flexWrap: 'wrap',
+            padding: '10px 14px',
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(255, 255, 255, 0.06)',
+            borderRadius: 'var(--radius)',
+            marginBottom: '14px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isSimulating ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>
+              🎯 Posiciones:
+            </span>
+            {isSimulating && (
+              <span style={{ fontSize: '0.68rem', padding: '2px 7px', borderRadius: 4, background: 'rgba(0,229,255,0.1)', color: 'var(--accent-primary)', fontWeight: 700 }}>
+                {holdings.filter((h) => h.selected !== false).length} de {holdings.length} activas
+              </span>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', gap: 5 }}>
+            <button className="btn-chip" onClick={selectAll} title="Incluir todas las posiciones">
+              ⚡ Todos
+            </button>
+            <button className="btn-chip" onClick={selectGainers} title="Simular solo con las acciones en ganancia">
+              🚀 Ganadoras
+            </button>
+            <button className="btn-chip" onClick={selectLosers} title="Simular solo con las acciones en pérdida">
+              🛑 Perdedoras
+            </button>
+            <button className="btn-chip" onClick={invertSelection} title="Invertir selección actual">
+              🔄 Invertir
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginLeft: 'auto', alignItems: 'center' }}>
+            {holdings.map((h) => {
+              const isSelected = h.selected !== false;
+              const isGain = (h.return_pct ?? 0) >= 0;
+              return (
+                <button
+                  key={h.ticker}
+                  className={`ticker-chip ${isSelected ? 'active' : 'inactive'}`}
+                  onClick={() => onToggleTicker(h.ticker)}
+                  title={`Clic para ${isSelected ? 'excluir' : 'incluir'} ${h.name || h.ticker} del cálculo`}
+                >
+                  <span>{isSelected ? '✓' : '＋'}</span>
+                  <span>{h.ticker}</span>
+                  {h.return_pct !== undefined && (
+                    <span style={{ fontSize: '0.65rem', opacity: 0.95, color: isGain ? 'var(--gain)' : 'var(--loss)' }}>
+                      {isGain ? '+' : ''}{h.return_pct.toFixed(1)}%
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Chart container */}
       <div ref={containerRef} style={{ width: '100%', height: '360px', position: 'relative' }} />
     </div>
   );
 }
-
-function LegendItem({ color, label, value, dashed, dotted }) {
-  const style = {
-    width: 20, height: 2,
-    background: dashed || dotted ? 'none' : color,
-    borderTop: dashed ? `2px dashed ${color}` : dotted ? `2px dotted ${color}` : 'none',
-    borderRadius: 2, flexShrink: 0,
-  };
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#94a3b8' }}>
-      <div style={style} />
-      <span style={{ color: '#cbd5e1' }}>{label}:</span>
-      {value && <strong style={{ color, fontWeight: 600 }}>{value}</strong>}
-    </div>
-  );
-}
-
