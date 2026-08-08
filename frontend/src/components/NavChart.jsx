@@ -12,6 +12,22 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
   const chartRef = useRef(null);
   const seriesRef = useRef({});
   const [hoverValues, setHoverValues] = useState(null);
+  const [visibleSeries, setVisibleSeries] = useState({
+    nav: true,
+    sp500: true,
+    nasdaq: true,
+    base: true,
+  });
+
+  const toggleSeries = (key) => {
+    setVisibleSeries((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      if (seriesRef.current[key]) {
+        seriesRef.current[key].applyOptions({ visible: next[key] });
+      }
+      return next;
+    });
+  };
 
   const initChart = useCallback(() => {
     if (!containerRef.current) return;
@@ -57,6 +73,7 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
       priceLineVisible: false,
       lastValueVisible: true,
       title: 'Portfolio',
+      visible: visibleSeries.nav,
     });
 
     // S&P 500 — amber line
@@ -67,6 +84,7 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
       priceLineVisible: false,
       lastValueVisible: true,
       title: 'S&P 500',
+      visible: visibleSeries.sp500,
     });
 
     // NASDAQ — purple line
@@ -77,6 +95,7 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
       priceLineVisible: false,
       lastValueVisible: true,
       title: 'NASDAQ',
+      visible: visibleSeries.nasdaq,
     });
 
     // Base investment line
@@ -87,6 +106,7 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
       priceLineVisible: false,
       lastValueVisible: false,
       title: 'Base',
+      visible: visibleSeries.base,
     });
 
     // Crosshair move handler to update legend values live
@@ -180,43 +200,119 @@ export default function NavChart({ navData, sp500Data, nasdaqData, investment })
   const currentSP = hoverValues?.sp500 ?? lastSP;
   const currentNasdaq = hoverValues?.nasdaq ?? lastNasdaq;
 
+  // Real % returns from base active capital
+  const navPct = currentNav && baseActive ? ((currentNav - baseActive) / baseActive) * 100 : null;
+  const spPct = currentSP && baseActive ? ((currentSP - baseActive) / baseActive) * 100 : null;
+  const nasdaqPct = currentNasdaq && baseActive ? ((currentNasdaq - baseActive) / baseActive) * 100 : null;
+
   return (
-    <div style={{ position: 'relative' }}>
-      {/* Legend with interactive values */}
-      <div style={{
-        display: 'flex', flexWrap: 'wrap', gap: '16px', marginBottom: '12px',
-        fontSize: '0.78rem', fontFamily: "'JetBrains Mono', monospace",
-      }}>
-        <LegendItem
-          color={COLORS.nav}
-          label="Titanes (Activo)"
-          value={currentNav != null ? `$${Number(currentNav).toFixed(2)}` : null}
-        />
-        <LegendItem
-          color={COLORS.sp500}
-          label="S&P 500"
-          value={currentSP != null ? `$${Number(currentSP).toFixed(2)}` : null}
-          dashed
-        />
-        <LegendItem
-          color={COLORS.nasdaq}
-          label="NASDAQ"
-          value={currentNasdaq != null ? `$${Number(currentNasdaq).toFixed(2)}` : null}
-          dotted
-        />
-        <LegendItem
-          color="rgba(255,255,255,0.25)"
-          label="Base Activa"
-          value={`$${Number(baseActive).toFixed(2)}`}
-          dashed
-        />
+    <div>
+      {/* Dynamic interactive legend with toggle buttons */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          {/* Titanes Portfolio */}
+          <button
+            onClick={() => toggleSeries('nav')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              background: visibleSeries.nav ? 'rgba(0, 229, 255, 0.08)' : 'rgba(255,255,255,0.02)',
+              border: `1px solid ${visibleSeries.nav ? 'rgba(0, 229, 255, 0.3)' : '#334155'}`,
+              padding: '4px 10px',
+              borderRadius: 6,
+              cursor: 'pointer',
+              color: visibleSeries.nav ? '#f1f5f9' : '#94a3b8',
+              fontSize: '0.75rem',
+            }}
+            title="Clic para mostrar/ocultar curva de Titanes"
+          >
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS.nav, opacity: visibleSeries.nav ? 1 : 0.3 }} />
+            <strong>Titanes</strong>
+            {currentNav != null && (
+              <span className="mono" style={{ color: '#00e5ff', fontWeight: 700 }}>
+                ${currentNav.toFixed(2)}
+              </span>
+            )}
+            {navPct != null && (
+              <span style={{ color: navPct >= 0 ? '#22c55e' : '#ef4444', fontSize: '0.7rem' }}>
+                ({navPct >= 0 ? '+' : ''}{navPct.toFixed(2)}%)
+              </span>
+            )}
+          </button>
+
+          {/* S&P 500 */}
+          <button
+            onClick={() => toggleSeries('sp500')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              background: visibleSeries.sp500 ? 'rgba(245, 158, 11, 0.08)' : 'rgba(255,255,255,0.02)',
+              border: `1px solid ${visibleSeries.sp500 ? 'rgba(245, 158, 11, 0.3)' : '#334155'}`,
+              padding: '4px 10px',
+              borderRadius: 6,
+              cursor: 'pointer',
+              color: visibleSeries.sp500 ? '#f1f5f9' : '#94a3b8',
+              fontSize: '0.75rem',
+            }}
+            title="Clic para mostrar/ocultar S&P 500"
+          >
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS.sp500, opacity: visibleSeries.sp500 ? 1 : 0.3 }} />
+            <span>S&P 500</span>
+            {currentSP != null && (
+              <span className="mono" style={{ color: '#fbbf24', fontWeight: 600 }}>
+                ${currentSP.toFixed(2)}
+              </span>
+            )}
+            {spPct != null && (
+              <span style={{ color: spPct >= 0 ? '#fbbf24' : '#ef4444', fontSize: '0.7rem' }}>
+                ({spPct >= 0 ? '+' : ''}{spPct.toFixed(2)}%)
+              </span>
+            )}
+          </button>
+
+          {/* NASDAQ */}
+          <button
+            onClick={() => toggleSeries('nasdaq')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              background: visibleSeries.nasdaq ? 'rgba(168, 85, 247, 0.08)' : 'rgba(255,255,255,0.02)',
+              border: `1px solid ${visibleSeries.nasdaq ? 'rgba(168, 85, 247, 0.3)' : '#334155'}`,
+              padding: '4px 10px',
+              borderRadius: 6,
+              cursor: 'pointer',
+              color: visibleSeries.nasdaq ? '#f1f5f9' : '#94a3b8',
+              fontSize: '0.75rem',
+            }}
+            title="Clic para mostrar/ocultar NASDAQ"
+          >
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS.nasdaq, opacity: visibleSeries.nasdaq ? 1 : 0.3 }} />
+            <span>NASDAQ</span>
+            {currentNasdaq != null && (
+              <span className="mono" style={{ color: '#c084fc', fontWeight: 600 }}>
+                ${currentNasdaq.toFixed(2)}
+              </span>
+            )}
+            {nasdaqPct != null && (
+              <span style={{ color: nasdaqPct >= 0 ? '#c084fc' : '#ef4444', fontSize: '0.7rem' }}>
+                ({nasdaqPct >= 0 ? '+' : ''}{nasdaqPct.toFixed(2)}%)
+              </span>
+            )}
+          </button>
+        </div>
+
         {hoverValues?.date && (
-          <span style={{ color: '#64748b', marginLeft: 'auto' }}>
+          <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontFamily: "'JetBrains Mono', monospace" }}>
             📅 {String(hoverValues.date)}
           </span>
         )}
       </div>
-      <div ref={containerRef} style={{ height: '340px', width: '100%' }} />
+
+      {/* Chart container */}
+      <div ref={containerRef} style={{ width: '100%', height: '360px', position: 'relative' }} />
     </div>
   );
 }

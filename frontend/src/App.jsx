@@ -3,6 +3,10 @@ import NavChart from './components/NavChart';
 import LiveMode from './components/LiveMode';
 import HoldingsTable from './components/HoldingsTable';
 import RebalanceManager from './components/RebalanceManager';
+import QuantitativeCard from './components/QuantitativeCard';
+import SectorAllocation from './components/SectorAllocation';
+import RebalanceTimer from './components/RebalanceTimer';
+import { exportPortfolioCSV } from './utils/exportReport';
 import { usePortfolioStore } from './store/portfolioStore';
 import { fetchNAV } from './api/client';
 import './App.css';
@@ -82,22 +86,36 @@ export default function App() {
             <span className="logo-icon">◈</span>
             <span className="logo-text">Titanes<span>Tech</span></span>
           </div>
-          <div className="header-subtitle">Custom ETF Portfolio Tracker</div>
+          <div className="header-subtitle">Custom ETF & ProPicks AI Tracker</div>
         </div>
 
-        <div className="mode-toggle">
-          <button
-            className={mode === 'historical' ? 'active' : ''}
-            onClick={() => setMode('historical')}
-          >
-            📈 Histórico
-          </button>
-          <button
-            className={mode === 'live' ? 'active' : ''}
-            onClick={() => setMode('live')}
-          >
-            ⚡ Live
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {navData && (
+            <button
+              className="btn btn-sm btn-ghost"
+              onClick={() => exportPortfolioCSV(navData, investment)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', padding: '6px 12px' }}
+              title="Descargar informe completo del portafolio en formato CSV"
+            >
+              <span>📥</span>
+              <span>Exportar Reporte CSV</span>
+            </button>
+          )}
+
+          <div className="mode-toggle">
+            <button
+              className={mode === 'historical' ? 'active' : ''}
+              onClick={() => setMode('historical')}
+            >
+              📈 Histórico
+            </button>
+            <button
+              className={mode === 'live' ? 'active' : ''}
+              onClick={() => setMode('live')}
+            >
+              ⚡ Live
+            </button>
+          </div>
         </div>
       </header>
 
@@ -271,7 +289,7 @@ export default function App() {
             <div className="card fade-up" style={{ animationDelay: '50ms' }}>
               <div className="chart-header">
                 <div>
-                  <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Valor del Portafolio</h2>
+                  <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Valor del Portafolio vs Benchmarks</h2>
                   {isSimulating && (
                     <span style={{ fontSize: '0.72rem', color: 'var(--accent-primary)', marginTop: 2, display: 'block' }}>
                       ⚡ Gráfico recalculado dinámicamente para las {activeHoldings.length} acciones seleccionadas
@@ -334,6 +352,22 @@ export default function App() {
               )}
             </div>
 
+            {/* ── Quantitative Intelligence & Allocation Grid ── */}
+            {summary && !loading && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '20px' }}>
+                <QuantitativeCard summary={summary} />
+                <SectorAllocation
+                  holdings={navData?.holdings}
+                  investment={investment}
+                  numSlots={numSlots}
+                />
+                <RebalanceTimer
+                  rebalances={navData?.rebalances}
+                  holdings={navData?.holdings}
+                />
+              </div>
+            )}
+
             {/* ── Bottom grid ───────────────────────────── */}
             <div className="bottom-grid">
               {/* Holdings table */}
@@ -383,4 +417,5 @@ function SummaryItem({ label, value, mono, large, muted }) {
     </div>
   );
 }
+
 
