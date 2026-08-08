@@ -450,9 +450,9 @@ export default function NavChart({
                 fontWeight: 700,
                 letterSpacing: '0.5px'
               }}
-              title="Escala logarítmica de doble eje activada para alinear capitales con gran diferencia"
+              title={`Eje Y desdoblado. Proporción de capitales: ${Math.round(Math.max(baseActive, mm20BaseActive) / Math.max(1, Math.min(baseActive, mm20BaseActive)))} a 1`}
             >
-              ⚖️ DOBLE ESCALA
+              ⚖️ ESCALA LOG {Math.round(Math.max(baseActive, mm20BaseActive) / Math.max(1, Math.min(baseActive, mm20BaseActive)))}
             </span>
           )}
           {hoverValues?.date && (
