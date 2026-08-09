@@ -37,18 +37,16 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        # Migration: Add columns to existing DB if missing
+        try:
+            columns = [row[1] for row in con.execute("PRAGMA table_info('purchase_portfolios')").fetchall()]
+            if 'is_plan' not in columns:
+                con.execute("ALTER TABLE purchase_portfolios ADD COLUMN is_plan BOOLEAN DEFAULT FALSE")
+            if 'plan_config' not in columns:
+                con.execute("ALTER TABLE purchase_portfolios ADD COLUMN plan_config VARCHAR")
+        except duckdb.Error:
+            pass
         
-        # Migration: Add is_plan column to existing DB if missing
-        try:
-            con.execute("ALTER TABLE purchase_portfolios ADD COLUMN is_plan BOOLEAN DEFAULT FALSE")
-        except duckdb.BinderException:
-            pass # Column already exists
-            
-        # Migration: Add plan_config column to existing DB if missing
-        try:
-            con.execute("ALTER TABLE purchase_portfolios ADD COLUMN plan_config VARCHAR")
-        except duckdb.BinderException:
-            pass # Column already exists
         
         con.execute("""
             CREATE TABLE IF NOT EXISTS individual_purchases (
