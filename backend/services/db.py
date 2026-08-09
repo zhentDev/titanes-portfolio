@@ -32,9 +32,16 @@ def init_db():
             CREATE TABLE IF NOT EXISTS purchase_portfolios (
                 id VARCHAR PRIMARY KEY,
                 name VARCHAR,
+                is_plan BOOLEAN DEFAULT FALSE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        
+        # Migration: Add is_plan column to existing DB if missing
+        try:
+            con.execute("ALTER TABLE purchase_portfolios ADD COLUMN is_plan BOOLEAN DEFAULT FALSE")
+        except duckdb.BinderException:
+            pass # Column already exists
         
         con.execute("""
             CREATE TABLE IF NOT EXISTS individual_purchases (

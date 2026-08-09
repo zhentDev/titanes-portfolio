@@ -4,7 +4,6 @@ import { usePortfolioStore } from '../store/portfolioStore';
 import { searchTicker, searchTickersMultiple, fetchLiveQuotes, fetchHistoricalPrice, fetchIndicesHistory } from '../api/client';
 import toast from 'react-hot-toast';
 import { toastConfirm, toastPrompt } from '../utils/toastAlerts';
-import { analyzeInvestmentPlan } from '../utils/investmentPlanAnalyzer';
 
 export default function IndividualPurchasesView({ portfolioId = 'hist_default' }) {
   const {
@@ -18,8 +17,7 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
     isBatchUpdating,
     batchProgress,
     runBatchRecalculate,
-    setAbortBatch,
-    togglePortfolioPlan
+    setAbortBatch
   } = usePortfolioStore();
 
   // Editing state
@@ -30,12 +28,6 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
   const [editTicker, setEditTicker] = useState('');
 
   const portfolio = purchasePortfolios?.find(p => p.id === portfolioId) || { name: 'Histórico' };
-  
-  // Smart Analysis
-  const planAnalysis = useMemo(() => {
-    if (!portfolio.isPlan) return null;
-    return analyzeInvestmentPlan(individualPurchases.filter(p => p.portfolioId === portfolioId));
-  }, [portfolio.isPlan, individualPurchases, portfolioId]);
 
   const currentPurchases = useMemo(() => {
     return individualPurchases.filter(p => p.portfolioId === portfolioId);
@@ -346,7 +338,7 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
     if (!isConfirmed) return;
 
     const updates = group.lots.map((p) => ({
-      ...p,
+      id: p.id,
       ticker: tickerUpper
     }));
     updateMultiplePurchases(updates);
@@ -547,17 +539,6 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 20 }}>
               Registra y trackea compras reales de ETFs, ETCs o Acciones con sus valores de apertura exactos.
             </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.85rem', color: portfolio.isPlan ? '#00e5ff' : 'var(--text-secondary)' }}>
-                <input 
-                  type="checkbox" 
-                  checked={!!portfolio.isPlan} 
-                  onChange={(e) => togglePortfolioPlan(portfolioId, e.target.checked)}
-                  style={{ accentColor: '#00e5ff', width: 16, height: 16 }}
-                />
-                🤖 Convertir en Plan de Inversión Frecuente
-              </label>
-            </div>
           </div>
           
           {portfolioId !== 'hist_default' && (
@@ -598,47 +579,6 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
           </div>
         </div>
       </div>
-
-      {/* SMART ANALYSIS CARD */}
-      {portfolio.isPlan && planAnalysis && (
-        <div className="card fade-up" style={{ padding: '20px', marginBottom: '24px', background: 'rgba(0, 229, 255, 0.03)', border: '1px solid rgba(0, 229, 255, 0.15)' }}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '1.05rem', fontWeight: 700, color: '#00e5ff', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span>🤖</span> Análisis Inteligente del Plan
-          </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-            <div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Frecuencia Detectada</div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#f1f5f9' }}>
-                {planAnalysis.frequencyDays ? `Cada ${planAnalysis.frequencyDays} días` : 'No hay suficientes datos'}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Inversión Promedio</div>
-              <div className="mono" style={{ fontSize: '1.1rem', fontWeight: 600, color: '#f1f5f9' }}>
-                ${planAnalysis.avgAmount.toFixed(2)}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Próxima Inversión Esperada</div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 600, color: planAnalysis.nextDate ? '#4ade80' : 'var(--text-muted)' }}>
-                {planAnalysis.nextDate ? planAnalysis.nextDate : '---'}
-              </div>
-            </div>
-          </div>
-          
-          <div style={{ marginTop: 20 }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 8 }}>Distribución Objetivo Detectada (Promedio):</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-              {Object.entries(planAnalysis.distribution).map(([ticker, pct]) => (
-                <div key={ticker} style={{ padding: '4px 10px', background: 'rgba(255,255,255,0.05)', borderRadius: 12, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontWeight: 700 }}>{ticker}</span>
-                  <span style={{ color: '#00e5ff' }}>{pct.toFixed(1)}%</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* GRAPH CONTAINER */}
       <div className="card fade-up" style={{ padding: '20px', marginBottom: '24px' }}>
@@ -1075,8 +1015,8 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
                               </button>
                               <button
                                 className="btn btn-sm btn-ghost"
-                                onClick={async () => {
-                                  const newPrice = await toastPrompt(`Precio actual de mercado para ${p.ticker} (ej. XTB):`, p.currentPrice);
+                                onClick={() => {
+                                  const newPrice = prompt(`Precio actual de mercado para ${p.ticker} (ej. XTB):`, p.currentPrice);
                                   if (newPrice !== null && !isNaN(Number(newPrice))) {
                                     handleSaveManualPrice(p, newPrice);
                                   }

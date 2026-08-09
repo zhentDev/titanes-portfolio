@@ -8,6 +8,7 @@ router = APIRouter()
 class PortfolioItem(BaseModel):
     id: str
     name: str
+    isPlan: Optional[bool] = False
 
 class PurchaseLot(BaseModel):
     id: str
@@ -25,11 +26,11 @@ class SyncPayload(BaseModel):
 @router.get("/purchases/portfolios")
 def get_all_purchases_data():
     with get_connection() as con:
-        portfolios = con.execute("SELECT id, name FROM purchase_portfolios").fetchall()
+        portfolios = con.execute("SELECT id, name, is_plan FROM purchase_portfolios").fetchall()
         lots = con.execute("SELECT id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price FROM individual_purchases").fetchall()
         
         return {
-            "purchasePortfolios": [{"id": p[0], "name": p[1]} for p in portfolios],
+            "purchasePortfolios": [{"id": p[0], "name": p[1], "isPlan": bool(p[2])} for p in portfolios],
             "individualPurchases": [
                 {
                     "id": lot[0],
@@ -48,8 +49,20 @@ def get_all_purchases_data():
 def create_portfolio(item: PortfolioItem):
     with get_connection() as con:
         con.execute(
-            "INSERT INTO purchase_portfolios (id, name) VALUES (?, ?) ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name",
-            [item.id, item.name]
+            "INSERT INTO purchase_portfolios (id, name, is_plan) VALUES (?, ?, ?) ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, is_plan=EXCLUDED.is_plan",
+            [item.id, item.name, item.isPlan]
+        )
+    return {"success": True}
+
+class PlanTogglePayload(BaseModel):
+    isPlan: bool
+
+@router.put("/purchases/portfolios/{portfolio_id}/plan")
+def toggle_portfolio_plan(portfolio_id: str, payload: PlanTogglePayload):
+    with get_connection() as con:
+        con.execute(
+            "UPDATE purchase_portfolios SET is_plan = ? WHERE id = ?",
+            [payload.isPlan, portfolio_id]
         )
     return {"success": True}
 

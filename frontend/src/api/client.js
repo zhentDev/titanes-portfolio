@@ -165,17 +165,26 @@ export async function fetchPurchasesData() {
   return res.json();
 }
 
-export async function createPurchasePortfolio(id, name) {
+export async function createPurchasePortfolio(id, name, isPlan = false) {
   const res = await fetch(`${BASE}/purchases/portfolios`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id, name }),
+    body: JSON.stringify({ id, name, isPlan }),
   });
   return res.json();
 }
 
 export async function deletePurchasePortfolioApi(id) {
   const res = await fetch(`${BASE}/purchases/portfolios/${id}`, { method: 'DELETE' });
+  return res.json();
+}
+
+export async function togglePortfolioPlanApi(id, isPlan) {
+  const res = await fetch(`${BASE}/purchases/portfolios/${id}/plan`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ isPlan }),
+  });
   return res.json();
 }
 
