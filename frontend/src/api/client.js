@@ -160,7 +160,7 @@ export async function deleteRebalance(date) {
 
 /** PURCHASES API */
 export async function fetchPurchasesData() {
-  const res = await fetch(`${BASE}/purchases/data`);
+  const res = await fetch(`${BASE}/purchases/portfolios`);
   if (!res.ok) throw new Error('Error fetching purchases data');
   return res.json();
 }
