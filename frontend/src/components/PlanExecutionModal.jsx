@@ -7,9 +7,9 @@ export default function PlanExecutionModal({ isOpen, onClose, planAnalysis, live
 
   useEffect(() => {
     if (isOpen && planAnalysis) {
-      // Usamos la nextDate o la fecha actual si ya pasó
+      // Usamos siempre la fecha de hoy como sugerencia para la ejecución real
       const today = new Date().toISOString().split('T')[0];
-      setExecutionDate(planAnalysis.nextDate && planAnalysis.nextDate < today ? planAnalysis.nextDate : today);
+      setExecutionDate(today);
 
       const initialItems = Object.entries(planAnalysis.distribution).map(([ticker, pct]) => {
         const targetAmount = (pct / 100) * planAnalysis.avgAmount;

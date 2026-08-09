@@ -85,15 +85,23 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
   const cashReserve = useMemo(() => {
     if (!planAnalysis || !planAnalysis.avgAmount || !currentPurchases.length) return 0;
     
-    const uniqueDates = new Set();
-    let totalInvested = 0;
+    const byDate = {};
     currentPurchases.forEach(p => {
-      if (p.date) uniqueDates.add(p.date);
-      totalInvested += (p.investedAmount ?? (p.shares * p.purchasePrice)) || 0;
+      if (!p.date) return;
+      if (!byDate[p.date]) byDate[p.date] = 0;
+      byDate[p.date] += (p.investedAmount ?? (p.shares * p.purchasePrice)) || 0;
     });
 
-    const expectedTotal = uniqueDates.size * planAnalysis.avgAmount;
-    return expectedTotal - totalInvested;
+    let reserve = 0;
+    Object.values(byDate).forEach(investedOnDate => {
+      // Considerarlo una ejecución del plan si la inversión no es desproporcionadamente grande
+      // (asumimos que si invierte más del doble del objetivo, fue una compra manual extraordinaria)
+      if (investedOnDate <= planAnalysis.avgAmount * 2) {
+        reserve += (planAnalysis.avgAmount - investedOnDate);
+      }
+    });
+
+    return reserve;
   }, [planAnalysis, currentPurchases]);
 
 
@@ -128,7 +136,11 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
 
   useEffect(() => {
     if (earliestDate) {
-      fetchIndicesHistory(earliestDate).then(setIndicesHistory).catch(console.error);
+      // Subtract 7 days to ensure we catch the previous valid trading day if earliestDate is a weekend/holiday
+      const d = new Date(earliestDate);
+      d.setDate(d.getDate() - 7);
+      const safeStartDate = d.toISOString().split('T')[0];
+      fetchIndicesHistory(safeStartDate).then(setIndicesHistory).catch(console.error);
     }
   }, [earliestDate]);
 
