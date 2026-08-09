@@ -179,11 +179,11 @@ export async function deletePurchasePortfolioApi(id) {
   return res.json();
 }
 
-export async function togglePortfolioPlanApi(id, isPlan) {
+export async function togglePortfolioPlanApi(id, isPlan, planConfig = null) {
   const res = await fetch(`${BASE}/purchases/portfolios/${id}/plan`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ isPlan }),
+    body: JSON.stringify({ isPlan, planConfig }),
   });
   return res.json();
 }

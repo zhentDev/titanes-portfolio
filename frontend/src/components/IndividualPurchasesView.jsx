@@ -5,6 +5,7 @@ import { searchTicker, searchTickersMultiple, fetchLiveQuotes, fetchHistoricalPr
 import toast from 'react-hot-toast';
 import { toastConfirm, toastPrompt } from '../utils/toastAlerts';
 import { analyzeInvestmentPlan } from '../utils/investmentPlanAnalyzer';
+import PlanConfigModal from './PlanConfigModal';
 
 export default function IndividualPurchasesView({ portfolioId = 'hist_default' }) {
   const {
@@ -28,14 +29,44 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
   const [editPrice, setEditPrice] = useState(0);
   const [editDate, setEditDate] = useState('');
   const [editTicker, setEditTicker] = useState('');
+  const [showPlanModal, setShowPlanModal] = useState(false);
 
   const portfolio = purchasePortfolios?.find(p => p.id === portfolioId) || { name: 'Histórico' };
   
   // Smart Analysis
-  const planAnalysis = useMemo(() => {
+  const autoPlanAnalysis = useMemo(() => {
     if (!portfolio.isPlan) return null;
     return analyzeInvestmentPlan(individualPurchases.filter(p => p.portfolioId === portfolioId));
   }, [portfolio.isPlan, individualPurchases, portfolioId]);
+
+  const planAnalysis = useMemo(() => {
+    if (!portfolio.isPlan) return null;
+    
+    // Si hay configuración manual, úsala. Si no, usa la autodetectada.
+    if (portfolio.planConfig) {
+      let nextDateStr = null;
+      if (autoPlanAnalysis?.nextDate) {
+        nextDateStr = autoPlanAnalysis.nextDate;
+      } else {
+        // Fallback para próxima fecha si no hay nada de data: usar fecha actual + frecuencia
+        const d = new Date();
+        d.setDate(d.getDate() + (portfolio.planConfig.frequencyDays || 15));
+        nextDateStr = d.toISOString().split('T')[0];
+      }
+      
+      return {
+        ...portfolio.planConfig,
+        nextDate: nextDateStr,
+        isManual: true
+      };
+    }
+    
+    if (autoPlanAnalysis && autoPlanAnalysis.frequencyDays) {
+      return { ...autoPlanAnalysis, isManual: false };
+    }
+    
+    return null;
+  }, [portfolio.isPlan, portfolio.planConfig, autoPlanAnalysis]);
 
   const currentPurchases = useMemo(() => {
     return individualPurchases.filter(p => p.portfolioId === portfolioId);
@@ -552,7 +583,13 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
                 <input 
                   type="checkbox" 
                   checked={!!portfolio.isPlan} 
-                  onChange={(e) => togglePortfolioPlan(portfolioId, e.target.checked)}
+                  onChange={(e) => {
+                    const isChecked = e.target.checked;
+                    togglePortfolioPlan(portfolioId, isChecked, portfolio.planConfig);
+                    if (isChecked && (!autoPlanAnalysis || !autoPlanAnalysis.frequencyDays) && !portfolio.planConfig) {
+                      setShowPlanModal(true);
+                    }
+                  }}
                   style={{ accentColor: '#00e5ff', width: 16, height: 16 }}
                 />
                 🤖 Convertir en Plan de Inversión Frecuente
@@ -600,11 +637,60 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
       </div>
 
       {/* SMART ANALYSIS CARD */}
-      {portfolio.isPlan && planAnalysis && (
+      {portfolio.isPlan && (
         <div className="card fade-up" style={{ padding: '20px', marginBottom: '24px', background: 'rgba(0, 229, 255, 0.03)', border: '1px solid rgba(0, 229, 255, 0.15)' }}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '1.05rem', fontWeight: 700, color: '#00e5ff', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span>🤖</span> Análisis Inteligente del Plan
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '1.05rem', fontWeight: 700, color: '#00e5ff', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>🤖</span> Análisis Inteligente del Plan {planAnalysis?.isManual && <span style={{ fontSize: '0.7rem', background: '#00e5ff20', padding: '2px 6px', borderRadius: 10 }}>(Manual)</span>}
+            </h3>
+            <button onClick={() => setShowPlanModal(true)} className="btn btn-sm" style={{ background: 'transparent', border: '1px solid rgba(0, 229, 255, 0.3)', color: '#00e5ff' }}>
+              ⚙️ Configurar
+            </button>
+          </div>
+          
+          {planAnalysis ? (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Frecuencia Detectada</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#f1f5f9' }}>
+                    {planAnalysis.frequencyDays ? `Cada ${planAnalysis.frequencyDays} días` : '---'}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Inversión Promedio</div>
+                  <div className="mono" style={{ fontSize: '1.1rem', fontWeight: 600, color: '#f1f5f9' }}>
+                    ${planAnalysis.avgAmount?.toFixed(2) || '0.00'}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Próxima Inversión Esperada</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 600, color: planAnalysis.nextDate ? '#4ade80' : 'var(--text-muted)' }}>
+                    {planAnalysis.nextDate ? planAnalysis.nextDate : '---'}
+                  </div>
+                </div>
+              </div>
+              
+              <div style={{ marginTop: 20 }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 8 }}>Distribución Objetivo Detectada (Promedio):</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                  {planAnalysis.distribution && Object.entries(planAnalysis.distribution).map(([ticker, pct]) => (
+                    <div key={ticker} style={{ padding: '4px 10px', background: 'rgba(255,255,255,0.05)', borderRadius: 12, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontWeight: 700 }}>{ticker}</span>
+                      <span style={{ color: '#00e5ff' }}>{pct.toFixed(1)}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div style={{ padding: 16, textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', background: 'rgba(0,0,0,0.2)', borderRadius: 8 }}>
+              No hay suficientes datos para detectar un patrón automáticamente.<br/>
+              <button onClick={() => setShowPlanModal(true)} className="btn btn-sm btn-primary" style={{ marginTop: 12 }}>Configurar Manualmente</button>
+            </div>
+          )}
+        </div>
+      )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
             <div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Frecuencia Detectada</div>
@@ -1104,6 +1190,15 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
           )}
         </div>
       </div>
+      <PlanConfigModal 
+        isOpen={showPlanModal}
+        onClose={() => setShowPlanModal(false)}
+        initialConfig={portfolio.planConfig || autoPlanAnalysis}
+        onSave={(newConfig) => {
+          togglePortfolioPlan(portfolioId, true, newConfig);
+          setShowPlanModal(false);
+        }}
+      />
     </div>
   );
 }

@@ -33,6 +33,7 @@ def init_db():
                 id VARCHAR PRIMARY KEY,
                 name VARCHAR,
                 is_plan BOOLEAN DEFAULT FALSE,
+                plan_config VARCHAR,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -40,6 +41,12 @@ def init_db():
         # Migration: Add is_plan column to existing DB if missing
         try:
             con.execute("ALTER TABLE purchase_portfolios ADD COLUMN is_plan BOOLEAN DEFAULT FALSE")
+        except duckdb.BinderException:
+            pass # Column already exists
+            
+        # Migration: Add plan_config column to existing DB if missing
+        try:
+            con.execute("ALTER TABLE purchase_portfolios ADD COLUMN plan_config VARCHAR")
         except duckdb.BinderException:
             pass # Column already exists
         

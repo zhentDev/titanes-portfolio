@@ -140,11 +140,11 @@ export const usePortfolioStore = create(
           toast.error('Error eliminando portafolio de BD');
         }
       },
-      togglePortfolioPlan: async (id, isPlan) => {
+      togglePortfolioPlan: async (id, isPlan, planConfig = null) => {
         try {
-          await togglePortfolioPlanApi(id, isPlan);
+          await togglePortfolioPlanApi(id, isPlan, planConfig);
           set((state) => ({
-            purchasePortfolios: state.purchasePortfolios.map(p => p.id === id ? { ...p, isPlan } : p)
+            purchasePortfolios: state.purchasePortfolios.map(p => p.id === id ? { ...p, isPlan, planConfig } : p)
           }));
           if (isPlan) {
             toast.success('El histórico ha sido marcado como Plan de Inversión', { icon: '🤖' });

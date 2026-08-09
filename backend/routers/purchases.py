@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import List, Optional
 from services.db import get_connection
+import json
 
 router = APIRouter()
 
@@ -9,6 +10,7 @@ class PortfolioItem(BaseModel):
     id: str
     name: str
     isPlan: Optional[bool] = False
+    planConfig: Optional[dict] = None
 
 class PurchaseLot(BaseModel):
     id: str
@@ -26,11 +28,11 @@ class SyncPayload(BaseModel):
 @router.get("/purchases/portfolios")
 def get_all_purchases_data():
     with get_connection() as con:
-        portfolios = con.execute("SELECT id, name, is_plan FROM purchase_portfolios").fetchall()
+        portfolios = con.execute("SELECT id, name, is_plan, plan_config FROM purchase_portfolios").fetchall()
         lots = con.execute("SELECT id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price FROM individual_purchases").fetchall()
         
         return {
-            "purchasePortfolios": [{"id": p[0], "name": p[1], "isPlan": bool(p[2])} for p in portfolios],
+            "purchasePortfolios": [{"id": p[0], "name": p[1], "isPlan": bool(p[2]), "planConfig": json.loads(p[3]) if p[3] else None} for p in portfolios],
             "individualPurchases": [
                 {
                     "id": lot[0],
@@ -48,21 +50,24 @@ def get_all_purchases_data():
 @router.post("/purchases/portfolios")
 def create_portfolio(item: PortfolioItem):
     with get_connection() as con:
+        config_str = json.dumps(item.planConfig) if item.planConfig else None
         con.execute(
-            "INSERT INTO purchase_portfolios (id, name, is_plan) VALUES (?, ?, ?) ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, is_plan=EXCLUDED.is_plan",
-            [item.id, item.name, item.isPlan]
+            "INSERT INTO purchase_portfolios (id, name, is_plan, plan_config) VALUES (?, ?, ?, ?) ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, is_plan=EXCLUDED.is_plan, plan_config=EXCLUDED.plan_config",
+            [item.id, item.name, item.isPlan, config_str]
         )
     return {"success": True}
 
 class PlanTogglePayload(BaseModel):
     isPlan: bool
+    planConfig: Optional[dict] = None
 
 @router.put("/purchases/portfolios/{portfolio_id}/plan")
 def toggle_portfolio_plan(portfolio_id: str, payload: PlanTogglePayload):
     with get_connection() as con:
+        config_str = json.dumps(payload.planConfig) if payload.planConfig else None
         con.execute(
-            "UPDATE purchase_portfolios SET is_plan = ? WHERE id = ?",
-            [payload.isPlan, portfolio_id]
+            "UPDATE purchase_portfolios SET is_plan = ?, plan_config = ? WHERE id = ?",
+            [payload.isPlan, config_str, portfolio_id]
         )
     return {"success": True}
 
