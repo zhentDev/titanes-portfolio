@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { toastConfirm, toastPrompt } from '../utils/toastAlerts';
 import { analyzeInvestmentPlan } from '../utils/investmentPlanAnalyzer';
 import PlanConfigModal from './PlanConfigModal';
+import PlanExecutionModal from './PlanExecutionModal';
 
 export default function IndividualPurchasesView({ portfolioId = 'hist_default' }) {
   const {
@@ -30,6 +31,7 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
   const [editDate, setEditDate] = useState('');
   const [editTicker, setEditTicker] = useState('');
   const [showPlanModal, setShowPlanModal] = useState(false);
+  const [showExecutionModal, setShowExecutionModal] = useState(false);
 
   const portfolio = purchasePortfolios?.find(p => p.id === portfolioId) || { name: 'Histórico' };
   
@@ -298,6 +300,28 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
     setEditPrice(0);
     setEditDate('');
     setEditTicker('');
+  };
+
+  const handleExecutePlan = async (purchases) => {
+    const loadingToast = toast.loading('Registrando compras del plan...');
+    try {
+      for (const p of purchases) {
+        const id = `buy_${Date.now()}_${Math.floor(Math.random()*10000)}`;
+        await addPurchase({
+          id,
+          portfolioId,
+          ticker: p.ticker,
+          date: p.date,
+          purchasePrice: p.purchasePrice,
+          shares: p.shares,
+          manualCurrentPrice: 0
+        });
+      }
+      toast.success('¡Compras registradas exitosamente!', { id: loadingToast, icon: '🚀' });
+      setShowExecutionModal(false);
+    } catch (e) {
+      toast.error('Error al registrar compras del plan', { id: loadingToast });
+    }
   };
 
   const handleSaveManualPrice = (p, manualPrice) => {
@@ -658,9 +682,16 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
             <h3 style={{ margin: '0 0 16px 0', fontSize: '1.05rem', fontWeight: 700, color: '#00e5ff', display: 'flex', alignItems: 'center', gap: 8 }}>
               <span>🤖</span> Análisis Inteligente del Plan {planAnalysis?.isManual && <span style={{ fontSize: '0.7rem', background: '#00e5ff20', padding: '2px 6px', borderRadius: 10 }}>(Manual)</span>}
             </h3>
-            <button onClick={() => setShowPlanModal(true)} className="btn btn-sm" style={{ background: 'transparent', border: '1px solid rgba(0, 229, 255, 0.3)', color: '#00e5ff' }}>
-              ⚙️ Configurar
-            </button>
+            <div style={{ display: 'flex', gap: 10 }}>
+              {planAnalysis?.nextDate && (new Date().toISOString().split('T')[0] >= planAnalysis.nextDate) && (
+                <button onClick={() => setShowExecutionModal(true)} className="btn btn-sm" style={{ background: '#00e5ff', color: '#000', fontWeight: 600, border: 'none', boxShadow: '0 0 10px rgba(0, 229, 255, 0.4)' }}>
+                  🚀 Ejecutar Plan
+                </button>
+              )}
+              <button onClick={() => setShowPlanModal(true)} className="btn btn-sm" style={{ background: 'transparent', border: '1px solid rgba(0, 229, 255, 0.3)', color: '#00e5ff' }}>
+                ⚙️ Configurar
+              </button>
+            </div>
           </div>
           
           {planAnalysis ? (
@@ -680,8 +711,15 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
                 </div>
                 <div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Próxima Inversión Esperada</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 600, color: planAnalysis.nextDate ? '#4ade80' : 'var(--text-muted)' }}>
-                    {planAnalysis.nextDate ? planAnalysis.nextDate : '---'}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 600, color: planAnalysis.nextDate ? (new Date().toISOString().split('T')[0] >= planAnalysis.nextDate ? '#ef4444' : '#4ade80') : 'var(--text-muted)' }}>
+                      {planAnalysis.nextDate ? planAnalysis.nextDate : '---'}
+                    </div>
+                    {planAnalysis.nextDate && (new Date().toISOString().split('T')[0] >= planAnalysis.nextDate) && (
+                      <span style={{ fontSize: '0.7rem', background: '#ef444420', color: '#ef4444', padding: '2px 6px', borderRadius: 4, fontWeight: 700, animation: 'pulse 2s infinite' }}>
+                        ¡PENDIENTE!
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div>
@@ -1186,6 +1224,12 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
           togglePortfolioPlan(portfolioId, true, newConfig);
           setShowPlanModal(false);
         }}
+      />
+      <PlanExecutionModal
+        isOpen={showExecutionModal}
+        onClose={() => setShowExecutionModal(false)}
+        planAnalysis={planAnalysis}
+        onSave={handleExecutePlan}
       />
     </div>
     </>
