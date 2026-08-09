@@ -567,6 +567,7 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
   }, [lotDataList, indicesHistory]);
 
   return (
+    <>
     <div style={{ maxWidth: 1000, margin: '0 auto', paddingBottom: 60, padding: 20 }}>
       {/* HEADER & SUMMARY */}
       <div className="card fade-up" style={{ padding: '24px', marginBottom: '24px' }}>
@@ -1200,5 +1201,6 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
         }}
       />
     </div>
+    </>
   );
 }
