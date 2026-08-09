@@ -21,7 +21,7 @@ import './App.css';
 const PERIODS = ['1W', '1M', '3M', '6M', '1Y', '3Y', '5Y', 'MAX'];
 
 export default function App() {
-  const { tickers, investment, period, numSlots, mode, setPeriod, setMode, customStrategies, addCustomStrategy, deleteCustomStrategy } = usePortfolioStore();
+  const { tickers, investment, period, numSlots, mode, setPeriod, setMode, customStrategies, addCustomStrategy, deleteCustomStrategy, initFetchPurchases } = usePortfolioStore();
   const [baseNavData, setBaseNavData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -33,6 +33,10 @@ export default function App() {
   const toggleUnit = () => setUnit((u) => (u === 'pct' ? 'usd' : 'pct'));
 
   // Only trigger network/DuckDB load on period, investment or rebalance refresh
+  useEffect(() => {
+    initFetchPurchases();
+  }, [initFetchPurchases]);
+
   useEffect(() => {
     let isCancelled = false;
     setLoading(true);

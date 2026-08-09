@@ -25,6 +25,7 @@ from fastapi.responses import JSONResponse
 from routers.nav import router as nav_router
 from routers.prices import router as prices_router
 from routers.rebalance import router as rebalance_router
+from routers.purchases import router as purchases_router
 
 app = FastAPI(
     title="Titanes Portfolio API",
@@ -89,6 +90,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 app.include_router(nav_router, prefix="/api")
 app.include_router(prices_router, prefix="/api")
 app.include_router(rebalance_router, prefix="/api")
+app.include_router(purchases_router, prefix="/api")
 
 
 @app.get("/")

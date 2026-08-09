@@ -4,7 +4,16 @@
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { fetchHistoricalPrice } from '../api/client';
+import { 
+  fetchHistoricalPrice,
+  fetchPurchasesData,
+  createPurchasePortfolio,
+  deletePurchasePortfolioApi,
+  createPurchaseLot,
+  updatePurchaseLots,
+  deletePurchaseLot,
+  syncPurchasesMigration
+} from '../api/client';
 import toast from 'react-hot-toast';
 
 const DEFAULT_TICKERS = [
@@ -34,42 +43,101 @@ export const usePortfolioStore = create(
         { id: 'hist_default', name: 'Compras Principales' }
       ],
       individualPurchases: [],
-      addPurchase: (purchase) =>
-        set((state) => ({
-          individualPurchases: [...state.individualPurchases, purchase],
-        })),
-      removePurchase: (id) =>
-        set((state) => ({
-          individualPurchases: state.individualPurchases.filter((p) => p.id !== id),
-        })),
-      updatePurchase: (updated) =>
-        set((state) => ({
-          individualPurchases: state.individualPurchases.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)),
-        })),
-      updateMultiplePurchases: (updates) =>
-        set((state) => {
-          const updateMap = new Map(updates.map(u => [u.id, u]));
-          return {
-            individualPurchases: state.individualPurchases.map(p => updateMap.has(p.id) ? { ...p, ...updateMap.get(p.id) } : p),
-          };
-        }),
-      addPurchasePortfolio: (name) => {
+      initFetchPurchases: async () => {
+        try {
+          const res = await fetchPurchasesData();
+          const localPorts = get().purchasePortfolios;
+          const localLots = get().individualPurchases;
+          
+          const hasLocalData = (localPorts.length > 1 || (localPorts.length === 1 && localPorts[0].id !== 'hist_default')) || localLots.length > 0;
+          const backendEmpty = res.purchasePortfolios.length === 0 && res.individualPurchases.length === 0;
+
+          if (backendEmpty && hasLocalData) {
+            // 🚨 MIGRATE LOCAL DATA TO DUCKDB 🚨
+            console.log('Migrando datos locales a DuckDB...');
+            await syncPurchasesMigration(localPorts, localLots);
+            toast.success('¡Tus compras fueron migradas a la base de datos de DuckDB exitosamente!');
+            const refetched = await fetchPurchasesData();
+            set({
+              purchasePortfolios: refetched.purchasePortfolios,
+              individualPurchases: refetched.individualPurchases
+            });
+          } else if (res.purchasePortfolios.length > 0) {
+            set({
+              purchasePortfolios: res.purchasePortfolios,
+              individualPurchases: res.individualPurchases
+            });
+          }
+        } catch (err) {
+          console.error('Error fetching purchases from backend:', err);
+        }
+      },
+      addPurchase: async (purchase) => {
+        try {
+          await createPurchaseLot(purchase);
+          set((state) => ({ individualPurchases: [...state.individualPurchases, purchase] }));
+        } catch (e) {
+          toast.error('Error guardando la compra en BD');
+        }
+      },
+      removePurchase: async (id) => {
+        try {
+          await deletePurchaseLot(id);
+          set((state) => ({ individualPurchases: state.individualPurchases.filter((p) => p.id !== id) }));
+        } catch (e) {
+          toast.error('Error eliminando la compra de BD');
+        }
+      },
+      updatePurchase: async (updated) => {
+        try {
+          await updatePurchaseLots([updated]);
+          set((state) => ({
+            individualPurchases: state.individualPurchases.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)),
+          }));
+        } catch (e) {
+          toast.error('Error actualizando la compra en BD');
+        }
+      },
+      updateMultiplePurchases: async (updates) => {
+        try {
+          await updatePurchaseLots(updates);
+          set((state) => {
+            const updateMap = new Map(updates.map(u => [u.id, u]));
+            return {
+              individualPurchases: state.individualPurchases.map(p => updateMap.has(p.id) ? { ...p, ...updateMap.get(p.id) } : p),
+            };
+          });
+        } catch (e) {
+          toast.error('Error actualizando múltiples compras en BD');
+        }
+      },
+      addPurchasePortfolio: async (name) => {
         const newPort = {
           id: `hist_${Date.now()}`,
           name: name.trim() || 'Nuevo Histórico',
         };
-        set((state) => ({
-          purchasePortfolios: [...state.purchasePortfolios, newPort],
-          mode: newPort.id,
-        }));
-        return newPort;
+        try {
+          await createPurchasePortfolio(newPort.id, newPort.name);
+          set((state) => ({
+            purchasePortfolios: [...state.purchasePortfolios, newPort],
+            mode: newPort.id,
+          }));
+          return newPort;
+        } catch (e) {
+          toast.error('Error creando portafolio en BD');
+        }
       },
-      deletePurchasePortfolio: (id) => {
-        set((state) => ({
-          purchasePortfolios: state.purchasePortfolios.filter(p => p.id !== id),
-          individualPurchases: state.individualPurchases.filter(p => p.portfolioId !== id),
-          mode: state.mode === id ? 'historical' : state.mode,
-        }));
+      deletePurchasePortfolio: async (id) => {
+        try {
+          await deletePurchasePortfolioApi(id);
+          set((state) => ({
+            purchasePortfolios: state.purchasePortfolios.filter(p => p.id !== id),
+            individualPurchases: state.individualPurchases.filter(p => p.portfolioId !== id),
+            mode: state.mode === id ? 'historical' : state.mode,
+          }));
+        } catch (e) {
+          toast.error('Error eliminando portafolio de BD');
+        }
       },
 
       // ── BATCH RECALCULATE STATE ──
@@ -224,17 +292,10 @@ export const usePortfolioStore = create(
         mode: s.mode,
         visibleSeries: s.visibleSeries,
         customStrategies: s.customStrategies,
-        purchasePortfolios: s.purchasePortfolios,
-        individualPurchases: s.individualPurchases,
+        customStrategies: s.customStrategies,
       }),
       merge: (persistedState, currentState) => {
         const merged = { ...currentState, ...persistedState };
-        // Migrate old purchases to have hist_default if missing
-        if (merged.individualPurchases) {
-          merged.individualPurchases = merged.individualPurchases.map(p => 
-            p.portfolioId ? p : { ...p, portfolioId: 'hist_default' }
-          );
-        }
         if (!merged.purchasePortfolios) {
           merged.purchasePortfolios = currentState.purchasePortfolios;
         }

@@ -3,7 +3,7 @@
  * Automatically falls back to static pre-calculated JSON data on GitHub Pages or when backend is offline!
  */
 
-const BASE = 'http://localhost:8000/api';
+const BASE = 'http://127.0.0.1:8000/api';
 const TIMEOUT_MS = 15000; // 15 seconds before checking static fallback
 
 // Helper to get relative static data path on GitHub Pages
