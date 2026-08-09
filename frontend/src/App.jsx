@@ -16,6 +16,7 @@ import { exportPortfolioCSV } from './utils/exportReport';
 import { usePortfolioStore } from './store/portfolioStore';
 import { fetchNAV } from './api/client';
 import { Toaster } from 'react-hot-toast';
+import { toastPrompt } from './utils/toastAlerts';
 import './App.css';
 
 const PERIODS = ['1W', '1M', '3M', '6M', '1Y', '3Y', '5Y', 'MAX'];
@@ -293,8 +294,8 @@ export default function App() {
             <button
               type="button"
               className="btn-chip"
-              onClick={() => {
-                const name = prompt("Nombre del nuevo Histórico de Compras:");
+              onClick={async () => {
+                const name = await toastPrompt("Nombre del nuevo Histórico de Compras:");
                 if (name) usePortfolioStore.getState().addPurchasePortfolio(name);
               }}
               style={{

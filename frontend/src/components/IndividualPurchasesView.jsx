@@ -1015,8 +1015,8 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
                               </button>
                               <button
                                 className="btn btn-sm btn-ghost"
-                                onClick={() => {
-                                  const newPrice = prompt(`Precio actual de mercado para ${p.ticker} (ej. XTB):`, p.currentPrice);
+                                onClick={async () => {
+                                  const newPrice = await toastPrompt(`Precio actual de mercado para ${p.ticker} (ej. XTB):`, p.currentPrice);
                                   if (newPrice !== null && !isNaN(Number(newPrice))) {
                                     handleSaveManualPrice(p, newPrice);
                                   }
