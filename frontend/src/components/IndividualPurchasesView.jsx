@@ -47,8 +47,16 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
     // Si hay configuración manual, úsala. Si no, usa la autodetectada.
     if (portfolio.planConfig) {
       let nextDateStr = null;
-      if (autoPlanAnalysis?.nextDate) {
-        nextDateStr = autoPlanAnalysis.nextDate;
+      const currentPurchases = individualPurchases.filter(p => p.portfolioId === portfolioId);
+      
+      if (currentPurchases.length > 0) {
+        // Encontrar la última fecha de compra real
+        const latestDateStr = currentPurchases.reduce((latest, p) => p.date > latest ? p.date : latest, currentPurchases[0].date);
+        const lastDate = new Date(latestDateStr);
+        // Ajustar zona horaria
+        lastDate.setMinutes(lastDate.getMinutes() + lastDate.getTimezoneOffset());
+        lastDate.setDate(lastDate.getDate() + (portfolio.planConfig.frequencyDays || 15));
+        nextDateStr = lastDate.toISOString().split('T')[0];
       } else {
         // Fallback para próxima fecha si no hay nada de data: usar fecha actual + frecuencia
         const d = new Date();
