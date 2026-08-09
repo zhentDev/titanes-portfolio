@@ -163,7 +163,7 @@ export const usePortfolioStore = create(
               const newPrice = res.price;
               const invested = p.investedAmount ?? (p.shares * p.purchasePrice);
               get().updateMultiplePurchases([{
-                id: p.id,
+                ...p,
                 purchasePrice: newPrice,
                 shares: invested / newPrice,
                 manualCurrentPrice: null

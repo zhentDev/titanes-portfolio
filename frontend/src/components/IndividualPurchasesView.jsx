@@ -338,7 +338,7 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
     if (!isConfirmed) return;
 
     const updates = group.lots.map((p) => ({
-      id: p.id,
+      ...p,
       ticker: tickerUpper
     }));
     updateMultiplePurchases(updates);

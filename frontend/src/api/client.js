@@ -194,6 +194,7 @@ export async function updatePurchaseLots(lots) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(lots),
   });
+  if (!res.ok) throw new Error('Failed to update purchase lots');
   return res.json();
 }
 
