@@ -692,40 +692,7 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
           )}
         </div>
       )}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-            <div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Frecuencia Detectada</div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#f1f5f9' }}>
-                {planAnalysis.frequencyDays ? `Cada ${planAnalysis.frequencyDays} días` : 'No hay suficientes datos'}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Inversión Promedio</div>
-              <div className="mono" style={{ fontSize: '1.1rem', fontWeight: 600, color: '#f1f5f9' }}>
-                ${planAnalysis.avgAmount.toFixed(2)}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Próxima Inversión Esperada</div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 600, color: planAnalysis.nextDate ? '#4ade80' : 'var(--text-muted)' }}>
-                {planAnalysis.nextDate ? planAnalysis.nextDate : '---'}
-              </div>
-            </div>
-          </div>
-          
-          <div style={{ marginTop: 20 }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 8 }}>Distribución Objetivo Detectada (Promedio):</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-              {Object.entries(planAnalysis.distribution).map(([ticker, pct]) => (
-                <div key={ticker} style={{ padding: '4px 10px', background: 'rgba(255,255,255,0.05)', borderRadius: 12, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontWeight: 700 }}>{ticker}</span>
-                  <span style={{ color: '#00e5ff' }}>{pct.toFixed(1)}%</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* GRAPH CONTAINER */}
       <div className="card fade-up" style={{ padding: '20px', marginBottom: '24px' }}>
