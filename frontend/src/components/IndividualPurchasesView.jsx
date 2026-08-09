@@ -72,6 +72,20 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
     return individualPurchases.filter(p => p.portfolioId === portfolioId);
   }, [individualPurchases, portfolioId]);
 
+  const cashReserve = useMemo(() => {
+    if (!planAnalysis || !planAnalysis.avgAmount || !currentPurchases.length) return 0;
+    
+    const uniqueDates = new Set();
+    let totalInvested = 0;
+    currentPurchases.forEach(p => {
+      if (p.date) uniqueDates.add(p.date);
+      totalInvested += (p.investedAmount ?? (p.shares * p.purchasePrice)) || 0;
+    });
+
+    const expectedTotal = uniqueDates.size * planAnalysis.avgAmount;
+    return expectedTotal - totalInvested;
+  }, [planAnalysis, currentPurchases]);
+
 
   // Form State
   const [ticker, setTicker] = useState('');
@@ -668,6 +682,12 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Próxima Inversión Esperada</div>
                   <div style={{ fontSize: '1.1rem', fontWeight: 600, color: planAnalysis.nextDate ? '#4ade80' : 'var(--text-muted)' }}>
                     {planAnalysis.nextDate ? planAnalysis.nextDate : '---'}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }} title="Dinero sobrante de tus depósitos esperados menos lo invertido realmente">Reserva en Efectivo Acum.</div>
+                  <div className="mono" style={{ fontSize: '1.1rem', fontWeight: 600, color: cashReserve > 0 ? '#f59e0b' : 'var(--text-muted)' }}>
+                    {cashReserve > 0 ? '+' : ''}${cashReserve.toFixed(2)}
                   </div>
                 </div>
               </div>
