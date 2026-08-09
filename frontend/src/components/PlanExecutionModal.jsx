@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 
-export default function PlanExecutionModal({ isOpen, onClose, planAnalysis, onSave }) {
+export default function PlanExecutionModal({ isOpen, onClose, planAnalysis, liveQuotes, onSave }) {
   const [executionDate, setExecutionDate] = useState('');
   const [items, setItems] = useState([]);
 
@@ -13,16 +13,26 @@ export default function PlanExecutionModal({ isOpen, onClose, planAnalysis, onSa
 
       const initialItems = Object.entries(planAnalysis.distribution).map(([ticker, pct]) => {
         const targetAmount = (pct / 100) * planAnalysis.avgAmount;
+        
+        let initialPrice = '';
+        let initialShares = '';
+        
+        if (liveQuotes && liveQuotes[ticker] && liveQuotes[ticker].price) {
+          initialPrice = liveQuotes[ticker].price;
+          // Auto-calcular acciones iniciales basadas en el precio en vivo
+          initialShares = (targetAmount / initialPrice).toFixed(4);
+        }
+
         return {
           ticker,
           targetAmount,
-          purchasePrice: '',
-          shares: '',
+          purchasePrice: initialPrice,
+          shares: initialShares,
         };
       });
       setItems(initialItems);
     }
-  }, [isOpen, planAnalysis]);
+  }, [isOpen, planAnalysis, liveQuotes]);
 
   if (!isOpen || !planAnalysis) return null;
 

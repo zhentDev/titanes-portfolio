@@ -1229,6 +1229,7 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
         isOpen={showExecutionModal}
         onClose={() => setShowExecutionModal(false)}
         planAnalysis={planAnalysis}
+        liveQuotes={liveQuotes}
         onSave={handleExecutePlan}
       />
     </div>
