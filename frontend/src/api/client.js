@@ -3,13 +3,16 @@
  * Automatically falls back to static pre-calculated JSON data on GitHub Pages or when backend is offline!
  */
 
-const IS_PUBLIC_STATIC_HOST = typeof window !== 'undefined' && (
-  window.location.hostname.includes('github.io') ||
-  (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
+const RENDER_BACKEND_BASE = 'https://titanes-portfolio-backend.onrender.com/api';
+const LOCAL_BACKEND_BASE = 'http://127.0.0.1:8000/api';
+
+const IS_LOCAL_HOST = typeof window !== 'undefined' && (
+  window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
 );
 
-const BASE = 'http://127.0.0.1:8000/api';
-const TIMEOUT_MS = 2000; // 2 seconds before checking static fallback
+// Use local backend when developing on localhost, and Render cloud backend on GitHub Pages/production!
+const BASE = IS_LOCAL_HOST ? LOCAL_BACKEND_BASE : RENDER_BACKEND_BASE;
+const TIMEOUT_MS = 4000; // 4 seconds timeout for cloud backend before static fallback
 
 // Helper to get relative static data path on GitHub Pages
 function getStaticDataPath(file) {
@@ -40,20 +43,17 @@ async function safeFetch(url, options = {}, retries = 1, delayMs = 300) {
 }
 
 async function fetchWithFallback(endpoint, staticFile, options = {}) {
-  // If NOT on a remote public static host, try connecting to local FastAPI backend
-  if (!IS_PUBLIC_STATIC_HOST) {
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-      const res = await safeFetch(`${BASE}${endpoint}`, { ...options, signal: controller.signal }, 1, 300);
-      clearTimeout(timer);
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    const res = await safeFetch(`${BASE}${endpoint}`, { ...options, signal: controller.signal }, 1, 300);
+    clearTimeout(timer);
 
-      if (res.ok) {
-        return await res.json();
-      }
-    } catch {
-      // Backend offline
+    if (res.ok) {
+      return await res.json();
     }
+  } catch {
+    // Backend offline / waking up
   }
 
   // Seamless static fallback
