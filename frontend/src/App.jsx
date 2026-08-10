@@ -149,12 +149,12 @@ export default function App() {
   // Client-side instant recalculation: 0ms latency, no spinner, no page reload, pure butter-smooth animation!
   const navData = useMemo(() => {
     if (!baseNavData) return null;
-    if (!selectedTickers) return baseNavData;
 
     const allHoldings = baseNavData.holdings || [];
+    const currentSelected = selectedTickers ?? allHoldings.map((h) => h.ticker);
     const updatedHoldings = allHoldings.map((h) => ({
       ...h,
-      selected: selectedTickers.includes(h.ticker),
+      selected: currentSelected.includes(h.ticker),
     }));
 
     const activeList = updatedHoldings.filter((h) => h.selected && h.shares > 0);
