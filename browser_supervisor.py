@@ -149,36 +149,41 @@ INSTRUCTIONS:
 
 
 def on_console_message(msg: ConsoleMessage):
-    """Handle browser console messages."""
-    text = msg.text
-    msg_type = msg.type
+    """Handle browser console messages safely without throwing EPIPE on reload."""
+    try:
+        text = msg.text
+        msg_type = msg.type
 
-    if msg_type == "error":
-        print(f"{RED}[BROWSER CONSOLE ERROR]{RESET} {text}")
-        target_file = find_frontend_file_from_error(text)
-        if target_file:
-            threading.Thread(
-                target=ask_local_model_to_fix_frontend,
-                args=(target_file, text),
-                daemon=True,
-            ).start()
-    elif msg_type == "warning":
-        # Optional: Print warnings in yellow without auto-fixing
-        if "react" in text.lower() or "deprecated" in text.lower():
-            print(f"{YELLOW}[BROWSER WARNING]{RESET} {text[:120]}...")
+        if msg_type == "error":
+            print(f"{RED}[BROWSER CONSOLE ERROR]{RESET} {text}")
+            target_file = find_frontend_file_from_error(text)
+            if target_file:
+                threading.Thread(
+                    target=ask_local_model_to_fix_frontend,
+                    args=(target_file, text),
+                    daemon=True,
+                ).start()
+        elif msg_type == "warning":
+            if "react" in text.lower() or "deprecated" in text.lower():
+                print(f"{YELLOW}[BROWSER WARNING]{RESET} {text[:120]}...")
+    except Exception:
+        pass
 
 
 def on_page_error(error: PlaywrightError):
-    """Handle uncaught JavaScript exceptions in the browser."""
-    err_str = str(error)
-    print(f"{RED}{BOLD}[BROWSER UNCAUGHT EXCEPTION]{RESET} {err_str}")
-    target_file = find_frontend_file_from_error(err_str)
-    if target_file:
-        threading.Thread(
-            target=ask_local_model_to_fix_frontend,
-            args=(target_file, err_str),
-            daemon=True,
-        ).start()
+    """Handle uncaught JavaScript exceptions safely without throwing EPIPE on reload."""
+    try:
+        err_str = str(error)
+        print(f"{RED}{BOLD}[BROWSER UNCAUGHT EXCEPTION]{RESET} {err_str}")
+        target_file = find_frontend_file_from_error(err_str)
+        if target_file:
+            threading.Thread(
+                target=ask_local_model_to_fix_frontend,
+                args=(target_file, err_str),
+                daemon=True,
+            ).start()
+    except Exception:
+        pass
 
 
 def main():
@@ -227,9 +232,12 @@ def main():
         try:
             while True:
                 time.sleep(1)
-        except KeyboardInterrupt:
+        except Exception:
             print(f"\n{YELLOW}[BROWSER WATCHDOG STOPPING] Closing browser...{RESET}")
-            context.close()
+            try:
+                context.close()
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":
