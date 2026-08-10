@@ -56,6 +56,39 @@ export default function App() {
   const [mainColInflationData, setMainColInflationData] = useState({ history: {}, latest: {}, monthly_rates: [] });
   const [isFetchingMainInflation, setIsFetchingMainInflation] = useState(false);
 
+  // Navigation Dropdown States & Outside Click Handlers
+  const [stratOpen, setStratOpen] = useState(false);
+  const [purchasesOpen, setPurchasesOpen] = useState(false);
+  const stratDropdownRef = useRef(null);
+  const purchasesDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (stratDropdownRef.current && !stratDropdownRef.current.contains(e.target)) {
+        setStratOpen(false);
+      }
+      if (purchasesDropdownRef.current && !purchasesDropdownRef.current.contains(e.target)) {
+        setPurchasesOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const isStrategyMode = mode === 'historical' || (customStrategies || []).some((s) => s.id === mode);
+  const isPurchaseMode = (purchasePortfolios || []).some((p) => p.id === mode);
+
+  const currentStrategyLabel = useMemo(() => {
+    if (mode === 'historical') return '🏆 Titanes Tech';
+    const match = (customStrategies || []).find((s) => s.id === mode);
+    return match ? `${match.country || '🌎'} ${match.name}` : 'Seleccionar...';
+  }, [mode, customStrategies]);
+
+  const currentPurchaseLabel = useMemo(() => {
+    const match = (purchasePortfolios || []).find((p) => p.id === mode);
+    return match ? match.name : (purchasePortfolios?.[0]?.name || 'Seleccionar...');
+  }, [mode, purchasePortfolios]);
+
   const mainSettings = mainPortfolioSettings || {
     assetCurrency: 'USD',
     localCurrency: 'COP',
@@ -260,131 +293,151 @@ export default function App() {
           <div className="header-subtitle">Custom ETF & ProPicks AI Terminal</div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12 }}>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            {navData && (
-              <button
-                className="btn btn-sm btn-ghost"
-                onClick={() => exportPortfolioCSV(navData, investment)}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', padding: '6px 12px' }}
-                title="Descargar informe completo del portafolio en formato CSV"
-              >
-                <span>📥</span>
-                <span>Exportar Reporte CSV</span>
-              </button>
-            )}
+        <nav className="header-nav-menu">
+          {/* 1. Estrategias & Portafolios Dropdown */}
+          <div className="nav-dropdown" ref={stratDropdownRef}>
+            <button 
+              type="button"
+              className={`nav-dropdown-btn ${isStrategyMode ? 'active' : ''}`}
+              onClick={() => {
+                setStratOpen(prev => !prev);
+                setPurchasesOpen(false);
+              }}
+            >
+              <span className="btn-label">📊 Estrategias</span>
+              <span className="active-badge">{currentStrategyLabel}</span>
+              <span className="chevron">{stratOpen ? '▲' : '▼'}</span>
+            </button>
 
-            <div className="mode-toggle" style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, margin: '0 8px', letterSpacing: '0.5px' }}>PORTAFOLIOS:</span>
-              
-              {/* Core Inmutable Strategy 1: Titanes Tech */}
-              <button
-                className={mode === 'historical' ? 'active' : ''}
-                onClick={() => setMode('historical')}
-              >
-                🏆 Titanes Tech
-              </button>
-
-              {/* User-Created Dynamic Custom Strategies (incluye MM20 por defecto) */}
-              {(customStrategies || []).map((strat) => (
-                <button
-                  key={strat.id}
-                  className={mode === strat.id ? 'active' : ''}
-                  onClick={() => setMode(strat.id)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+            {stratOpen && (
+              <div className="nav-dropdown-menu fade-up">
+                <div className="dropdown-header">Estrategias & Portafolios</div>
+                
+                <button 
+                  type="button"
+                  className={`dropdown-item ${mode === 'historical' ? 'selected' : ''}`}
+                  onClick={() => { setMode('historical'); setStratOpen(false); }}
                 >
-                  <span>{strat.country || '🌎'}</span>
-                  <span>{strat.name}</span>
-                  {strat.isSystem && (
-                    <span style={{ fontSize: '0.65rem', padding: '1px 5px', borderRadius: 4, background: `${strat.color}33`, color: strat.color }}>
-                      PRO
-                    </span>
-                  )}
-                  {!strat.isSystem && (
-                    <span style={{ fontSize: '0.62rem', padding: '1px 4px', borderRadius: 3, background: 'rgba(255,255,255,0.08)', color: '#94a3b8' }}>
-                      {strat.numSlots}
-                    </span>
-                  )}
+                  <span className="item-icon">🏆</span>
+                  <span className="item-title">Titanes Tech</span>
+                  <span className="system-badge core">CORE</span>
                 </button>
-              ))}
 
-              {/* Botón para crear nueva estrategia dinámica */}
-              <button
-                type="button"
-                className="btn-chip"
-                onClick={() => setIsModalOpen(true)}
-                style={{
-                  border: '1px dashed rgba(0, 229, 255, 0.4)',
-                  background: 'rgba(0, 229, 255, 0.08)',
-                  color: 'var(--accent-primary)',
-                  fontWeight: 700,
-                  fontSize: '0.75rem',
-                  padding: '5px 10px',
-                }}
-                title="Crear una nueva estrategia personalizada con país, nombre y slots"
-              >
-                + Nueva Estrategia
-              </button>
-            </div>
+                {(customStrategies || []).map((strat) => (
+                  <button 
+                    type="button"
+                    key={strat.id}
+                    className={`dropdown-item ${mode === strat.id ? 'selected' : ''}`}
+                    onClick={() => { setMode(strat.id); setStratOpen(false); }}
+                  >
+                    <span className="item-icon">{strat.country || '🌎'}</span>
+                    <span className="item-title">{strat.name}</span>
+                    {strat.isSystem ? (
+                      <span className="system-badge pro">PRO</span>
+                    ) : (
+                      <span className="system-badge custom">{strat.numSlots} slots</span>
+                    )}
+                  </button>
+                ))}
+
+                <div className="dropdown-divider" />
+                <button 
+                  type="button"
+                  className="dropdown-action-btn cyan"
+                  onClick={() => { setIsModalOpen(true); setStratOpen(false); }}
+                >
+                  <span>+ Nueva Estrategia</span>
+                </button>
+              </div>
+            )}
           </div>
 
-          <div className="mode-toggle" style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, margin: '0 8px', letterSpacing: '0.5px' }}>OPERACIONES:</span>
-            
-            {(purchasePortfolios || []).map((port) => (
-              <button
-                key={port.id}
-                className={mode === port.id ? 'active' : ''}
-                onClick={() => setMode(port.id)}
-                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-              >
-                <span>🛒</span>
-                <span>{port.name}</span>
-              </button>
-            ))}
+          {/* 2. Compras Individuales Dropdown */}
+          <div className="nav-dropdown" ref={purchasesDropdownRef}>
+            <button 
+              type="button"
+              className={`nav-dropdown-btn ${isPurchaseMode ? 'active' : ''}`}
+              onClick={() => {
+                setPurchasesOpen(prev => !prev);
+                setStratOpen(false);
+              }}
+            >
+              <span className="btn-label">🛒 Compras</span>
+              <span className="active-badge warning">{currentPurchaseLabel}</span>
+              <span className="chevron">{purchasesOpen ? '▲' : '▼'}</span>
+            </button>
 
+            {purchasesOpen && (
+              <div className="nav-dropdown-menu fade-up">
+                <div className="dropdown-header">Históricos de Compras</div>
+
+                {(purchasePortfolios || []).map((port) => (
+                  <button 
+                    type="button"
+                    key={port.id}
+                    className={`dropdown-item ${mode === port.id ? 'selected' : ''}`}
+                    onClick={() => { setMode(port.id); setPurchasesOpen(false); }}
+                  >
+                    <span className="item-icon">🛒</span>
+                    <span className="item-title">{port.name}</span>
+                  </button>
+                ))}
+
+                <div className="dropdown-divider" />
+                <button 
+                  type="button"
+                  className="dropdown-action-btn orange"
+                  onClick={async () => {
+                    setPurchasesOpen(false);
+                    const name = await toastPrompt("Nombre del nuevo Histórico de Compras:");
+                    if (name) addPurchasePortfolio(name);
+                  }}
+                >
+                  <span>+ Nuevo Histórico</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* 3. Renta Fija & Ahorros */}
+          <button
+            type="button"
+            className={`nav-pill-btn emerald ${mode === 'fixed_income' ? 'active' : ''}`}
+            onClick={() => {
+              setMode('fixed_income');
+              setStratOpen(false);
+              setPurchasesOpen(false);
+            }}
+          >
+            <span>🏦 Renta Fija & Ahorros</span>
+          </button>
+
+          {/* 4. Live Tracker */}
+          <button
+            type="button"
+            className={`nav-pill-btn ${mode === 'live' ? 'active' : ''}`}
+            onClick={() => {
+              setMode('live');
+              setStratOpen(false);
+              setPurchasesOpen(false);
+            }}
+          >
+            <span>⚡ Live Tracker</span>
+          </button>
+
+          {/* 5. Exportar CSV */}
+          {navData && (
             <button
               type="button"
-              className="btn-chip"
-              onClick={async () => {
-                const name = await toastPrompt("Nombre del nuevo Histórico de Compras:");
-                if (name) addPurchasePortfolio(name);
-              }}
-              style={{
-                border: '1px dashed rgba(255, 165, 0, 0.4)',
-                background: 'rgba(255, 165, 0, 0.08)',
-                color: '#ffa500',
-                fontWeight: 700,
-                fontSize: '0.75rem',
-                padding: '5px 10px',
-              }}
-              title="Crear un nuevo portafolio de compras individuales"
+              className="nav-action-btn"
+              onClick={() => exportPortfolioCSV(navData, investment)}
+              title="Descargar informe completo del portafolio en formato CSV"
             >
-              + Nuevo Histórico
+              <span>📥</span>
+              <span>Exportar CSV</span>
             </button>
-
-            <button
-              className={mode === 'fixed_income' ? 'active' : ''}
-              onClick={() => setMode('fixed_income')}
-              style={{
-                borderColor: mode === 'fixed_income' ? '#10b981' : undefined,
-                color: mode === 'fixed_income' ? '#10b981' : undefined,
-                background: mode === 'fixed_income' ? 'rgba(16, 185, 129, 0.15)' : undefined,
-                fontWeight: 700,
-              }}
-            >
-              🏦 Renta Fija & Ahorros
-            </button>
-
-            <button
-              className={mode === 'live' ? 'active' : ''}
-              onClick={() => setMode('live')}
-            >
-              ⚡ Live Tracker
-            </button>
-          </div>
-        </div>
+          )}
+        </nav>
       </header>
 
       {/* ── Modal Creador de Nueva Estrategia ─────────────── */}
