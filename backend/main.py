@@ -4,19 +4,14 @@ Run with:  uvicorn main:app --reload --port 8000
 """
 
 import os
+import sys
 import traceback
 import warnings
 
-# Suppress ALL noisy DeprecationWarnings (from pandas, yfinance, etc)
-warnings.simplefilter("ignore", DeprecationWarning)
+# Suppress ALL noisy DeprecationWarnings & FutureWarnings (from pandas, yfinance, numpy, etc)
 warnings.filterwarnings("ignore")
+warnings.simplefilter("ignore")
 
-import warnings
-
-warnings.simplefilter("ignore", DeprecationWarning)
-warnings.simplefilter("ignore", FutureWarning)
-
-import os
 import certifi
 
 os.environ["CURL_CA_BUNDLE"] = certifi.where()

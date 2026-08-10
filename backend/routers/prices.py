@@ -40,25 +40,44 @@ def intraday(ticker: str):
     return get_intraday(ticker.upper())
 
 
+import time
+import pandas as pd
+
+_indices_cache = {}
+_indices_cache_ts = 0.0
+INDICES_TTL = 86400  # 24 hours TTL for daily index history cache
+
+
 @router.get("/prices/indices_history")
 def indices_history(start_date: str = Query("2020-01-01", description="Start date in YYYY-MM-DD")):
     """
     Returns daily historical prices for S&P 500 and NASDAQ from start_date to today.
+    Cached in memory to return responses in < 2ms without re-downloading from yfinance.
     """
+    global _indices_cache, _indices_cache_ts
+    now = time.time()
+
+    if _indices_cache and (now - _indices_cache_ts < INDICES_TTL):
+        return {k: v for k, v in _indices_cache.items() if k >= start_date}
+
     from services.market_data import get_historical_prices
 
     df = get_historical_prices(["^GSPC", "^IXIC"], period="MAX", include_benchmarks=False)
     df_pd = df.to_pandas()
     df_pd["date_str"] = df_pd["date"].astype(str).str[:10]
-    df_pd = df_pd[df_pd["date_str"] >= start_date]
 
     result = {}
     for _, row in df_pd.iterrows():
+        sp_val = row.get("SP500") if "SP500" in row else row.get("^GSPC")
+        nasdaq_val = row.get("NASDAQ") if "NASDAQ" in row else row.get("^IXIC")
         result[row["date_str"]] = {
-            "SP500": row.get("^GSPC", None) if "^GSPC" in row else None,
-            "NASDAQ": row.get("^IXIC", None) if "^IXIC" in row else None,
+            "SP500": float(sp_val) if sp_val is not None and not pd.isna(sp_val) else None,
+            "NASDAQ": float(nasdaq_val) if nasdaq_val is not None and not pd.isna(nasdaq_val) else None,
         }
-    return result
+
+    _indices_cache = result
+    _indices_cache_ts = now
+    return {k: v for k, v in result.items() if k >= start_date}
 
 
 @router.get("/prices/historical/{ticker}")

@@ -4,6 +4,10 @@ Provides historical OHLCV data and real-time quotes.
 Cache is simple in-memory with TTL to avoid hammering Yahoo Finance.
 """
 
+import warnings
+warnings.filterwarnings("ignore")
+warnings.simplefilter("ignore")
+
 import threading
 import time
 from datetime import datetime, timezone
