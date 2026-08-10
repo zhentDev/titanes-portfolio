@@ -81,19 +81,32 @@ function FixedIncomeProjectionChart({ projectionData, currency = 'COP', mode = '
   useEffect(() => {
     if (!chartRef.current || !projectionData?.length) return;
 
-    const formattedBalance = projectionData.map((d) => ({
-      time: d.date,
-      value: Number(d.projectedValue),
-    }));
+    // Filter out invalid items and deduplicate times
+    const seenTimes = new Set();
+    const formattedBalance = [];
+    const formattedCapital = [];
 
-    const formattedCapital = projectionData.map((d) => ({
-      time: d.date,
-      value: Number(d.baseCapital),
-    }));
+    projectionData.forEach((d) => {
+      const timeVal = d.date || d.dateLabel;
+      if (!timeVal || seenTimes.has(timeVal)) return;
+      seenTimes.add(timeVal);
 
-    seriesRef.current.balance?.setData(formattedBalance);
-    seriesRef.current.capital?.setData(formattedCapital);
-    chartRef.current.timeScale().fitContent();
+      formattedBalance.push({
+        time: timeVal,
+        value: Number(d.projectedValue) || 0,
+      });
+
+      formattedCapital.push({
+        time: timeVal,
+        value: Number(d.baseCapital) || 0,
+      });
+    });
+
+    if (formattedBalance.length > 0) {
+      seriesRef.current.balance?.setData(formattedBalance);
+      seriesRef.current.capital?.setData(formattedCapital);
+      chartRef.current.timeScale().fitContent();
+    }
   }, [projectionData]);
 
   return (

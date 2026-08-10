@@ -384,5 +384,34 @@ export async function calculateCompoundHistory(entityId, deposits, currentDate =
   return res.json();
 }
 
+export async function uploadStatementApi(filesInput, password = '', startYear = 2024) {
+  const formData = new FormData();
+  const fileArray = Array.isArray(filesInput) ? filesInput : [filesInput];
+
+  fileArray.forEach((f) => {
+    formData.append('files', f);
+  });
+
+  if (password) formData.append('password', password);
+  if (startYear) formData.append('start_year', String(startYear));
+
+  const res = await safeFetch(`${BASE}/fixed-income/upload-statement`, {
+    method: 'POST',
+    body: formData,
+  });
+  if (!res.ok) throw new Error('Error al procesar el lote de extractos PDF o imágenes');
+  return res.json();
+}
+
+export async function confirmStatementImportApi(entityId, accounts = [], cdts = [], transactions = []) {
+  const res = await safeFetch(`${BASE}/fixed-income/confirm-import`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ entityId, accounts, cdts, transactions }),
+  });
+  if (!res.ok) throw new Error('Error al importar la información del extracto');
+  return res.json();
+}
+
 
 

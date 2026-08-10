@@ -75,11 +75,12 @@ export default function App() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const isStrategyMode = mode === 'historical' || (customStrategies || []).some((s) => s.id === mode);
+  const isStrategyMode = mode === 'historical' || mode === 'live' || (customStrategies || []).some((s) => s.id === mode);
   const isPurchaseMode = (purchasePortfolios || []).some((p) => p.id === mode);
 
   const currentStrategyLabel = useMemo(() => {
     if (mode === 'historical') return '🏆 Titanes Tech';
+    if (mode === 'live') return '⚡ Live Tracker';
     const match = (customStrategies || []).find((s) => s.id === mode);
     return match ? `${match.country || '🌎'} ${match.name}` : 'Seleccionar...';
   }, [mode, customStrategies]);
@@ -323,6 +324,16 @@ export default function App() {
                   <span className="system-badge core">CORE</span>
                 </button>
 
+                <button 
+                  type="button"
+                  className={`dropdown-item ${mode === 'live' ? 'selected' : ''}`}
+                  onClick={() => { setMode('live'); setStratOpen(false); }}
+                >
+                  <span className="item-icon">⚡</span>
+                  <span className="item-title">Live Tracker</span>
+                  <span className="system-badge pro">LIVE</span>
+                </button>
+
                 {(customStrategies || []).map((strat) => (
                   <button 
                     type="button"
@@ -410,19 +421,6 @@ export default function App() {
             }}
           >
             <span>🏦 Renta Fija & Ahorros</span>
-          </button>
-
-          {/* 4. Live Tracker */}
-          <button
-            type="button"
-            className={`nav-pill-btn ${mode === 'live' ? 'active' : ''}`}
-            onClick={() => {
-              setMode('live');
-              setStratOpen(false);
-              setPurchasesOpen(false);
-            }}
-          >
-            <span>⚡ Live Tracker</span>
           </button>
 
           {/* 5. Exportar CSV */}

@@ -3,6 +3,7 @@ import { useFixedIncomeStore } from '../../store/fixedIncomeStore';
 import { fetchFxHistory, fetchColInflationHistory } from '../../api/client';
 import FixedIncomeProjectionChart from './FixedIncomeProjectionChart';
 import FixedIncomeModal from './FixedIncomeModal';
+import StatementImporterModal from './StatementImporterModal';
 import { toastConfirm } from '../../utils/toastAlerts';
 import toast from 'react-hot-toast';
 
@@ -24,6 +25,28 @@ export default function FixedIncomeHub() {
     deleteCDT,
     initFetchFixedIncome,
   } = useFixedIncomeStore();
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalTab, setModalTab] = useState('account');
+  const [importerOpen, setImporterOpen] = useState(false);
+  const [showAllEntities, setShowAllEntities] = useState(false);
+  const [fxRate, setFxRate] = useState(4150); // USD-COP fallback
+  const [colInflationRate, setColInflationRate] = useState(5.16); // YoY IPC fallback
+
+  useEffect(() => {
+    initFetchFixedIncome();
+    fetchFxHistory('USD', 'COP')
+      .then((res) => {
+        if (res?.current) setFxRate(res.current);
+      })
+      .catch(console.error);
+
+    fetchColInflationHistory()
+      .then((res) => {
+        if (res?.latest?.yoy) setColInflationRate(res.latest.yoy);
+      })
+      .catch(console.error);
+  }, [initFetchFixedIncome]);
 
   const handleDeleteAccount = async (acc) => {
     const ok = await toastConfirm(`¿Estás seguro de eliminar la cuenta "${acc.name}"?`);
@@ -49,26 +72,6 @@ export default function FixedIncomeHub() {
     }
   };
 
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalTab, setModalTab] = useState('account');
-  const [fxRate, setFxRate] = useState(4150); // USD-COP fallback
-  const [colInflationRate, setColInflationRate] = useState(5.16); // YoY IPC fallback
-
-  useEffect(() => {
-    initFetchFixedIncome();
-    fetchFxHistory('USD', 'COP')
-      .then((res) => {
-        if (res?.current) setFxRate(res.current);
-      })
-      .catch(console.error);
-
-    fetchColInflationHistory()
-      .then((res) => {
-        if (res?.latest?.yoy) setColInflationRate(res.latest.yoy);
-      })
-      .catch(console.error);
-  }, [initFetchFixedIncome]);
-
   // Helper to convert any amount to the preferred currency (COP or USD)
   const convertAmount = (amount, fromCurrency) => {
     if (!amount) return 0;
@@ -82,18 +85,28 @@ export default function FixedIncomeHub() {
     return amount;
   };
 
+  // ── Active Entities Filter ──────────────────────────────
+  const activeEntities = useMemo(() => {
+    if (showAllEntities) return entities;
+    return entities.filter((entity) => {
+      const hasAcc = accounts.some((a) => a.entityId === entity.id);
+      const hasCdt = cdts.some((c) => c.entityId === entity.id);
+      return hasAcc || hasCdt;
+    });
+  }, [entities, accounts, cdts, showAllEntities]);
+
   // ── Financial Metrics Aggregation ───────────────────────
   const metrics = useMemo(() => {
     let totalPatrimony = 0;
     let totalDailyIncome = 0;
     let weightedRateSum = 0;
 
-    // Accounts
-    (accounts || []).forEach((acc) => {
+    // Accounts / Pockets
+    accounts.forEach((acc) => {
       const val = convertAmount(acc.balance, acc.currency);
       totalPatrimony += val;
 
-      const rateDecimal = acc.interestRateEA / 100;
+      const rateDecimal = (acc.interestRateEA || 0) / 100;
       const dailyRate = Math.pow(1 + rateDecimal, 1 / 365) - 1;
       const dailyIncome = val * dailyRate;
 
@@ -101,14 +114,13 @@ export default function FixedIncomeHub() {
       weightedRateSum += acc.interestRateEA * val;
     });
 
-    // CDTs
-    (cdts || []).forEach((cdt) => {
+    // Term Deposits / CDTs
+    cdts.forEach((cdt) => {
       const val = convertAmount(cdt.capital, cdt.currency);
       totalPatrimony += val;
 
-      const rateDecimal = cdt.interestRateEA / 100;
+      const rateDecimal = (cdt.interestRateEA || 0) / 100;
       const dailyRate = Math.pow(1 + rateDecimal, 1 / 365) - 1;
-      // Subtract ReteFuente (e.g. 4%) from net daily accrual
       const reteMultiplier = 1 - (cdt.reteFuentePct || 4) / 100;
       const dailyIncome = val * dailyRate * reteMultiplier;
 
@@ -149,7 +161,6 @@ export default function FixedIncomeHub() {
     const rateEA = metrics.weightedEA / 100;
     const inflationEA = (preferredCurrency === 'COP' ? colInflationRate : 3.0) / 100;
 
-    // Effective daily growth rate
     const dailyNominalRate = Math.pow(1 + rateEA, 1 / 365) - 1;
     const dailyInflationRate = Math.pow(1 + inflationEA, 1 / 365) - 1;
 
@@ -158,37 +169,33 @@ export default function FixedIncomeHub() {
 
     let runningBalance = baseVal;
     let runningCapital = baseVal;
-    const monthlyContributionInPreferred = convertAmount(monthlyDepositContribution, 'COP');
-    const dailyContribution = monthlyContributionInPreferred / 30.416;
+    const monthlyDepositConverted = convertAmount(monthlyDepositContribution, 'COP');
+    const dailyDepositContribution = (monthlyDepositConverted * 12) / 365;
 
-    for (let day = 0; day <= totalDays; day += stepDays) {
-      const pointDate = new Date(today);
-      pointDate.setDate(pointDate.getDate() + day);
-      const dateStr = pointDate.toISOString().slice(0, 10);
-
-      // Compound interest accrual
-      const interestFactor = Math.pow(1 + dailyNominalRate, day);
-      const futureFromInitial = baseVal * interestFactor;
-
-      // Future value of daily/monthly contributions
-      let futureFromContributions = 0;
-      if (dailyContribution > 0 && dailyNominalRate > 0) {
-        futureFromContributions = dailyContribution * ((Math.pow(1 + dailyNominalRate, day) - 1) / dailyNominalRate);
+    for (let d = 0; d <= totalDays; d += stepDays) {
+      if (d > 0) {
+        for (let i = 0; i < stepDays; i++) {
+          runningBalance += dailyDepositContribution;
+          runningCapital += dailyDepositContribution;
+          runningBalance += runningBalance * dailyNominalRate;
+        }
       }
 
-      const totalNominalValue = futureFromInitial + futureFromContributions;
-      const totalContributedCapital = baseVal + dailyContribution * day;
+      const pointDate = new Date(today.getTime() + d * 86400000);
+      const isoDate = pointDate.toISOString().slice(0, 10);
+      const label = pointDate.toLocaleDateString('es-CO', { month: 'short', day: 'numeric', year: totalDays > 365 ? '2-digit' : undefined });
 
-      let finalProjectedValue = totalNominalValue;
+      let finalProjectedValue = runningBalance;
       if (projectionMode === 'REAL') {
-        const inflationDiscountFactor = Math.pow(1 + dailyInflationRate, day);
-        finalProjectedValue = totalNominalValue / inflationDiscountFactor;
+        const discountFactor = Math.pow(1 + dailyInflationRate, d);
+        finalProjectedValue = runningBalance / discountFactor;
       }
 
       series.push({
-        date: dateStr,
+        date: isoDate,
+        dateLabel: label,
         projectedValue: Math.round(finalProjectedValue),
-        baseCapital: Math.round(totalContributedCapital),
+        baseCapital: Math.round(runningCapital),
       });
     }
 
@@ -258,7 +265,7 @@ export default function FixedIncomeHub() {
             {metrics.realRateEA >= 0 ? '+' : ''}{metrics.realRateEA.toFixed(2)}% <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#94a3b8' }}>Real</span>
           </div>
           <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: 2 }}>
-            IPC {colInflationRate}% Colombia
+            Ajustado por inflación ({preferredCurrency === 'COP' ? `IPC CO ${colInflationRate}%` : 'IPC US 3.0%'})
           </div>
         </div>
       </div>
@@ -266,6 +273,12 @@ export default function FixedIncomeHub() {
       {/* ── ACTION & FILTER CONTROLS BAR ─────────────────── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setImporterOpen(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'linear-gradient(135deg, #38bdf8 0%, #818cf8 100%)', color: '#0f172a', border: 'none', padding: '8px 16px', borderRadius: 8, fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(56, 189, 248, 0.3)' }}
+          >
+            📄 Importar Extracto PDF / Foto
+          </button>
           <button
             onClick={() => { setModalTab('account'); setModalOpen(true); }}
             style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#10b981', color: '#000', border: 'none', padding: '8px 16px', borderRadius: 8, fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
@@ -308,25 +321,25 @@ export default function FixedIncomeHub() {
           <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderRadius: 18, padding: 3, border: '1px solid rgba(255,255,255,0.1)' }}>
             <button
               onClick={() => setProjectionMode('NOMINAL')}
-              style={{ padding: '5px 12px', borderRadius: 15, border: 'none', background: projectionMode === 'NOMINAL' ? 'rgba(255,255,255,0.12)' : 'transparent', color: projectionMode === 'NOMINAL' ? '#fff' : '#94a3b8', fontWeight: projectionMode === 'NOMINAL' ? 700 : 400, fontSize: '0.75rem', cursor: 'pointer' }}
+              style={{ padding: '5px 12px', borderRadius: 15, border: 'none', background: projectionMode === 'NOMINAL' ? '#38bdf8' : 'transparent', color: projectionMode === 'NOMINAL' ? '#000' : '#94a3b8', fontWeight: projectionMode === 'NOMINAL' ? 700 : 400, fontSize: '0.75rem', cursor: 'pointer' }}
             >
               Nominal
             </button>
             <button
               onClick={() => setProjectionMode('REAL')}
-              style={{ padding: '5px 12px', borderRadius: 15, border: 'none', background: projectionMode === 'REAL' ? 'rgba(245, 158, 11, 0.2)' : 'transparent', color: projectionMode === 'REAL' ? '#f59e0b' : '#94a3b8', fontWeight: projectionMode === 'REAL' ? 700 : 400, fontSize: '0.75rem', cursor: 'pointer' }}
+              style={{ padding: '5px 12px', borderRadius: 15, border: 'none', background: projectionMode === 'REAL' ? '#f59e0b' : 'transparent', color: projectionMode === 'REAL' ? '#000' : '#94a3b8', fontWeight: projectionMode === 'REAL' ? 700 : 400, fontSize: '0.75rem', cursor: 'pointer' }}
             >
-              🛡️ Real (vs IPC)
+              Real (Ajustado IPC)
             </button>
           </div>
 
-          {/* Timeline Switcher */}
+          {/* Horizonte Temporal */}
           <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderRadius: 18, padding: 3, border: '1px solid rgba(255,255,255,0.1)' }}>
             {['1M', '3M', '6M', '1Y', '3Y', '5Y'].map((t) => (
               <button
                 key={t}
                 onClick={() => setProjectionTimeline(t)}
-                style={{ padding: '5px 10px', borderRadius: 15, border: 'none', background: projectionTimeline === t ? 'rgba(16, 185, 129, 0.2)' : 'transparent', color: projectionTimeline === t ? '#10b981' : '#94a3b8', fontWeight: projectionTimeline === t ? 700 : 400, fontSize: '0.72rem', cursor: 'pointer' }}
+                style={{ padding: '5px 10px', borderRadius: 15, border: 'none', background: projectionTimeline === t ? '#820ad1' : 'transparent', color: projectionTimeline === t ? '#fff' : '#94a3b8', fontWeight: projectionTimeline === t ? 700 : 400, fontSize: '0.75rem', cursor: 'pointer' }}
               >
                 {t}
               </button>
@@ -335,7 +348,7 @@ export default function FixedIncomeHub() {
         </div>
       </div>
 
-      {/* ── PROJECTION CHART ─────────────────────────────── */}
+      {/* ── INTERACTIVE PROJECTION CHART ─────────────────── */}
       <FixedIncomeProjectionChart
         projectionData={projectionSeries}
         currency={preferredCurrency}
@@ -376,9 +389,21 @@ export default function FixedIncomeHub() {
         </div>
       </div>
 
-      {/* ── ENTITIES & ACCOUNTS GRID ──────────────────────── */}
+      {/* ── ENTITIES & ACCOUNTS GRID HEADER ──────────────── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '8px 0 -6px 0' }}>
+        <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#f1f5f9', fontWeight: 700 }}>
+          🏦 Entidades y Cuentas Activas ({activeEntities.length})
+        </h4>
+        <button
+          onClick={() => setShowAllEntities(!showAllEntities)}
+          style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: '#94a3b8', borderRadius: 6, padding: '4px 10px', fontSize: '0.72rem', cursor: 'pointer' }}
+        >
+          {showAllEntities ? 'Ver solo entidades con saldo' : 'Ver catálogo completo de entidades'}
+        </button>
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 16 }}>
-        {entities.map((entity) => {
+        {activeEntities.map((entity) => {
           const entityAccounts = accounts.filter((a) => a.entityId === entity.id);
           const entityCDTs = cdts.filter((c) => c.entityId === entity.id);
 
@@ -400,9 +425,9 @@ export default function FixedIncomeHub() {
               {/* Entity Card Header */}
               <div style={{ padding: '14px 18px', background: `${entity.color}15`, borderBottom: `1px solid ${entity.color}33`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: '1.25rem' }}>{entity.icon || '🏦'}</span>
+                  <span style={{ fontSize: '1.4rem' }}>{entity.icon}</span>
                   <div>
-                    <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.9rem' }}>
+                    <div style={{ fontWeight: 800, color: '#f8fafc', fontSize: '1rem' }}>
                       {entity.name} <span style={{ fontSize: '0.75rem' }}>{entity.country}</span>
                     </div>
                     <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
@@ -412,12 +437,15 @@ export default function FixedIncomeHub() {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div className="mono" style={{ fontSize: '0.95rem', fontWeight: 800, color: entity.color, textAlign: 'right' }}>
-                    {currSymbol} {entityTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <div style={{ textAlign: 'right' }}>
+                    <div className="mono" style={{ fontWeight: 800, color: '#10b981', fontSize: '1rem' }}>
+                      {currSymbol} {entityTotal.toLocaleString('en-US', { maximumFractionDigits: 2 })}
+                    </div>
                   </div>
+
                   <button
                     onClick={() => handleDeleteEntity(entity)}
-                    style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.8rem', padding: '2px 4px', opacity: 0.7 }}
+                    style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.85rem' }}
                     title="Eliminar Entidad"
                   >
                     🗑️
@@ -425,76 +453,59 @@ export default function FixedIncomeHub() {
                 </div>
               </div>
 
-              {/* Entity Accounts & CDTs list */}
-              <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {/* Accounts / Pockets */}
-                {entityAccounts.map((acc) => {
-                  const dailyRate = Math.pow(1 + acc.interestRateEA / 100, 1 / 365) - 1;
-                  const dailyEarn = acc.balance * dailyRate;
-
-                  return (
-                    <div
-                      key={acc.id}
-                      style={{
-                        background: 'rgba(255, 255, 255, 0.03)',
-                        borderRadius: 10,
-                        padding: '10px 14px',
-                        border: '1px solid rgba(255, 255, 255, 0.06)',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span style={{ fontWeight: 600, color: '#f1f5f9', fontSize: '0.82rem' }}>{acc.name}</span>
-                          <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: 4, background: '#10b98122', color: '#10b981', fontWeight: 700 }}>
-                            {acc.interestRateEA}% E.A.
-                          </span>
-                          {acc.isTaxExemptGMF && (
-                            <span style={{ fontSize: '0.62rem', padding: '1px 4px', borderRadius: 3, background: 'rgba(255,255,255,0.08)', color: '#94a3b8' }}>
-                              Exenta 4x1000
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ fontSize: '0.7rem', color: '#10b981', marginTop: 3 }}>
-                          +{acc.currency} ${(dailyEarn).toFixed(2)} / día
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div className="mono" style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f1f5f9', textAlign: 'right' }}>
-                          {acc.currency} ${acc.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </div>
-                        <button
-                          onClick={() => handleDeleteAccount(acc)}
-                          style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.75rem', padding: '2px 4px' }}
-                          title="Eliminar cuenta"
-                        >
-                          ✕
-                        </button>
+              {/* Accounts & Pockets List */}
+              <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {entityAccounts.map((acc) => (
+                  <div
+                    key={acc.id}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      borderRadius: 10,
+                      padding: '10px 14px',
+                      border: '1px solid rgba(255, 255, 255, 0.06)',
+                      display: 'flex',
+                      justify: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.85rem' }}>{acc.name}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: 2 }}>
+                        Tasa: <span style={{ color: '#10b981', fontWeight: 700 }}>{acc.interestRateEA}% E.A.</span>
+                        {acc.isTaxExemptGMF && <span style={{ marginLeft: 6, color: '#38bdf8', fontSize: '0.65rem' }}>Exenta 4x1000</span>}
                       </div>
                     </div>
-                  );
-                })}
 
-                {/* CDTs with Progress and ReteFuente */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div className="mono" style={{ fontWeight: 700, color: '#f8fafc', fontSize: '0.9rem' }}>
+                        ${acc.balance.toLocaleString('en-US', { maximumFractionDigits: 2 })} <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{acc.currency}</span>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteAccount(acc)}
+                        style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.75rem' }}
+                        title="Eliminar Cuenta"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Term Deposits / CDTs List */}
                 {entityCDTs.map((cdt) => {
-                  const start = new Date(cdt.startDate).getTime();
-                  const end = new Date(cdt.maturityDate).getTime();
-                  const now = new Date().getTime();
+                  const today = new Date();
+                  const maturity = new Date(cdt.maturityDate);
+                  const start = new Date(cdt.startDate);
+                  const totalDays = (maturity - start) / (1000 * 3600 * 24) || 180;
+                  const daysElapsed = (today - start) / (1000 * 3600 * 24);
+                  const daysRemaining = Math.max(0, Math.ceil((maturity - today) / (1000 * 3600 * 24)));
+                  const progressPct = Math.min(100, Math.max(0, (daysElapsed / totalDays) * 100));
 
-                  const totalDuration = Math.max(1, end - start);
-                  const elapsed = Math.min(totalDuration, Math.max(0, now - start));
-                  const progressPct = Math.min(100, Math.max(0, (elapsed / totalDuration) * 100));
-
-                  const daysRemaining = Math.max(0, Math.ceil((end - now) / (1000 * 60 * 60 * 24)));
-
-                  // Gross interest at maturity: Capital * ((1+EA)^(termDays/365) - 1)
-                  const grossProfit = cdt.capital * (Math.pow(1 + cdt.interestRateEA / 100, cdt.termDays / 365) - 1);
-                  const reteFuenteAmount = grossProfit * ((cdt.reteFuentePct || 4.0) / 100);
-                  const netProfit = grossProfit - reteFuenteAmount;
-                  const totalAtMaturity = cdt.capital + netProfit;
+                  const rateDecimal = (cdt.interestRateEA || 0) / 100;
+                  const totalInterestGross = cdt.capital * (Math.pow(1 + rateDecimal, cdt.termDays / 365) - 1);
+                  const reteFuenteAmount = totalInterestGross * ((cdt.reteFuentePct || 4) / 100);
+                  const netInterest = totalInterestGross - reteFuenteAmount;
+                  const totalAtMaturity = cdt.capital + netInterest;
 
                   return (
                     <div
@@ -572,6 +583,12 @@ export default function FixedIncomeHub() {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         initialTab={modalTab}
+      />
+
+      {/* ── MODAL DE IMPORTACIÓN INTELIGENTE DE EXTRACTOS (PDF) ── */}
+      <StatementImporterModal
+        isOpen={importerOpen}
+        onClose={() => setImporterOpen(false)}
       />
     </div>
   );

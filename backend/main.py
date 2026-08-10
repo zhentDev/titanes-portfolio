@@ -82,7 +82,16 @@ async def global_exception_handler(request: Request, exc: Exception):
         "function": func_name,
     }
 
-    return JSONResponse(status_code=500, content=error_payload)
+    return JSONResponse(
+        status_code=500,
+        content=error_payload,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Allow-Credentials": "true",
+        },
+    )
 
 
 app.include_router(nav_router, prefix="/api")

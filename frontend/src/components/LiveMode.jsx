@@ -38,7 +38,7 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
         }
       }
 
-      const activeHoldings = currentNav?.holdings || [];
+      const activeHoldings = (currentNav?.holdings || []).filter((h) => h.selected !== false && h.shares > 0);
       const activeTickers = activeHoldings.map((h) => h.ticker);
 
       if (activeTickers.length === 0) {
@@ -85,7 +85,9 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
               intradayResults.forEach((series, i) => {
                 const ticker = activeTickers[i];
                 const holding = activeHoldings.find((h) => h.ticker === ticker);
-                const shares = holding ? holding.shares : 0;
+                const numSlots = navData?.summary?.total_slots || 15;
+                const slotValue = investment / numSlots;
+                const shares = (holding && holding.start_price > 0) ? (slotValue / holding.start_price) : (holding ? holding.shares : 0);
 
                 const point = series.find((p) => p.time === t);
                 const price = point?.value ?? quotesData?.find((q) => q.ticker === ticker)?.price;
@@ -273,12 +275,12 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
 
       {/* ── Intraday Chart (Only during active market sessions) ────────── */}
       {intradayChart.length > 1 && (
-        <div className="card" style={{ paddingBottom: '30px' }}>
+        <div className="card" style={{ paddingBottom: '20px', overflow: 'hidden' }}>
           <h3 style={{ marginBottom: 16, fontSize: '1rem', fontWeight: 600 }}>
             Gráfica Intradía de Hoy (5m) — Capital Activo
           </h3>
-          <div style={{ height: '340px' }}>
-            <NavChart navData={intradayChart} investment={activeInvested} />
+          <div style={{ width: '100%', minHeight: '320px', overflow: 'hidden' }}>
+            <NavChart navData={intradayChart} investment={activeInvested} chartHeight={300} isLiveMode={true} />
           </div>
         </div>
       )}
@@ -302,7 +304,18 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
             const change = q?.change ?? (h.current_price - h.start_price);
             const changePct = q?.change_pct ?? h.return_pct ?? 0;
             const isChangeGain = change >= 0;
-            const currentVal = h.shares * currentP;
+
+            const numSlots = navData?.summary?.total_slots || 15;
+            const slotValue = investment / numSlots;
+            const cardShares = h.start_price > 0 ? (slotValue / h.start_price) : h.shares;
+            const initialInvested = slotValue;
+            const currentVal = cardShares * currentP;
+            const totalGain = currentVal - initialInvested;
+            const totalGainPct = initialInvested > 0 ? (totalGain / initialInvested) * 100 : 0;
+            const isTotalGain = totalGain >= 0;
+
+            const periodRaw = navData?.summary?.period || '1Y';
+            const periodText = periodRaw === '1Y' ? '1 Año' : periodRaw === '3Y' ? '3 Años' : periodRaw === '5Y' ? '5 Años' : periodRaw;
 
             return (
               <div
@@ -358,44 +371,72 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
                   <span
                     className={`badge ${isChangeGain ? 'gain' : 'loss'}`}
                     style={{ fontSize: '0.72rem', padding: '3px 8px' }}
+                    title="Variación intradía en vivo de la sesión de hoy"
                   >
-                    {isChangeGain ? '▲' : '▼'} {Math.abs(changePct).toFixed(2)}%
+                    Hoy: {isChangeGain ? '▲' : '▼'} {Math.abs(changePct).toFixed(2)}%
                   </span>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 2 }}>
-                  <div className="mono" style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                    ${currentP ? currentP.toFixed(2) : '—'}
+                  <div>
+                    <div className="mono" style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)' }} title="Valor actual en vivo de tu posición total">
+                      ${currentVal ? currentVal.toFixed(2) : '—'}
+                    </div>
+                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                      {h.shares.toFixed(4)} acc. @ ${currentP.toFixed(2)}
+                    </div>
                   </div>
                   <span
                     className="mono"
                     style={{
-                      fontSize: '0.72rem',
-                      fontWeight: 600,
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
                       color: isChangeGain ? 'var(--gain)' : 'var(--loss)',
                     }}
+                    title="Variación en dólares durante la jornada de hoy"
                   >
-                    {isChangeGain ? '+' : ''}${change ? change.toFixed(2) : '0.00'}
+                    {isChangeGain ? '+' : ''}${change ? change.toFixed(2) : '0.00'} (Hoy)
                   </span>
                 </div>
 
                 <div
                   style={{
-                    paddingTop: 8,
+                    paddingTop: 10,
                     borderTop: '1px solid var(--border)',
                     display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
+                    flexDirection: 'column',
+                    gap: 4,
                     fontSize: '0.74rem',
                     color: 'var(--text-muted)',
                   }}
                 >
-                  <span>
-                    Posición: <strong style={{ color: 'var(--text-secondary)' }}>{h.shares.toFixed(4)} acc.</strong>
-                  </span>
-                  <span className="mono" style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-                    ${currentVal.toFixed(2)}
-                  </span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Inversión Inicial Base:</span>
+                    <span className="mono" style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
+                      ${initialInvested.toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Valor Actual (Live):</span>
+                    <span className="mono" style={{ fontWeight: 700, color: 'var(--accent-primary)' }}>
+                      ${currentVal.toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Acumulado ({periodText}):</span>
+                    <span className="mono" style={{ fontWeight: 700, color: isTotalGain ? 'var(--gain)' : 'var(--loss)' }}>
+                      {isTotalGain ? '+' : ''}${totalGain.toFixed(2)} ({isTotalGain ? '+' : ''}{totalGainPct.toFixed(1)}%)
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2, fontSize: '0.7rem' }}>
+                    <span>Posición Comprada:</span>
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      {h.shares.toFixed(4)} acc. @ ${h.start_price?.toFixed(2) || '—'}/acc
+                    </span>
+                  </div>
                 </div>
               </div>
             );

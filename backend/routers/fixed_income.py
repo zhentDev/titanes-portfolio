@@ -518,5 +518,116 @@ def sync_full_state(payload: SyncStateModel):
         db["cdts"] = payload.cdts
     if payload.transactions is not None:
         db["transactions"] = payload.transactions
-    save_fixed_income_db(db)
     return {"success": True, "timestamp": datetime.now().isoformat()}
+
+
+from fastapi import UploadFile, File, Form
+from services.statement_parser import process_statement_document, process_batch_statement_documents
+
+
+@router.post("/upload-statement")
+async def upload_statement(
+    file: Optional[UploadFile] = File(None),
+    files: Optional[List[UploadFile]] = File(None),
+    password: Optional[str] = Form(None),
+    start_year: Optional[int] = Form(2024)
+):
+    """
+    Upload a batch of bank statements (PDFs or mobile screenshots) protected with password (e.g. Cedula/NIT).
+    Decrypts, auto-identifies entity, and extracts accounts, Cajitas by name, CDTs, and movements.
+    """
+    files_to_process = files or ([file] if file else [])
+    if not files_to_process:
+        raise HTTPException(status_code=400, detail="No se enviaron archivos para procesar")
+
+    contents = []
+    for f in files_to_process:
+        c = await f.read()
+        if c:
+            contents.append(c)
+
+    res = process_batch_statement_documents(contents, password=password, start_year=start_year or 2024)
+    return res
+
+
+class ConfirmImportRequest(BaseModel):
+    entityId: str
+    accounts: List[Dict[str, Any]] = []
+    cdts: List[Dict[str, Any]] = []
+    transactions: List[Dict[str, Any]] = []
+
+
+@router.post("/confirm-import")
+def confirm_statement_import(payload: ConfirmImportRequest):
+    """Batch import approved accounts, CDTs, and transactions extracted from PDF."""
+    db = load_fixed_income_db()
+    
+    # 1. Ensure entity exists
+    existing_entities = {e["id"]: e for e in db.get("entities", [])}
+    if payload.entityId not in existing_entities:
+        # Create entity if missing
+        db["entities"].append({
+            "id": payload.entityId,
+            "name": "Entidad Detectada",
+            "country": "🇨🇴",
+            "color": "#820ad1",
+            "icon": "🏦",
+            "createdAt": datetime.now().isoformat()
+        })
+
+    # 2. Append new accounts
+    created_accounts = 0
+    for acc in payload.accounts:
+        acc_id = acc.get("id") or f"acc_pdf_{int(datetime.now().timestamp() * 1000)}"
+        db["accounts"].append({
+            "id": acc_id,
+            "entityId": payload.entityId,
+            "name": acc.get("name", "Cuenta Detectada"),
+            "type": acc.get("type", "pocket"),
+            "currency": acc.get("currency", "COP"),
+            "balance": float(acc.get("balance", 0.0)),
+            "interestRateEA": float(acc.get("interestRateEA", 12.0)),
+            "isTaxExemptGMF": bool(acc.get("isTaxExemptGMF", True)),
+            "rateHistory": [{"date": datetime.now().strftime("%Y-%m-%d"), "rateEA": float(acc.get("interestRateEA", 12.0))}],
+            "createdAt": datetime.now().isoformat()
+        })
+        created_accounts += 1
+
+    # 3. Append new CDTs
+    created_cdts = 0
+    for cdt in payload.cdts:
+        cdt_id = cdt.get("id") or f"cdt_pdf_{int(datetime.now().timestamp() * 1000)}"
+        start_dt = cdt.get("startDate") or datetime.now().strftime("%Y-%m-%d")
+        term_days = int(cdt.get("termDays", 180))
+        
+        # calculate maturity date if missing
+        try:
+            start_obj = datetime.strptime(start_dt, "%Y-%m-%d")
+            maturity_obj = datetime.fromtimestamp(start_obj.timestamp() + term_days * 86400)
+            maturity_dt = maturity_obj.strftime("%Y-%m-%d")
+        except Exception:
+            maturity_dt = start_dt
+
+        db["cdts"].append({
+            "id": cdt_id,
+            "entityId": payload.entityId,
+            "name": cdt.get("name", "CDT Detectado"),
+            "capital": float(cdt.get("capital", 0.0)),
+            "currency": cdt.get("currency", "COP"),
+            "interestRateEA": float(cdt.get("interestRateEA", 12.0)),
+            "termDays": term_days,
+            "startDate": start_dt,
+            "maturityDate": cdt.get("maturityDate") or maturity_dt,
+            "reteFuentePct": float(cdt.get("reteFuentePct", 4.0)),
+            "isAutoRenew": bool(cdt.get("isAutoRenew", False)),
+            "createdAt": datetime.now().isoformat()
+        })
+        created_cdts += 1
+
+    save_fixed_income_db(db)
+    return {
+        "success": True,
+        "importedAccounts": created_accounts,
+        "importedCDTs": created_cdts,
+        "timestamp": datetime.now().isoformat()
+    }

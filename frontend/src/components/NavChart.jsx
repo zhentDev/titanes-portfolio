@@ -21,6 +21,8 @@ export default function NavChart({
   selectLosers,
   invertSelection,
   isSimulating,
+  chartHeight = 400,
+  isLiveMode = false,
 }) {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
@@ -91,7 +93,7 @@ export default function NavChart({
     if (!containerRef.current) return;
 
     const initialMode = isLogActive ? (PriceScaleMode?.Logarithmic ?? 1) : (PriceScaleMode?.Normal ?? 0);
-    const hasVisibleStrategies = (customStrategies || []).some((s) => visibleSeries?.[s.id] !== false);
+    const hasVisibleStrategies = !isLiveMode && (customStrategies || []).some((s) => visibleSeries?.[s.id] !== false);
 
     chartRef.current = createChart(containerRef.current, {
       layout: {
@@ -107,6 +109,21 @@ export default function NavChart({
       crosshair: {
         vertLine: { color: 'rgba(0,229,255,0.4)', width: 1, style: LineStyle.Dashed },
         horzLine: { color: 'rgba(0,229,255,0.4)', width: 1, style: LineStyle.Dashed },
+      },
+      localization: {
+        locale: 'es-CO',
+        timeFormatter: (time) => {
+          if (typeof time === 'number') {
+            const date = new Date(time * 1000);
+            return date.toLocaleTimeString('es-CO', {
+              timeZone: 'America/Bogota',
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true,
+            });
+          }
+          return String(time);
+        },
       },
       leftPriceScale: {
         visible: hasVisibleStrategies,
@@ -128,6 +145,19 @@ export default function NavChart({
         fixLeftEdge: true,
         fixRightEdge: true,
         timeVisible: true,
+        secondsVisible: false,
+        tickMarkFormatter: (time) => {
+          if (typeof time === 'number') {
+            const date = new Date(time * 1000);
+            return date.toLocaleTimeString('es-CO', {
+              timeZone: 'America/Bogota',
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: false,
+            });
+          }
+          return String(time);
+        },
       },
       handleScroll: { mouseWheel: true, pressedMouseMove: true },
       handleScale: { mouseWheel: true, pinch: true },
@@ -143,7 +173,7 @@ export default function NavChart({
       lineWidth: 2,
       priceLineVisible: false,
       lastValueVisible: true,
-      title: 'Portfolio',
+      title: isLiveMode ? 'Portafolio En Vivo' : 'Titanes',
       visible: visibleSeries?.nav !== false,
       priceScaleId: 'right',
     });
@@ -173,18 +203,20 @@ export default function NavChart({
     });
 
     // Custom Strategies curves (Bound to LEFT Axis for Dual Scale separation!)
-    (customStrategies || []).forEach((strat) => {
-      seriesRef.current[strat.id] = chart.addLineSeries({
-        color: strat.color || '#10b981',
-        lineWidth: 2,
-        lineStyle: LineStyle.Solid,
-        priceLineVisible: false,
-        lastValueVisible: true,
-        title: strat.name,
-        visible: visibleSeries?.[strat.id] !== false,
-        priceScaleId: 'left', // LEFT AXIS!
+    if (!isLiveMode) {
+      (customStrategies || []).forEach((strat) => {
+        seriesRef.current[strat.id] = chart.addLineSeries({
+          color: strat.color || '#10b981',
+          lineWidth: 2,
+          lineStyle: LineStyle.Solid,
+          priceLineVisible: false,
+          lastValueVisible: true,
+          title: strat.name,
+          visible: visibleSeries?.[strat.id] !== false,
+          priceScaleId: 'left', // LEFT AXIS!
+        });
       });
-    });
+    }
 
     // Base investment line (Right Axis)
     seriesRef.current.base = chart.addLineSeries({
@@ -231,7 +263,7 @@ export default function NavChart({
     ro.observe(containerRef.current);
 
     return () => ro.disconnect();
-  }, []);
+  }, [isLiveMode, visibleSeries, customStrategies]);
 
   // Init chart once on component mount
   useEffect(() => {
@@ -408,7 +440,7 @@ export default function NavChart({
             title="Clic para mostrar/ocultar curva de Titanes"
           >
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS.nav, opacity: visibleSeries?.nav ? 1 : 0.3 }} />
-            <strong>Titanes</strong>
+            <strong>{isLiveMode ? 'Portafolio En Vivo' : 'Titanes'}</strong>
             {currentNav != null && (
               <span className="mono" style={{ color: '#00e5ff', fontWeight: 700 }}>
                 ${currentNav.toFixed(2)}
@@ -442,7 +474,7 @@ export default function NavChart({
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS.sp500, opacity: visibleSeries?.sp500 ? 1 : 0.3 }} />
             <strong>S&P 500</strong>
             {currentSP != null && (
-              <span className="mono" style={{ color: '#fbbf24', fontWeight: 700 }}>
+              <span className="mono" style={{ color: '#f59e0b', fontWeight: 700 }}>
                 ${currentSP.toFixed(2)}
               </span>
             )}
@@ -485,8 +517,8 @@ export default function NavChart({
             )}
           </button>
 
-          {/* Dynamic Custom Strategies (Bound to Left Axis) */}
-          {(customStrategies || []).map((strat) => {
+          {/* Dynamic Custom Strategies (Bound to Left Axis) — Hidden in Live Mode */}
+          {!isLiveMode && (customStrategies || []).map((strat) => {
             const isVisible = visibleSeries?.[strat.id] !== false;
             const stratBase = strat.activeInvested || 500;
             const isMM20 = strat.id === 'strat_mm20' || strat.name.toLowerCase().includes('mm20');
@@ -601,7 +633,29 @@ export default function NavChart({
               whiteSpace: 'nowrap',
             }}
           >
-            📅 {hoverValues?.date ? String(hoverValues.date) : '2000-00-00'}
+            📅 {(() => {
+              const dateVal = hoverValues?.date;
+              if (!dateVal) return '';
+              if (typeof dateVal === 'number') {
+                const d = new Date(dateVal * 1000);
+                return d.toLocaleDateString('es-CO', {
+                  timeZone: 'America/Bogota',
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: true,
+                });
+              }
+              const str = String(dateVal);
+              if (str.length >= 10 && str.includes('-')) {
+                const [y, m, d] = str.split('-');
+                const dateObj = new Date(Number(y), Number(m) - 1, Number(d));
+                return dateObj.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
+              }
+              return str;
+            })()}
           </span>
         </div>
       </div>
@@ -697,7 +751,7 @@ export default function NavChart({
         ref={containerRef}
         style={{
           width: '100%',
-          height: '420px',
+          height: `${chartHeight}px`,
           position: 'relative',
           borderRadius: 'calc(var(--radius) - 4px)',
           overflow: 'hidden',

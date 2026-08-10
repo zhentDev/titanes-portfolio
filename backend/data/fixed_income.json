@@ -7,83 +7,9 @@
       "color": "#820ad1",
       "icon": "💜",
       "createdAt": "2025-01-01T00:00:00Z"
-    },
-    {
-      "id": "ent_lulo",
-      "name": "Lulo Bank",
-      "country": "🇨🇴",
-      "color": "#00e5ff",
-      "icon": "⚡",
-      "createdAt": "2025-01-01T00:00:00Z"
-    },
-    {
-      "id": "ent_pibank",
-      "name": "Pibank",
-      "country": "🇨🇴",
-      "color": "#f59e0b",
-      "icon": "🏦",
-      "createdAt": "2025-01-01T00:00:00Z"
-    },
-    {
-      "id": "ent_ibkr",
-      "name": "Interactive Brokers",
-      "country": "🇺🇸",
-      "color": "#e11d48",
-      "icon": "💵",
-      "createdAt": "2025-01-01T00:00:00Z"
     }
   ],
-  "accounts": [
-    {
-      "id": "acc_lulo_pocket",
-      "entityId": "ent_lulo",
-      "name": "Bolsillo Lulo",
-      "type": "pocket",
-      "currency": "COP",
-      "balance": 2500000.0,
-      "interestRateEA": 13.0,
-      "isTaxExemptGMF": true,
-      "rateHistory": [
-        {
-          "date": "2024-11-01",
-          "rateEA": 13.0
-        }
-      ],
-      "createdAt": "2025-01-01T00:00:00Z"
-    },
-    {
-      "id": "acc_ibkr_cash",
-      "entityId": "ent_ibkr",
-      "name": "USD Cash Yield",
-      "type": "wallet",
-      "currency": "USD",
-      "balance": 1500.0,
-      "interestRateEA": 4.83,
-      "isTaxExemptGMF": false,
-      "rateHistory": [
-        {
-          "date": "2025-01-01",
-          "rateEA": 4.83
-        }
-      ],
-      "createdAt": "2025-01-01T00:00:00Z"
-    }
-  ],
-  "cdts": [
-    {
-      "id": "cdt_pibank_180",
-      "entityId": "ent_pibank",
-      "name": "CDT Digital 180 Días",
-      "capital": 10000000.0,
-      "currency": "COP",
-      "interestRateEA": 11.5,
-      "termDays": 180,
-      "startDate": "2025-01-15",
-      "maturityDate": "2025-07-14",
-      "reteFuentePct": 4.0,
-      "isAutoRenew": false,
-      "createdAt": "2025-01-15T00:00:00Z"
-    }
-  ],
+  "accounts": [],
+  "cdts": [],
   "transactions": []
 }

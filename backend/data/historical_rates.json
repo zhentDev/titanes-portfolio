@@ -1,5 +1,19 @@
 {
   "entities": {
+    "ent_finandina": {
+      "name": "Banco Finandina",
+      "country": "🇨🇴",
+      "savings_rates": [
+        { "from": "2024-01-01", "to": "2024-08-31", "rateEA": 13.25, "notes": "Cuenta FlexiDigital 13.25% E.A." },
+        { "from": "2024-09-01", "to": "2099-12-31", "rateEA": 12.5, "notes": "Cuenta FlexiDigital 12.5% E.A. vigente" }
+      ],
+      "cdt_term_rates": [
+        { "termDaysMin": 1, "termDaysMax": 45, "rateEA": 11.0, "label": "30 Días Digital" },
+        { "termDaysMin": 46, "termDaysMax": 120, "rateEA": 11.8, "label": "90 Días Digital" },
+        { "termDaysMin": 121, "termDaysMax": 220, "rateEA": 12.2, "label": "180 Días Digital" },
+        { "termDaysMin": 221, "termDaysMax": 999, "rateEA": 12.6, "label": "360 Días Digital" }
+      ]
+    },
     "ent_nu": {
       "name": "Nu Colombia",
       "country": "🇨🇴",
@@ -43,6 +57,60 @@
         { "termDaysMin": 221, "termDaysMax": 999, "rateEA": 11.8, "label": "360 Días" }
       ]
     },
+    "ent_rappi": {
+      "name": "RappiPay (RappiCuenta)",
+      "country": "🇨🇴",
+      "savings_rates": [
+        { "from": "2024-01-01", "to": "2099-12-31", "rateEA": 14.0, "notes": "RappiCuenta Alta Rentabilidad 14% E.A." }
+      ],
+      "cdt_term_rates": [
+        { "termDaysMin": 1, "termDaysMax": 999, "rateEA": 12.0, "label": "CDT RappiPay" }
+      ]
+    },
+    "ent_uala": {
+      "name": "Ualá Colombia",
+      "country": "🇨🇴",
+      "savings_rates": [
+        { "from": "2024-01-01", "to": "2099-12-31", "rateEA": 13.0, "notes": "Rendimiento Ualá 13% E.A." }
+      ],
+      "cdt_term_rates": []
+    },
+    "ent_bancolombia": {
+      "name": "Bancolombia",
+      "country": "🇨🇴",
+      "savings_rates": [
+        { "from": "2024-01-01", "to": "2099-12-31", "rateEA": 9.5, "notes": "Cuenta de Ahorro Rentable" }
+      ],
+      "cdt_term_rates": [
+        { "termDaysMin": 1, "termDaysMax": 120, "rateEA": 9.8, "label": "90 Días Tu360" },
+        { "termDaysMin": 121, "termDaysMax": 220, "rateEA": 10.5, "label": "180 Días Tu360" },
+        { "termDaysMin": 221, "termDaysMax": 999, "rateEA": 10.8, "label": "360 Días Tu360" }
+      ]
+    },
+    "ent_davivienda": {
+      "name": "Davivienda",
+      "country": "🇨🇴",
+      "savings_rates": [
+        { "from": "2024-01-01", "to": "2099-12-31", "rateEA": 9.0, "notes": "Cuenta Dabuenavida" }
+      ],
+      "cdt_term_rates": [
+        { "termDaysMin": 1, "termDaysMax": 120, "rateEA": 10.0, "label": "90 Días Digital" },
+        { "termDaysMin": 121, "termDaysMax": 220, "rateEA": 10.7, "label": "180 Días Digital" },
+        { "termDaysMin": 221, "termDaysMax": 999, "rateEA": 11.0, "label": "360 Días Digital" }
+      ]
+    },
+    "ent_serfinanza": {
+      "name": "Banco Serfinanza",
+      "country": "🇨🇴",
+      "savings_rates": [
+        { "from": "2024-01-01", "to": "2099-12-31", "rateEA": 11.0, "notes": "Cuenta Rendimiento" }
+      ],
+      "cdt_term_rates": [
+        { "termDaysMin": 1, "termDaysMax": 120, "rateEA": 11.5, "label": "90 Días Digital" },
+        { "termDaysMin": 121, "termDaysMax": 220, "rateEA": 12.3, "label": "180 Días Digital" },
+        { "termDaysMin": 221, "termDaysMax": 999, "rateEA": 12.8, "label": "360 Días Digital" }
+      ]
+    },
     "ent_ibkr": {
       "name": "Interactive Brokers",
       "country": "🇺🇸",
@@ -52,19 +120,6 @@
       ],
       "cdt_term_rates": [
         { "termDaysMin": 1, "termDaysMax": 999, "rateEA": 4.60, "label": "US Treasury Bills" }
-      ]
-    },
-    "ent_plenti": {
-      "name": "Plenti",
-      "country": "🇨🇴",
-      "savings_rates": [
-        { "from": "2024-01-01", "to": "2024-08-31", "rateEA": 6.0, "notes": "Dólares Digitales Flexible" },
-        { "from": "2024-09-01", "to": "2099-12-31", "rateEA": 5.5, "notes": "Dólares Digitales Flexible vigente" }
-      ],
-      "cdt_term_rates": [
-        { "termDaysMin": 1, "termDaysMax": 45, "rateEA": 7.5, "label": "30 Días Plazo Fijo" },
-        { "termDaysMin": 46, "termDaysMax": 120, "rateEA": 8.0, "label": "90 Días Plazo Fijo" },
-        { "termDaysMin": 121, "termDaysMax": 999, "rateEA": 8.25, "label": "180 Días Plazo Fijo" }
       ]
     }
   }
