@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import NavChart from './components/NavChart';
 import LiveMode from './components/LiveMode';
 import HoldingsTable from './components/HoldingsTable';

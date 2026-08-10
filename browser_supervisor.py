@@ -90,7 +90,18 @@ def ask_local_model_to_fix_frontend(target_file: Path, error_message: str):
     with fix_lock:
         now = time.time()
         file_str = str(target_file)
-        if file_str in last_fix_time and (now - last_fix_time[file_str]) < 12.0:
+
+        # 1. Pause if file was modified by developer / AI agent in the last 15 seconds
+        try:
+            mtime = target_file.stat().st_mtime
+            if (now - mtime) < 15.0:
+                print(f"{YELLOW}[AUTO-HEALER PAUSED]{RESET} Active editing detected in {target_file.name} (modified {(now - mtime):.1f}s ago). Standing by.")
+                return
+        except Exception:
+            pass
+
+        # 2. Cooldown check (45 seconds)
+        if file_str in last_fix_time and (now - last_fix_time[file_str]) < 45.0:
             return  # Cooldown
 
         last_fix_time[file_str] = now
