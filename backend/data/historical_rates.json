@@ -1,0 +1,71 @@
+{
+  "entities": {
+    "ent_nu": {
+      "name": "Nu Colombia",
+      "country": "🇨🇴",
+      "savings_rates": [
+        { "from": "2024-01-01", "to": "2024-04-15", "rateEA": 13.0, "notes": "Lanzamiento Cuenta Nu" },
+        { "from": "2024-04-16", "to": "2024-10-15", "rateEA": 13.0, "notes": "Cajitas Nu 13% E.A." },
+        { "from": "2024-10-16", "to": "2025-01-14", "rateEA": 12.0, "notes": "Ajuste de política monetaria" },
+        { "from": "2025-01-15", "to": "2099-12-31", "rateEA": 12.0, "notes": "Cajitas 12.0% E.A. vigente" }
+      ],
+      "cdt_term_rates": [
+        { "termDaysMin": 1, "termDaysMax": 45, "rateEA": 11.2, "label": "30 Días" },
+        { "termDaysMin": 46, "termDaysMax": 75, "rateEA": 11.5, "label": "60 Días" },
+        { "termDaysMin": 76, "termDaysMax": 120, "rateEA": 11.8, "label": "90 Días" },
+        { "termDaysMin": 121, "termDaysMax": 220, "rateEA": 12.2, "label": "180 Días" },
+        { "termDaysMin": 221, "termDaysMax": 300, "rateEA": 12.4, "label": "270 Días" },
+        { "termDaysMin": 301, "termDaysMax": 999, "rateEA": 12.5, "label": "360 Días" }
+      ]
+    },
+    "ent_lulo": {
+      "name": "Lulo Bank",
+      "country": "🇨🇴",
+      "savings_rates": [
+        { "from": "2024-01-01", "to": "2024-06-30", "rateEA": 13.0, "notes": "Bolsillos Lulo" },
+        { "from": "2024-07-01", "to": "2099-12-31", "rateEA": 13.0, "notes": "Bolsillos Lulo 13% E.A. vigentes" }
+      ],
+      "cdt_term_rates": [
+        { "termDaysMin": 1, "termDaysMax": 120, "rateEA": 11.0, "label": "90 Días" },
+        { "termDaysMin": 121, "termDaysMax": 220, "rateEA": 11.5, "label": "180 Días" },
+        { "termDaysMin": 221, "termDaysMax": 999, "rateEA": 12.0, "label": "360 Días" }
+      ]
+    },
+    "ent_pibank": {
+      "name": "Pibank",
+      "country": "🇨🇴",
+      "savings_rates": [
+        { "from": "2024-01-01", "to": "2099-12-31", "rateEA": 12.0, "notes": "Cuenta Remunerada Pibank" }
+      ],
+      "cdt_term_rates": [
+        { "termDaysMin": 1, "termDaysMax": 120, "rateEA": 11.0, "label": "90 Días" },
+        { "termDaysMin": 121, "termDaysMax": 220, "rateEA": 11.5, "label": "180 Días" },
+        { "termDaysMin": 221, "termDaysMax": 999, "rateEA": 11.8, "label": "360 Días" }
+      ]
+    },
+    "ent_ibkr": {
+      "name": "Interactive Brokers",
+      "country": "🇺🇸",
+      "savings_rates": [
+        { "from": "2024-01-01", "to": "2024-09-15", "rateEA": 4.83, "notes": "USD Cash Yield Fed Rate" },
+        { "from": "2024-09-16", "to": "2099-12-31", "rateEA": 4.58, "notes": "USD Cash Yield Fed Rate vigente" }
+      ],
+      "cdt_term_rates": [
+        { "termDaysMin": 1, "termDaysMax": 999, "rateEA": 4.60, "label": "US Treasury Bills" }
+      ]
+    },
+    "ent_plenti": {
+      "name": "Plenti",
+      "country": "🇨🇴",
+      "savings_rates": [
+        { "from": "2024-01-01", "to": "2024-08-31", "rateEA": 6.0, "notes": "Dólares Digitales Flexible" },
+        { "from": "2024-09-01", "to": "2099-12-31", "rateEA": 5.5, "notes": "Dólares Digitales Flexible vigente" }
+      ],
+      "cdt_term_rates": [
+        { "termDaysMin": 1, "termDaysMax": 45, "rateEA": 7.5, "label": "30 Días Plazo Fijo" },
+        { "termDaysMin": 46, "termDaysMax": 120, "rateEA": 8.0, "label": "90 Días Plazo Fijo" },
+        { "termDaysMin": 121, "termDaysMax": 999, "rateEA": 8.25, "label": "180 Días Plazo Fijo" }
+      ]
+    }
+  }
+}

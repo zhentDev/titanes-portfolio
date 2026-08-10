@@ -96,6 +96,19 @@ h3 { font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-sp
 .loss  { color: var(--loss); }
 .muted { color: var(--text-muted); }
 
+.layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.top-nav {
+  position: relative;
+  z-index: 50;
+}
+
 .badge {
   display: inline-flex;
   align-items: center;
@@ -164,6 +177,8 @@ h3 { font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-sp
   border-radius: 100px;
   padding: 3px;
   gap: 2px;
+  position: relative;
+  z-index: 50;
 }
 .mode-toggle button {
   padding: 6px 16px;

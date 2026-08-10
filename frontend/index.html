@@ -9,6 +9,30 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Live Auto-Healer Error Bridge (Development only)
+      function _sendDevError(data) {
+        fetch('http://localhost:8001/error', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(data)
+        }).catch(() => {});
+      }
+      window.addEventListener('error', (e) => {
+        _sendDevError({
+          message: e.message,
+          filename: e.filename,
+          lineno: e.lineno,
+          stack: e.error ? e.error.stack : ''
+        });
+      });
+      window.addEventListener('unhandledrejection', (e) => {
+        _sendDevError({
+          message: e.reason ? (e.reason.message || String(e.reason)) : 'Unhandled Promise Rejection',
+          stack: e.reason && e.reason.stack ? e.reason.stack : ''
+        });
+      });
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

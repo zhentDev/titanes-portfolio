@@ -12,15 +12,10 @@ router = APIRouter(tags=["NAV"])
 
 @router.get("/nav")
 def nav_endpoint(
-    period: str = Query(default="1Y", description="1M | 3M | 6M | 1Y | 3Y | 5Y | MAX"),
-    investment: float = Query(default=2000.0, ge=1.0, description="Starting capital in USD"),
-    num_slots: int = Query(
-        default=15, ge=1, description="Fixed number of portfolio slots (default 15)"
-    ),
-    selected_tickers: str = Query(
-        default=None,
-        description="Comma-separated list of active tickers to include in simulation",
-    ),
+    period: str = "1Y",
+    investment: float = 2000.0,
+    num_slots: int = 15,
+    selected_tickers: str | None = None,
 ):
     rebalances = get_all_rebalances()
     if not rebalances:
@@ -28,7 +23,7 @@ def nav_endpoint(
 
     # Parse selected tickers list
     selected_list = None
-    if selected_tickers:
+    if selected_tickers and isinstance(selected_tickers, str):
         selected_list = [t.strip().upper() for t in selected_tickers.split(",") if t.strip()]
 
     # Collect all unique tickers ever held in the portfolio
@@ -46,4 +41,3 @@ def nav_endpoint(
         selected_tickers=selected_list,
     )
     return result
-

@@ -4,19 +4,24 @@ frontend/dist/
 .DS_Store
 
 # Python & Tooling
+__pycache__/
+*.pyc
 backend/.venv/
 backend/__pycache__/
 backend/*.pyc
+backend/*/__pycache__/
 backend/.pytest_cache/
 .ruff_cache/
 backend/.ruff_cache/
+.browser_profile/
 
 # Database
-# backend/titanes.duckdb
 backend/*.duckdb.wal
+backend/titanes_backup.duckdb
 
 # Environment & AI tools
 .env
 .aider*
 .continue/
+
 

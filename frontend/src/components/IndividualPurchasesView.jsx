@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { createChart, ColorType, LineStyle } from 'lightweight-charts';
 import { usePortfolioStore } from '../store/portfolioStore';
-import { searchTicker, searchTickersMultiple, fetchLiveQuotes, fetchHistoricalPrice, fetchIndicesHistory } from '../api/client';
+import { searchTicker, searchTickersMultiple, fetchLiveQuotes, fetchHistoricalPrice, fetchIndicesHistory, fetchFxHistory, fetchColInflationHistory } from '../api/client';
 import toast from 'react-hot-toast';
 import { toastConfirm, toastPrompt } from '../utils/toastAlerts';
 import { analyzeInvestmentPlan } from '../utils/investmentPlanAnalyzer';
 import PlanConfigModal from './PlanConfigModal';
 import PlanExecutionModal from './PlanExecutionModal';
+import InflationExplorerModal from './InflationExplorerModal';
 
 export default function IndividualPurchasesView({ portfolioId = 'hist_default' }) {
   const {
@@ -17,12 +18,16 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
     updateMultiplePurchases,
     purchasePortfolios,
     deletePurchasePortfolio,
-    isBatchUpdating,
-    batchProgress,
+    batchUpdateStatus,
     runBatchRecalculate,
     setAbortBatch,
-    togglePortfolioPlan
+    togglePortfolioPlan,
+    updatePortfolioSettings
   } = usePortfolioStore();
+
+  const status = batchUpdateStatus?.[portfolioId] || {};
+  const isBatchUpdating = status.isUpdating || false;
+  const batchProgress = status.progress || { current: 0, total: 0 };
 
   // Editing state
   const [editingPurchase, setEditingPurchase] = useState(null);
@@ -32,8 +37,38 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
   const [editTicker, setEditTicker] = useState('');
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [showExecutionModal, setShowExecutionModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showInflationExplorer, setShowInflationExplorer] = useState(false);
 
-  const portfolio = purchasePortfolios?.find(p => p.id === portfolioId) || { name: 'Histórico' };
+  const portfolio = purchasePortfolios?.find(p => p.id === portfolioId) || { name: 'Histórico', assetCurrency: 'USD', localCurrency: 'USD', inflationRate: 0, useAutoColInflation: false };
+  
+  // Yield View Mode: 'USD' | 'FX' | 'REAL'
+  const [yieldViewMode, setYieldViewMode] = useState('USD');
+  const [fxData, setFxData] = useState({ current: 1.0, history: {} });
+  const [isFetchingFx, setIsFetchingFx] = useState(false);
+  const [colInflationData, setColInflationData] = useState({ history: {} });
+  const [isFetchingInflation, setIsFetchingInflation] = useState(false);
+
+  useEffect(() => {
+    if (portfolio.assetCurrency && portfolio.localCurrency && portfolio.assetCurrency !== portfolio.localCurrency) {
+      setIsFetchingFx(true);
+      fetchFxHistory(portfolio.assetCurrency, portfolio.localCurrency)
+        .then(res => setFxData(res))
+        .catch(console.error)
+        .finally(() => setIsFetchingFx(false));
+    } else {
+      setFxData({ current: 1.0, history: {} });
+      if (yieldViewMode === 'FX') setYieldViewMode('USD');
+    }
+  }, [portfolio.assetCurrency, portfolio.localCurrency]);
+
+  useEffect(() => {
+    setIsFetchingInflation(true);
+    fetchColInflationHistory()
+      .then(res => setColInflationData(res))
+      .catch(console.error)
+      .finally(() => setIsFetchingInflation(false));
+  }, []);
   
   // Smart Analysis
   const autoPlanAnalysis = useMemo(() => {
@@ -361,6 +396,52 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
       const profit = currentValue - invested;
       const profitPct = invested > 0 ? (profit / invested) * 100 : 0;
 
+      // FX and Real Yield Calculations
+      const historicalFx = fxData.history[p.date] || fxData.current || 1.0;
+      const currentFx = fxData.current || 1.0;
+      
+      const investedFx = invested * historicalFx;
+      const currentValueFx = currentValue * currentFx;
+      const profitFx = currentValueFx - investedFx;
+      const profitPctFx = investedFx > 0 ? (profitFx / investedFx) * 100 : 0;
+
+      // Real Yield (Inflation)
+      let inflationFactor = 1.0;
+      let inflationRatePct = 0.0;
+      if (portfolio.useAutoColInflation && colInflationData.history && Object.keys(colInflationData.history).length > 0) {
+        // Find CPI for purchase month
+        const pDate = new Date(p.date);
+        const pYear = pDate.getFullYear();
+        const pMonth = String(pDate.getMonth() + 1).padStart(2, '0');
+        let cpiPurchase = colInflationData.history[`${pYear}-${pMonth}-01`];
+        
+        // Find latest CPI
+        const dates = Object.keys(colInflationData.history).sort();
+        const cpiCurrent = colInflationData.history[dates[dates.length - 1]];
+        
+        if (!cpiPurchase) {
+          // fallback to closest available past date
+          const pastDates = dates.filter(d => d <= p.date);
+          if (pastDates.length > 0) cpiPurchase = colInflationData.history[pastDates[pastDates.length - 1]];
+          else cpiPurchase = cpiCurrent; // fallback to current if extremely old
+        }
+        
+        if (cpiPurchase && cpiCurrent && cpiPurchase > 0) {
+          inflationFactor = cpiCurrent / cpiPurchase;
+          inflationRatePct = (inflationFactor - 1) * 100;
+        }
+      } else {
+        const yearsElapsed = Math.max(0, (new Date().getTime() - new Date(p.date).getTime()) / (1000 * 60 * 60 * 24 * 365.25));
+        const inflationRate = portfolio.inflationRate || 0;
+        inflationFactor = Math.pow(1 + inflationRate / 100, yearsElapsed);
+        inflationRatePct = (inflationFactor - 1) * 100;
+      }
+
+      const currentValueReal = currentValueFx / (inflationFactor > 0 ? inflationFactor : 1.0);
+      const inflationLoss = currentValueFx - currentValueReal;
+      const profitReal = currentValueReal - investedFx;
+      const profitPctReal = investedFx > 0 ? (profitReal / investedFx) * 100 : 0;
+
       return {
         ...p,
         name: liveQuote?.name || p.name,
@@ -369,25 +450,55 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
         currentValue,
         profit,
         profitPct,
+        investedFx,
+        currentValueFx,
+        profitFx,
+        profitPctFx,
+        inflationFactor,
+        inflationRatePct,
+        inflationLoss,
+        currentValueReal,
+        profitReal,
+        profitPctReal,
         isPositive: profit >= 0,
         hasLiveQuote: liveQuote?.price != null,
       };
     });
-  }, [currentPurchases, liveQuotes]);
+  }, [currentPurchases, liveQuotes, fxData, portfolio.inflationRate, portfolio.useAutoColInflation, colInflationData]);
 
   const summary = useMemo(() => {
     let totalInvested = 0;
     let totalCurrentValue = 0;
+    let totalInvestedFx = 0;
+    let totalCurrentValueFx = 0;
+    let totalCurrentValueReal = 0;
 
     lotDataList.forEach(lot => {
       totalInvested += lot.invested;
       totalCurrentValue += lot.currentValue;
+      totalInvestedFx += lot.investedFx;
+      totalCurrentValueFx += lot.currentValueFx;
+      totalCurrentValueReal += lot.currentValueReal;
     });
 
     const netReturn = totalCurrentValue - totalInvested;
     const netReturnPct = totalInvested > 0 ? (netReturn / totalInvested) * 100 : 0;
+    
+    const netReturnFx = totalCurrentValueFx - totalInvestedFx;
+    const netReturnPctFx = totalInvestedFx > 0 ? (netReturnFx / totalInvestedFx) * 100 : 0;
 
-    return { totalInvested, totalCurrentValue, netReturn, netReturnPct };
+    const totalInflationLoss = totalCurrentValueFx - totalCurrentValueReal;
+    const totalInflationLossPct = totalInvestedFx > 0 ? (totalInflationLoss / totalInvestedFx) * 100 : 0;
+
+    const netReturnReal = totalCurrentValueReal - totalInvestedFx;
+    const netReturnPctReal = totalInvestedFx > 0 ? (netReturnReal / totalInvestedFx) * 100 : 0;
+
+    return { 
+      totalInvested, totalCurrentValue, netReturn, netReturnPct,
+      totalInvestedFx, totalCurrentValueFx, netReturnFx, netReturnPctFx,
+      totalInflationLoss, totalInflationLossPct,
+      totalCurrentValueReal, netReturnReal, netReturnPctReal
+    };
   }, [lotDataList]);
 
   // Group lots by ticker
@@ -401,19 +512,34 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
           lots: [],
           totalInvested: 0,
           totalCurrentValue: 0,
-          totalShares: 0
+          totalShares: 0,
+          totalInvestedFx: 0,
+          totalCurrentValueFx: 0,
+          totalInflationLoss: 0,
+          totalCurrentValueReal: 0
         };
       }
       groups[p.ticker].lots.push(p);
       groups[p.ticker].totalInvested += p.invested;
       groups[p.ticker].totalCurrentValue += p.currentValue;
       groups[p.ticker].totalShares += p.shares;
+      groups[p.ticker].totalInvestedFx += p.investedFx;
+      groups[p.ticker].totalCurrentValueFx += p.currentValueFx;
+      groups[p.ticker].totalInflationLoss += p.inflationLoss;
+      groups[p.ticker].totalCurrentValueReal += p.currentValueReal;
     });
 
     Object.values(groups).forEach(g => {
       g.profit = g.totalCurrentValue - g.totalInvested;
       g.profitPct = g.totalInvested > 0 ? (g.profit / g.totalInvested) * 100 : 0;
       g.isPositive = g.profit >= 0;
+      
+      g.profitFx = g.totalCurrentValueFx - g.totalInvestedFx;
+      g.profitPctFx = g.totalInvestedFx > 0 ? (g.profitFx / g.totalInvestedFx) * 100 : 0;
+      
+      g.profitReal = g.totalCurrentValueReal - g.totalInvestedFx;
+      g.profitPctReal = g.totalInvestedFx > 0 ? (g.profitReal / g.totalInvestedFx) * 100 : 0;
+
       g.currentPrice = g.lots[0].currentPrice;
       g.avgOpenPrice = g.totalShares > 0 ? g.totalInvested / g.totalShares : 0;
       g.lots.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -443,7 +569,7 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
   };
 
   const handleStopBatch = () => {
-    setAbortBatch();
+    setAbortBatch(portfolioId);
   };
 
   const handleBatchRecalculate = async () => {
@@ -451,7 +577,7 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
     const isConfirmed = await toastConfirm('Esto actualizará el Precio de Apertura de TODOS los lotes consultando el precio histórico real de Yahoo Finance.\n\n¿Deseas continuar?');
     if (!isConfirmed) return;
 
-    runBatchRecalculate(currentPurchases);
+    runBatchRecalculate(portfolioId, currentPurchases);
   };
 
   // Historical Chart Rendering
@@ -637,7 +763,7 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 20 }}>
               Registra y trackea compras reales de ETFs, ETCs o Acciones con sus valores de apertura exactos.
             </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 10 }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.85rem', color: portfolio.isPlan ? '#00e5ff' : 'var(--text-secondary)' }}>
                 <input 
                   type="checkbox" 
@@ -651,8 +777,22 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
                   }}
                   style={{ accentColor: '#00e5ff', width: 16, height: 16 }}
                 />
-                🤖 Convertir en Plan de Inversión Frecuente
+                🤖 Convertir en Plan
               </label>
+
+              <button
+                onClick={() => setShowInflationExplorer(true)}
+                style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.25)', color: '#fbbf24', padding: '4px 12px', borderRadius: '12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+              >
+                🔍 Ver Historial IPC ({colInflationData.latest?.yoy ? `${colInflationData.latest.yoy}%` : 'Colombia'})
+              </button>
+
+              <button
+                onClick={() => setShowSettingsModal(true)}
+                style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--text-secondary)', padding: '4px 12px', borderRadius: '12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+              >
+                ⚙️ Configurar Divisa/Inflación
+              </button>
             </div>
           </div>
           
@@ -672,28 +812,222 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
           )}
         </div>
 
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderRadius: 20, padding: 4, border: '1px solid rgba(255,255,255,0.1)' }}>
+            <button
+              onClick={() => setYieldViewMode('USD')}
+              style={{ padding: '6px 16px', borderRadius: 16, border: 'none', background: yieldViewMode === 'USD' ? 'rgba(255,255,255,0.1)' : 'transparent', color: yieldViewMode === 'USD' ? '#fff' : 'var(--text-muted)', fontSize: '0.8rem', fontWeight: yieldViewMode === 'USD' ? 700 : 400, cursor: 'pointer', transition: 'all 0.2s' }}
+            >
+              Nominal ({portfolio.assetCurrency || 'USD'})
+            </button>
+            <button
+              onClick={() => {
+                if (portfolio.localCurrency && portfolio.localCurrency !== (portfolio.assetCurrency || 'USD')) {
+                  setYieldViewMode('FX');
+                } else if (portfolio.localCurrency) {
+                  setYieldViewMode('FX');
+                } else {
+                  toast('Configura tu Divisa Local en ⚙️ primero.', { icon: 'ℹ️' });
+                }
+              }}
+              style={{ padding: '6px 16px', borderRadius: 16, border: 'none', background: yieldViewMode === 'FX' ? 'rgba(0, 229, 255, 0.15)' : 'transparent', color: yieldViewMode === 'FX' ? '#00e5ff' : 'var(--text-muted)', fontSize: '0.8rem', fontWeight: yieldViewMode === 'FX' ? 700 : 400, cursor: 'pointer', transition: 'all 0.2s' }}
+            >
+              Divisa ({portfolio.localCurrency || 'COP'}) {isFetchingFx && yieldViewMode === 'FX' && '⏳'}
+            </button>
+            <button
+              onClick={() => {
+                if (portfolio.useAutoColInflation || (portfolio.inflationRate > 0)) {
+                  setYieldViewMode('REAL');
+                } else {
+                  toast('Configura la Inflación en ⚙️ primero.', { icon: 'ℹ️' });
+                }
+              }}
+              style={{ padding: '6px 16px', borderRadius: 16, border: 'none', background: yieldViewMode === 'REAL' ? 'rgba(245, 158, 11, 0.15)' : 'transparent', color: yieldViewMode === 'REAL' ? '#f59e0b' : 'var(--text-muted)', fontSize: '0.8rem', fontWeight: yieldViewMode === 'REAL' ? 700 : 400, cursor: 'pointer', transition: 'all 0.2s' }}
+            >
+              Poder Adquisitivo Real {isFetchingInflation && yieldViewMode === 'REAL' && '⏳'}
+            </button>
+          </div>
+        </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
           <div style={{ padding: 16, background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Capital Total Invertido</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Capital Total Invertido ({yieldViewMode === 'USD' ? (portfolio.assetCurrency || 'USD') : (portfolio.localCurrency || 'COP')})</div>
             <div className="mono" style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f1f5f9' }}>
-              ${summary.totalInvested.toFixed(2)}
+              ${yieldViewMode === 'USD' ? summary.totalInvested.toFixed(2) : summary.totalInvestedFx.toFixed(2)}
             </div>
           </div>
           <div style={{ padding: 16, background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Valor Actual</div>
-            <div className="mono" style={{ fontSize: '1.4rem', fontWeight: 800, color: '#00e5ff' }}>
-              ${summary.totalCurrentValue.toFixed(2)}
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              Valor Actual {yieldViewMode === 'REAL' && '(Ajustado)'}
+            </div>
+            <div className="mono" style={{ fontSize: '1.4rem', fontWeight: 800, color: yieldViewMode === 'REAL' ? '#f59e0b' : '#00e5ff' }}>
+              ${yieldViewMode === 'USD' ? summary.totalCurrentValue.toFixed(2) : yieldViewMode === 'FX' ? summary.totalCurrentValueFx.toFixed(2) : summary.totalCurrentValueReal.toFixed(2)}
             </div>
           </div>
-          <div style={{ padding: 16, background: summary.netReturn >= 0 ? 'rgba(34, 197, 94, 0.05)' : 'rgba(239, 68, 68, 0.05)', borderRadius: 'var(--radius)', border: `1px solid ${summary.netReturn >= 0 ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}` }}>
-            <div style={{ fontSize: '0.75rem', color: summary.netReturn >= 0 ? '#4ade80' : '#f87171' }}>Beneficio Neto Total</div>
-            <div className="mono" style={{ fontSize: '1.4rem', fontWeight: 800, color: summary.netReturn >= 0 ? '#4ade80' : '#f87171' }}>
-              {summary.netReturn >= 0 ? '+' : ''}${summary.netReturn.toFixed(2)}
-              <span style={{ fontSize: '0.8rem', marginLeft: 8 }}>({summary.netReturnPct >= 0 ? '+' : ''}{summary.netReturnPct.toFixed(2)}%)</span>
+          {(() => {
+            const netReturn = yieldViewMode === 'USD' ? summary.netReturn : yieldViewMode === 'FX' ? summary.netReturnFx : summary.netReturnReal;
+            const netReturnPct = yieldViewMode === 'USD' ? summary.netReturnPct : yieldViewMode === 'FX' ? summary.netReturnPctFx : summary.netReturnPctReal;
+            const isPositive = netReturn >= 0;
+            const color = isPositive ? '#4ade80' : '#f87171';
+            const bgColor = isPositive ? 'rgba(34, 197, 94, 0.05)' : 'rgba(239, 68, 68, 0.05)';
+            const borderColor = isPositive ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)';
+            
+            return (
+              <div style={{ padding: 16, background: bgColor, borderRadius: 'var(--radius)', border: `1px solid ${borderColor}` }}>
+                <div style={{ fontSize: '0.75rem', color }}>Beneficio Neto Total</div>
+                <div className="mono" style={{ fontSize: '1.4rem', fontWeight: 800, color }}>
+                  {isPositive ? '+' : ''}${netReturn.toFixed(2)}
+                  <span style={{ fontSize: '0.8rem', marginLeft: 8 }}>({isPositive ? '+' : ''}{netReturnPct.toFixed(2)}%)</span>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* ── 3-Level Comparative Breakdown Card (Nominal vs Divisa vs Real) ── */}
+        <div style={{ marginTop: 16, padding: '16px 20px', background: 'rgba(0,0,0,0.25)', borderRadius: 'var(--radius)', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>📊 Comparativa de Rendimiento Multinivel (Nominal ➔ Divisa ➔ Real)</span>
+            <span style={{ fontSize: '0.74rem', color: '#f59e0b', background: 'rgba(245,158,11,0.1)', padding: '2px 8px', borderRadius: 6 }}>
+              {portfolio.useAutoColInflation ? 'IPC Automático (FRED/DANE)' : `Inflación Manual ${portfolio.inflationRate || 0}%/año`}
+            </span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+            {/* Level 1: Nominal */}
+            <div style={{ padding: 12, background: 'rgba(255,255,255,0.02)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase' }}>1. Nominal ({portfolio.assetCurrency || 'USD'})</div>
+              <div className="mono" style={{ fontSize: '1.15rem', fontWeight: 800, color: summary.netReturn >= 0 ? '#4ade80' : '#f87171', marginTop: 4 }}>
+                {summary.netReturn >= 0 ? '+' : ''}${summary.netReturn.toFixed(2)} ({summary.netReturnPct >= 0 ? '+' : ''}{summary.netReturnPct.toFixed(2)}%)
+              </div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                Inv: ${summary.totalInvested.toFixed(2)} ➔ Val: ${summary.totalCurrentValue.toFixed(2)}
+              </div>
+            </div>
+
+            {/* Level 2: FX Adjusted */}
+            <div style={{ padding: 12, background: 'rgba(0, 229, 255, 0.03)', borderRadius: 8, border: '1px solid rgba(0, 229, 255, 0.15)' }}>
+              <div style={{ fontSize: '0.72rem', color: '#00e5ff', textTransform: 'uppercase' }}>2. Al Cambio Divisa ({portfolio.localCurrency || 'COP'})</div>
+              <div className="mono" style={{ fontSize: '1.15rem', fontWeight: 800, color: summary.netReturnFx >= 0 ? '#4ade80' : '#f87171', marginTop: 4 }}>
+                {summary.netReturnFx >= 0 ? '+' : ''}${summary.netReturnFx.toFixed(2)} ({summary.netReturnPctFx >= 0 ? '+' : ''}{summary.netReturnPctFx.toFixed(2)}%)
+              </div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                Inv: ${summary.totalInvestedFx.toFixed(2)} ➔ Val: ${summary.totalCurrentValueFx.toFixed(2)}
+              </div>
+            </div>
+
+            {/* Level 3: Real Purchasing Power */}
+            <div style={{ padding: 12, background: 'rgba(245, 158, 11, 0.03)', borderRadius: 8, border: '1px solid rgba(245, 158, 11, 0.15)' }}>
+              <div style={{ fontSize: '0.72rem', color: '#f59e0b', textTransform: 'uppercase' }}>3. Poder Adquisitivo Real (Neto)</div>
+              <div className="mono" style={{ fontSize: '1.15rem', fontWeight: 800, color: summary.netReturnReal >= 0 ? '#f59e0b' : '#f87171', marginTop: 4 }}>
+                {summary.netReturnReal >= 0 ? '+' : ''}${summary.netReturnReal.toFixed(2)} ({summary.netReturnPctReal >= 0 ? '+' : ''}{summary.netReturnPctReal.toFixed(2)}%)
+              </div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                Val. Real: ${summary.totalCurrentValueReal.toFixed(2)} (Resta inflación)
+              </div>
+            </div>
+          </div>
+
+          {/* Explicit Deduction Equation Bar */}
+          <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(245, 158, 11, 0.06)', borderRadius: 8, border: '1px dashed rgba(245, 158, 11, 0.25)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: '0.78rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <span style={{ color: '#00e5ff', fontWeight: 700 }}>Ganancia Bruta ({portfolio.localCurrency || 'COP'}):</span>
+              <span className="mono" style={{ color: summary.netReturnFx >= 0 ? '#4ade80' : '#f87171', fontWeight: 700 }}>
+                {summary.netReturnFx >= 0 ? '+' : ''}${summary.netReturnFx.toFixed(2)}
+              </span>
+              <span style={{ color: 'var(--text-muted)' }}>➖</span>
+              <span style={{ color: '#f87171', fontWeight: 700 }}>Descuento Inflación (IPC):</span>
+              <span className="mono" style={{ color: '#f87171', fontWeight: 700 }}>
+                -${summary.totalInflationLoss.toFixed(2)} ({summary.totalInflationLossPct.toFixed(2)}%)
+              </span>
+              <span style={{ color: 'var(--text-muted)' }}>🟰</span>
+              <span style={{ color: '#f59e0b', fontWeight: 700 }}>Ganancia Real Neta:</span>
+              <span className="mono" style={{ color: summary.netReturnReal >= 0 ? '#f59e0b' : '#f87171', fontWeight: 800 }}>
+                {summary.netReturnReal >= 0 ? '+' : ''}${summary.netReturnReal.toFixed(2)} ({summary.netReturnPctReal >= 0 ? '+' : ''}{summary.netReturnPctReal.toFixed(2)}% Real)
+              </span>
             </div>
           </div>
         </div>
       </div>
+
+      {showSettingsModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
+          <div className="card fade-up" style={{ width: '100%', maxWidth: 450, padding: 24, background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <h3 style={{ margin: '0 0 20px 0', color: '#f1f5f9', display: 'flex', alignItems: 'center', gap: 8 }}>⚙️ Configuración del Portafolio</h3>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 8 }}>Divisa del Activo</label>
+                <select 
+                  value={portfolio.assetCurrency || 'USD'}
+                  onChange={(e) => updatePortfolioSettings(portfolio.id, e.target.value, portfolio.localCurrency || 'COP', portfolio.inflationRate || 0, portfolio.useAutoColInflation || false)}
+                  className="input" 
+                  style={{ width: '100%' }}
+                >
+                  <option value="USD">USD - Dólar</option>
+                  <option value="EUR">EUR - Euro</option>
+                  <option value="GBP">GBP - Libra</option>
+                  <option value="COP">COP - Peso Col.</option>
+                  <option value="MXN">MXN - Peso Mex.</option>
+                  <option value="CLP">CLP - Peso Chi.</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 8 }}>Divisa Local</label>
+                <select 
+                  value={portfolio.localCurrency || 'COP'}
+                  onChange={(e) => updatePortfolioSettings(portfolio.id, portfolio.assetCurrency || 'USD', e.target.value, portfolio.inflationRate || 0, portfolio.useAutoColInflation || false)}
+                  className="input" 
+                  style={{ width: '100%' }}
+                >
+                  <option value="COP">COP - Peso Col.</option>
+                  <option value="MXN">MXN - Peso Mex.</option>
+                  <option value="CLP">CLP - Peso Chi.</option>
+                  <option value="USD">USD - Dólar</option>
+                  <option value="EUR">EUR - Euro</option>
+                </select>
+              </div>
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: -8, marginBottom: 16 }}>
+              Calcularemos la ganancia en Divisa Local ajustando por la tasa de cambio histórica vs actual del par seleccionado.
+            </div>
+
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 12, cursor: 'pointer' }}>
+                <input 
+                  type="checkbox"
+                  checked={portfolio.useAutoColInflation || false}
+                  onChange={(e) => updatePortfolioSettings(portfolio.id, portfolio.assetCurrency || 'USD', portfolio.localCurrency || 'COP', portfolio.inflationRate || 0, e.target.checked)}
+                />
+                Usar Inflación Automática (Colombia, mensual)
+              </label>
+
+              {!portfolio.useAutoColInflation && (
+                <>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 8 }}>Inflación Anual Manual (%)</label>
+                  <input 
+                    type="number" 
+                    step="0.1"
+                    min="0"
+                    value={portfolio.inflationRate || 0}
+                    onChange={(e) => updatePortfolioSettings(portfolio.id, portfolio.assetCurrency || 'USD', portfolio.localCurrency || 'COP', parseFloat(e.target.value) || 0, false)}
+                    className="input" 
+                    style={{ width: '100%' }}
+                  />
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                    Descontaremos este % anual compuesto según el tiempo transcurrido de cada lote.
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowSettingsModal(false)} className="btn btn-primary" style={{ minWidth: 100 }}>
+                Listo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* SMART ANALYSIS CARD */}
       {portfolio.isPlan && (
@@ -1122,21 +1456,39 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
                       <div style={{ textAlign: 'right', flex: 1, display: 'flex', justifyContent: 'flex-end', gap: 24, marginRight: 16 }}>
                         <div>
                           <div style={{ color: 'var(--text-secondary)', fontSize: '0.7rem' }}>Total Invertido</div>
-                          <div className="mono" style={{ fontWeight: 700 }}>${group.totalInvested.toFixed(2)}</div>
+                          <div className="mono" style={{ fontWeight: 700 }}>
+                            ${yieldViewMode === 'USD' ? group.totalInvested.toFixed(2) : group.totalInvestedFx.toFixed(2)}
+                          </div>
                           <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Volumen: {group.totalShares.toFixed(4)}</div>
                         </div>
                         <div>
                           <div style={{ color: 'var(--text-secondary)', fontSize: '0.7rem' }}>Valor Mercado</div>
-                          <div className="mono" style={{ fontWeight: 700, color: '#00e5ff' }}>${group.totalCurrentValue.toFixed(2)}</div>
+                          <div className="mono" style={{ fontWeight: 700, color: yieldViewMode === 'REAL' ? '#f59e0b' : '#00e5ff' }}>
+                            ${yieldViewMode === 'USD' ? group.totalCurrentValue.toFixed(2) : yieldViewMode === 'FX' ? group.totalCurrentValueFx.toFixed(2) : group.totalCurrentValueReal.toFixed(2)}
+                          </div>
                           <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Apertura Prom: ${group.avgOpenPrice.toFixed(2)}</div>
                         </div>
-                        <div style={{ minWidth: 100 }}>
-                          <div style={{ color: 'var(--text-secondary)', fontSize: '0.7rem' }}>Beneficio Neto</div>
-                          <div style={{ color: group.isPositive ? '#4ade80' : '#f87171', fontWeight: 700, fontSize: '0.9rem' }}>
-                            {group.isPositive ? '+' : ''}${group.profit.toFixed(2)}
-                            <div style={{ fontSize: '0.7rem' }}>({group.isPositive ? '+' : ''}{group.profitPct.toFixed(2)}%)</div>
-                          </div>
-                        </div>
+                        {(() => {
+                          const profit = yieldViewMode === 'USD' ? group.profit : yieldViewMode === 'FX' ? group.profitFx : group.profitReal;
+                          const profitPct = yieldViewMode === 'USD' ? group.profitPct : yieldViewMode === 'FX' ? group.profitPctFx : group.profitPctReal;
+                          const isPositive = profit >= 0;
+                          return (
+                            <div style={{ minWidth: 120 }}>
+                              <div style={{ color: 'var(--text-secondary)', fontSize: '0.7rem' }}>
+                                {yieldViewMode === 'REAL' ? 'Beneficio Real Neto' : 'Beneficio Neto'}
+                              </div>
+                              <div style={{ color: isPositive ? (yieldViewMode === 'REAL' ? '#f59e0b' : '#4ade80') : '#f87171', fontWeight: 700, fontSize: '0.9rem' }}>
+                                {isPositive ? '+' : ''}${profit.toFixed(2)}
+                                <div style={{ fontSize: '0.7rem' }}>({isPositive ? '+' : ''}{profitPct.toFixed(2)}%{yieldViewMode === 'REAL' ? ' Real' : ''})</div>
+                              </div>
+                              {yieldViewMode === 'REAL' && (
+                                <div style={{ fontSize: '0.65rem', color: '#f87171', marginTop: 2 }}>
+                                  📉 -${(group.totalInflationLoss || 0).toFixed(2)} por IPC
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                       
                       <div style={{ fontSize: '1.2rem', color: 'var(--text-muted)' }}>
@@ -1172,13 +1524,17 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
                               <div style={{ display: 'flex', gap: 16, fontSize: '0.75rem' }}>
                                 <div>
                                   <div style={{ color: 'var(--text-secondary)' }}>Invertido</div>
-                                  <div className="mono" style={{ fontWeight: 700 }}>${p.invested.toFixed(2)}</div>
+                                  <div className="mono" style={{ fontWeight: 700 }}>
+                                    ${yieldViewMode === 'USD' ? p.invested.toFixed(2) : p.investedFx.toFixed(2)}
+                                  </div>
                                   <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Apertura: ${p.purchasePrice.toFixed(2)}</div>
                                   <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Vol: {p.shares.toFixed(4)}</div>
                                 </div>
                                 <div>
                                   <div style={{ color: 'var(--text-secondary)' }}>Valor Mercado</div>
-                                  <div className="mono" style={{ fontWeight: 700, color: '#00e5ff' }}>${p.currentValue.toFixed(2)}</div>
+                                  <div className="mono" style={{ fontWeight: 700, color: yieldViewMode === 'REAL' ? '#f59e0b' : '#00e5ff' }}>
+                                    ${yieldViewMode === 'USD' ? p.currentValue.toFixed(2) : yieldViewMode === 'FX' ? p.currentValueFx.toFixed(2) : p.currentValueReal.toFixed(2)}
+                                  </div>
                                   <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
                                     Actual: ${p.currentPrice.toFixed(2)}
                                     {p.manualCurrentPrice && <span style={{ color: '#f59e0b', marginLeft: 4 }}>(Manual)</span>}
@@ -1186,9 +1542,23 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
                                   </div>
                                 </div>
                               </div>
-                              <div style={{ marginTop: 4, color: p.isPositive ? '#4ade80' : '#f87171', fontWeight: 700, fontSize: '0.8rem' }}>
-                                Beneficio: {p.isPositive ? '+' : ''}${p.profit.toFixed(2)} ({p.isPositive ? '+' : ''}{p.profitPct.toFixed(2)}%)
-                              </div>
+                              {(() => {
+                                const profit = yieldViewMode === 'USD' ? p.profit : yieldViewMode === 'FX' ? p.profitFx : p.profitReal;
+                                const profitPct = yieldViewMode === 'USD' ? p.profitPct : yieldViewMode === 'FX' ? p.profitPctFx : p.profitPctReal;
+                                const isPositive = profit >= 0;
+                                return (
+                                  <div style={{ marginTop: 4 }}>
+                                    <div style={{ color: isPositive ? (yieldViewMode === 'REAL' ? '#f59e0b' : '#4ade80') : '#f87171', fontWeight: 700, fontSize: '0.8rem' }}>
+                                      {yieldViewMode === 'REAL' ? 'Beneficio Real' : 'Beneficio'}: {isPositive ? '+' : ''}${profit.toFixed(2)} ({isPositive ? '+' : ''}{profitPct.toFixed(2)}%{yieldViewMode === 'REAL' ? ' Real' : ''})
+                                    </div>
+                                    {yieldViewMode === 'REAL' && (
+                                      <div style={{ fontSize: '0.65rem', color: '#fca5a5', marginTop: 1 }}>
+                                        📉 Inflación descontada: -${(p.inflationLoss || 0).toFixed(2)} (-{(p.inflationRatePct || 0).toFixed(2)}% acum.)
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
 
                             <div style={{ display: 'flex', gap: 4, marginLeft: 16 }}>
@@ -1251,6 +1621,11 @@ export default function IndividualPurchasesView({ portfolioId = 'hist_default' }
         planAnalysis={planAnalysis}
         liveQuotes={liveQuotes}
         onSave={handleExecutePlan}
+      />
+      <InflationExplorerModal
+        isOpen={showInflationExplorer}
+        onClose={() => setShowInflationExplorer(false)}
+        inflationData={colInflationData}
       />
     </div>
     </>

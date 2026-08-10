@@ -26,7 +26,7 @@ def init_db():
                 FOREIGN KEY (rebalance_date) REFERENCES rebalances(rebalance_date)
             )
         """)
-        
+
         # New tables for Individual Purchases
         con.execute("""
             CREATE TABLE IF NOT EXISTS purchase_portfolios (
@@ -34,20 +34,47 @@ def init_db():
                 name VARCHAR,
                 is_plan BOOLEAN DEFAULT FALSE,
                 plan_config VARCHAR,
+                asset_currency VARCHAR DEFAULT 'USD',
+                local_currency VARCHAR DEFAULT 'COP',
+                annual_inflation_rate DOUBLE DEFAULT 0.0,
+                use_auto_col_inflation BOOLEAN DEFAULT FALSE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
         # Migration: Add columns to existing DB if missing
         try:
-            columns = [row[1] for row in con.execute("PRAGMA table_info('purchase_portfolios')").fetchall()]
-            if 'is_plan' not in columns:
-                con.execute("ALTER TABLE purchase_portfolios ADD COLUMN is_plan BOOLEAN DEFAULT FALSE")
-            if 'plan_config' not in columns:
+            columns = [
+                row[1] for row in con.execute("PRAGMA table_info('purchase_portfolios')").fetchall()
+            ]
+            if "is_plan" not in columns:
+                con.execute(
+                    "ALTER TABLE purchase_portfolios ADD COLUMN is_plan BOOLEAN DEFAULT FALSE"
+                )
+            if "plan_config" not in columns:
                 con.execute("ALTER TABLE purchase_portfolios ADD COLUMN plan_config VARCHAR")
-        except duckdb.Error:
-            pass
-        
-        
+            if "base_currency" in columns and "local_currency" not in columns:
+                con.execute(
+                    "ALTER TABLE purchase_portfolios RENAME COLUMN base_currency TO local_currency"
+                )
+            elif "local_currency" not in columns:
+                con.execute(
+                    "ALTER TABLE purchase_portfolios ADD COLUMN local_currency VARCHAR DEFAULT 'COP'"
+                )
+            if "asset_currency" not in columns:
+                con.execute(
+                    "ALTER TABLE purchase_portfolios ADD COLUMN asset_currency VARCHAR DEFAULT 'USD'"
+                )
+            if "annual_inflation_rate" not in columns:
+                con.execute(
+                    "ALTER TABLE purchase_portfolios ADD COLUMN annual_inflation_rate DOUBLE DEFAULT 0.0"
+                )
+            if "use_auto_col_inflation" not in columns:
+                con.execute(
+                    "ALTER TABLE purchase_portfolios ADD COLUMN use_auto_col_inflation BOOLEAN DEFAULT FALSE"
+                )
+        except duckdb.Error as e:
+            print(f"Migration error: {e}")
+
         con.execute("""
             CREATE TABLE IF NOT EXISTS individual_purchases (
                 id VARCHAR PRIMARY KEY,

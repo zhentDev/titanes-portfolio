@@ -16,6 +16,7 @@ from services.db import get_all_rebalances
 from services.market_data import get_historical_prices
 from services.nav_engine import calculate_nav
 
+
 def generate_static():
     print("[STATIC GEN] Inicializando base de datos DuckDB...")
 
@@ -64,6 +65,7 @@ def generate_static():
     print("[STATIC GEN] Guardado: nav_all.json completo")
 
     print("[STATIC GEN] Generación de datos estáticos completada con éxito!")
+
 
 if __name__ == "__main__":
     generate_static()

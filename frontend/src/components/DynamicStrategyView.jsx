@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { toastConfirm } from '../utils/toastAlerts';
 import { usePortfolioStore } from '../store/portfolioStore';
-import { searchTicker } from '../api/client';
+import { searchTicker, fetchFxHistory, fetchColInflationHistory, fetchLiveQuotes } from '../api/client';
 import StrategyChart, { SYNTHETIC_RETURNS } from './StrategyChart';
+import InflationExplorerModal from './InflationExplorerModal';
 
 const PERIODS = ['1W', '1M', '3M', '6M', '1Y', '3Y', '5Y', 'MAX'];
 
@@ -11,6 +12,54 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack }) {
 
   const storageKey = `titanes_strat_${strategy.id}_rebalances`;
   const capitalKey = `titanes_strat_${strategy.id}_capital`;
+  const settingsKey = `titanes_strat_${strategy.id}_settings`;
+
+  // Settings for currency and inflation
+  const [stratSettings, setStratSettings] = useState(() => {
+    try {
+      const saved = localStorage.getItem(settingsKey);
+      if (saved !== null) return JSON.parse(saved);
+    } catch {}
+    return {
+      assetCurrency: 'USD',
+      localCurrency: 'COP',
+      inflationRate: 0,
+      useAutoColInflation: false,
+    };
+  });
+
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showInflationExplorer, setShowInflationExplorer] = useState(false);
+  const [stratYieldViewMode, setStratYieldViewMode] = useState('USD');
+  const [fxData, setFxData] = useState({ current: 1.0, history: {} });
+  const [isFetchingFx, setIsFetchingFx] = useState(false);
+  const [colInflationData, setColInflationData] = useState({ history: {}, latest: {}, monthly_rates: [] });
+  const [isFetchingInflation, setIsFetchingInflation] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem(settingsKey, JSON.stringify(stratSettings));
+  }, [stratSettings, settingsKey]);
+
+  useEffect(() => {
+    if (stratSettings.assetCurrency && stratSettings.localCurrency && stratSettings.assetCurrency !== stratSettings.localCurrency) {
+      setIsFetchingFx(true);
+      fetchFxHistory(stratSettings.assetCurrency, stratSettings.localCurrency)
+        .then(res => setFxData(res))
+        .catch(console.error)
+        .finally(() => setIsFetchingFx(false));
+    } else {
+      setFxData({ current: 1.0, history: {} });
+      if (stratYieldViewMode === 'FX') setStratYieldViewMode('USD');
+    }
+  }, [stratSettings.assetCurrency, stratSettings.localCurrency]);
+
+  useEffect(() => {
+    setIsFetchingInflation(true);
+    fetchColInflationHistory()
+      .then(res => setColInflationData(res))
+      .catch(console.error)
+      .finally(() => setIsFetchingInflation(false));
+  }, []);
 
   // Rebalance history for this specific custom strategy
   const [rebalances, setRebalances] = useState(() => {
@@ -75,19 +124,17 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack }) {
 
   useEffect(() => {
     if (activeTickers.length > 0) {
-      import('../api/client').then(({ fetchLiveQuotes }) => {
-        fetchLiveQuotes(activeTickers)
-          .then((res) => {
-            if (Array.isArray(res)) {
-              const map = {};
-              res.forEach((q) => {
-                map[q.ticker] = q;
-              });
-              setTickerMetadata(map);
-            }
-          })
-          .catch(console.error);
-      });
+      fetchLiveQuotes(activeTickers)
+        .then((res) => {
+          if (Array.isArray(res)) {
+            const map = {};
+            res.forEach((q) => {
+              map[q.ticker] = q;
+            });
+            setTickerMetadata(map);
+          }
+        })
+        .catch(console.error);
     }
   }, [activeTickers.join(',')]);
 
@@ -311,41 +358,308 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack }) {
         </div>
       </div>
 
-      <div className="summary-strip fade-up">
-        <div className="summary-item">
-          <div className="summary-label">Rentabilidad {strategy.name} ({period})</div>
-          <div className="summary-value large mono" style={{ color: currentReturns.strat >= 0 ? 'var(--gain)' : 'var(--loss)', fontWeight: 800 }}>
-            {unit === 'pct'
-              ? `${currentReturns.strat >= 0 ? '+' : ''}${(currentReturns.strat * 100).toFixed(1)}%`
-              : `${currentReturns.strat >= 0 ? '+' : '-'}$${Math.abs(activeInvested * currentReturns.strat).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-          </div>
+      {/* ── Yield View Controls for Strategy (Nominal / Divisa / Real) ── */}
+      <div className="fade-up" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderRadius: 20, padding: 4, border: '1px solid rgba(255,255,255,0.1)' }}>
+          <button
+            onClick={() => setStratYieldViewMode('USD')}
+            style={{ padding: '6px 16px', borderRadius: 16, border: 'none', background: stratYieldViewMode === 'USD' ? 'rgba(255,255,255,0.1)' : 'transparent', color: stratYieldViewMode === 'USD' ? '#fff' : 'var(--text-muted)', fontSize: '0.8rem', fontWeight: stratYieldViewMode === 'USD' ? 700 : 400, cursor: 'pointer', transition: 'all 0.2s' }}
+          >
+            Nominal ({stratSettings.assetCurrency || 'USD'})
+          </button>
+          <button
+            onClick={() => {
+              if (stratSettings.localCurrency && stratSettings.localCurrency !== (stratSettings.assetCurrency || 'USD')) {
+                setStratYieldViewMode('FX');
+              } else if (stratSettings.localCurrency) {
+                setStratYieldViewMode('FX');
+              } else {
+                toast('Configura tu Divisa Local en ⚙️ primero.', { icon: 'ℹ️' });
+              }
+            }}
+            style={{ padding: '6px 16px', borderRadius: 16, border: 'none', background: stratYieldViewMode === 'FX' ? 'rgba(0, 229, 255, 0.15)' : 'transparent', color: stratYieldViewMode === 'FX' ? '#00e5ff' : 'var(--text-muted)', fontSize: '0.8rem', fontWeight: stratYieldViewMode === 'FX' ? 700 : 400, cursor: 'pointer', transition: 'all 0.2s' }}
+          >
+            Divisa ({stratSettings.localCurrency || 'COP'}) {isFetchingFx && stratYieldViewMode === 'FX' && '⏳'}
+          </button>
+          <button
+            onClick={() => {
+              if (stratSettings.useAutoColInflation || (stratSettings.inflationRate > 0)) {
+                setStratYieldViewMode('REAL');
+              } else {
+                toast('Configura la Inflación en ⚙️ primero.', { icon: 'ℹ️' });
+              }
+            }}
+            style={{ padding: '6px 16px', borderRadius: 16, border: 'none', background: stratYieldViewMode === 'REAL' ? 'rgba(245, 158, 11, 0.15)' : 'transparent', color: stratYieldViewMode === 'REAL' ? '#f59e0b' : 'var(--text-muted)', fontSize: '0.8rem', fontWeight: stratYieldViewMode === 'REAL' ? 700 : 400, cursor: 'pointer', transition: 'all 0.2s' }}
+          >
+            Poder Adquisitivo Real {isFetchingInflation && stratYieldViewMode === 'REAL' && '⏳'}
+          </button>
         </div>
-        <div className="summary-divider" />
-        <div className="summary-item">
-          <div className="summary-label">Benchmark ({strategy.benchmark}) ({period})</div>
-          <div className="summary-value mono" style={{ color: '#fbbf24', fontWeight: 700 }}>
-            {unit === 'pct'
-              ? `${currentReturns[strategy.benchmark === 'NASDAQ' ? 'nasdaq' : 'sp'] >= 0 ? '+' : ''}${(currentReturns[strategy.benchmark === 'NASDAQ' ? 'nasdaq' : 'sp'] * 100).toFixed(1)}%`
-              : `${currentReturns[strategy.benchmark === 'NASDAQ' ? 'nasdaq' : 'sp'] >= 0 ? '+' : '-'}$${Math.abs(activeInvested * currentReturns[strategy.benchmark === 'NASDAQ' ? 'nasdaq' : 'sp']).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-          </div>
-        </div>
-        <div className="summary-divider" />
-        <div className="summary-item">
-          <div className="summary-label">Capital Activo ({activeTickers.length}/{numSlots} Slots)</div>
-          <div className="summary-value mono large" style={{ color: strategy.color, fontWeight: 800 }}>
-            {unit === 'pct'
-              ? `${((activeTickers.length / numSlots) * 100).toFixed(1)}%`
-              : `$${activeInvested.toFixed(2)}`}
-          </div>
-        </div>
-        <div className="summary-divider" />
-        <div className="summary-item">
-          <div className="summary-label">Regla de Asignación</div>
-          <div className="summary-value mono" style={{ color: strategy.color, fontWeight: 700 }}>
-            {weightPerSlot}% / slot (${slotValue.toFixed(2)})
-          </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            onClick={() => setShowInflationExplorer(true)}
+            style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.25)', color: '#fbbf24', padding: '6px 14px', borderRadius: '14px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+          >
+            🔍 Ver Historial IPC ({colInflationData.latest?.yoy ? `${colInflationData.latest.yoy}%` : 'Colombia'})
+          </button>
+
+          <button
+            onClick={() => setShowSettingsModal(true)}
+            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--text-secondary)', padding: '6px 14px', borderRadius: '14px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+          >
+            ⚙️ Configurar Divisa/Inflación
+          </button>
         </div>
       </div>
+
+      {(() => {
+        let fxMult = 1.0;
+        if (stratYieldViewMode !== 'USD') {
+          fxMult = fxData.current || 1.0;
+        }
+
+        let inflationFactor = 1.0;
+        if (stratYieldViewMode === 'REAL') {
+          if (stratSettings.useAutoColInflation && colInflationData.history && Object.keys(colInflationData.history).length > 0) {
+            const dates = Object.keys(colInflationData.history).sort();
+            const cpiCurrent = colInflationData.history[dates[dates.length - 1]];
+            const pastDates = dates.slice(0, Math.max(1, dates.length - 12));
+            const cpiStart = pastDates.length > 0 ? colInflationData.history[pastDates[0]] : cpiCurrent;
+            if (cpiStart && cpiCurrent) {
+              inflationFactor = cpiCurrent / cpiStart;
+            }
+          } else if (stratSettings.inflationRate > 0) {
+            const years = period === '1W' ? 1/52 : period === '1M' ? 1/12 : period === '3M' ? 3/12 : period === '6M' ? 6/12 : period === '1Y' ? 1 : period === '3Y' ? 3 : period === '5Y' ? 5 : 5;
+            inflationFactor = Math.pow(1 + stratSettings.inflationRate / 100, years);
+          }
+        }
+
+        const rawInvested = activeInvested;
+        const investedAdjusted = rawInvested * (stratYieldViewMode !== 'USD' ? fxMult : 1.0);
+        
+        const rawStockVal = rawInvested * (1 + currentReturns.strat);
+        const currentStockValueAdjusted = (rawStockVal * (stratYieldViewMode !== 'USD' ? fxMult : 1.0)) / inflationFactor;
+        
+        const netReturnAdjusted = currentStockValueAdjusted - investedAdjusted;
+        const returnPctAdjusted = investedAdjusted > 0 ? (netReturnAdjusted / investedAdjusted) : 0;
+
+        const currSymbol = stratYieldViewMode === 'USD' ? (stratSettings.assetCurrency || 'USD') : (stratSettings.localCurrency || 'COP');
+
+        return (
+          <div className="summary-strip fade-up">
+            <div className="summary-item">
+              <div className="summary-label">Rentabilidad {strategy.name} ({stratYieldViewMode === 'REAL' ? 'Real' : period})</div>
+              <div className="summary-value large mono" style={{ color: returnPctAdjusted >= 0 ? 'var(--gain)' : 'var(--loss)', fontWeight: 800 }}>
+                {unit === 'pct'
+                  ? `${returnPctAdjusted >= 0 ? '+' : ''}${(returnPctAdjusted * 100).toFixed(1)}%`
+                  : `${netReturnAdjusted >= 0 ? '+' : '-'}$${Math.abs(netReturnAdjusted).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              </div>
+            </div>
+            <div className="summary-divider" />
+            <div className="summary-item">
+              <div className="summary-label">Benchmark ({strategy.benchmark}) ({period})</div>
+              <div className="summary-value mono" style={{ color: '#fbbf24', fontWeight: 700 }}>
+                {unit === 'pct'
+                  ? `${currentReturns[strategy.benchmark === 'NASDAQ' ? 'nasdaq' : 'sp'] >= 0 ? '+' : ''}${(currentReturns[strategy.benchmark === 'NASDAQ' ? 'nasdaq' : 'sp'] * 100).toFixed(1)}%`
+                  : `${currentReturns[strategy.benchmark === 'NASDAQ' ? 'nasdaq' : 'sp'] >= 0 ? '+' : '-'}$${Math.abs(investedAdjusted * currentReturns[strategy.benchmark === 'NASDAQ' ? 'nasdaq' : 'sp']).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              </div>
+            </div>
+            <div className="summary-divider" />
+            <div className="summary-item">
+              <div className="summary-label">Capital Activo ({activeTickers.length}/{numSlots} Slots - {currSymbol})</div>
+              <div className="summary-value mono large" style={{ color: strategy.color, fontWeight: 800 }}>
+                {unit === 'pct'
+                  ? `${((activeTickers.length / numSlots) * 100).toFixed(1)}%`
+                  : `$${investedAdjusted.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              </div>
+            </div>
+            <div className="summary-divider" />
+            <div className="summary-item">
+              <div className="summary-label">Regla de Asignación</div>
+              <div className="summary-value mono" style={{ color: strategy.color, fontWeight: 700 }}>
+                {weightPerSlot}% / slot (${(slotValue * (stratYieldViewMode !== 'USD' ? fxMult : 1.0)).toFixed(2)})
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 3-Level Comparative Breakdown Card (Nominal vs Divisa vs Real) ── */}
+      {(() => {
+        const nomInvested = activeInvested;
+        const nomReturnUsd = nomInvested * (currentReturns.strat || 0);
+        const nomReturnPct = (currentReturns.strat || 0) * 100;
+
+        const fxMult = fxData.current || 1.0;
+        const fxInvested = nomInvested * fxMult;
+        const fxStockVal = (nomInvested + nomReturnUsd) * fxMult;
+        const fxReturnNet = fxStockVal - fxInvested;
+        const fxReturnPct = fxInvested > 0 ? (fxReturnNet / fxInvested) * 100 : 0;
+
+        let inflationFactor = 1.0;
+        if (stratSettings.useAutoColInflation && colInflationData.latest?.yoy) {
+          const yoy = colInflationData.latest.yoy;
+          const years = period === '1W' ? 1/52 : period === '1M' ? 1/12 : period === '3M' ? 3/12 : period === '6M' ? 6/12 : period === '1Y' ? 1 : period === '3Y' ? 3 : period === '5Y' ? 5 : 5;
+          inflationFactor = Math.pow(1 + yoy / 100, years);
+        } else if (stratSettings.inflationRate > 0) {
+          const years = period === '1W' ? 1/52 : period === '1M' ? 1/12 : period === '3M' ? 3/12 : period === '6M' ? 6/12 : period === '1Y' ? 1 : period === '3Y' ? 3 : period === '5Y' ? 5 : 5;
+          inflationFactor = Math.pow(1 + stratSettings.inflationRate / 100, years);
+        }
+
+        const realStockVal = fxStockVal / inflationFactor;
+        const realReturnNet = realStockVal - fxInvested;
+        const realReturnPct = fxInvested > 0 ? (realReturnNet / fxInvested) * 100 : 0;
+
+        const inflationLossAmount = fxStockVal - realStockVal;
+        const inflationLossPct = fxInvested > 0 ? (inflationLossAmount / fxInvested) * 100 : 0;
+
+        return (
+          <div className="fade-up" style={{ marginTop: 12, marginBottom: 16, padding: '14px 20px', background: 'rgba(0,0,0,0.25)', borderRadius: 'var(--radius)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span>📊 Comparativa de Rendimiento Multinivel (Nominal ➔ Divisa ➔ Real)</span>
+              <span style={{ fontSize: '0.74rem', color: '#f59e0b', background: 'rgba(245,158,11,0.1)', padding: '2px 8px', borderRadius: 6 }}>
+                {stratSettings.useAutoColInflation ? 'IPC Automático (FRED/DANE)' : `Inflación Manual ${stratSettings.inflationRate || 0}%/año`}
+              </span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+              {/* Level 1: Nominal */}
+              <div style={{ padding: 10, background: 'rgba(255,255,255,0.02)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase' }}>1. Nominal ({stratSettings.assetCurrency || 'USD'})</div>
+                <div className="mono" style={{ fontSize: '1.1rem', fontWeight: 800, color: nomReturnUsd >= 0 ? '#4ade80' : '#f87171', marginTop: 4 }}>
+                  {nomReturnUsd >= 0 ? '+' : ''}${nomReturnUsd.toFixed(2)} ({nomReturnPct >= 0 ? '+' : ''}{nomReturnPct.toFixed(2)}%)
+                </div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                  Crecimiento puro en moneda del activo
+                </div>
+              </div>
+
+              {/* Level 2: FX Adjusted */}
+              <div style={{ padding: 10, background: 'rgba(0, 229, 255, 0.03)', borderRadius: 8, border: '1px solid rgba(0, 229, 255, 0.15)' }}>
+                <div style={{ fontSize: '0.72rem', color: '#00e5ff', textTransform: 'uppercase' }}>2. Al Cambio Divisa ({stratSettings.localCurrency || 'COP'})</div>
+                <div className="mono" style={{ fontSize: '1.1rem', fontWeight: 800, color: fxReturnNet >= 0 ? '#4ade80' : '#f87171', marginTop: 4 }}>
+                  {fxReturnNet >= 0 ? '+' : ''}${fxReturnNet.toFixed(2)} ({fxReturnPct >= 0 ? '+' : ''}{fxReturnPct.toFixed(2)}%)
+                </div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                  Tipo de cambio: ${fxMult.toLocaleString('en-US', { maximumFractionDigits: 2 })}
+                </div>
+              </div>
+
+              {/* Level 3: Real Purchasing Power */}
+              <div style={{ padding: 10, background: 'rgba(245, 158, 11, 0.03)', borderRadius: 8, border: '1px solid rgba(245, 158, 11, 0.15)' }}>
+                <div style={{ fontSize: '0.72rem', color: '#f59e0b', textTransform: 'uppercase' }}>3. Poder Adquisitivo Real</div>
+                <div className="mono" style={{ fontSize: '1.1rem', fontWeight: 800, color: realReturnNet >= 0 ? '#f59e0b' : '#f87171', marginTop: 4 }}>
+                  {realReturnNet >= 0 ? '+' : ''}${realReturnNet.toFixed(2)} ({realReturnPct >= 0 ? '+' : ''}{realReturnPct.toFixed(2)}%)
+                </div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                  Factor Inflación: -{((inflationFactor - 1) * 100).toFixed(1)}%
+                </div>
+              </div>
+            </div>
+
+            {/* Explicit Deduction Equation Bar */}
+            <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(245, 158, 11, 0.06)', borderRadius: 8, border: '1px dashed rgba(245, 158, 11, 0.25)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: '0.78rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <span style={{ color: '#00e5ff', fontWeight: 700 }}>Ganancia Bruta ({stratSettings.localCurrency || 'COP'}):</span>
+                <span className="mono" style={{ color: fxReturnNet >= 0 ? '#4ade80' : '#f87171', fontWeight: 700 }}>
+                  {fxReturnNet >= 0 ? '+' : ''}${fxReturnNet.toFixed(2)}
+                </span>
+                <span style={{ color: 'var(--text-muted)' }}>➖</span>
+                <span style={{ color: '#f87171', fontWeight: 700 }}>Descuento Inflación (IPC):</span>
+                <span className="mono" style={{ color: '#f87171', fontWeight: 700 }}>
+                  -${inflationLossAmount.toFixed(2)} ({inflationLossPct.toFixed(2)}%)
+                </span>
+                <span style={{ color: 'var(--text-muted)' }}>🟰</span>
+                <span style={{ color: '#f59e0b', fontWeight: 700 }}>Ganancia Real Neta:</span>
+                <span className="mono" style={{ color: realReturnNet >= 0 ? '#f59e0b' : '#f87171', fontWeight: 800 }}>
+                  {realReturnNet >= 0 ? '+' : ''}${realReturnNet.toFixed(2)} ({realReturnPct >= 0 ? '+' : ''}{realReturnPct.toFixed(2)}% Real)
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Settings Modal ────────────────────────────── */}
+      {showSettingsModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
+          <div className="card fade-up" style={{ width: '100%', maxWidth: 450, padding: 24, background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <h3 style={{ margin: '0 0 20px 0', color: '#f1f5f9', display: 'flex', alignItems: 'center', gap: 8 }}>⚙️ Configuración: {strategy.name}</h3>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 8 }}>Divisa del Activo</label>
+                <select 
+                  value={stratSettings.assetCurrency || 'USD'}
+                  onChange={(e) => setStratSettings(prev => ({ ...prev, assetCurrency: e.target.value }))}
+                  className="input" 
+                  style={{ width: '100%' }}
+                >
+                  <option value="USD">USD - Dólar</option>
+                  <option value="EUR">EUR - Euro</option>
+                  <option value="GBP">GBP - Libra</option>
+                  <option value="COP">COP - Peso Col.</option>
+                  <option value="MXN">MXN - Peso Mex.</option>
+                  <option value="CLP">CLP - Peso Chi.</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 8 }}>Divisa Local</label>
+                <select 
+                  value={stratSettings.localCurrency || 'COP'}
+                  onChange={(e) => setStratSettings(prev => ({ ...prev, localCurrency: e.target.value }))}
+                  className="input" 
+                  style={{ width: '100%' }}
+                >
+                  <option value="COP">COP - Peso Col.</option>
+                  <option value="MXN">MXN - Peso Mex.</option>
+                  <option value="CLP">CLP - Peso Chi.</option>
+                  <option value="USD">USD - Dólar</option>
+                  <option value="EUR">EUR - Euro</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 12, cursor: 'pointer' }}>
+                <input 
+                  type="checkbox"
+                  checked={stratSettings.useAutoColInflation || false}
+                  onChange={(e) => setStratSettings(prev => ({ ...prev, useAutoColInflation: e.target.checked }))}
+                />
+                Usar Inflación Automática (Colombia, mensual)
+              </label>
+
+              {!stratSettings.useAutoColInflation && (
+                <>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 8 }}>Inflación Anual Manual (%)</label>
+                  <input 
+                    type="number" 
+                    step="0.1"
+                    min="0"
+                    value={stratSettings.inflationRate || 0}
+                    onChange={(e) => setStratSettings(prev => ({ ...prev, inflationRate: parseFloat(e.target.value) || 0 }))}
+                    className="input" 
+                    style={{ width: '100%' }}
+                  />
+                </>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowSettingsModal(false)} className="btn btn-primary" style={{ minWidth: 100 }}>
+                Listo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Inflation Explorer Modal ──────────────────── */}
+      <InflationExplorerModal
+        isOpen={showInflationExplorer}
+        onClose={() => setShowInflationExplorer(false)}
+        inflationData={colInflationData}
+      />
 
       <div className="card fade-up" style={{ padding: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>

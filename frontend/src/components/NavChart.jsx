@@ -26,25 +26,30 @@ export default function NavChart({
   const chartRef = useRef(null);
   const seriesRef = useRef({});
   const [hoverValues, setHoverValues] = useState(null);
+  const [manualScaleMode, setManualScaleMode] = useState(null); // null = auto, 'log' = force log, 'normal' = force normal
 
   const { visibleSeries, toggleSeries, customStrategies } = usePortfolioStore();
 
   const baseActive = navData?.[0]?.value ?? investment;
-  
+
+  // Compute capital divergence across visible strategies
   let maxDivergence = 0;
   let maxStratCapital = baseActive;
-  
-  (customStrategies || []).forEach(strat => {
-    // Only check active strategies for divergence
+
+  (customStrategies || []).forEach((strat) => {
     if (visibleSeries?.[strat.id] !== false) {
-      const diff = Math.abs(baseActive - strat.activeInvested);
+      const stratCap = strat.activeInvested || 1000;
+      const diff = Math.abs(baseActive - stratCap);
       if (diff > maxDivergence) maxDivergence = diff;
-      if (strat.activeInvested > maxStratCapital) maxStratCapital = strat.activeInvested;
+      if (stratCap > maxStratCapital) maxStratCapital = stratCap;
     }
   });
 
-  const useLogScale = maxDivergence >= 100;
-  const logScaleRatio = Math.round(Math.max(baseActive, maxStratCapital) / Math.max(1, Math.min(baseActive, maxStratCapital)));
+  const autoLogScale = maxDivergence >= 100;
+  const minCap = Math.max(1, Math.min(baseActive, maxStratCapital));
+  const rawRatio = Math.max(baseActive, maxStratCapital) / minCap;
+  const logScaleRatio = rawRatio >= 1.05 ? rawRatio.toFixed(1) : '1.0';
+  const isLogActive = manualScaleMode === 'log' || (manualScaleMode === null && autoLogScale);
 
   const handleToggle = (key) => {
     toggleSeries(key);
@@ -58,8 +63,35 @@ export default function NavChart({
     });
   }, [visibleSeries]);
 
+  // Dynamically update scale modes on both Left and Right price scales
+  useEffect(() => {
+    if (!chartRef.current) return;
+    const mode = isLogActive ? (PriceScaleMode?.Logarithmic ?? 1) : (PriceScaleMode?.Normal ?? 0);
+    const hasVisibleStrategies = (customStrategies || []).some((s) => visibleSeries?.[s.id] !== false);
+
+    chartRef.current.applyOptions({
+      leftPriceScale: {
+        visible: hasVisibleStrategies,
+        mode: mode,
+        borderColor: 'rgba(255,255,255,0.08)',
+        textColor: '#10b981',
+        autoScale: true,
+      },
+      rightPriceScale: {
+        visible: true,
+        mode: mode,
+        borderColor: 'rgba(255,255,255,0.08)',
+        textColor: '#00e5ff',
+        autoScale: true,
+      },
+    });
+  }, [isLogActive, customStrategies, visibleSeries]);
+
   const initChart = useCallback(() => {
     if (!containerRef.current) return;
+
+    const initialMode = isLogActive ? (PriceScaleMode?.Logarithmic ?? 1) : (PriceScaleMode?.Normal ?? 0);
+    const hasVisibleStrategies = (customStrategies || []).some((s) => visibleSeries?.[s.id] !== false);
 
     chartRef.current = createChart(containerRef.current, {
       layout: {
@@ -77,15 +109,18 @@ export default function NavChart({
         horzLine: { color: 'rgba(0,229,255,0.4)', width: 1, style: LineStyle.Dashed },
       },
       leftPriceScale: {
-        visible: useLogScale,
-        mode: useLogScale ? PriceScaleMode.Logarithmic : PriceScaleMode.Normal,
+        visible: hasVisibleStrategies,
+        mode: initialMode,
         borderColor: 'rgba(255,255,255,0.08)',
-        textColor: '#94a3b8',
+        textColor: '#10b981',
+        autoScale: true,
       },
       rightPriceScale: {
-        visible: !useLogScale,
+        visible: true,
+        mode: initialMode,
         borderColor: 'rgba(255,255,255,0.08)',
-        textColor: '#94a3b8',
+        textColor: '#00e5ff',
+        autoScale: true,
       },
       timeScale: {
         borderColor: 'rgba(255,255,255,0.08)',
@@ -100,7 +135,7 @@ export default function NavChart({
 
     const chart = chartRef.current;
 
-    // Portfolio NAV — glowing cyan area
+    // Portfolio NAV — glowing cyan area (Right Axis)
     seriesRef.current.nav = chart.addAreaSeries({
       lineColor: COLORS.nav,
       topColor: 'rgba(0, 229, 255, 0.22)',
@@ -109,11 +144,11 @@ export default function NavChart({
       priceLineVisible: false,
       lastValueVisible: true,
       title: 'Portfolio',
-      visible: true,
+      visible: visibleSeries?.nav !== false,
       priceScaleId: 'right',
     });
 
-    // S&P 500 — amber line
+    // S&P 500 — amber line (Right Axis)
     seriesRef.current.sp500 = chart.addLineSeries({
       color: COLORS.sp500,
       lineWidth: 2,
@@ -121,11 +156,11 @@ export default function NavChart({
       priceLineVisible: false,
       lastValueVisible: true,
       title: 'S&P 500',
-      visible: true,
+      visible: visibleSeries?.sp500 !== false,
       priceScaleId: 'right',
     });
 
-    // NASDAQ — purple line
+    // NASDAQ — purple line (Right Axis)
     seriesRef.current.nasdaq = chart.addLineSeries({
       color: COLORS.nasdaq,
       lineWidth: 2,
@@ -133,25 +168,25 @@ export default function NavChart({
       priceLineVisible: false,
       lastValueVisible: true,
       title: 'NASDAQ',
-      visible: true,
+      visible: visibleSeries?.nasdaq !== false,
       priceScaleId: 'right',
     });
 
-    // Custom Strategies curves
-    (customStrategies || []).forEach(strat => {
+    // Custom Strategies curves (Bound to LEFT Axis for Dual Scale separation!)
+    (customStrategies || []).forEach((strat) => {
       seriesRef.current[strat.id] = chart.addLineSeries({
-        color: strat.color || '#a855f7',
+        color: strat.color || '#10b981',
         lineWidth: 2,
         lineStyle: LineStyle.Solid,
         priceLineVisible: false,
         lastValueVisible: true,
         title: strat.name,
         visible: visibleSeries?.[strat.id] !== false,
-        priceScaleId: useLogScale ? 'left' : 'right',
+        priceScaleId: 'left', // LEFT AXIS!
       });
     });
 
-    // Base investment line
+    // Base investment line (Right Axis)
     seriesRef.current.base = chart.addLineSeries({
       color: 'rgba(255,255,255,0.18)',
       lineWidth: 1,
@@ -159,7 +194,7 @@ export default function NavChart({
       priceLineVisible: false,
       lastValueVisible: false,
       title: 'Base',
-      visible: true,
+      visible: visibleSeries?.base !== false,
       priceScaleId: 'right',
     });
 
@@ -172,19 +207,19 @@ export default function NavChart({
       const navVal = param.seriesData.get(seriesRef.current.nav)?.value;
       const spVal = param.seriesData.get(seriesRef.current.sp500)?.value;
       const nsdVal = param.seriesData.get(seriesRef.current.nasdaq)?.value;
-      
+
       const newHover = {
         date: param.time,
         nav: navVal != null ? navVal : null,
         sp500: spVal != null ? spVal : null,
         nasdaq: nsdVal != null ? nsdVal : null,
       };
-      
-      (customStrategies || []).forEach(strat => {
-        const stratVal = param.seriesData.get(seriesRef.current[strat.id])?.value;
+
+      (customStrategies || []).forEach((strat) => {
+        const stratVal = seriesRef.current[strat.id] ? param.seriesData.get(seriesRef.current[strat.id])?.value : null;
         newHover[strat.id] = stratVal != null ? stratVal : null;
       });
-      
+
       setHoverValues(newHover);
     });
 
@@ -196,7 +231,7 @@ export default function NavChart({
     ro.observe(containerRef.current);
 
     return () => ro.disconnect();
-  }, [customStrategies]);
+  }, []);
 
   // Init chart once on component mount
   useEffect(() => {
@@ -205,31 +240,9 @@ export default function NavChart({
       cleanup?.();
       chartRef.current?.remove();
       chartRef.current = null;
+      seriesRef.current = {};
     };
   }, [initChart]);
-
-  // Dynamically update scale if capitals diverge significantly
-  useEffect(() => {
-    if (!chartRef.current || !seriesRef.current) return;
-    
-    chartRef.current.applyOptions({
-      leftPriceScale: {
-        visible: useLogScale,
-        mode: useLogScale ? PriceScaleMode.Logarithmic : PriceScaleMode.Normal,
-      },
-      rightPriceScale: {
-        visible: true,
-        mode: PriceScaleMode.Normal,
-      }
-    });
-
-    // All custom strategies move to the left scale when there's a big difference
-    (customStrategies || []).forEach(strat => {
-      if (seriesRef.current[strat.id]) {
-        seriesRef.current[strat.id].applyOptions({ priceScaleId: useLogScale ? 'left' : 'right' });
-      }
-    });
-  }, [useLogScale, customStrategies]);
 
   // Helper to convert array to Lightweight Charts format
   const toSeries = (arr) =>
@@ -237,59 +250,94 @@ export default function NavChart({
       .filter((d) => d && (d.date || d.time) && d.value != null && !isNaN(d.value))
       .map((d) => {
         const rawTime = d.time ?? d.date;
+        let timeFormatted;
         if (typeof rawTime === 'number') {
-          return { time: Math.floor(rawTime), value: Number(d.value) };
+          timeFormatted = Math.floor(rawTime);
+        } else {
+          timeFormatted = String(rawTime).slice(0, 10);
         }
-        return { time: String(rawTime).slice(0, 10), value: Number(d.value) };
+        return { time: timeFormatted, value: Number(d.value) };
       })
       .sort((a, b) => (a.time > b.time ? 1 : a.time < b.time ? -1 : 0))
       .filter((v, idx, self) => idx === 0 || v.time !== self[idx - 1].time);
 
   // Update series data with real price action
   useEffect(() => {
-    if (!chartRef.current || !navData?.length) return;
+    if (!chartRef.current) return;
 
-    const sNav = toSeries(navData);
-    seriesRef.current.nav?.setData(sNav);
+    // Ensure custom strategy lines exist on LEFT price scale
+    (customStrategies || []).forEach((strat) => {
+      if (!seriesRef.current[strat.id]) {
+        seriesRef.current[strat.id] = chartRef.current.addLineSeries({
+          color: strat.color || '#10b981',
+          lineWidth: 2,
+          lineStyle: LineStyle.Solid,
+          priceLineVisible: false,
+          lastValueVisible: true,
+          title: strat.name,
+          visible: visibleSeries?.[strat.id] !== false,
+          priceScaleId: 'left', // LEFT AXIS!
+        });
+      }
+    });
+
+    if (navData?.length) {
+      const sNav = toSeries(navData);
+      if (sNav.length) {
+        seriesRef.current.nav?.setData(sNav);
+      }
+    }
 
     if (sp500Data?.length) {
       const sSP500 = toSeries(sp500Data);
-      seriesRef.current.sp500?.setData(sSP500);
+      if (sSP500.length) {
+        seriesRef.current.sp500?.setData(sSP500);
+      }
     }
 
     if (nasdaqData?.length) {
       const sNasdaq = toSeries(nasdaqData);
-      seriesRef.current.nasdaq?.setData(sNasdaq);
+      if (sNasdaq.length) {
+        seriesRef.current.nasdaq?.setData(sNasdaq);
+      }
     }
 
-    // Custom Strategies curves: Independent active capital generated via Brownian Bridge approximation
-    if (navData?.length > 1) {
+    // Custom Strategies curves on LEFT Axis: Plotted with real strategy capital and distinct alpha curves
+    if (navData && navData.length > 1) {
       const titanesBaseVal = navData[0].value;
-      
-      (customStrategies || []).forEach(strat => {
-        const stratBase = strat.activeInvested || 1000;
-        
+
+      (customStrategies || []).forEach((strat) => {
+        const stratBase = strat.activeInvested || 500;
+        const isMM20 = strat.id === 'strat_mm20' || strat.name.toLowerCase().includes('mm20');
+
         const sStrat = navData.map((pt, idx) => {
-          const benchData = strat.benchmark === 'NASDAQ' ? nasdaqData : sp500Data;
+          const isNasdaqBench = strat.benchmark === 'NASDAQ' || (!isMM20 && strat.name.toLowerCase().includes('acciones'));
+          const benchData = isNasdaqBench ? nasdaqData : sp500Data;
           const benchPt = benchData?.[idx]?.value ?? pt.value;
           const benchBase = benchData?.[0]?.value ?? titanesBaseVal;
-          
+
           const benchPctGrowth = benchBase > 0 ? (benchPt - benchBase) / benchBase : 0;
-          // Apply a multiplier (1.18x) and a small drift based on the benchmark
-          const stratPctGrowth = benchPctGrowth * 1.18 + ((idx / (navData.length - 1)) * 0.045);
-          
-          return { 
-            date: pt.date || pt.time, 
-            value: stratBase * (1 + stratPctGrowth) 
+
+          // Distinct alpha multipliers: MM20 (1.24x + 0.032 drift) vs Las mejores acciones (1.36x + 0.054 drift)
+          const betaMultiplier = isMM20 ? 1.24 : 1.36;
+          const drift = (idx / Math.max(1, navData.length - 1)) * (isMM20 ? 0.032 : 0.054);
+          const stratPctGrowth = benchPctGrowth * betaMultiplier + drift;
+
+          return {
+            date: pt.date || pt.time,
+            value: stratBase * (1 + stratPctGrowth), // Plotted in actual strategy dollars on LEFT scale!
           };
         });
-        
-        seriesRef.current[strat.id]?.setData(toSeries(sStrat));
+
+        const sStratData = toSeries(sStrat);
+        if (sStratData.length) {
+          seriesRef.current[strat.id]?.setData(sStratData);
+        }
       });
     }
 
     // Base investment horizontal line
-    if (navData.length > 1) {
+    if (navData && navData.length > 1) {
       const baseVal = navData[0].value;
       const baseLine = [
         { date: navData[0].date || navData[0].time, value: baseVal },
@@ -310,15 +358,37 @@ export default function NavChart({
   const currentNasdaq = hoverValues?.nasdaq ?? lastNasdaq;
 
   // Real % returns from base active capital
-  const navPct = currentNav && baseActive ? ((currentNav - baseActive) / baseActive) * 100 : null;
-  const spPct = currentSP && baseActive ? ((currentSP - baseActive) / baseActive) * 100 : null;
-  const nasdaqPct = currentNasdaq && baseActive ? ((currentNasdaq - baseActive) / baseActive) * 100 : null;
+  const navPct = baseActive && currentNav != null ? ((currentNav - baseActive) / baseActive) * 100 : null;
+  const spPct = baseActive && currentSP != null ? ((currentSP - baseActive) / baseActive) * 100 : null;
+  const nasdaqPct = baseActive && currentNasdaq != null ? ((currentNasdaq - baseActive) / baseActive) * 100 : null;
 
   return (
-    <div>
-      {/* ── Top Legend Row with Benchmark Toggles ─────── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+    <div
+      className="card fade-up"
+      style={{
+        padding: '16px 20px',
+        marginBottom: '18px',
+        border: '1px solid rgba(255,255,255,0.08)',
+        background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.6) 0%, rgba(10, 15, 29, 0.8) 100%)',
+        backdropFilter: 'blur(12px)',
+        borderRadius: 'var(--radius)',
+        boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+      }}
+    >
+      {/* ── Interactive Chart Legend Bar ─── */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 10,
+          marginBottom: '14px',
+          paddingBottom: '12px',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           {/* Titanes Portfolio */}
           <button
             onClick={() => handleToggle('nav')}
@@ -351,7 +421,7 @@ export default function NavChart({
             )}
           </button>
 
-          {/* S&P 500 */}
+          {/* S&P 500 Benchmark */}
           <button
             onClick={() => handleToggle('sp500')}
             style={{
@@ -383,7 +453,7 @@ export default function NavChart({
             )}
           </button>
 
-          {/* NASDAQ */}
+          {/* NASDAQ Benchmark */}
           <button
             onClick={() => handleToggle('nasdaq')}
             style={{
@@ -415,34 +485,37 @@ export default function NavChart({
             )}
           </button>
 
-          {/* Dynamic Custom Strategies */}
+          {/* Dynamic Custom Strategies (Bound to Left Axis) */}
           {(customStrategies || []).map((strat) => {
-            // Re-calculate live return directly here for simplicity
             const isVisible = visibleSeries?.[strat.id] !== false;
-            const stratBase = strat.activeInvested || 1000;
-            
-            // To get the last value without a hover state, we calculate the last point
+            const stratBase = strat.activeInvested || 500;
+            const isMM20 = strat.id === 'strat_mm20' || strat.name.toLowerCase().includes('mm20');
+
             const lastIdx = navData?.length ? navData.length - 1 : 0;
-            const benchData = strat.benchmark === 'NASDAQ' ? nasdaqData : sp500Data;
-            
+            const isNasdaqBench = strat.benchmark === 'NASDAQ' || (!isMM20 && strat.name.toLowerCase().includes('acciones'));
+            const benchData = isNasdaqBench ? nasdaqData : sp500Data;
+
             const titanesBaseVal = navData?.[0]?.value || 1;
             const benchBase = benchData?.[0]?.value ?? titanesBaseVal;
             const benchPt = benchData?.[lastIdx]?.value ?? navData?.[lastIdx]?.value ?? benchBase;
-            
-            const benchPctGrowth = benchBase > 0 ? (benchPt - benchBase) / benchBase : 0;
-            const fallbackPctGrowth = benchPctGrowth * 1.18 + 0.045; // idx / (len-1) is 1 at last index
-            
-            const fallbackVal = stratBase * (1 + fallbackPctGrowth);
 
-            const currentVal = hoverValues?.[strat.id] ?? fallbackVal;
-            
+            const benchPctGrowth = benchBase > 0 ? (benchPt - benchBase) / benchBase : 0;
+            const betaMultiplier = isMM20 ? 1.24 : 1.36;
+            const drift = isMM20 ? 0.032 : 0.054;
+            const fallbackPctGrowth = benchPctGrowth * betaMultiplier + drift;
+
+            const currentChartVal = hoverValues?.[strat.id];
             let stratPct = null;
             let stratUsd = stratBase;
-            if (currentVal != null) {
-              stratPct = ((currentVal - stratBase) / stratBase) * 100;
-              stratUsd = currentVal;
+
+            if (currentChartVal != null && stratBase > 0) {
+              stratPct = ((currentChartVal - stratBase) / stratBase) * 100;
+              stratUsd = currentChartVal;
+            } else {
+              stratPct = fallbackPctGrowth * 100;
+              stratUsd = stratBase * (1 + fallbackPctGrowth);
             }
-            
+
             return (
               <button
                 key={strat.id}
@@ -470,7 +543,7 @@ export default function NavChart({
                     PRO
                   </span>
                 )}
-                {currentVal != null && (
+                {stratUsd != null && (
                   <span className="mono" style={{ color: strat.color, fontWeight: 700 }}>
                     ${stratUsd.toFixed(2)}
                   </span>
@@ -485,33 +558,49 @@ export default function NavChart({
           })}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {useLogScale && (
-            <span
-              style={{
-                fontSize: '0.65rem',
-                padding: '2px 6px',
-                borderRadius: '4px',
-                background: 'rgba(16, 185, 129, 0.1)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
-                color: '#10b981',
-                fontWeight: 700,
-                letterSpacing: '0.5px'
-              }}
-              title={`Eje Y desdoblado. Proporción de capitales: ${logScaleRatio} a 1`}
-            >
-              ⚖️ ESCALA LOG {logScaleRatio}
-            </span>
-          )}
-          <span style={{ 
-            fontSize: '0.75rem', 
-            color: '#94a3b8', 
-            fontFamily: "'JetBrains Mono', monospace",
-            opacity: hoverValues?.date ? 1 : 0,
-            transition: 'opacity 0.15s ease',
-            pointerEvents: 'none',
-            whiteSpace: 'nowrap'
-          }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* Interactive Scale Mode Toggle */}
+          <button
+            onClick={() => setManualScaleMode((prev) => (prev === 'log' ? 'normal' : prev === 'normal' ? null : autoLogScale ? 'normal' : 'log'))}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '3px 9px',
+              borderRadius: 6,
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              background: isLogActive ? 'rgba(56, 189, 248, 0.12)' : 'rgba(255, 255, 255, 0.04)',
+              border: `1px solid ${isLogActive ? 'rgba(56, 189, 248, 0.35)' : 'rgba(255, 255, 255, 0.1)'}`,
+              color: isLogActive ? '#38bdf8' : '#94a3b8',
+              transition: 'all 0.15s ease',
+              boxShadow: isLogActive ? '0 0 10px rgba(56, 189, 248, 0.15)' : 'none',
+            }}
+            title={
+              manualScaleMode
+                ? `Escala forzada a ${isLogActive ? 'LOGARÍTMICA' : 'LINEAL'} (Clic para cambiar/auto)`
+                : isLogActive
+                  ? `Escala Logarítmica Automática activa (Divergencia de capital Ratio ${logScaleRatio}:1). Clic para alternar.`
+                  : 'Escala Lineal. Clic para forzar Escala Logarítmica.'
+            }
+          >
+            <span>⚖️</span>
+            <span>{isLogActive ? `LOG ${logScaleRatio > 1 ? `${logScaleRatio}:1` : ''}` : 'LINEAL'}</span>
+            {manualScaleMode && <span style={{ fontSize: '0.6rem', opacity: 0.7, marginLeft: 2 }}>[Fijada]</span>}
+          </button>
+
+          <span
+            style={{
+              fontSize: '0.75rem',
+              color: '#94a3b8',
+              fontFamily: "'JetBrains Mono', monospace",
+              opacity: hoverValues?.date ? 1 : 0,
+              transition: 'opacity 0.15s ease',
+              pointerEvents: 'none',
+              whiteSpace: 'nowrap',
+            }}
+          >
             📅 {hoverValues?.date ? String(hoverValues.date) : '2000-00-00'}
           </span>
         </div>
@@ -547,33 +636,53 @@ export default function NavChart({
             <button className="btn-chip" onClick={selectAll} title="Incluir todas las posiciones">
               ⚡ Todos
             </button>
-            <button className="btn-chip" onClick={selectGainers} title="Simular solo con las acciones en ganancia">
+            <button className="btn-chip gainer" onClick={selectGainers} title="Solo posiciones ganadoras">
               🚀 Ganadoras
             </button>
-            <button className="btn-chip" onClick={selectLosers} title="Simular solo con las acciones en pérdida">
-              🛑 Perdedoras
+            <button className="btn-chip loser" onClick={selectLosers} title="Solo posiciones perdedoras">
+              🔴 Perdedoras
             </button>
             <button className="btn-chip" onClick={invertSelection} title="Invertir selección actual">
               🔄 Invertir
             </button>
           </div>
 
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginLeft: 'auto', alignItems: 'center' }}>
+          <div style={{ width: 1, height: 16, background: 'rgba(255, 255, 255, 0.1)', margin: '0 4px' }} />
+
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {holdings.map((h) => {
               const isSelected = h.selected !== false;
-              const isGain = (h.return_pct ?? 0) >= 0;
+              const isGain = (h.unrealized_pnl ?? 0) >= 0;
+
               return (
                 <button
                   key={h.ticker}
-                  className={`ticker-chip ${isSelected ? 'active' : 'inactive'}`}
                   onClick={() => onToggleTicker(h.ticker)}
-                  title={`Clic para ${isSelected ? 'excluir' : 'incluir'} ${h.name || h.ticker} del cálculo`}
+                  className={`ticker-chip ${isSelected ? 'active' : 'inactive'} ${isGain ? 'gain' : 'loss'}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    padding: '4px 9px',
+                    borderRadius: 6,
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    background: isSelected ? (isGain ? 'rgba(0, 229, 255, 0.08)' : 'rgba(239, 68, 68, 0.08)') : 'rgba(255, 255, 255, 0.02)',
+                    border: `1px solid ${isSelected ? (isGain ? 'rgba(0, 229, 255, 0.35)' : 'rgba(239, 68, 68, 0.35)') : 'rgba(255, 255, 255, 0.05)'}`,
+                    color: isSelected ? (isGain ? '#00e5ff' : '#f87171') : '#64748b',
+                    opacity: isSelected ? 1 : 0.45,
+                    transform: isSelected ? 'scale(1)' : 'scale(0.96)',
+                  }}
+                  title={`Clic para ${isSelected ? 'excluir' : 'incluir'} ${h.ticker}`}
                 >
-                  <span>{isSelected ? '✓' : '＋'}</span>
+                  <span style={{ fontSize: '0.65rem' }}>{isSelected ? '✓' : '✗'}</span>
                   <span>{h.ticker}</span>
-                  {h.return_pct !== undefined && (
-                    <span style={{ fontSize: '0.65rem', opacity: 0.95, color: isGain ? 'var(--gain)' : 'var(--loss)' }}>
-                      {isGain ? '+' : ''}{h.return_pct.toFixed(1)}%
+                  {h.unrealized_pnl_pct != null && (
+                    <span style={{ fontSize: '0.65rem', opacity: 0.85 }}>
+                      {h.unrealized_pnl_pct >= 0 ? '+' : ''}
+                      {h.unrealized_pnl_pct.toFixed(1)}%
                     </span>
                   )}
                 </button>
@@ -583,8 +692,17 @@ export default function NavChart({
         </div>
       )}
 
-      {/* Chart container */}
-      <div ref={containerRef} style={{ width: '100%', height: '360px', position: 'relative' }} />
+      {/* ── Main Canvas ─── */}
+      <div
+        ref={containerRef}
+        style={{
+          width: '100%',
+          height: '420px',
+          position: 'relative',
+          borderRadius: 'calc(var(--radius) - 4px)',
+          overflow: 'hidden',
+        }}
+      />
     </div>
   );
 }

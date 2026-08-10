@@ -13,9 +13,14 @@ from typing import Any, Dict
 import pandas as pd
 import polars as pl
 import yfinance as yf
+from curl_cffi import requests as cureq
+
+_yf_session = cureq.Session(impersonate="chrome", verify=False)
+
 
 def get_yf_ticker(ticker: str) -> yf.Ticker:
-    return yf.Ticker(ticker)
+    return yf.Ticker(ticker, session=_yf_session)
+
 
 # ──────────────────────────────────────────────
 # Default portfolio & benchmarks
@@ -40,31 +45,91 @@ BENCHMARKS: list[str] = ["^GSPC", "^IXIC", "IJH", "^MID"]
 
 # Catálogo oficial de metadatos para Titanes Tecnológicos y acciones de MM20
 TICKER_METADATA: dict[str, dict[str, str]] = {
-    "AMD": {"name": "Advanced Micro Devices, Inc.", "sector": "Semiconductores & GPUs", "exchange": "NASDAQ"},
-    "AMAT": {"name": "Applied Materials, Inc.", "sector": "Equipamiento de Semiconductores", "exchange": "NASDAQ"},
+    "AMD": {
+        "name": "Advanced Micro Devices, Inc.",
+        "sector": "Semiconductores & GPUs",
+        "exchange": "NASDAQ",
+    },
+    "AMAT": {
+        "name": "Applied Materials, Inc.",
+        "sector": "Equipamiento de Semiconductores",
+        "exchange": "NASDAQ",
+    },
     "HPQ": {"name": "HP Inc.", "sector": "Hardware, PCs & Impresión", "exchange": "NYSE"},
-    "INTC": {"name": "Intel Corporation", "sector": "Procesadores & Fabricación", "exchange": "NASDAQ"},
-    "ON": {"name": "ON Semiconductor Corporation", "sector": "Semiconductores & Automoción", "exchange": "NASDAQ"},
-    "ORCL": {"name": "Oracle Corporation", "sector": "Software Empresarial & Nube", "exchange": "NYSE"},
-    "POWI": {"name": "Power Integrations, Inc.", "sector": "Chips de Alta Eficiencia", "exchange": "NASDAQ"},
+    "INTC": {
+        "name": "Intel Corporation",
+        "sector": "Procesadores & Fabricación",
+        "exchange": "NASDAQ",
+    },
+    "ON": {
+        "name": "ON Semiconductor Corporation",
+        "sector": "Semiconductores & Automoción",
+        "exchange": "NASDAQ",
+    },
+    "ORCL": {
+        "name": "Oracle Corporation",
+        "sector": "Software Empresarial & Nube",
+        "exchange": "NYSE",
+    },
+    "POWI": {
+        "name": "Power Integrations, Inc.",
+        "sector": "Chips de Alta Eficiencia",
+        "exchange": "NASDAQ",
+    },
     "QCOM": {"name": "Qualcomm Incorporated", "sector": "Chips Móviles & 5G", "exchange": "NASDAQ"},
-    "TXN": {"name": "Texas Instruments Incorporated", "sector": "Semiconductores Analógicos", "exchange": "NASDAQ"},
-    "MRVL": {"name": "Marvell Technology, Inc.", "sector": "Infraestructura & Centros de Datos", "exchange": "NASDAQ"},
-    "HIMX": {"name": "Himax Technologies, Inc.", "sector": "Controladores de Pantalla", "exchange": "NASDAQ"},
-    "NTAP": {"name": "NetApp, Inc.", "sector": "Almacenamiento Híbrido & Nube", "exchange": "NASDAQ"},
-    "KD": {"name": "Kyndryl Holdings, Inc.", "sector": "Infraestructura TI & Servicios", "exchange": "NYSE"},
-    "ARM": {"name": "Arm Holdings plc", "sector": "Arquitectura de Microchips", "exchange": "NASDAQ"},
+    "TXN": {
+        "name": "Texas Instruments Incorporated",
+        "sector": "Semiconductores Analógicos",
+        "exchange": "NASDAQ",
+    },
+    "MRVL": {
+        "name": "Marvell Technology, Inc.",
+        "sector": "Infraestructura & Centros de Datos",
+        "exchange": "NASDAQ",
+    },
+    "HIMX": {
+        "name": "Himax Technologies, Inc.",
+        "sector": "Controladores de Pantalla",
+        "exchange": "NASDAQ",
+    },
+    "NTAP": {
+        "name": "NetApp, Inc.",
+        "sector": "Almacenamiento Híbrido & Nube",
+        "exchange": "NASDAQ",
+    },
+    "KD": {
+        "name": "Kyndryl Holdings, Inc.",
+        "sector": "Infraestructura TI & Servicios",
+        "exchange": "NYSE",
+    },
+    "ARM": {
+        "name": "Arm Holdings plc",
+        "sector": "Arquitectura de Microchips",
+        "exchange": "NASDAQ",
+    },
     # Mid-caps MM20
-    "ARLP": {"name": "Alliance Resource Partners", "sector": "Energía / Carbón", "exchange": "NASDAQ"},
+    "ARLP": {
+        "name": "Alliance Resource Partners",
+        "sector": "Energía / Carbón",
+        "exchange": "NASDAQ",
+    },
     "ACLS": {"name": "Axcelis Technologies", "sector": "Semiconductores", "exchange": "NASDAQ"},
     "BHC": {"name": "Bausch Health", "sector": "Salud / Farmacéutica", "exchange": "NYSE"},
     "DIOD": {"name": "Diodes Inc", "sector": "Semiconductores", "exchange": "NASDAQ"},
     "HAE": {"name": "Haemonetics Corp", "sector": "Dispositivos Médicos", "exchange": "NYSE"},
-    "NSIT": {"name": "Insight Enterprises", "sector": "Soluciones IT & Cloud", "exchange": "NASDAQ"},
+    "NSIT": {
+        "name": "Insight Enterprises",
+        "sector": "Soluciones IT & Cloud",
+        "exchange": "NASDAQ",
+    },
     "VECO": {"name": "Veeco Instruments", "sector": "Equipamiento de Chips", "exchange": "NASDAQ"},
     "OSK": {"name": "Oshkosh Corp", "sector": "Maquinaria Industrial", "exchange": "NYSE"},
     "SM": {"name": "SM Energy", "sector": "Petróleo & Gas", "exchange": "NYSE"},
-    "IJH": {"name": "iShares Core S&P Mid-Cap ETF", "sector": "Benchmark S&P MidCap 400", "exchange": "NYSE"},
+    "IJH": {
+        "name": "iShares Core S&P Mid-Cap ETF",
+        "sector": "Benchmark S&P MidCap 400",
+        "exchange": "NYSE",
+    },
 }
 
 
@@ -95,7 +160,14 @@ import redis
 
 try:
     _redis_host = os.environ.get("REDIS_HOST", "localhost")
-    _redis_client = redis.Redis(host=_redis_host, port=6379, db=0, decode_responses=False)
+    _redis_client = redis.Redis(
+        host=_redis_host,
+        port=6379,
+        db=0,
+        decode_responses=False,
+        socket_connect_timeout=0.5,
+        socket_timeout=0.5,
+    )
     # Test connection
     _redis_client.ping()
     _use_redis = True
@@ -129,8 +201,9 @@ def _cache_get(key: str) -> object | None:
     return None
 
 
-def _cache_set(key: str, data: object) -> None:
-    ttl = LIVE_TTL if key.startswith("live:") else HISTORICAL_TTL
+def _cache_set(key: str, data: object, ttl: int | None = None) -> None:
+    if ttl is None:
+        ttl = LIVE_TTL if key.startswith("live:") else HISTORICAL_TTL
     if _use_redis:
         try:
             _redis_client.setex(key, ttl, pickle.dumps(data))
@@ -184,6 +257,7 @@ def get_historical_prices(
         auto_adjust=True,
         progress=False,
         threads=True,
+        session=_yf_session,
     )
 
     # yfinance returns MultiIndex when multiple tickers
@@ -240,8 +314,14 @@ def get_live_quotes(tickers: list[str]) -> list[dict]:
             results.append(
                 {
                     "ticker": ticker,
-                    "name": meta.get("name") or info.get("longName") or info.get("shortName") or ticker,
-                    "sector": meta.get("sector") or info.get("sector") or info.get("industry") or "Desconocido",
+                    "name": meta.get("name")
+                    or info.get("longName")
+                    or info.get("shortName")
+                    or ticker,
+                    "sector": meta.get("sector")
+                    or info.get("sector")
+                    or info.get("industry")
+                    or "Desconocido",
                     "exchange": meta.get("exchange") or info.get("exchange") or "US",
                     "currency": info.get("currency") or "USD",
                     "quoteType": info.get("quoteType") or "EQUITY",
@@ -285,7 +365,14 @@ def get_intraday(ticker: str) -> list[dict]:
         return cached  # type: ignore[return-value]
 
     try:
-        df = yf.download(ticker, period="1d", interval="5m", auto_adjust=True, progress=False)
+        df = yf.download(
+            ticker,
+            period="1d",
+            interval="5m",
+            auto_adjust=True,
+            progress=False,
+            session=_yf_session,
+        )
         records = []
         for idx, row in df.iterrows():
             # Check for NaN safely
@@ -321,3 +408,150 @@ def _is_market_open() -> bool:
         return False
     hour_utc = now.hour + now.minute / 60
     return 14.5 <= hour_utc < 21.0
+
+
+# ──────────────────────────────────────────────
+# FX / Currency Data
+# ──────────────────────────────────────────────
+def get_fx_data(currency_str: str) -> dict:
+    """
+    Fetch historical and current FX rates for an asset currency to local currency.
+    Format of currency_str is 'ASSET-LOCAL' (e.g. 'USD-COP').
+    Returns: { "current": 4200.5, "history": { "2024-01-01": 3900.2, ... } }
+    """
+    parts = currency_str.split("-")
+    asset_currency = parts[0].strip().upper() if len(parts) > 0 else "USD"
+    local_currency = parts[1].strip().upper() if len(parts) > 1 else "COP"
+
+    if asset_currency == local_currency:
+        return {"current": 1.0, "history": {}}
+
+    ticker_sym = f"{asset_currency}{local_currency}=X"
+    cache_key = f"fx:{ticker_sym}"
+
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+
+    try:
+        # Get historical data for the last 10 years (or max)
+        df = yf.download(
+            ticker_sym, period="10y", auto_adjust=True, progress=False, session=_yf_session
+        )
+        history_dict = {}
+
+        if not df.empty:
+            # Handle MultiIndex if present
+            if isinstance(df.columns, pd.MultiIndex):
+                closes = df["Close"].copy()
+            else:
+                closes = df[["Close"]].copy()
+                closes.columns = [ticker_sym]
+
+            closes.index.name = "date"
+            closes = closes.reset_index()
+            closes["date"] = pd.to_datetime(closes["date"]).dt.date
+
+            for _, row in closes.iterrows():
+                val = row.iloc[1] if len(row) > 1 else None
+                if pd.isna(val):
+                    continue
+                history_dict[str(row["date"])] = float(val)
+
+        # Get current price
+        t = get_yf_ticker(ticker_sym)
+        fi = t.fast_info
+        current_price = fi.last_price or 0.0
+
+        if current_price == 0.0 and history_dict:
+            # Fallback to last available day
+            last_date = sorted(history_dict.keys())[-1]
+            current_price = history_dict[last_date]
+
+        result = {"current": current_price, "history": history_dict}
+
+        # Cache for 1 hour
+        _cache_set(cache_key, result)
+        return result
+    except Exception as e:
+        logging.error(f"Error fetching FX data for {currency_str}: {e}")
+        return {"current": 1.0, "history": {}}
+
+
+# ──────────────────────────────────────────────
+# Inflation Data
+# ──────────────────────────────────────────────
+import io
+
+
+def get_colombia_cpi_history() -> dict:
+    """
+    Fetch Colombian CPI (Consumer Price Index) from FRED (Federal Reserve Economic Data).
+    Series: COLCPALTT01IXOBM
+    Returns a dictionary of date strings to CPI values, latest summary, and monthly rates.
+    """
+    cache_key = "inflation:colombia"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+
+    url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=COLCPALTT01IXOBM"
+    try:
+        if _yf_session:
+            resp = _yf_session.get(url, timeout=10)
+            df = pd.read_csv(io.StringIO(resp.text))
+        else:
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=10) as response:
+                df = pd.read_csv(response)
+
+        # Detect column names dynamically
+        date_col = (
+            "observation_date"
+            if "observation_date" in df.columns
+            else ("DATE" if "DATE" in df.columns else df.columns[0])
+        )
+        val_col = "COLCPALTT01IXOBM" if "COLCPALTT01IXOBM" in df.columns else df.columns[1]
+
+        history_dict = {}
+        for _, row in df.iterrows():
+            date_str = str(row[date_col])[:10]
+            try:
+                val = float(row[val_col])
+                history_dict[date_str] = val
+            except (ValueError, TypeError):
+                pass
+
+        sorted_dates = sorted(history_dict.keys())
+        monthly_rates = []
+        for i, d in enumerate(sorted_dates):
+            cpi = history_dict[d]
+            mom = 0.0
+            yoy = 0.0
+            if i > 0:
+                prev_cpi = history_dict[sorted_dates[i - 1]]
+                mom = ((cpi - prev_cpi) / prev_cpi) * 100 if prev_cpi > 0 else 0.0
+            if i >= 12:
+                year_ago_cpi = history_dict[sorted_dates[i - 12]]
+                yoy = ((cpi - year_ago_cpi) / year_ago_cpi) * 100 if year_ago_cpi > 0 else 0.0
+
+            monthly_rates.append(
+                {"date": d, "cpi": round(cpi, 4), "mom": round(mom, 2), "yoy": round(yoy, 2)}
+            )
+
+        latest = monthly_rates[-1] if monthly_rates else {"date": "", "cpi": 0, "mom": 0, "yoy": 0}
+
+        result = {
+            "history": history_dict,
+            "latest": latest,
+            "monthly_rates": list(reversed(monthly_rates)),  # newest first
+        }
+        _cache_set(cache_key, result, ttl=86400)
+        return result
+    except Exception as e:
+        logging.error(f"Error fetching Colombian CPI data: {e}")
+        return {
+            "history": {},
+            "latest": {"date": "", "cpi": 0, "mom": 0, "yoy": 0},
+            "monthly_rates": [],
+        }

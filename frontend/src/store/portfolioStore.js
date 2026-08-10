@@ -13,7 +13,8 @@ import {
   updatePurchaseLots,
   deletePurchaseLot,
   syncPurchasesMigration,
-  togglePortfolioPlanApi
+  togglePortfolioPlanApi,
+  updatePortfolioSettingsApi
 } from '../api/client';
 import toast from 'react-hot-toast';
 
@@ -39,6 +40,16 @@ export const usePortfolioStore = create(
         base: true,
         'strat_mm20': true, // Auto-show the default system strategy
       },
+      // ── Main Mode Settings (Divisa e Inflación) ──
+      mainPortfolioSettings: {
+        assetCurrency: 'USD',
+        localCurrency: 'COP',
+        inflationRate: 0,
+        useAutoColInflation: false,
+      },
+      setMainPortfolioSettings: (newSettings) => set((state) => ({
+        mainPortfolioSettings: { ...state.mainPortfolioSettings, ...newSettings }
+      })),
       // ── HISTORICAL INDIVIDUAL PURCHASES ──
       purchasePortfolios: [
         { id: 'hist_default', name: 'Compras Principales' }
@@ -155,23 +166,44 @@ export const usePortfolioStore = create(
           toast.error('Error actualizando estado del plan en BD');
         }
       },
+      updatePortfolioSettings: async (id, assetCurrency, localCurrency, inflationRate, useAutoColInflation) => {
+        try {
+          await updatePortfolioSettingsApi(id, assetCurrency, localCurrency, inflationRate, useAutoColInflation);
+          set((state) => ({
+            purchasePortfolios: state.purchasePortfolios.map(p => p.id === id ? { ...p, assetCurrency, localCurrency, inflationRate, useAutoColInflation } : p)
+          }));
+          toast.success('Configuración del portafolio actualizada');
+        } catch (e) {
+          toast.error('Error actualizando configuración del portafolio');
+        }
+      },
       // ── BATCH RECALCULATE STATE ──
-      isBatchUpdating: false,
-      batchProgress: { current: 0, total: 0 },
-      abortBatch: false,
-      setAbortBatch: () => set({ abortBatch: true }),
-      runBatchRecalculate: async (purchases) => {
-        set({ isBatchUpdating: true, abortBatch: false, batchProgress: { current: 0, total: purchases.length } });
+      batchUpdateStatus: {}, // { [portfolioId]: { isUpdating: true, abort: false, progress: { current: 0, total: 0 } } }
+      setAbortBatch: (portfolioId) => set((state) => ({ 
+        batchUpdateStatus: { ...state.batchUpdateStatus, [portfolioId]: { ...state.batchUpdateStatus[portfolioId], abort: true } }
+      })),
+      runBatchRecalculate: async (portfolioId, purchases) => {
+        set((state) => ({ 
+          batchUpdateStatus: { 
+            ...state.batchUpdateStatus, 
+            [portfolioId]: { isUpdating: true, abort: false, progress: { current: 0, total: purchases.length } } 
+          }
+        }));
         let successCount = 0;
         let failCount = 0;
 
         for (let i = 0; i < purchases.length; i++) {
-          if (get().abortBatch) {
-            toast('Recálculo detenido manualmente.', { icon: '🛑', duration: 4000 });
+          if (get().batchUpdateStatus[portfolioId]?.abort) {
+            toast(`Recálculo detenido manualmente para ${portfolioId}.`, { icon: '🛑', duration: 4000 });
             break;
           }
           const p = purchases[i];
-          set({ batchProgress: { current: i + 1, total: purchases.length } });
+          set((state) => ({ 
+            batchUpdateStatus: { 
+              ...state.batchUpdateStatus, 
+              [portfolioId]: { ...state.batchUpdateStatus[portfolioId], progress: { current: i + 1, total: purchases.length } } 
+            }
+          }));
           try {
             const res = await fetchHistoricalPrice(p.ticker, p.date);
             if (res && res.price) {
@@ -193,14 +225,18 @@ export const usePortfolioStore = create(
           await new Promise(resolve => setTimeout(resolve, 1500));
         }
 
-        if (get().abortBatch) {
+        if (get().batchUpdateStatus[portfolioId]?.abort) {
           // Handled
         } else if (failCount > 0) {
           toast(`Recálculo terminado: ${successCount} OK, ${failCount} fallidos.`, { icon: '⚠️', duration: 5000 });
         } else {
           toast.success(`Recálculo terminado: ${successCount} actualizados correctamente.`, { duration: 4000 });
         }
-        set({ isBatchUpdating: false, abortBatch: false });
+        set((state) => {
+          const newStatus = { ...state.batchUpdateStatus };
+          delete newStatus[portfolioId];
+          return { batchUpdateStatus: newStatus };
+        });
       },
 
       customStrategies: [

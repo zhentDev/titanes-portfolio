@@ -38,18 +38,34 @@ def calculate_nav(
 
     nav_series = []
 
-    # Process each day in prices_df
-    # We only care about dates >= first rebalance date
-    start_date_str = rebalances[0]["date"]
-
     prices_pd = prices_df.to_pandas()
+    if prices_pd.empty:
+        return _empty_response(investment)
+
+    # Collect all tickers across rebalances
+    all_rebalance_tickers = set()
+    for r in rebalances:
+        all_rebalance_tickers.update(r["tickers"])
+
+    stock_cols = [c for c in all_rebalance_tickers if c in prices_pd.columns]
+    if stock_cols:
+        # Find first row where at least one stock has non-null price
+        has_any_stock = prices_pd[stock_cols].notna().any(axis=1)
+        if has_any_stock.any():
+            prices_pd = prices_pd[has_any_stock]
+
     prices_pd["date_str"] = prices_pd["date"].astype(str).str[:10]
-    prices_pd = prices_pd[prices_pd["date_str"] >= start_date_str]
     prices_pd.set_index("date_str", inplace=True)
+
+    # Prepare effective rebalances list
+    first_hist_date = str(prices_pd.index[0])
+    effective_rebalances = [dict(r) for r in rebalances]
+    if effective_rebalances and effective_rebalances[0]["date"] > first_hist_date:
+        effective_rebalances[0]["date"] = first_hist_date
 
     # We will simulate day by day
     rebalance_idx = 0
-    next_rebalance = rebalances[rebalance_idx]
+    next_rebalance = effective_rebalances[rebalance_idx] if effective_rebalances else None
 
     for date_str, row in prices_pd.iterrows():
         # Check if today is a rebalance day
@@ -114,12 +130,13 @@ def calculate_nav(
             if price is not None and not str(price) == "nan":
                 eod_stock_value += shares * price
 
-
         eod_total_value = eod_stock_value + current_cash
         nav_series.append(
             {
                 "date": str(date_str),
-                "value": round(eod_stock_value, 4),  # Curva activa alineada con S&P500 y NASDAQ ($666.67)
+                "value": round(
+                    eod_stock_value, 4
+                ),  # Curva activa alineada con S&P500 y NASDAQ ($666.67)
                 "total_value": round(eod_total_value, 4),  # Total con cash no desplegado
                 "stock_value": round(eod_stock_value, 4),
                 "cash": round(current_cash, 4),
@@ -138,14 +155,15 @@ def calculate_nav(
 
     # Active capital deployed in equities (ej. $2,000 * 5/15 = $666.67)
     active_count = len([t for t in active_tickers if t in current_shares])
-    active_invested = round(investment * (active_count / num_slots), 4) if num_slots > 0 else investment
-
+    active_invested = (
+        round(investment * (active_count / num_slots), 4) if num_slots > 0 else investment
+    )
 
     def _benchmark_series(col: str) -> list[dict]:
         if col not in prices_df.columns:
             return []
         bdf = (
-            prices_df.filter(pl.col("date").cast(pl.String) >= str(start_date_str))
+            prices_df.filter(pl.col("date").cast(pl.String) >= str(first_hist_date))
             .select(["date", col])
             .drop_nulls()
         )
@@ -163,7 +181,6 @@ def calculate_nav(
         return points
 
     last_row = prices_pd.iloc[-1]
-
 
     holdings = []
     slot_weight_pct = 100.0 / num_slots
@@ -210,7 +227,9 @@ def calculate_nav(
                 "current_price": round(current_price, 4),
                 "current_value": round(val, 4),
                 "return_pct": round(return_pct, 4),
-                "return_usd": round(val - (shares * start_price), 2) if is_selected and start_price > 0 else 0.0,
+                "return_usd": round(val - (shares * start_price), 2)
+                if is_selected and start_price > 0
+                else 0.0,
                 "selected": is_selected,
                 "history": t_history,
             }
@@ -230,11 +249,15 @@ def calculate_nav(
     # Rendimiento de los benchmarks sobre ese mismo capital
     sp500_end_val = sp500_series[-1]["value"] if sp500_series else active_invested
     sp500_return = sp500_end_val - active_invested
-    sp500_return_pct = ((sp500_end_val - active_invested) / active_invested * 100) if active_invested > 0 else 0.0
+    sp500_return_pct = (
+        ((sp500_end_val - active_invested) / active_invested * 100) if active_invested > 0 else 0.0
+    )
 
     nasdaq_end_val = nasdaq_series[-1]["value"] if nasdaq_series else active_invested
     nasdaq_return = nasdaq_end_val - active_invested
-    nasdaq_return_pct = ((nasdaq_end_val - active_invested) / active_invested * 100) if active_invested > 0 else 0.0
+    nasdaq_return_pct = (
+        ((nasdaq_end_val - active_invested) / active_invested * 100) if active_invested > 0 else 0.0
+    )
 
     # Métricas ProPicks AI: Alfa en Porcentaje (%) y en Dólares ($)
     alpha_sp500 = round(active_return_pct - sp500_return_pct, 2)
@@ -278,7 +301,9 @@ def calculate_nav(
     rf_daily = 0.04 / 252
     if len(daily_returns) > 1 and daily_vol > 0:
         excess_returns = [r - rf_daily for r in daily_returns]
-        sharpe_ratio = round((sum(excess_returns) / len(excess_returns)) / daily_vol * math.sqrt(252), 2)
+        sharpe_ratio = round(
+            (sum(excess_returns) / len(excess_returns)) / daily_vol * math.sqrt(252), 2
+        )
     else:
         sharpe_ratio = 1.45 if active_return_pct >= 0 else -0.50
 
@@ -287,7 +312,12 @@ def calculate_nav(
         downside_diffs = [min(0.0, r - rf_daily) ** 2 for r in daily_returns]
         downside_dev = math.sqrt(sum(downside_diffs) / len(daily_returns))
         if downside_dev > 0:
-            sortino_ratio = round((sum(daily_returns) / len(daily_returns) - rf_daily) / downside_dev * math.sqrt(252), 2)
+            sortino_ratio = round(
+                (sum(daily_returns) / len(daily_returns) - rf_daily)
+                / downside_dev
+                * math.sqrt(252),
+                2,
+            )
         else:
             sortino_ratio = round(sharpe_ratio * 1.25, 2)
     else:
@@ -312,11 +342,15 @@ def calculate_nav(
     # Win Rate (% de posiciones activas en ganancia)
     active_selected = [h for h in holdings if h.get("selected", True) and h.get("shares", 0) > 0]
     winning_holdings = [h for h in active_selected if (h.get("return_pct", 0) >= 0)]
-    win_rate_pct = round((len(winning_holdings) / len(active_selected) * 100.0), 1) if active_selected else 0.0
+    win_rate_pct = (
+        round((len(winning_holdings) / len(active_selected) * 100.0), 1) if active_selected else 0.0
+    )
 
     # ── Matriz de Correlación Interactivo ────────────────
     active_ticker_names = [h["ticker"] for h in active_selected]
-    matrix_tickers = active_ticker_names + ["SP500"] if "SP500" in prices_df.columns else active_ticker_names
+    matrix_tickers = (
+        active_ticker_names + ["SP500"] if "SP500" in prices_df.columns else active_ticker_names
+    )
     corr_matrix = []
     total_corrs = []
 
@@ -329,16 +363,16 @@ def calculate_nav(
                 s1 = prices_df[t1].to_numpy()
                 s2 = prices_df[t2].to_numpy()
                 # compute daily returns
-                r1 = [(s1[k] - s1[k-1])/s1[k-1] for k in range(1, len(s1)) if s1[k-1] > 0]
-                r2 = [(s2[k] - s2[k-1])/s2[k-1] for k in range(1, len(s2)) if s2[k-1] > 0]
+                r1 = [(s1[k] - s1[k - 1]) / s1[k - 1] for k in range(1, len(s1)) if s1[k - 1] > 0]
+                r2 = [(s2[k] - s2[k - 1]) / s2[k - 1] for k in range(1, len(s2)) if s2[k - 1] > 0]
                 n = min(len(r1), len(r2))
                 if n > 2:
                     m1 = sum(r1[:n]) / n
                     m2 = sum(r2[:n]) / n
-                    v1 = math.sqrt(sum((x - m1)**2 for x in r1[:n]))
-                    v2 = math.sqrt(sum((y - m2)**2 for y in r2[:n]))
+                    v1 = math.sqrt(sum((x - m1) ** 2 for x in r1[:n]))
+                    v2 = math.sqrt(sum((y - m2) ** 2 for y in r2[:n]))
                     if v1 > 0 and v2 > 0:
-                        c = sum((r1[k] - m1)*(r2[k] - m2) for k in range(n)) / (v1 * v2)
+                        c = sum((r1[k] - m1) * (r2[k] - m2) for k in range(n)) / (v1 * v2)
                         c_val = round(max(-1.0, min(1.0, c)), 2)
                     else:
                         c_val = 0.50
@@ -354,15 +388,27 @@ def calculate_nav(
     diversification_score = round(max(1.0, min(10.0, (1.0 - avg_corr) * 10 + 3.5)), 1)
 
     # ── Simulación Monte Carlo & Stress Testing ──────────
-    mu = (mean_ret if len(daily_returns) > 1 else 0.0006)
-    sigma = (daily_vol if len(daily_returns) > 1 and daily_vol > 0 else 0.009)
+    mu = mean_ret if len(daily_returns) > 1 else 0.0006
+    sigma = daily_vol if len(daily_returns) > 1 and daily_vol > 0 else 0.009
     days_proj = [0, 15, 30, 45, 60, 90]
-    
+
     monte_carlo = {
         "days": days_proj,
         "median": [round(current_stock_value * math.exp(mu * d), 2) for d in days_proj],
-        "bull_95": [round(current_stock_value * math.exp((mu + 1.96 * sigma) * math.sqrt(d) if d > 0 else 0), 2) for d in days_proj],
-        "bear_5": [round(current_stock_value * math.exp((mu - 1.96 * sigma) * math.sqrt(d) if d > 0 else 0), 2) for d in days_proj],
+        "bull_95": [
+            round(
+                current_stock_value * math.exp((mu + 1.96 * sigma) * math.sqrt(d) if d > 0 else 0),
+                2,
+            )
+            for d in days_proj
+        ],
+        "bear_5": [
+            round(
+                current_stock_value * math.exp((mu - 1.96 * sigma) * math.sqrt(d) if d > 0 else 0),
+                2,
+            )
+            for d in days_proj
+        ],
         "scenarios": {
             "ai_rally": {
                 "name": "Rally de Inteligencia Artificial",
@@ -403,17 +449,31 @@ def calculate_nav(
 
     # ── Radar 360 Cuantitativo por Factor ───────────────
     radar_data = [
-        {"factor": "Momentum Relativo", "score": min(95, max(30, int(60 + active_return_pct * 4))), "benchmark": 55},
-        {"factor": "Resiliencia / Drawdown", "score": min(95, max(30, int(90 + max_dd * 5))), "benchmark": 60},
-        {"factor": "Alfa vs S&P 500", "score": min(98, max(30, int(65 + alpha_sp500 * 8))), "benchmark": 50},
-        {"factor": "Eficiencia Sharpe", "score": min(95, max(30, int(sharpe_ratio * 35 + 20))), "benchmark": 52},
+        {
+            "factor": "Momentum Relativo",
+            "score": min(95, max(30, int(60 + active_return_pct * 4))),
+            "benchmark": 55,
+        },
+        {
+            "factor": "Resiliencia / Drawdown",
+            "score": min(95, max(30, int(90 + max_dd * 5))),
+            "benchmark": 60,
+        },
+        {
+            "factor": "Alfa vs S&P 500",
+            "score": min(98, max(30, int(65 + alpha_sp500 * 8))),
+            "benchmark": 50,
+        },
+        {
+            "factor": "Eficiencia Sharpe",
+            "score": min(95, max(30, int(sharpe_ratio * 35 + 20))),
+            "benchmark": 52,
+        },
         {"factor": "Diversificación", "score": int(diversification_score * 9.5), "benchmark": 60},
     ]
 
     total_return = current_value - total_invested
-    total_return_pct = (
-        (total_return / total_invested * 100) if total_invested > 0 else 0.0
-    )
+    total_return_pct = (total_return / total_invested * 100) if total_invested > 0 else 0.0
 
     # Series de rendimiento relativo individual para cada ticker
     ticker_series = {}
@@ -476,7 +536,6 @@ def calculate_nav(
             "unallocated_slots": unallocated_slots,
         },
     }
-
 
 
 def _empty_response(investment: float) -> dict:

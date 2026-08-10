@@ -12,11 +12,13 @@ warnings.simplefilter("ignore", DeprecationWarning)
 warnings.filterwarnings("ignore")
 
 import warnings
+
 warnings.simplefilter("ignore", DeprecationWarning)
 warnings.simplefilter("ignore", FutureWarning)
 
 import os
 import certifi
+
 os.environ["CURL_CA_BUNDLE"] = certifi.where()
 
 from fastapi import FastAPI, Request
@@ -26,6 +28,7 @@ from routers.nav import router as nav_router
 from routers.prices import router as prices_router
 from routers.rebalance import router as rebalance_router
 from routers.purchases import router as purchases_router
+from routers.fixed_income import router as fixed_income_router
 
 app = FastAPI(
     title="Titanes Portfolio API",
@@ -91,6 +94,7 @@ app.include_router(nav_router, prefix="/api")
 app.include_router(prices_router, prefix="/api")
 app.include_router(rebalance_router, prefix="/api")
 app.include_router(purchases_router, prefix="/api")
+app.include_router(fixed_income_router, prefix="/api/fixed-income", tags=["fixed-income"])
 
 
 @app.get("/")
