@@ -3,8 +3,13 @@
  * Automatically falls back to static pre-calculated JSON data on GitHub Pages or when backend is offline!
  */
 
+const IS_PUBLIC_STATIC_HOST = typeof window !== 'undefined' && (
+  window.location.hostname.includes('github.io') ||
+  (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
+);
+
 const BASE = 'http://127.0.0.1:8000/api';
-const TIMEOUT_MS = 15000; // 15 seconds before checking static fallback
+const TIMEOUT_MS = 2000; // 2 seconds before checking static fallback
 
 // Helper to get relative static data path on GitHub Pages
 function getStaticDataPath(file) {
@@ -14,7 +19,7 @@ function getStaticDataPath(file) {
 }
 
 // Resilient fetch helper with automatic retry for initial startup / hot-reloads
-async function safeFetch(url, options = {}, retries = 2, delayMs = 600) {
+async function safeFetch(url, options = {}, retries = 1, delayMs = 300) {
   for (let i = 0; i <= retries; i++) {
     try {
       const res = await fetch(url, options);
@@ -35,18 +40,20 @@ async function safeFetch(url, options = {}, retries = 2, delayMs = 600) {
 }
 
 async function fetchWithFallback(endpoint, staticFile, options = {}) {
-  // If explicitly in static hosting or local backend is not available
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-    const res = await safeFetch(`${BASE}${endpoint}`, { ...options, signal: controller.signal }, 2, 600);
-    clearTimeout(timer);
+  // If NOT on a remote public static host, try connecting to local FastAPI backend
+  if (!IS_PUBLIC_STATIC_HOST) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+      const res = await safeFetch(`${BASE}${endpoint}`, { ...options, signal: controller.signal }, 1, 300);
+      clearTimeout(timer);
 
-    if (res.ok) {
-      return await res.json();
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {
+      // Backend offline
     }
-  } catch {
-    // Backend offline or running in static GitHub Pages environment
   }
 
   // Seamless static fallback

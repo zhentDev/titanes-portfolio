@@ -64,6 +64,19 @@ def generate_static():
         json.dump(all_period_data, f, indent=2)
     print("[STATIC GEN] Guardado: nav_all.json completo")
 
+    # Copy fixed income data if present
+    fixed_inc_src = backend_dir / "data" / "fixed_income.json"
+    if fixed_inc_src.exists():
+        with open(fixed_inc_src, "r", encoding="utf-8") as sf, open(out_dir / "fixed_income.json", "w", encoding="utf-8") as df:
+            df.write(sf.read())
+        print("[STATIC GEN] Guardado: fixed_income.json")
+
+    hist_rates_src = backend_dir / "data" / "historical_rates.json"
+    if hist_rates_src.exists():
+        with open(hist_rates_src, "r", encoding="utf-8") as sf, open(out_dir / "historical_rates.json", "w", encoding="utf-8") as df:
+            df.write(sf.read())
+        print("[STATIC GEN] Guardado: historical_rates.json")
+
     print("[STATIC GEN] Generación de datos estáticos completada con éxito!")
 
 
