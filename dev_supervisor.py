@@ -139,10 +139,10 @@ def _schedule_backup_cleanup(backup_path: Path, file_path: Path, delay_seconds: 
 
 def is_ai_or_developer_modifying(target_file: Path) -> bool:
     """
-    Detect if an AI assistant (Antigravity/Gemini) or developer is actively modifying code.
+    Detect if an AI assistant (Antigravity) or developer is actively modifying code.
     1. Check for AI lockfile (.ai_active.lock or .ai_lock).
-    2. Check target file stability: if target file mtime was touched within 10s, pause auto-healer.
-    3. Check workspace activity: if any file in frontend/src or backend was modified within 6s, wait.
+    2. Check target file stability: if target file mtime was touched within 45s, pause auto-healer.
+    3. Check workspace activity: if any file in frontend/src or backend was modified within 30s, wait.
     """
     now = time.time()
 
@@ -150,8 +150,8 @@ def is_ai_or_developer_modifying(target_file: Path) -> bool:
     lock_files = [ROOT_DIR / ".ai_active.lock", ROOT_DIR / ".ai_lock", ROOT_DIR / ".agent_busy"]
     for lock in lock_files:
         if lock.exists():
-            # If lock is fresh (< 5 mins), AI is actively coding
-            if (now - lock.stat().st_mtime) < 300:
+            # If lock is fresh (< 10 mins), AI is actively coding
+            if (now - lock.stat().st_mtime) < 600:
                 return True
             else:
                 try:
@@ -159,14 +159,14 @@ def is_ai_or_developer_modifying(target_file: Path) -> bool:
                 except Exception:
                     pass
 
-    # 2. Check if the target file was edited in the last 10 seconds
+    # 2. Check if the target file was edited in the last 45 seconds
     if target_file.exists():
-        if (now - target_file.stat().st_mtime) < 10.0:
+        if (now - target_file.stat().st_mtime) < 45.0:
             return True
 
-    # 3. Check if ANY source code in frontend/src or backend was modified in the last 6 seconds
+    # 3. Check if ANY source code in frontend/src or backend was modified in the last 30 seconds
     for p in list(FRONTEND_DIR.glob("src/**/*.*")) + list(BACKEND_DIR.glob("**/*.py")):
-        if p.is_file() and (now - p.stat().st_mtime) < 6.0:
+        if p.is_file() and (now - p.stat().st_mtime) < 30.0:
             return True
 
     return False
@@ -213,13 +213,13 @@ def ask_local_model_to_fix(file_path: Path, error_context: str, service_name: st
     with fix_lock:
         now = time.time()
         file_str = str(file_path)
-        if file_str in last_fix_time and (now - last_fix_time[file_str]) < 12.0:
+        if file_str in last_fix_time and (now - last_fix_time[file_str]) < 60.0:
             return  # Avoid spamming fixes while hot-reloading
 
         last_fix_time[file_str] = now
 
-    # 1. Wait until AI / developer has finished active modifications
-    for _ in range(8):
+    # 1. Wait until AI / developer has finished active modifications (wait up to 30s)
+    for _ in range(15):
         if is_ai_or_developer_modifying(file_path):
             time.sleep(2.0)
         else:
