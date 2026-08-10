@@ -9,6 +9,7 @@ COPY pyproject.toml .
 COPY main.py .
 COPY routers/ routers/
 COPY services/ services/
+COPY data/ data/
 
 # Install the project and its dependencies using standard pip
 COPY requirements.txt .
