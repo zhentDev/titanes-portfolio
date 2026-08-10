@@ -297,8 +297,12 @@ def get_historical_prices(
 def get_live_quotes(tickers: list[str]) -> list[dict]:
     """
     Fetch current price, change, % change for each ticker.
-    Returns a list of dicts ready to be serialised as JSON.
+    Uses fast_info with fallback to 5d history for London (.L) and international tickers.
+    Cached to avoid Yahoo Finance rate-limiting.
     """
+    if not tickers:
+        return []
+
     cache_key = f"live:{','.join(sorted(tickers))}"
     cached = _cache_get(cache_key)
     if cached is not None:
@@ -306,36 +310,59 @@ def get_live_quotes(tickers: list[str]) -> list[dict]:
 
     results: list[dict] = []
     for ticker in tickers:
+        ticker_clean = ticker.strip().upper()
         try:
-            t = get_yf_ticker(ticker)
-            fi = t.fast_info
-            info = t.info
-            price: float = fi.last_price or 0.0
-            prev: float = fi.previous_close or price
-            change = price - prev
-            change_pct = (change / prev * 100) if prev else 0.0
-            meta = get_ticker_meta(ticker)
-            results.append(
-                {
-                    "ticker": ticker,
-                    "name": meta.get("name")
-                    or info.get("longName")
-                    or info.get("shortName")
-                    or ticker,
-                    "sector": meta.get("sector")
-                    or info.get("sector")
-                    or info.get("industry")
-                    or "Desconocido",
-                    "exchange": meta.get("exchange") or info.get("exchange") or "US",
-                    "currency": info.get("currency") or "USD",
-                    "quoteType": info.get("quoteType") or "EQUITY",
-                    "price": round(price, 4),
-                    "change": round(change, 4),
-                    "change_pct": round(change_pct, 4),
-                    "previous_close": round(prev, 4),
-                    "market_open": _is_market_open(),
-                }
-            )
+            t = get_yf_ticker(ticker_clean)
+            price = None
+            prev = None
+
+            # 1. Try fast_info
+            try:
+                fi = t.fast_info
+                price = getattr(fi, "last_price", None)
+                prev = getattr(fi, "previous_close", None)
+            except Exception:
+                pass
+
+            # 2. Fallback to 5-day history if fast_info returns None or 0
+            if not price or pd.isna(price) or price <= 0:
+                hist = t.history(period="5d")
+                if not hist.empty and "Close" in hist.columns:
+                    closes = hist["Close"].dropna()
+                    if not closes.empty:
+                        price = float(closes.iloc[-1])
+                        prev = float(closes.iloc[-2]) if len(closes) > 1 else price
+
+            # Handle GBP vs GBX (Pence) conversion for London tickers (.L)
+            currency = "USD"
+            if ticker_clean.endswith(".L"):
+                currency = "GBP"
+
+            if price is not None and not pd.isna(price) and price > 0:
+                price = float(price)
+                prev = float(prev) if prev and not pd.isna(prev) else price
+                change = price - prev
+                change_pct = (change / prev * 100) if prev > 0 else 0.0
+
+                meta = get_ticker_meta(ticker_clean)
+                results.append(
+                    {
+                        "ticker": ticker_clean,
+                        "name": meta.get("name") or ticker_clean,
+                        "sector": meta.get("sector") or "Tecnología",
+                        "exchange": meta.get("exchange") or ("LSE" if ticker_clean.endswith(".L") else "US"),
+                        "currency": currency,
+                        "quoteType": "EQUITY",
+                        "price": round(price, 4),
+                        "change": round(change, 4),
+                        "change_pct": round(change_pct, 4),
+                        "previous_close": round(prev, 4),
+                        "market_open": _is_market_open(),
+                    }
+                )
+            else:
+                raise ValueError(f"No price data available for {ticker_clean}")
+
         except Exception as exc:
             meta = get_ticker_meta(ticker)
             results.append(
