@@ -8,6 +8,9 @@ import re
 import io
 from typing import Dict, Any, List, Optional
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 import pypdf
 
@@ -319,6 +322,20 @@ def parse_nu_screenshot_history(text: str, start_year: int = 2024) -> Dict[str, 
     # Regex for date lines: "13 jun - 02:10" or "13 jun"
     date_line_pattern = re.compile(r'(\d{1,2})\s+([a-z]{3})(?:\s*-\s*\d{2}:\d{2})?', re.IGNORECASE)
 
+    # Nuevo: detectar saldos directos de cajitas (resumen)
+    direct_balance_pattern = re.compile(
+        r'(?:Cajita\s+)([A-Za-z0-9\sáéíóúÁÉÍÓÚñÑ]+?)\s*[:$]?\s*([+\-]?\$?\s*[\d\.,]+)',
+        re.IGNORECASE
+    )
+    for line in lines:
+        bal_match = direct_balance_pattern.search(line)
+        if bal_match:
+            cajita_name = bal_match.group(1).strip()
+            bal = abs(parse_cop_amount(bal_match.group(2)))
+            if cajita_name not in pocket_balances:
+                pocket_balances[cajita_name] = bal
+                logger.debug("Direct balance found: %s = %.2f", cajita_name, bal)
+
     current_date_str = f"{current_year}-01-01"
 
     for i, line in enumerate(lines):
@@ -342,6 +359,8 @@ def parse_nu_screenshot_history(text: str, start_year: int = 2024) -> Dict[str, 
             action, cajita_name, amount_str = cajita_match.groups()
             cajita_name = cajita_name.strip()
             val = abs(parse_cop_amount(amount_str))
+            
+            logger.debug("Cajita match on line %d: %s | action=%s, name=%s, amount=%.2f", i, line, action, cajita_name, val)
             
             if action.lower() == 'agregaste':
                 pocket_balances[cajita_name] = pocket_balances.get(cajita_name, 0.0) + val
@@ -378,7 +397,12 @@ def parse_nu_screenshot_history(text: str, start_year: int = 2024) -> Dict[str, 
                     "reteFuentePct": 4.0,
                     "category": cat_name.strip()
                 })
+                
+                logger.debug("CDT match on line %d: %s | category=%s, capital=%.2f", i, line, cat_name, capital)
 
+    logger.debug("Pocket balances dict: %s", pocket_balances)
+    logger.debug("CDTs detected: %d", len(cdts_detected))
+    
     accounts_detected = []
     for pocket_name, balance in pocket_balances.items():
         accounts_detected.append({
@@ -394,6 +418,8 @@ def parse_nu_screenshot_history(text: str, start_year: int = 2024) -> Dict[str, 
     if not accounts_detected and not cdts_detected:
         cop_amounts = [parse_cop_amount(a) for a in re.findall(r'([+\-]?\$?\s*\d{1,3}(?:\.\d{3})*(?:,\d{2})?)', text) if parse_cop_amount(a) > 0]
         estimated_bal = max(cop_amounts) if cop_amounts else 0.0
+        
+        logger.debug("Fallback triggered. cop_amounts: %s, max: %.2f", cop_amounts, estimated_bal)
         
         accounts_detected.append({
             "name": "Cuenta / Cajita Principal",
