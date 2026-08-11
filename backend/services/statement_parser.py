@@ -357,6 +357,8 @@ def parse_nu_screenshot_history(text: str, start_year: int = 2024) -> Dict[str, 
             last_month_num = month_num
             current_date_str = f"{current_year}-{month_num:02d}-{day:02d}"
 
+        has_direct_balances = len([k for k in pocket_balances if pocket_balances[k] > 0]) > 0
+        
         # 1. Parse Cajita transactions
         cajita_match = cajita_pattern.search(line)
         if cajita_match:
@@ -366,24 +368,25 @@ def parse_nu_screenshot_history(text: str, start_year: int = 2024) -> Dict[str, 
             
             logger.debug("Cajita match on line %d: %s | action=%s, name=%s, amount=%.2f", i, line, action, cajita_name, val)
             
-            if action.lower() == 'agregaste':
-                pocket_balances[cajita_name] = pocket_balances.get(cajita_name, 0.0) + val
-                movements_detected.append({
-                    "date": current_date_str,
-                    "description": f"Agregaste a {cajita_name}",
-                    "amount": -val,
-                    "currency": "COP",
-                    "type": "debit"
-                })
-            else: # Retiraste
-                pocket_balances[cajita_name] = pocket_balances.get(cajita_name, 0.0) - val
-                movements_detected.append({
-                    "date": current_date_str,
-                    "description": f"Retiraste de {cajita_name}",
-                    "amount": val,
-                    "currency": "COP",
-                    "type": "credit"
-                })
+            if not has_direct_balances:
+                if action.lower() == 'agregaste':
+                    pocket_balances[cajita_name] = pocket_balances.get(cajita_name, 0.0) + val
+                    movements_detected.append({
+                        "date": current_date_str,
+                        "description": f"Agregaste a {cajita_name}",
+                        "amount": -val,
+                        "currency": "COP",
+                        "type": "debit"
+                    })
+                else: # Retiraste
+                    pocket_balances[cajita_name] = pocket_balances.get(cajita_name, 0.0) - val
+                    movements_detected.append({
+                        "date": current_date_str,
+                        "description": f"Retiraste de {cajita_name}",
+                        "amount": val,
+                        "currency": "COP",
+                        "type": "credit"
+                    })
 
         # 2. Parse CDT investments by Category/Cajita
         cdt_match = cdt_cat_pattern.search(line)
