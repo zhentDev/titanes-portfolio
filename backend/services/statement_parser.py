@@ -296,6 +296,10 @@ def parse_nu_screenshot_history(text: str, start_year: int = 2024) -> Dict[str, 
     """
     lines = [line.strip() for line in text.split('\n') if line.strip()]
     
+    logger.debug("=== OCR RAW TEXT ===")
+    logger.debug(text)
+    logger.debug("=== END OCR TEXT ===")
+    
     pocket_balances: Dict[str, float] = {}
     cdts_detected = []
     movements_detected = []
