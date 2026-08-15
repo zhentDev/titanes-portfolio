@@ -10,7 +10,7 @@ export default function SectorAllocation({ holdings, investment, numSlots }) {
   // Group by sector
   const sectorMap = {};
   activeHoldings.forEach((h) => {
-    const s = h.sector || 'Tecnología';
+    const s = h.sector || "Tecnología";
     if (!sectorMap[s]) sectorMap[s] = { name: s, value: 0, tickers: [] };
     sectorMap[s].value += h.current_value || 0;
     sectorMap[s].tickers.push(h.ticker);
@@ -19,26 +19,40 @@ export default function SectorAllocation({ holdings, investment, numSlots }) {
   const sectors = Object.values(sectorMap).sort((a, b) => b.value - a.value);
 
   const SECTOR_COLORS = [
-    '#00e5ff', // Cyan
-    '#a855f7', // Purple
-    '#10b981', // Emerald
-    '#f59e0b', // Amber
-    '#ec4899', // Pink
-    '#3b82f6', // Blue
+    "#00e5ff", // Cyan
+    "#a855f7", // Purple
+    "#10b981", // Emerald
+    "#f59e0b", // Amber
+    "#ec4899", // Pink
+    "#3b82f6", // Blue
   ];
 
   return (
-    <div className="card fade-up" style={{ padding: '20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+    <div className="card fade-up" style={{ padding: "20px" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "16px",
+        }}
+      >
         <div>
-          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>
+          <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700 }}>
             🍩 Exposición y Concentración Sectorial
           </h3>
-          <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+          <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
             Distribución del capital activo entre industrias tecnológicas y liquidez
           </span>
         </div>
-        <span className="badge" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
+        <span
+          className="badge"
+          style={{
+            background: "rgba(255,255,255,0.06)",
+            color: "var(--text-secondary)",
+            fontSize: "0.75rem",
+          }}
+        >
           {sectors.length} Sectores · {activeHoldings.length} Acciones
         </span>
       </div>
@@ -46,13 +60,13 @@ export default function SectorAllocation({ holdings, investment, numSlots }) {
       {/* Multi-color Allocation Progress Bar */}
       <div
         style={{
-          display: 'flex',
-          height: '14px',
-          borderRadius: '8px',
-          overflow: 'hidden',
-          background: 'rgba(255,255,255,0.05)',
-          marginBottom: '16px',
-          boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.5)',
+          display: "flex",
+          height: "14px",
+          borderRadius: "8px",
+          overflow: "hidden",
+          background: "rgba(255,255,255,0.05)",
+          marginBottom: "16px",
+          boxShadow: "inset 0 1px 3px rgba(0,0,0,0.5)",
         }}
       >
         {sectors.map((sec, idx) => {
@@ -64,7 +78,7 @@ export default function SectorAllocation({ holdings, investment, numSlots }) {
               style={{
                 width: `${pct}%`,
                 background: color,
-                transition: 'width 0.4s ease',
+                transition: "width 0.4s ease",
               }}
               title={`${sec.name}: $${sec.value.toFixed(2)} (${pct.toFixed(1)}%)`}
             />
@@ -74,8 +88,8 @@ export default function SectorAllocation({ holdings, investment, numSlots }) {
           <div
             style={{
               width: `${(cashReserved / totalFundValue) * 100}%`,
-              background: 'rgba(255,255,255,0.15)',
-              borderLeft: '1px solid rgba(0,0,0,0.3)',
+              background: "rgba(255,255,255,0.15)",
+              borderLeft: "1px solid rgba(0,0,0,0.3)",
             }}
             title={`Cash Reservado Q: $${cashReserved.toFixed(2)} (${((cashReserved / totalFundValue) * 100).toFixed(1)}%)`}
           />
@@ -85,9 +99,9 @@ export default function SectorAllocation({ holdings, investment, numSlots }) {
       {/* Sector Pills Grid */}
       <div
         style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '10px',
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: "10px",
         }}
       >
         {sectors.map((sec, idx) => {
@@ -97,40 +111,45 @@ export default function SectorAllocation({ holdings, investment, numSlots }) {
             <div
               key={sec.name}
               style={{
-                background: 'var(--bg-surface)',
-                padding: '10px 14px',
-                borderRadius: 'var(--radius)',
-                border: '1px solid var(--border)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                background: "var(--bg-surface)",
+                padding: "10px 14px",
+                borderRadius: "var(--radius)",
+                border: "1px solid var(--border)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span
                   style={{
                     width: 10,
                     height: 10,
-                    borderRadius: '50%',
+                    borderRadius: "50%",
                     background: color,
-                    display: 'inline-block',
+                    display: "inline-block",
                     boxShadow: `0 0 6px ${color}66`,
                   }}
                 />
                 <div>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  <div
+                    style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--text-primary)" }}
+                  >
                     {sec.name}
                   </div>
-                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                    {sec.tickers.join(', ')}
+                  <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                    {sec.tickers.join(", ")}
                   </div>
                 </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <div className="mono" style={{ fontSize: '0.88rem', fontWeight: 700, color: color }}>
+              <div style={{ textAlign: "right" }}>
+                <div
+                  className="mono"
+                  style={{ fontSize: "0.88rem", fontWeight: 700, color: color }}
+                >
                   {pctOfActive.toFixed(1)}%
                 </div>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
                   ${sec.value.toFixed(2)}
                 </div>
               </div>
@@ -142,42 +161,43 @@ export default function SectorAllocation({ holdings, investment, numSlots }) {
         {cashReserved > 0 && (
           <div
             style={{
-              background: 'rgba(255,255,255,0.02)',
-              padding: '10px 14px',
-              borderRadius: 'var(--radius)',
-              border: '1px dashed var(--border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              background: "rgba(255,255,255,0.02)",
+              padding: "10px 14px",
+              borderRadius: "var(--radius)",
+              border: "1px dashed var(--border)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
               opacity: 0.75,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span
                 style={{
                   width: 10,
                   height: 10,
-                  borderRadius: '50%',
-                  background: '#64748b',
-                  display: 'inline-block',
+                  borderRadius: "50%",
+                  background: "#64748b",
+                  display: "inline-block",
                 }}
               />
               <div>
-                <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--text-muted)" }}>
                   Cash Reservado (Q)
                 </div>
-                <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                <div style={{ fontSize: "0.68rem", color: "#64748b" }}>
                   {numSlots - activeHoldings.length} slots libres
                 </div>
               </div>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div className="mono" style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-muted)' }}>
+            <div style={{ textAlign: "right" }}>
+              <div
+                className="mono"
+                style={{ fontSize: "0.88rem", fontWeight: 700, color: "var(--text-muted)" }}
+              >
                 ${cashReserved.toFixed(2)}
               </div>
-              <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
-                Liquidez
-              </div>
+              <div style={{ fontSize: "0.68rem", color: "#64748b" }}>Liquidez</div>
             </div>
           </div>
         )}

@@ -3,8 +3,11 @@ Titanes Tech Portfolio — FastAPI backend entry point.
 Run with:  uvicorn main:app --reload --port 8000
 """
 
+import logging
+
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s [%(name)s] %(levelname)s %(message)s")
+
 import os
-import sys
 import traceback
 import warnings
 
@@ -19,11 +22,12 @@ os.environ["CURL_CA_BUNDLE"] = certifi.where()
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+
+from routers.fixed_income import router as fixed_income_router
 from routers.nav import router as nav_router
 from routers.prices import router as prices_router
-from routers.rebalance import router as rebalance_router
 from routers.purchases import router as purchases_router
-from routers.fixed_income import router as fixed_income_router
+from routers.rebalance import router as rebalance_router
 
 app = FastAPI(
     title="Titanes Portfolio API",

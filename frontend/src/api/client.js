@@ -3,12 +3,12 @@
  * Automatically falls back to static pre-calculated JSON data on GitHub Pages or when backend is offline!
  */
 
-const RENDER_BACKEND_BASE = 'https://titanes-portfolio-backend.onrender.com/api';
-const LOCAL_BACKEND_BASE = 'http://127.0.0.1:8000/api';
+const RENDER_BACKEND_BASE = "https://titanes-portfolio-backend.onrender.com/api";
+const LOCAL_BACKEND_BASE = "http://127.0.0.1:8000/api";
 
-const IS_LOCAL_HOST = typeof window !== 'undefined' && (
-  window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-);
+const IS_LOCAL_HOST =
+  typeof window !== "undefined" &&
+  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 
 // Use local backend when developing on localhost, and Render cloud backend on GitHub Pages/production!
 const BASE = IS_LOCAL_HOST ? LOCAL_BACKEND_BASE : RENDER_BACKEND_BASE;
@@ -16,8 +16,8 @@ const TIMEOUT_MS = 4000; // 4 seconds timeout for cloud backend before static fa
 
 // Helper to get relative static data path on GitHub Pages
 function getStaticDataPath(file) {
-  const base = import.meta.env.BASE_URL || './';
-  const cleanBase = base.endsWith('/') ? base : `${base}/`;
+  const base = import.meta.env.BASE_URL || "./";
+  const cleanBase = base.endsWith("/") ? base : `${base}/`;
   return `${cleanBase}data/${file}`;
 }
 
@@ -46,7 +46,12 @@ async function fetchWithFallback(endpoint, staticFile, options = {}) {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-    const res = await safeFetch(`${BASE}${endpoint}`, { ...options, signal: controller.signal }, 1, 300);
+    const res = await safeFetch(
+      `${BASE}${endpoint}`,
+      { ...options, signal: controller.signal },
+      1,
+      300,
+    );
     clearTimeout(timer);
 
     if (res.ok) {
@@ -65,18 +70,25 @@ async function fetchWithFallback(endpoint, staticFile, options = {}) {
     }
   }
 
-  throw new Error(`No se pudo cargar datos desde el backend ni desde el archivo estático ${staticFile}`);
+  throw new Error(
+    `No se pudo cargar datos desde el backend ni desde el archivo estático ${staticFile}`,
+  );
 }
 
 /** GET /api/nav */
-export async function fetchNAV({ period = '1Y', investment = 2000, numSlots = 15, selectedTickers }) {
+export async function fetchNAV({
+  period = "1Y",
+  investment = 2000,
+  numSlots = 15,
+  selectedTickers,
+}) {
   const params = new URLSearchParams({
     period,
     investment: String(investment),
     num_slots: String(numSlots),
   });
   if (selectedTickers && selectedTickers.length > 0) {
-    params.set('selected_tickers', selectedTickers.join(','));
+    params.set("selected_tickers", selectedTickers.join(","));
   }
 
   const staticFile = `nav_${period}.json`;
@@ -116,13 +128,13 @@ export async function fetchNAV({ period = '1Y', investment = 2000, numSlots = 15
 
 /** GET /api/prices/live */
 export async function fetchLiveQuotes(tickers) {
-  const params = new URLSearchParams({ tickers: tickers.join(',') });
-  return fetchWithFallback(`/prices/live?${params}`, 'nav_1W.json');
+  const params = new URLSearchParams({ tickers: tickers.join(",") });
+  return fetchWithFallback(`/prices/live?${params}`, "nav_1W.json");
 }
 
 /** GET /api/prices/intraday/:ticker */
 export async function fetchIntraday(ticker) {
-  return fetchWithFallback(`/prices/intraday/${ticker}`, 'nav_1W.json');
+  return fetchWithFallback(`/prices/intraday/${ticker}`, "nav_1W.json");
 }
 
 /** GET /api/prices/indices_history?start_date=YYYY-MM-DD */
@@ -147,7 +159,7 @@ export async function fetchHistoricalPrice(ticker, date) {
   } catch {
     // If backend offline, just return a mock response or null so the UI can gracefully fallback
   }
-  return { price: null, error: 'Backend offline' };
+  return { price: null, error: "Backend offline" };
 }
 
 /** GET /api/tickers/search?q=... */
@@ -163,63 +175,69 @@ export async function searchTickersMultiple(q) {
 
 /** GET /api/rebalances */
 export async function fetchRebalances() {
-  return fetchWithFallback('/rebalances', 'rebalances.json');
+  return fetchWithFallback("/rebalances", "rebalances.json");
 }
 
 /** POST /api/rebalances */
 export async function createRebalance({ rebalance_date, cash_added, tickers }) {
   const res = await fetch(`${BASE}/rebalances`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ rebalance_date, cash_added, tickers }),
   });
-  if (!res.ok) throw new Error('Error al registrar rebalanceo');
+  if (!res.ok) throw new Error("Error al registrar rebalanceo");
   return res.json();
 }
 
 /** DELETE /api/rebalances/:date */
 export async function deleteRebalance(date) {
   const res = await fetch(`${BASE}/rebalances/${date}`, {
-    method: 'DELETE',
+    method: "DELETE",
   });
-  if (!res.ok) throw new Error('Error al eliminar rebalanceo');
+  if (!res.ok) throw new Error("Error al eliminar rebalanceo");
   return res.json();
 }
 
 /** PURCHASES API */
 export async function fetchPurchasesData() {
   const res = await safeFetch(`${BASE}/purchases/portfolios`, {}, 2, 500);
-  if (!res.ok) throw new Error('Error fetching purchases data');
+  if (!res.ok) throw new Error("Error fetching purchases data");
   return res.json();
 }
 
 export async function createPurchasePortfolio(id, name, isPlan = false) {
   const res = await safeFetch(`${BASE}/purchases/portfolios`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id, name, isPlan }),
   });
   return res.json();
 }
 
 export async function deletePurchasePortfolioApi(id) {
-  const res = await safeFetch(`${BASE}/purchases/portfolios/${id}`, { method: 'DELETE' });
+  const res = await safeFetch(`${BASE}/purchases/portfolios/${id}`, { method: "DELETE" });
   return res.json();
 }
 
 export async function togglePortfolioPlanApi(id, isPlan, planConfig = null) {
   const res = await safeFetch(`${BASE}/purchases/portfolios/${id}/plan`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ isPlan, planConfig }),
   });
   return res.json();
 }
 
-export async function updatePortfolioSettingsApi(id, assetCurrency, localCurrency, inflationRate, useAutoColInflation) {
+export async function updatePortfolioSettingsApi(
+  id,
+  assetCurrency,
+  localCurrency,
+  inflationRate,
+  useAutoColInflation,
+) {
   const res = await safeFetch(`${BASE}/purchases/portfolios/${id}/settings`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ assetCurrency, localCurrency, inflationRate, useAutoColInflation }),
   });
   return res.json();
@@ -227,21 +245,26 @@ export async function updatePortfolioSettingsApi(id, assetCurrency, localCurrenc
 
 export async function fetchFxHistory(assetCurrency, localCurrency) {
   if (assetCurrency === localCurrency) return { current: 1.0, history: {} };
-  const res = await safeFetch(`${BASE}/purchases/fx?currency=${assetCurrency}-${localCurrency}`, {}, 2, 500);
-  if (!res.ok) throw new Error('Error fetching FX data');
+  const res = await safeFetch(
+    `${BASE}/purchases/fx?currency=${assetCurrency}-${localCurrency}`,
+    {},
+    2,
+    500,
+  );
+  if (!res.ok) throw new Error("Error fetching FX data");
   return res.json();
 }
 
 export async function fetchColInflationHistory() {
   const res = await safeFetch(`${BASE}/purchases/inflation/colombia`, {}, 2, 500);
-  if (!res.ok) throw new Error('Error fetching inflation data');
+  if (!res.ok) throw new Error("Error fetching inflation data");
   return res.json();
 }
 
 export async function createPurchaseLot(lot) {
   const res = await fetch(`${BASE}/purchases/lots`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(lot),
   });
   return res.json();
@@ -249,23 +272,23 @@ export async function createPurchaseLot(lot) {
 
 export async function updatePurchaseLots(lots) {
   const res = await fetch(`${BASE}/purchases/lots`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(lots),
   });
-  if (!res.ok) throw new Error('Failed to update purchase lots');
+  if (!res.ok) throw new Error("Failed to update purchase lots");
   return res.json();
 }
 
 export async function deletePurchaseLot(id) {
-  const res = await fetch(`${BASE}/purchases/lots/${id}`, { method: 'DELETE' });
+  const res = await fetch(`${BASE}/purchases/lots/${id}`, { method: "DELETE" });
   return res.json();
 }
 
 export async function syncPurchasesMigration(purchasePortfolios, individualPurchases) {
   const res = await safeFetch(`${BASE}/purchases/sync`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ purchasePortfolios, individualPurchases }),
   });
   return res.json();
@@ -275,14 +298,14 @@ export async function syncPurchasesMigration(purchasePortfolios, individualPurch
 
 export async function fetchFixedIncomeData() {
   const res = await safeFetch(`${BASE}/fixed-income/data`, {}, 2, 500);
-  if (!res.ok) throw new Error('Error fetching fixed income data');
+  if (!res.ok) throw new Error("Error fetching fixed income data");
   return res.json();
 }
 
 export async function createFixedIncomeEntity(entity) {
   const res = await safeFetch(`${BASE}/fixed-income/entities`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(entity),
   });
   return res.json();
@@ -290,22 +313,22 @@ export async function createFixedIncomeEntity(entity) {
 
 export async function updateFixedIncomeEntityApi(id, entity) {
   const res = await safeFetch(`${BASE}/fixed-income/entities/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(entity),
   });
   return res.json();
 }
 
 export async function deleteFixedIncomeEntityApi(id) {
-  const res = await safeFetch(`${BASE}/fixed-income/entities/${id}`, { method: 'DELETE' });
+  const res = await safeFetch(`${BASE}/fixed-income/entities/${id}`, { method: "DELETE" });
   return res.json();
 }
 
 export async function createFixedIncomeAccount(account) {
   const res = await safeFetch(`${BASE}/fixed-income/accounts`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(account),
   });
   return res.json();
@@ -313,22 +336,22 @@ export async function createFixedIncomeAccount(account) {
 
 export async function updateFixedIncomeAccountApi(id, account) {
   const res = await safeFetch(`${BASE}/fixed-income/accounts/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(account),
   });
   return res.json();
 }
 
 export async function deleteFixedIncomeAccountApi(id) {
-  const res = await safeFetch(`${BASE}/fixed-income/accounts/${id}`, { method: 'DELETE' });
+  const res = await safeFetch(`${BASE}/fixed-income/accounts/${id}`, { method: "DELETE" });
   return res.json();
 }
 
 export async function createFixedIncomeCDT(cdt) {
   const res = await safeFetch(`${BASE}/fixed-income/cdts`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(cdt),
   });
   return res.json();
@@ -336,34 +359,39 @@ export async function createFixedIncomeCDT(cdt) {
 
 export async function updateFixedIncomeCDTApi(id, cdt) {
   const res = await safeFetch(`${BASE}/fixed-income/cdts/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(cdt),
   });
   return res.json();
 }
 
 export async function deleteFixedIncomeCDTApi(id) {
-  const res = await safeFetch(`${BASE}/fixed-income/cdts/${id}`, { method: 'DELETE' });
+  const res = await safeFetch(`${BASE}/fixed-income/cdts/${id}`, { method: "DELETE" });
   return res.json();
 }
 
 export async function syncFixedIncomeStateApi(state) {
   const res = await safeFetch(`${BASE}/fixed-income/sync`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(state),
   });
   return res.json();
 }
 
-export async function suggestFixedIncomeRate(entityId, productType = 'savings', termDays = null, date = null) {
+export async function suggestFixedIncomeRate(
+  entityId,
+  productType = "savings",
+  termDays = null,
+  date = null,
+) {
   const params = new URLSearchParams({
     entity_id: entityId,
     product_type: productType,
   });
-  if (termDays) params.set('term_days', String(termDays));
-  if (date) params.set('date', date);
+  if (termDays) params.set("term_days", String(termDays));
+  if (date) params.set("date", date);
 
   try {
     const res = await safeFetch(`${BASE}/fixed-income/rates/suggest?${params}`);
@@ -371,47 +399,59 @@ export async function suggestFixedIncomeRate(entityId, productType = 'savings', 
   } catch (e) {
     // Fallback defaults
   }
-  return { rateEA: 12.0, label: 'Tasa Estándar', tiers: [] };
+  return { rateEA: 12.0, label: "Tasa Estándar", tiers: [] };
+}
+
+export async function fetchHistoricalRates() {
+  try {
+    const res = await safeFetch(`${BASE}/fixed-income/rates`);
+    if (res.ok) return await res.json();
+  } catch (e) {
+    console.error("Error fetching historical rates database:", e);
+  }
+  return { entities: {} };
 }
 
 export async function calculateCompoundHistory(entityId, deposits, currentDate = null) {
   const res = await safeFetch(`${BASE}/fixed-income/calculate-compound-history`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ entityId, deposits, currentDate }),
   });
-  if (!res.ok) throw new Error('Error calculating compound history');
+  if (!res.ok) throw new Error("Error calculating compound history");
   return res.json();
 }
 
-export async function uploadStatementApi(filesInput, password = '', startYear = 2024) {
+export async function uploadStatementApi(filesInput, password = "", startYear = 2024) {
   const formData = new FormData();
   const fileArray = Array.isArray(filesInput) ? filesInput : [filesInput];
 
   fileArray.forEach((f) => {
-    formData.append('files', f);
+    formData.append("files", f);
   });
 
-  if (password) formData.append('password', password);
-  if (startYear) formData.append('start_year', String(startYear));
+  if (password) formData.append("password", password);
+  if (startYear) formData.append("start_year", String(startYear));
 
   const res = await safeFetch(`${BASE}/fixed-income/upload-statement`, {
-    method: 'POST',
+    method: "POST",
     body: formData,
   });
-  if (!res.ok) throw new Error('Error al procesar el lote de extractos PDF o imágenes');
+  if (!res.ok) throw new Error("Error al procesar el lote de extractos PDF o imágenes");
   return res.json();
 }
 
-export async function confirmStatementImportApi(entityId, accounts = [], cdts = [], transactions = []) {
+export async function confirmStatementImportApi(
+  entityId,
+  accounts = [],
+  cdts = [],
+  transactions = [],
+) {
   const res = await safeFetch(`${BASE}/fixed-income/confirm-import`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ entityId, accounts, cdts, transactions }),
   });
-  if (!res.ok) throw new Error('Error al importar la información del extracto');
+  if (!res.ok) throw new Error("Error al importar la información del extracto");
   return res.json();
 }
-
-
-

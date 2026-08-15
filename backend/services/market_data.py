@@ -251,7 +251,7 @@ def get_historical_prices(
     cache_key = f"hist:{','.join(sorted(all_tickers))}:{period}"
     cached = _cache_get(cache_key)
     if cached is not None:
-        return cached  # type: ignore[return-value]
+        return cached.clone() if hasattr(cached, "clone") else cached  # type: ignore[return-value]
 
     yf_period = PERIOD_MAP.get(period.upper(), "1y")
 

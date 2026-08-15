@@ -22,6 +22,11 @@ def calculate_nav(
     Calculate portfolio NAV using DuckDB rebalance history.
     Supports dynamic ticker selection / what-if simulations.
     """
+    if prices_df is None:
+        return _empty_response(investment)
+
+    prices_df = prices_df.clone() if hasattr(prices_df, "clone") else prices_df
+
     rebalances = get_all_rebalances()
     if not rebalances:
         return _empty_response(investment)
@@ -60,8 +65,15 @@ def calculate_nav(
     # Prepare effective rebalances list
     first_hist_date = str(prices_pd.index[0])
     effective_rebalances = [dict(r) for r in rebalances]
-    if effective_rebalances and effective_rebalances[0]["date"] > first_hist_date:
-        effective_rebalances[0]["date"] = first_hist_date
+
+    # Effective start of the strategy series: first trading day >= first rebalance date
+    first_rb_date = effective_rebalances[0]["date"] if effective_rebalances else first_hist_date
+    series_start = first_hist_date
+    if effective_rebalances:
+        for _d in prices_pd.index:
+            if str(_d) >= first_rb_date:
+                series_start = str(_d)
+                break
 
     # We will simulate day by day
     rebalance_idx = 0
@@ -131,18 +143,19 @@ def calculate_nav(
                 eod_stock_value += shares * price
 
         eod_total_value = eod_stock_value + current_cash
-        nav_series.append(
-            {
-                "date": str(date_str),
-                "value": round(
-                    eod_stock_value, 4
-                ),  # Curva activa alineada con S&P500 y NASDAQ ($666.67)
-                "total_value": round(eod_total_value, 4),  # Total con cash no desplegado
-                "stock_value": round(eod_stock_value, 4),
-                "cash": round(current_cash, 4),
-            }
-        )
-        current_value = eod_total_value
+        if date_str >= series_start:
+            nav_series.append(
+                {
+                    "date": str(date_str),
+                    "value": round(
+                        eod_stock_value, 4
+                    ),  # Curva activa alineada con S&P500 y NASDAQ ($666.67)
+                    "total_value": round(eod_total_value, 4),  # Total con cash no desplegado
+                    "stock_value": round(eod_stock_value, 4),
+                    "cash": round(current_cash, 4),
+                }
+            )
+            current_value = eod_total_value
 
     if not nav_series:
         return _empty_response(investment)
@@ -186,6 +199,8 @@ def calculate_nav(
     slot_weight_pct = 100.0 / num_slots
 
     current_stock_value = 0.0
+    df_cols = set(prices_df.columns)
+
     for t in active_tickers:
         is_selected = selected_tickers is None or t in selected_tickers
         shares = current_shares.get(t, 0.0)
@@ -205,8 +220,12 @@ def calculate_nav(
 
         # Historial de factores diarios exactos para graficar la trayectoria real
         t_history = []
-        if t in prices_df.columns:
-            s_t = prices_df.select(["date", t]).drop_nulls()
+        if t in df_cols:
+            s_t = (
+                prices_df.filter(pl.col("date").cast(pl.String) >= series_start)
+                .select(["date", t])
+                .drop_nulls()
+            )
             if not s_t.is_empty():
                 p0 = float(s_t[t][0])
                 if p0 > 0:
@@ -479,7 +498,11 @@ def calculate_nav(
     ticker_series = {}
     for t in active_tickers:
         if t in prices_df.columns:
-            s_t = prices_df.select(["date", t]).drop_nulls()
+            s_t = (
+                prices_df.filter(pl.col("date").cast(pl.String) >= series_start)
+                .select(["date", t])
+                .drop_nulls()
+            )
             if not s_t.is_empty():
                 p0 = float(s_t[t][0])
                 if p0 > 0:

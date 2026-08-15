@@ -4,6 +4,9 @@
 """
 
 import datetime
+import json
+from pathlib import Path
+
 import yfinance as yf
 from fastapi import APIRouter, Query
 from services.market_data import DEFAULT_TICKERS, get_intraday, get_live_quotes, get_ticker_meta
@@ -45,7 +48,30 @@ import pandas as pd
 
 _indices_cache = {}
 _indices_cache_ts = 0.0
-INDICES_TTL = 86400  # 24 hours TTL for daily index history cache
+INDICES_TTL = 86400 * 7  # 7 days TTL for daily index history cache (persisted to disk)
+
+DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+INDICES_FILE = DATA_DIR / "indices_history.json"
+
+_hist_price_cache: dict[str, tuple[float, dict]] = {}
+HIST_PRICE_TTL = 86400 * 7  # 7 days
+
+
+def _load_indices_from_disk() -> dict:
+    try:
+        with open(INDICES_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _save_indices_to_disk(result: dict) -> None:
+    try:
+        INDICES_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(INDICES_FILE, "w", encoding="utf-8") as f:
+            json.dump(result, f)
+    except Exception:
+        pass
 
 
 @router.get("/prices/indices_history")
@@ -59,6 +85,18 @@ def indices_history(start_date: str = Query("2020-01-01", description="Start dat
 
     if _indices_cache and (now - _indices_cache_ts < INDICES_TTL):
         return {k: v for k, v in _indices_cache.items() if k >= start_date}
+
+    # Cold start: reload from disk (no Yahoo download) if the persisted file is still fresh
+    if not _indices_cache and INDICES_FILE.exists():
+        try:
+            if now - INDICES_FILE.stat().st_mtime < INDICES_TTL:
+                disk = _load_indices_from_disk()
+                if disk:
+                    _indices_cache = disk
+                    _indices_cache_ts = now
+                    return {k: v for k, v in _indices_cache.items() if k >= start_date}
+        except Exception:
+            pass
 
     from services.market_data import get_historical_prices
 
@@ -77,6 +115,7 @@ def indices_history(start_date: str = Query("2020-01-01", description="Start dat
 
     _indices_cache = result
     _indices_cache_ts = now
+    _save_indices_to_disk(result)
     return {k: v for k, v in result.items() if k >= start_date}
 
 
@@ -87,6 +126,10 @@ def historical_price(ticker: str, date: str = Query(..., description="Date in YY
     If the date is a weekend/holiday, returns the closest previous trading day's close.
     """
     ticker_clean = ticker.strip().upper()
+    cache_key = f"{ticker_clean}:{date}"
+    cached = _hist_price_cache.get(cache_key)
+    if cached and (time.time() - cached[0] < HIST_PRICE_TTL):
+        return cached[1]
     try:
         t = get_yf_ticker(ticker_clean)
         target_date = datetime.datetime.strptime(date, "%Y-%m-%d")
@@ -99,12 +142,14 @@ def historical_price(ticker: str, date: str = Query(..., description="Date in YY
         if not df.empty:
             last_close = df["Close"].iloc[-1]
             actual_date = df.index[-1].strftime("%Y-%m-%d")
-            return {
+            result = {
                 "ticker": ticker_clean,
                 "requested_date": date,
                 "actual_date": actual_date,
                 "price": round(float(last_close), 4),
             }
+            _hist_price_cache[cache_key] = (time.time(), result)
+            return result
         else:
             return {"error": "No historical data found for this date range."}
     except Exception as exc:

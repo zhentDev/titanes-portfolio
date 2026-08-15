@@ -5,17 +5,16 @@ in parallel, monitors console output for errors, and automatically prompts
 local LLMs (Qwen Coder / DeepSeek via model_router) to fix the code in real-time.
 """
 
+import ast
+import json
 import os
 import re
-import sys
-import time
-import ast
 import subprocess
+import sys
 import threading
+import time
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
-
-import json
-from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # Configure UTF-8 for Windows console
 if sys.platform == "win32":
@@ -53,7 +52,9 @@ fix_lock = threading.Lock()
 
 def find_frontend_file_from_error(error_text: str) -> Path | None:
     """Scan error text for referenced frontend source files (.jsx, .tsx, .js, .ts, .css)."""
-    matches = re.findall(r'(?:src[/\\][a-zA-Z0-9_\-/\\]+\.(?:jsx?|tsx?|css))', error_text)
+    matches = re.findall(
+        r"(?:src[/\\][a-zA-Z0-9_\-/\\]+\.(?:jsx?|tsx?|css))", error_text
+    )
     if matches:
         rel_path = matches[-1].replace("\\", "/")
         target = FRONTEND_DIR / rel_path
@@ -62,11 +63,20 @@ def find_frontend_file_from_error(error_text: str) -> Path | None:
 
     all_source_files = list(FRONTEND_DIR.glob("src/**/*.*"))
     for file_path in all_source_files:
-        if file_path.name in error_text and file_path.suffix in [".jsx", ".tsx", ".js", ".ts", ".css"]:
+        if file_path.name in error_text and file_path.suffix in [
+            ".jsx",
+            ".tsx",
+            ".js",
+            ".ts",
+            ".css",
+        ]:
             return file_path
 
     # Fallback to main App file if error relates to React render
-    if any(k in error_text.lower() for k in ["uncaught", "react", "undefined", "null", "typeerror", "cannot read"]):
+    if any(
+        k in error_text.lower()
+        for k in ["uncaught", "react", "undefined", "null", "typeerror", "cannot read"]
+    ):
         for candidate in ["src/App.jsx", "src/App.tsx", "src/main.jsx", "src/main.tsx"]:
             p = FRONTEND_DIR / candidate
             if p.exists():
@@ -94,7 +104,7 @@ class LiveErrorBridgeHandler(BaseHTTPRequestHandler):
                     args=(target_file, full_error, "frontend (live browser)"),
                     daemon=True,
                 ).start()
-        except Exception as e:
+        except Exception:
             pass
 
         self.send_response(200)
@@ -123,16 +133,23 @@ def start_live_error_bridge(port: int = 8001):
         print(f"{YELLOW}[ERROR BRIDGE NOTICE] Port {port} busy: {e}{RESET}")
 
 
-def _schedule_backup_cleanup(backup_path: Path, file_path: Path, delay_seconds: float = 8.0):
+def _schedule_backup_cleanup(
+    backup_path: Path, file_path: Path, delay_seconds: float = 8.0
+):
     """Automatically delete the temporary .bak file after the service stabilizes."""
+
     def _cleanup():
         time.sleep(delay_seconds)
         try:
             if backup_path.exists():
                 backup_path.unlink()
-                print(f"{GREEN}[AUTO-HEALER CLEANUP]{RESET} Fix verified stable. Deleted temporary backup: {backup_path.name}")
+                print(
+                    f"{GREEN}[AUTO-HEALER CLEANUP]{RESET} Fix verified stable. Deleted temporary backup: {backup_path.name}"
+                )
         except Exception as e:
-            print(f"{YELLOW}[CLEANUP WARNING] Could not remove {backup_path.name}: {e}{RESET}")
+            print(
+                f"{YELLOW}[CLEANUP WARNING] Could not remove {backup_path.name}: {e}{RESET}"
+            )
 
     threading.Thread(target=_cleanup, daemon=True).start()
 
@@ -147,7 +164,11 @@ def is_ai_or_developer_modifying(target_file: Path) -> bool:
     now = time.time()
 
     # 1. Explicit Lockfile Check
-    lock_files = [ROOT_DIR / ".ai_active.lock", ROOT_DIR / ".ai_lock", ROOT_DIR / ".agent_busy"]
+    lock_files = [
+        ROOT_DIR / ".ai_active.lock",
+        ROOT_DIR / ".ai_lock",
+        ROOT_DIR / ".agent_busy",
+    ]
     for lock in lock_files:
         if lock.exists():
             # If lock is fresh (< 10 mins), AI is actively coding
@@ -189,7 +210,9 @@ def is_error_still_valid(file_path: Path, error_context: str) -> bool:
     if file_path.suffix == ".py":
         try:
             ast.parse(content)
-            print(f"{GREEN}[AUTO-HEALER BYPASSED]{RESET} {file_path.name} is already valid Python syntax. Skipping.")
+            print(
+                f"{GREEN}[AUTO-HEALER BYPASSED]{RESET} {file_path.name} is already valid Python syntax. Skipping."
+            )
             return False
         except SyntaxError:
             return True
@@ -198,11 +221,13 @@ def is_error_still_valid(file_path: Path, error_context: str) -> bool:
 
     # React / JS check: if referenced identifier is already defined or gone
     if file_path.suffix in [".jsx", ".tsx", ".js", ".ts"]:
-        m = re.search(r'([a-zA-Z0-9_]+) is not defined', error_context)
+        m = re.search(r"([a-zA-Z0-9_]+) is not defined", error_context)
         if m:
             ident = m.group(1)
             if ident not in content:
-                print(f"{GREEN}[AUTO-HEALER BYPASSED]{RESET} Obsolete error: '{ident}' is no longer in {file_path.name}. Skipping.")
+                print(
+                    f"{GREEN}[AUTO-HEALER BYPASSED]{RESET} Obsolete error: '{ident}' is no longer in {file_path.name}. Skipping."
+                )
                 return False
 
     return True
@@ -225,7 +250,9 @@ def ask_local_model_to_fix(file_path: Path, error_context: str, service_name: st
         else:
             break
     else:
-        print(f"{YELLOW}[AUTO-HEALER PAUSED]{RESET} Active editing / AI modification detected in workspace. Standing by.")
+        print(
+            f"{YELLOW}[AUTO-HEALER PAUSED]{RESET} Active editing / AI modification detected in workspace. Standing by."
+        )
         return
 
     if not file_path.exists():
@@ -241,7 +268,9 @@ def ask_local_model_to_fix(file_path: Path, error_context: str, service_name: st
         print(f"{RED}Error reading file {file_path}: {e}{RESET}")
         return
 
-    print(f"\n{RED}{BOLD}[AUTO-HEALER DETECTED PERSISTENT ERROR IN {service_name.upper()}]{RESET}")
+    print(
+        f"\n{RED}{BOLD}[AUTO-HEALER DETECTED PERSISTENT ERROR IN {service_name.upper()}]{RESET}"
+    )
     print(f"{YELLOW}Target file: {file_path}{RESET}")
     print(f"{YELLOW}Consulting local model (Qwen 2.5 Coder 14B)...{RESET}")
 
@@ -303,14 +332,18 @@ INSTRUCTIONS:
 
             # Write fixed code
             file_path.write_text(fixed_code, encoding="utf-8")
-            print(f"{GREEN}{BOLD}[AUTO-HEALER SUCCESS]{RESET} Fixed {file_path.name} using local model! (Temporary backup created)")
+            print(
+                f"{GREEN}{BOLD}[AUTO-HEALER SUCCESS]{RESET} Fixed {file_path.name} using local model! (Temporary backup created)"
+            )
 
             # Schedule cleanup of the temporary backup once service stays healthy
             _schedule_backup_cleanup(backup_path, file_path, delay_seconds=8.0)
         except Exception as e:
             print(f"{RED}Failed to write fix to {file_path}: {e}{RESET}")
     else:
-        print(f"{YELLOW}[AUTO-HEALER] Local model returned an empty or invalid fix.{RESET}")
+        print(
+            f"{YELLOW}[AUTO-HEALER] Local model returned an empty or invalid fix.{RESET}"
+        )
 
 
 def stream_process(cmd: str, cwd: Path, name: str, color: str):
@@ -344,12 +377,18 @@ def stream_process(cmd: str, cwd: Path, name: str, color: str):
             target_file = None
             for file_str, line_num in reversed(file_matches):
                 p = Path(file_str)
-                if p.exists() and "site-packages" not in str(p) and "WindowsApps" not in str(p):
+                if (
+                    p.exists()
+                    and "site-packages" not in str(p)
+                    and "WindowsApps" not in str(p)
+                ):
                     target_file = p
                     break
 
             if target_file:
-                print(f"\n{YELLOW}[AUTO-HEALER] Found project file in error stack: {target_file.name}{RESET}")
+                print(
+                    f"\n{YELLOW}[AUTO-HEALER] Found project file in error stack: {target_file.name}{RESET}"
+                )
                 threading.Thread(
                     target=ask_local_model_to_fix,
                     args=(target_file, full_error, s_name),
@@ -358,7 +397,10 @@ def stream_process(cmd: str, cwd: Path, name: str, color: str):
                 return
 
             # 2. Detect TypeScript / Vite / Bun errors
-            vite_file_matches = re.findall(r'([a-zA-Z0-9_\-\/\\]+\.(?:jsx?|tsx?|vue|svelte)):(\d+):(\d+)', full_error)
+            vite_file_matches = re.findall(
+                r"([a-zA-Z0-9_\-\/\\]+\.(?:jsx?|tsx?|vue|svelte)):(\d+):(\d+)",
+                full_error,
+            )
             if vite_file_matches:
                 rel_path, _, _ = vite_file_matches[-1]
                 target_file = (FRONTEND_DIR / rel_path).resolve()
@@ -376,20 +418,43 @@ def stream_process(cmd: str, cwd: Path, name: str, color: str):
             lower_line = line.lower()
 
             # Detect Python / Uvicorn errors
-            if "traceback (most recent call last):" in lower_line or "error:" in lower_line or "exception" in lower_line or "syntaxerror:" in lower_line:
+            if (
+                "traceback (most recent call last):" in lower_line
+                or "error:" in lower_line
+                or "exception" in lower_line
+                or "syntaxerror:" in lower_line
+            ):
                 collecting_error = True
                 error_buffer.append(line)
             elif collecting_error:
                 error_buffer.append(line)
 
                 # Fatal error line reached (e.g. SyntaxError, TypeError, etc.)
-                is_fatal_error_line = any(err in lower_line for err in [
-                    "syntaxerror:", "indentationerror:", "nameerror:", "typeerror:",
-                    "attributeerror:", "valueerror:", "importerror:", "modulenotfounderror:",
-                    "keyerror:", "indexerror:", "zerodivisionerror:", "unicodedecodeerror:"
-                ])
+                is_fatal_error_line = any(
+                    err in lower_line
+                    for err in [
+                        "syntaxerror:",
+                        "indentationerror:",
+                        "nameerror:",
+                        "typeerror:",
+                        "attributeerror:",
+                        "valueerror:",
+                        "importerror:",
+                        "modulenotfounderror:",
+                        "keyerror:",
+                        "indexerror:",
+                        "zerodivisionerror:",
+                        "unicodedecodeerror:",
+                    ]
+                )
 
-                if is_fatal_error_line or line.strip() == "" or "info:" in lower_line or "warning:" in lower_line or len(error_buffer) > 25:
+                if (
+                    is_fatal_error_line
+                    or line.strip() == ""
+                    or "info:" in lower_line
+                    or "warning:" in lower_line
+                    or len(error_buffer) > 25
+                ):
                     collecting_error = False
                     _process_error_buffer(error_buffer, name)
 
@@ -411,8 +476,11 @@ def stream_process(cmd: str, cwd: Path, name: str, color: str):
 def run_browser_supervisor():
     """Wait for backend (8000) and frontend (5173) to be fully online before opening the browser."""
     import httpx
-    print(f"{CYAN}[SUPERVISOR]{RESET} Waiting for backend (8000) and frontend (5173) to initialize...")
-    
+
+    print(
+        f"{CYAN}[SUPERVISOR]{RESET} Waiting for backend (8000) and frontend (5173) to initialize..."
+    )
+
     # Wait up to 15 seconds for both ports to accept connections
     for _ in range(15):
         try:
@@ -420,7 +488,9 @@ def run_browser_supervisor():
                 r_back = client.get("http://127.0.0.1:8000/docs")
                 r_front = client.get("http://localhost:5173")
                 if r_back.status_code == 200 and r_front.status_code == 200:
-                    print(f"{GREEN}[SUPERVISOR READY]{RESET} Both servers online! Launching browser window...")
+                    print(
+                        f"{GREEN}[SUPERVISOR READY]{RESET} Both servers online! Launching browser window..."
+                    )
                     break
         except Exception:
             pass
@@ -428,6 +498,7 @@ def run_browser_supervisor():
 
     try:
         from browser_supervisor import main as browser_main
+
         browser_main()
     except Exception as e:
         print(f"{YELLOW}[BROWSER SUPERVISOR ERROR] {e}{RESET}")
@@ -447,8 +518,12 @@ def clean_zombie_ports(ports=(8000, 5173, 8001)):
             my_pid = os.getpid()
             for pid in pids:
                 if pid > 4 and pid != my_pid:
-                    subprocess.run(f"taskkill /F /T /PID {pid}", shell=True, capture_output=True)
-                    print(f"{YELLOW}[PORT CLEANER]{RESET} Freed port {port} (Terminated zombie PID {pid})")
+                    subprocess.run(
+                        f"taskkill /F /T /PID {pid}", shell=True, capture_output=True
+                    )
+                    print(
+                        f"{YELLOW}[PORT CLEANER]{RESET} Freed port {port} (Terminated zombie PID {pid})"
+                    )
         except Exception:
             pass
 
@@ -456,20 +531,28 @@ def clean_zombie_ports(ports=(8000, 5173, 8001)):
 def wait_for_backend_ready(port: int = 8000, max_timeout: float = 20.0) -> bool:
     """Probe backend port until FastAPI responds HTTP 200 on /docs or OpenAPI."""
     import urllib.request
+
     print(f"{CYAN}[SUPERVISOR]{RESET} Initializing backend and probing port {port}...")
     start = time.time()
     while (time.time() - start) < max_timeout:
         try:
-            req = urllib.request.Request(f"http://127.0.0.1:{port}/docs", headers={"User-Agent": "SupervisorProbe/1.0"})
+            req = urllib.request.Request(
+                f"http://127.0.0.1:{port}/docs",
+                headers={"User-Agent": "SupervisorProbe/1.0"},
+            )
             with urllib.request.urlopen(req, timeout=1.0) as resp:
                 if resp.status == 200:
                     elapsed = round(time.time() - start, 1)
-                    print(f"{GREEN}{BOLD}[BACKEND READY]{RESET} FastAPI online and accepting connections in {elapsed}s! Starting frontend...")
+                    print(
+                        f"{GREEN}{BOLD}[BACKEND READY]{RESET} FastAPI online and accepting connections in {elapsed}s! Starting frontend..."
+                    )
                     return True
         except Exception:
             pass
         time.sleep(0.3)
-    print(f"{YELLOW}[SUPERVISOR WARNING]{RESET} Backend probe reached timeout ({max_timeout}s). Starting frontend anyway...")
+    print(
+        f"{YELLOW}[SUPERVISOR WARNING]{RESET} Backend probe reached timeout ({max_timeout}s). Starting frontend anyway..."
+    )
     return False
 
 
@@ -483,13 +566,26 @@ def main():
     print(f"{BOLD}{CYAN}   🚀 AUTONOMOUS LOCAL DEV SUPERVISOR (WATCHDOG)      {RESET}")
     print(f"{BOLD}{CYAN}======================================================{RESET}")
     print(f"• Frontend: {FRONTEND_DIR} (bun dev)")
-    print(f"• Backend:  {BACKEND_DIR}  (uvicorn main:app --host 0.0.0.0 --port 8000 --reload)")
-    print(f"• Browser Console Watcher: {'ENABLED (Opening Edge/Chrome)' if enable_browser else 'DISABLED (Use --browser to enable)'}")
-    print(f"• Auto-Healer Engine: Qwen 2.5 Coder 14B (Local Model - 0 Tokens)")
-    print(f"------------------------------------------------------\n")
+    print(
+        f"• Backend:  {BACKEND_DIR}  (uvicorn main:app --host 0.0.0.0 --port 8000 --reload)"
+    )
+    print(
+        f"• Browser Console Watcher: {'ENABLED (Opening Edge/Chrome)' if enable_browser else 'DISABLED (Use --browser to enable)'}"
+    )
+    print("• Auto-Healer Engine: Qwen 2.5 Coder 14B (Local Model - 0 Tokens)")
+    print("------------------------------------------------------\n")
 
     # 1. Start Backend Thread first
-    backend_cmd = f'"{sys.executable}" -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload'
+    # --reload-dir services: solo vigila la carpeta de lógica de negocio (donde
+    #   más se itera con Aider/el auto-healer), evitando que tocar main.py u otros
+    #   archivos de configuración dispare un reinicio innecesario.
+    # --reload-delay 2: agrupa escrituras rápidas consecutivas (comunes cuando un
+    #   editor/backup escribe el archivo más de una vez) en un solo reinicio, en
+    #   vez de reiniciar el proceso repetidamente en cascada.
+    backend_cmd = (
+        f'"{sys.executable}" -m uvicorn main:app --host 0.0.0.0 --port 8000 '
+        f"--reload --reload-dir services --reload-delay 2"
+    )
     backend_thread = threading.Thread(
         target=stream_process,
         args=(backend_cmd, BACKEND_DIR, "backend", CYAN),
