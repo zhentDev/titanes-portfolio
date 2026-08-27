@@ -581,6 +581,7 @@
     "ent_mejorcdt": {
       "name": "MejorCDT",
       "country": "🇨🇴",
+      "last_synced": "2026-08-15T02:27:59.353390",
       "savings_rates": [
         {
           "from": "2024-01-01",
@@ -594,63 +595,141 @@
           "termDaysMin": 60,
           "termDaysMax": 119,
           "rateEA": 10.8,
-          "label": "90 Días (KOA / Contactar)"
+          "label": "90 Días (KOA / Contactar)",
+          "entity": "KOA / Contactar"
         },
         {
           "termDaysMin": 120,
           "termDaysMax": 239,
           "rateEA": 11.8,
-          "label": "180 Días (KOA)"
+          "label": "180 Días (KOA)",
+          "entity": "KOA"
         },
         {
           "termDaysMin": 240,
           "termDaysMax": 320,
           "rateEA": 12.0,
-          "label": "270 Días (KOA)"
+          "label": "270 Días (KOA)",
+          "entity": "KOA"
         },
         {
           "termDaysMin": 321,
           "termDaysMax": 450,
           "rateEA": 12.3,
-          "label": "1 Año / 360 Días (KOA / Ban100)"
+          "label": "1 Año / 360 Días (KOA / Ban100)",
+          "entity": "KOA / Ban100"
         },
         {
           "termDaysMin": 451,
           "termDaysMax": 650,
           "rateEA": 12.1,
-          "label": "540 Días (KOA)"
+          "label": "540 Días (KOA)",
+          "entity": "KOA"
         },
         {
           "termDaysMin": 651,
           "termDaysMax": 1080,
           "rateEA": 11.9,
-          "label": "2 Años / 720 Días"
+          "label": "2 Años / 720 Días",
+          "entity": "Aliados MejorCDT"
         }
       ]
     },
     "ent_plenti": {
       "name": "Plenti (Ahorros)",
-      "country": "🇨🇴",
+      "country": "🇺🇸",
+      "currency": "USD",
       "savings_rates": [
         {
           "from": "2024-01-01",
           "to": "2099-12-31",
-          "rateEA": 10.5,
-          "notes": "Rendimiento diario Plenti Flex"
+          "rateEA": 4.0,
+          "notes": "Bolsillo Visible USD (hasta 4.0% E.A.)"
+        }
+      ],
+      "tiered_savings_rates": [
+        {
+          "maxBalance": 500,
+          "rateEA": 2.0,
+          "label": "Hasta $500 USD (2.0% EA)"
+        },
+        {
+          "maxBalance": 1000,
+          "rateEA": 3.0,
+          "label": "$500 a $1,000 USD (3.0% EA)"
+        },
+        {
+          "maxBalance": 5000,
+          "rateEA": 3.5,
+          "label": "$1,000 a $5,000 USD (3.5% EA)"
+        },
+        {
+          "maxBalance": 9999999,
+          "rateEA": 4.0,
+          "label": "Más de $5,000 USD (4.0% EA Máx Bolsillo Visible)"
         }
       ],
       "cdt_term_rates": [
         {
           "termDaysMin": 30,
-          "termDaysMax": 90,
-          "rateEA": 11.0,
-          "label": "30-90 Días Plenti Lock"
+          "termDaysMax": 89,
+          "rateEA": 5.5,
+          "label": "30 Días Plenti Lock (5.50% E.A.)"
         },
         {
-          "termDaysMin": 91,
-          "termDaysMax": 180,
-          "rateEA": 11.5,
-          "label": "180 Días Plenti Lock"
+          "termDaysMin": 90,
+          "termDaysMax": 365,
+          "rateEA": 8.0,
+          "label": "90 Días Plenti Lock (8.00% E.A.)"
+        }
+      ]
+    },
+    "ent_1786777900826": {
+      "name": "Plenti (Ahorros)",
+      "country": "🇺🇸",
+      "currency": "USD",
+      "savings_rates": [
+        {
+          "from": "2024-01-01",
+          "to": "2099-12-31",
+          "rateEA": 4.0,
+          "notes": "Bolsillo Visible USD (hasta 4.0% E.A.)"
+        }
+      ],
+      "tiered_savings_rates": [
+        {
+          "maxBalance": 500,
+          "rateEA": 2.0,
+          "label": "Hasta $500 USD (2.0% EA)"
+        },
+        {
+          "maxBalance": 1000,
+          "rateEA": 3.0,
+          "label": "$500 a $1,000 USD (3.0% EA)"
+        },
+        {
+          "maxBalance": 5000,
+          "rateEA": 3.5,
+          "label": "$1,000 a $5,000 USD (3.5% EA)"
+        },
+        {
+          "maxBalance": 9999999,
+          "rateEA": 4.0,
+          "label": "Más de $5,000 USD (4.0% EA Máx Bolsillo Visible)"
+        }
+      ],
+      "cdt_term_rates": [
+        {
+          "termDaysMin": 30,
+          "termDaysMax": 89,
+          "rateEA": 5.5,
+          "label": "30 Días Plenti Lock (5.50% E.A.)"
+        },
+        {
+          "termDaysMin": 90,
+          "termDaysMax": 365,
+          "rateEA": 8.0,
+          "label": "90 Días Plenti Lock (8.00% E.A.)"
         }
       ]
     }

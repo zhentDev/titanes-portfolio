@@ -23,6 +23,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from routers.cash_flow import router as cash_flow_router
 from routers.fixed_income import router as fixed_income_router
 from routers.nav import router as nav_router
 from routers.prices import router as prices_router
@@ -103,6 +104,7 @@ app.include_router(prices_router, prefix="/api")
 app.include_router(rebalance_router, prefix="/api")
 app.include_router(purchases_router, prefix="/api")
 app.include_router(fixed_income_router, prefix="/api/fixed-income", tags=["fixed-income"])
+app.include_router(cash_flow_router, prefix="/api", tags=["cash-flow"])
 
 
 @app.get("/")

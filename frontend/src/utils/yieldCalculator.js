@@ -32,24 +32,62 @@ export function calculateAccountYield(account, transactions = [], historicalRate
 
   // 1. Resolve rates for entity
   const entityId = account.entityId || "ent_nu";
-  const entityRates = historicalRates?.entities?.[entityId]?.savings_rates || [
-    { from: "2023-06-01", to: "2024-10-07", rateEA: 13.0, notes: "13% E.A." },
-    { from: "2024-10-08", to: "2024-12-09", rateEA: 12.0, notes: "12% E.A." },
-    { from: "2024-12-10", to: "2025-03-09", rateEA: 11.0, notes: "11% E.A." },
-    { from: "2025-03-10", to: "2025-05-08", rateEA: 9.5, notes: "9.5% E.A." },
-    { from: "2025-05-09", to: "2025-08-11", rateEA: 9.25, notes: "9.25% E.A." },
-    { from: "2025-08-12", to: "2026-02-05", rateEA: 8.25, notes: "8.25% E.A." },
-    { from: "2026-02-06", to: "2026-04-08", rateEA: 8.75, notes: "8.75% E.A." },
-    { from: "2026-04-09", to: "2099-12-31", rateEA: 9.30, notes: "9.30% E.A." },
-  ];
-
-  const getRateForDate = (dateStr) => {
-    for (const r of entityRates) {
-      if (dateStr >= r.from && dateStr <= r.to) {
-        return Number(r.rateEA || 9.30);
+  let entityRates = historicalRates?.entities?.[entityId]?.savings_rates;
+  
+  if (!entityRates && historicalRates?.entities) {
+    const entName = (account.entityName || "").toLowerCase();
+    for (const [k, v] of Object.entries(historicalRates.entities)) {
+      const kClean = k.toLowerCase().replace("ent_", "");
+      const vClean = (v.name || "").toLowerCase();
+      if ((entName && (kClean.includes(entName) || vClean.includes(entName))) || (entityId && entityId.includes(kClean))) {
+        entityRates = v.savings_rates;
+        break;
       }
     }
-    return Number(account.interestRateEA || 9.30);
+  }
+
+  // Nu default fallback only if entity is Nu
+  if (!entityRates && (entityId === "ent_nu" || entityId.includes("nu"))) {
+    entityRates = [
+      { from: "2023-06-01", to: "2024-10-07", rateEA: 13.0, notes: "13% E.A." },
+      { from: "2024-10-08", to: "2024-12-09", rateEA: 12.0, notes: "12% E.A." },
+      { from: "2024-12-10", to: "2025-03-09", rateEA: 11.0, notes: "11% E.A." },
+      { from: "2025-03-10", to: "2025-05-08", rateEA: 9.5, notes: "9.5% E.A." },
+      { from: "2025-05-09", to: "2025-08-11", rateEA: 9.25, notes: "9.25% E.A." },
+      { from: "2025-08-12", to: "2026-02-05", rateEA: 8.25, notes: "8.25% E.A." },
+      { from: "2026-02-06", to: "2026-04-08", rateEA: 8.75, notes: "8.75% E.A." },
+      { from: "2026-04-09", to: "2099-12-31", rateEA: 9.30, notes: "9.30% E.A." },
+    ];
+  }
+
+  const tieredRates = account.tieredRates || [];
+
+  const getRateForDateAndBalance = (dateStr, balance = 0) => {
+    // 1. If account is crypto / commodity or has an explicit rateEA, prioritize it!
+    if (account.type === "crypto" || (account.interestRateEA && Number(account.interestRateEA) > 0 && !tieredRates.length)) {
+      return Number(account.interestRateEA);
+    }
+
+    // 2. Dynamic balance tiers (e.g. Plenti Bolsillo Visible USD tiers)
+    if (tieredRates.length > 0 && account.type !== "crypto") {
+      for (const tier of tieredRates) {
+        if (balance <= (tier.maxBalance || Infinity)) {
+          return Number(tier.rateEA || 3.0);
+        }
+      }
+      return Number(tieredRates[tieredRates.length - 1].rateEA || 3.0);
+    }
+
+    // 3. Historical date brackets for entity (e.g. Nu Colombia)
+    if (entityRates && entityRates.length > 0 && account.type !== "crypto") {
+      for (const r of entityRates) {
+        if (dateStr >= r.from && dateStr <= r.to) {
+          return Number(r.rateEA || account.interestRateEA || (account.currency === "USD" ? 3.0 : 9.30));
+        }
+      }
+    }
+
+    return Number(account.interestRateEA || (account.currency === "USD" ? 3.0 : 9.30));
   };
 
   // 2. Resolve CDTs linked to this account
@@ -224,7 +262,7 @@ export function calculateAccountYield(account, transactions = [], historicalRate
     // If account has explicit recorded interest transactions (e.g. Finandina monthly payouts),
     // we do not synthesize daily compound interest on top of recorded payouts.
     if (explicitInterestTotal === 0) {
-      const rateEA = getRateForDate(dStr);
+      const rateEA = getRateForDateAndBalance(dStr, currBalance);
       // Colombian banking standard (SFC) for high-yield savings: base 360 days
       const dailyRate = Math.pow(1 + rateEA / 100, 1 / 360) - 1;
       const dailyInterest = currBalance * dailyRate;

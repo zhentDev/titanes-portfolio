@@ -386,6 +386,13 @@ def get_all_historical_rates():
     return load_historical_rates_db()
 
 
+@router.post("/rates/sync-mejorcdt")
+def sync_mejorcdt_rates():
+    """Trigger live sync of MejorCDT rates into historical_rates.json."""
+    from scrapers.mejorcdt_scraper import sync_mejorcdt_to_database
+    return sync_mejorcdt_to_database()
+
+
 @router.get("/rates/suggest")
 def suggest_rate(
     entity_id: str,

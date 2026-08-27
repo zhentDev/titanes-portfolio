@@ -455,3 +455,92 @@ export async function confirmStatementImportApi(
   if (!res.ok) throw new Error("Error al importar la información del extracto");
   return res.json();
 }
+
+// ── Cash Flow & Budget Allocation API ────────────────────────────
+
+export async function fetchCashFlowData() {
+  return await fetchWithFallback("/cash-flow", "cash_flow.json");
+}
+
+export async function syncCashFlowStateApi(payload) {
+  const res = await safeFetch(`${BASE}/cash-flow/sync`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error("Error al sincronizar el estado de Flujo de Caja");
+  return res.json();
+}
+
+export async function createInflowApi(item) {
+  const res = await safeFetch(`${BASE}/cash-flow/inflow`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(item),
+  });
+  if (!res.ok) throw new Error("Error al registrar ingreso");
+  return res.json();
+}
+
+export async function deleteInflowApi(id) {
+  const res = await safeFetch(`${BASE}/cash-flow/inflow/${id}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Error al eliminar ingreso");
+  return res.json();
+}
+
+export async function createNeedExpenseApi(item) {
+  const res = await safeFetch(`${BASE}/cash-flow/need`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(item),
+  });
+  if (!res.ok) throw new Error("Error al registrar gasto esencial");
+  return res.json();
+}
+
+export async function deleteNeedExpenseApi(id) {
+  const res = await safeFetch(`${BASE}/cash-flow/need/${id}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Error al eliminar gasto esencial");
+  return res.json();
+}
+
+export async function createWantExpenseApi(item) {
+  const res = await safeFetch(`${BASE}/cash-flow/want`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(item),
+  });
+  if (!res.ok) throw new Error("Error al registrar gasto de estilo de vida");
+  return res.json();
+}
+
+export async function deleteWantExpenseApi(id) {
+  const res = await safeFetch(`${BASE}/cash-flow/want/${id}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Error al eliminar gasto de estilo de vida");
+  return res.json();
+}
+
+export async function createWealthItemApi(item) {
+  const res = await safeFetch(`${BASE}/cash-flow/wealth`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(item),
+  });
+  if (!res.ok) throw new Error("Error al registrar aporte de ahorro/inversión");
+  return res.json();
+}
+
+export async function deleteWealthItemApi(id) {
+  const res = await safeFetch(`${BASE}/cash-flow/wealth/${id}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Error al eliminar asignación de ahorro/inversión");
+  return res.json();
+}
+

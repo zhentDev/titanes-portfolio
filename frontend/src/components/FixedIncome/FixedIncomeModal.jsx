@@ -1,9 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 import { calculateCompoundHistory, suggestFixedIncomeRate } from "../../api/client";
 import { useFixedIncomeStore } from "../../store/fixedIncomeStore";
 import { BANK_PRESETS, getBankPreset, svgToDataUri } from "../../utils/bankPresets";
+import {
+  CurrencyInput,
+  DynamicDatePicker,
+  FloatingInput,
+  CustomSelectDropdown,
+} from "../Common";
 
 export default function FixedIncomeModal({
   isOpen,
@@ -15,6 +21,43 @@ export default function FixedIncomeModal({
   const { entities, accounts, addEntity, updateEntity, addAccount, updateAccount, addCDT, updateCDT, addTransaction, updateTransaction } =
     useFixedIncomeStore();
   const [activeTab, setActiveTab] = useState(initialTab); // 'entity' | 'account' | 'cdt' | 'calculator' | 'transaction'
+
+  // Memoized options for CustomSelectDropdown
+  const entityOptions = useMemo(() => {
+    return entities.map((e) => ({
+      value: e.id,
+      label: e.name,
+      country: e.country,
+      icon: e.icon,
+      color: e.color,
+      logoUrl: e.logoUrl || (e.name ? svgToDataUri(getBankPreset(e.name)?.logoSvg) : null),
+    }));
+  }, [entities]);
+
+  const accountOptions = useMemo(() => {
+    return accounts.map((acc) => {
+      const ent = entities.find((e) => e.id === acc.entityId);
+      const logo = ent?.logoUrl || (ent?.name ? svgToDataUri(getBankPreset(ent.name)?.logoSvg) : null);
+      return {
+        value: acc.id,
+        label: `${ent?.name || "Banco"} — ${acc.name}`,
+        badge: `$${Number(acc.balance || 0).toLocaleString("en-US")} ${acc.currency}`,
+        icon: ent?.icon,
+        logoUrl: logo,
+      };
+    });
+  }, [accounts, entities]);
+
+  const bankPresetOptions = useMemo(() => {
+    return BANK_PRESETS.map((bp) => ({
+      value: bp.id,
+      label: bp.name,
+      badge: `${bp.defaultRateEA}% E.A.`,
+      country: bp.country,
+      icon: bp.icon,
+      logoUrl: svgToDataUri(bp.logoSvg),
+    }));
+  }, []);
 
   // Entity Form State
   const [entityName, setEntityName] = useState("");
@@ -32,6 +75,12 @@ export default function FixedIncomeModal({
   const [accountRateEA, setAccountRateEA] = useState("");
   const [accountTaxExempt, setAccountTaxExempt] = useState(true);
   const [accountStartDate, setAccountStartDate] = useState("2023-06-01");
+
+  // Gold / Commodity Staking State (XAUt / PAXG)
+  const [goldQuantity, setGoldQuantity] = useState("");
+  const [goldBuyPrice, setGoldBuyPrice] = useState("");
+  const [goldSellPrice, setGoldSellPrice] = useState("");
+  const [goldCommission, setGoldCommission] = useState("");
 
   // CDT Form State
   const [cdtName, setCdtName] = useState("");
@@ -108,6 +157,10 @@ export default function FixedIncomeModal({
         setAccountRateEA("");
         setAccountTaxExempt(true);
         setAccountStartDate("2023-06-01");
+        setGoldQuantity("");
+        setGoldBuyPrice("");
+        setGoldSellPrice("");
+        setGoldCommission("");
       } else if (initialTab === "cdt") {
         setCdtName("");
         setCdtCapital("");
@@ -148,6 +201,10 @@ export default function FixedIncomeModal({
       setAccountRateEA(String(editItem.interestRateEA || ""));
       setAccountTaxExempt(editItem.isTaxExemptGMF ?? true);
       setAccountStartDate(editItem.startDate || (editItem.createdAt ? editItem.createdAt.slice(0, 10) : "2023-06-01"));
+      setGoldQuantity(String(editItem.goldQuantity || ""));
+      setGoldBuyPrice(String(editItem.goldBuyPrice || ""));
+      setGoldSellPrice(String(editItem.goldSellPrice || ""));
+      setGoldCommission(String(editItem.goldCommission || ""));
     } else if (initialTab === "cdt") {
       setSelectedEntityId(editItem.entityId || "");
       setCdtName(editItem.name || "");
@@ -338,6 +395,10 @@ export default function FixedIncomeModal({
       isTaxExemptGMF: accountTaxExempt,
       startDate: accountStartDate,
       createdAt: editItem?.createdAt || `${accountStartDate}T00:00:00.000Z`,
+      goldQuantity: Number(goldQuantity) || undefined,
+      goldBuyPrice: Number(goldBuyPrice) || undefined,
+      goldSellPrice: Number(goldSellPrice) || undefined,
+      goldCommission: Number(goldCommission) || undefined,
     };
     if (editItem?.id) {
       await updateAccount({ ...accountData, id: editItem.id });
@@ -464,8 +525,9 @@ export default function FixedIncomeModal({
         width: "100vw",
         height: "100vh",
         zIndex: 999999,
-        background: "rgba(0, 0, 0, 0.82)",
-        backdropFilter: "blur(8px)",
+        background: "rgba(8, 12, 24, 0.82)",
+        backdropFilter: "blur(16px)",
+        WebkitBackdropFilter: "blur(16px)",
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "center",
@@ -480,16 +542,18 @@ export default function FixedIncomeModal({
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: "#0f172a",
+          background: "rgba(13, 18, 38, 0.95)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
           border: "1px solid rgba(255, 255, 255, 0.12)",
-          borderRadius: 16,
+          borderRadius: 18,
           width: "100%",
           maxWidth: 620,
           height: 570,
           maxHeight: "calc(100vh - 96px)",
           display: "flex",
           flexDirection: "column",
-          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.85)",
+          boxShadow: "0 30px 60px -12px rgba(0, 0, 0, 0.9), 0 0 35px rgba(56, 189, 248, 0.08)",
           overflow: "hidden",
           flexShrink: 0,
         }}
@@ -612,52 +676,20 @@ export default function FixedIncomeModal({
                 >
                   Entidad Bancaria
                 </label>
-                <select
+                <CustomSelectDropdown
+                  options={entityOptions}
                   value={selectedEntityId}
-                  onChange={(e) => setSelectedEntityId(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "8px 12px",
-                    borderRadius: 8,
-                    background: "#1e293b",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    color: "#f1f5f9",
-                    fontSize: "0.85rem",
-                  }}
-                >
-                  {entities.map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {e.icon} {e.name} ({e.country})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setSelectedEntityId(val)}
+                  placeholder="Selecciona una entidad..."
+                />
               </div>
 
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.75rem",
-                    color: "#94a3b8",
-                    marginBottom: 4,
-                  }}
-                >
-                  Nombre del Producto / Bolsillo
-                </label>
-                <input
-                  type="text"
+                <FloatingInput
+                  label="Nombre del Producto / Bolsillo"
                   placeholder="ej. Cajita de Rendimiento, Bolsillo Viajes"
                   value={accountName}
                   onChange={(e) => setAccountName(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "8px 12px",
-                    borderRadius: 8,
-                    background: "#1e293b",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    color: "#f1f5f9",
-                    fontSize: "0.85rem",
-                  }}
                   required
                 />
               </div>
@@ -690,7 +722,7 @@ export default function FixedIncomeModal({
                     <option value="pocket">⚡ Bolsillo / Cajita</option>
                     <option value="savings">💳 Cuenta de Ahorro</option>
                     <option value="wallet">💵 Billetera / Cash Yield</option>
-                    <option value="crypto">🪙 Crypto Staking</option>
+                    <option value="crypto">🪙 Oro / Crypto Staking (XAUt / PAXG)</option>
                   </select>
                 </div>
                 <div>
@@ -725,6 +757,143 @@ export default function FixedIncomeModal({
                 </div>
               </div>
 
+              {accountType === "crypto" && (
+                <div
+                  style={{
+                    background: "rgba(212, 175, 55, 0.08)",
+                    border: "1px solid rgba(212, 175, 55, 0.3)",
+                    borderRadius: 10,
+                    padding: "12px 14px",
+                    marginTop: 6,
+                    marginBottom: 10,
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#f59e0b" }}>
+                      🪙 Parámetros de Oro / Crypto (XAUt / PAXG)
+                    </span>
+                    <span style={{ fontSize: "0.68rem", color: "#38bdf8" }}>
+                      Spread Bid/Ask y Comisiones
+                    </span>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.68rem", color: "#cbd5e1", marginBottom: 3 }}>
+                        Cantidad de Oro / Tokens
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="ej. 0.35 onzas o 10.5 g"
+                        value={goldQuantity}
+                        onChange={(e) => {
+                          const qty = e.target.value;
+                          setGoldQuantity(qty);
+                          if (qty && goldSellPrice) {
+                            setAccountBalance(String(Number(qty) * Number(goldSellPrice)));
+                          }
+                        }}
+                        style={{
+                          width: "100%",
+                          padding: "6px 10px",
+                          borderRadius: 6,
+                          background: "#0f172a",
+                          border: "1px solid rgba(212, 175, 55, 0.3)",
+                          color: "#f8fafc",
+                          fontSize: "0.8rem",
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.68rem", color: "#cbd5e1", marginBottom: 3 }}>
+                        💸 Comisión / Fee Pagado (USD)
+                      </label>
+                      <CurrencyInput
+                        currency="USD"
+                        placeholder="0.00"
+                        value={goldCommission}
+                        onChange={(val) => setGoldCommission(val !== "" ? String(val) : "")}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.68rem", color: "#cbd5e1", marginBottom: 3 }}>
+                        📥 Precio de Compra / Ask (USD)
+                      </label>
+                      <CurrencyInput
+                        currency="USD"
+                        placeholder="2420.00"
+                        value={goldBuyPrice}
+                        onChange={(val) => setGoldBuyPrice(val !== "" ? String(val) : "")}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.68rem", color: "#cbd5e1", marginBottom: 3 }}>
+                        📤 Precio de Venta Actual / Bid (USD)
+                      </label>
+                      <CurrencyInput
+                        currency="USD"
+                        placeholder="2450.00"
+                        value={goldSellPrice}
+                        onChange={(val) => {
+                          const sp = val !== "" ? String(val) : "";
+                          setGoldSellPrice(sp);
+                          if (goldQuantity && sp) {
+                            setAccountBalance(String(Number(goldQuantity) * Number(sp)));
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {Number(goldQuantity) > 0 && Number(goldBuyPrice) > 0 && Number(goldSellPrice) > 0 && (
+                    <div
+                      style={{
+                        marginTop: 8,
+                        padding: "6px 10px",
+                        background: "rgba(0,0,0,0.3)",
+                        borderRadius: 6,
+                        fontSize: "0.68rem",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        flexWrap: "wrap",
+                        gap: 6,
+                      }}
+                    >
+                      <span style={{ color: "#94a3b8" }}>
+                        Costo Total:{" "}
+                        <strong style={{ color: "#f8fafc" }}>
+                          ${(Number(goldQuantity) * Number(goldBuyPrice) + Number(goldCommission || 0)).toLocaleString("en-US", { maximumFractionDigits: 2 })} USD
+                        </strong>
+                      </span>
+                      <span style={{ color: "#94a3b8" }}>
+                        Valor Liquidable:{" "}
+                        <strong style={{ color: "#38bdf8" }}>
+                          ${(Number(goldQuantity) * Number(goldSellPrice)).toLocaleString("en-US", { maximumFractionDigits: 2 })} USD
+                        </strong>
+                      </span>
+                      <span style={{ color: "#94a3b8" }}>
+                        Efecto Precio + Fee:{" "}
+                        <strong
+                          style={{
+                            color:
+                              Number(goldQuantity) * Number(goldSellPrice) - (Number(goldQuantity) * Number(goldBuyPrice) + Number(goldCommission || 0)) >= 0
+                                ? "#10b981"
+                                : "#ef4444",
+                          }}
+                        >
+                          {Number(goldQuantity) * Number(goldSellPrice) - (Number(goldQuantity) * Number(goldBuyPrice) + Number(goldCommission || 0)) >= 0 ? "+" : ""}
+                          ${(Number(goldQuantity) * Number(goldSellPrice) - (Number(goldQuantity) * Number(goldBuyPrice) + Number(goldCommission || 0))).toLocaleString("en-US", { maximumFractionDigits: 2 })} USD
+                        </strong>
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
                   <label
@@ -737,22 +906,11 @@ export default function FixedIncomeModal({
                   >
                     Saldo Actual
                   </label>
-                  <input
-                    type="number"
-                    step="any"
-                    placeholder="ej. 5000000"
+                  <CurrencyInput
+                    currency={accountCurrency}
                     value={accountBalance}
-                    onChange={(e) => setAccountBalance(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      background: "#1e293b",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      color: "#f1f5f9",
-                      fontSize: "0.85rem",
-                    }}
-                    required
+                    onChange={(val) => setAccountBalance(val !== "" ? String(val) : "")}
+                    placeholder="0"
                   />
                 </div>
                 <div>
@@ -766,22 +924,13 @@ export default function FixedIncomeModal({
                   >
                     Tasa Efectiva Anual (E.A. %)
                   </label>
-                  <input
+                  <FloatingInput
                     type="number"
                     step="0.01"
                     placeholder="ej. 12.0"
+                    suffix="% E.A."
                     value={accountRateEA}
                     onChange={(e) => setAccountRateEA(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      background: "#1e293b",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      color: "#10b981",
-                      fontWeight: 700,
-                      fontSize: "0.85rem",
-                    }}
                     required
                   />
                 </div>
@@ -799,19 +948,9 @@ export default function FixedIncomeModal({
                   >
                     Fecha Apertura / Inicio
                   </label>
-                  <input
-                    type="date"
+                  <DynamicDatePicker
                     value={accountStartDate}
-                    onChange={(e) => setAccountStartDate(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      background: "#1e293b",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      color: "#f1f5f9",
-                      fontSize: "0.85rem",
-                    }}
+                    onChange={(iso) => setAccountStartDate(iso)}
                   />
                 </div>
                 <div style={{ display: "flex", alignItems: "center", paddingTop: 16 }}>
@@ -894,25 +1033,12 @@ export default function FixedIncomeModal({
                 >
                   Entidad Emisora
                 </label>
-                <select
+                <CustomSelectDropdown
+                  options={entityOptions}
                   value={selectedEntityId}
-                  onChange={(e) => setSelectedEntityId(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "8px 12px",
-                    borderRadius: 8,
-                    background: "#1e293b",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    color: "#f1f5f9",
-                    fontSize: "0.85rem",
-                  }}
-                >
-                  {entities.map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {e.icon} {e.name} ({e.country})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setSelectedEntityId(val)}
+                  placeholder="Selecciona una entidad..."
+                />
               </div>
 
               {/* Nu/Bank Term Chips for Instant Plazo & Rate Selection */}
@@ -959,30 +1085,11 @@ export default function FixedIncomeModal({
               )}
 
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.75rem",
-                    color: "#94a3b8",
-                    marginBottom: 4,
-                  }}
-                >
-                  Nombre / Identificador del CDT
-                </label>
-                <input
-                  type="text"
+                <FloatingInput
+                  label="Nombre / Identificador del CDT"
                   placeholder="ej. CDT Nu Congelada 180 Días, CDT Pibank"
                   value={cdtName}
                   onChange={(e) => setCdtName(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "8px 12px",
-                    borderRadius: 8,
-                    background: "#1e293b",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    color: "#f1f5f9",
-                    fontSize: "0.85rem",
-                  }}
                   required
                 />
               </div>
@@ -999,22 +1106,11 @@ export default function FixedIncomeModal({
                   >
                     Capital Invertido
                   </label>
-                  <input
-                    type="number"
-                    step="any"
-                    placeholder="ej. 10000000"
+                  <CurrencyInput
+                    currency={cdtCurrency}
                     value={cdtCapital}
-                    onChange={(e) => setCdtCapital(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      background: "#1e293b",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      color: "#f1f5f9",
-                      fontSize: "0.85rem",
-                    }}
-                    required
+                    onChange={(val) => setCdtCapital(val !== "" ? String(val) : "")}
+                    placeholder="0"
                   />
                 </div>
                 <div>
@@ -1028,22 +1124,13 @@ export default function FixedIncomeModal({
                   >
                     Tasa Pactada (E.A. %)
                   </label>
-                  <input
+                  <FloatingInput
                     type="number"
                     step="0.01"
                     placeholder="ej. 12.2"
+                    suffix="% E.A."
                     value={cdtRateEA}
                     onChange={(e) => setCdtRateEA(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      background: "#1e293b",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      color: "#f59e0b",
-                      fontWeight: 700,
-                      fontSize: "0.85rem",
-                    }}
                     required
                   />
                 </div>
@@ -1061,19 +1148,10 @@ export default function FixedIncomeModal({
                   >
                     Plazo (Días)
                   </label>
-                  <input
+                  <FloatingInput
                     type="number"
                     value={cdtTermDays}
                     onChange={(e) => setCdtTermDays(Number(e.target.value))}
-                    style={{
-                      width: "100%",
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      background: "#1e293b",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      color: "#f1f5f9",
-                      fontSize: "0.85rem",
-                    }}
                     required
                   />
                 </div>
@@ -1088,20 +1166,9 @@ export default function FixedIncomeModal({
                   >
                     Fecha Apertura
                   </label>
-                  <input
-                    type="date"
+                  <DynamicDatePicker
                     value={cdtStartDate}
-                    onChange={(e) => setCdtStartDate(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      background: "#1e293b",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      color: "#f1f5f9",
-                      fontSize: "0.85rem",
-                    }}
-                    required
+                    onChange={(iso) => setCdtStartDate(iso)}
                   />
                 </div>
                 <div>
@@ -1113,22 +1180,13 @@ export default function FixedIncomeModal({
                       marginBottom: 4,
                     }}
                   >
-                    Vencimiento
+                    Vencimiento (Auto)
                   </label>
-                  <input
-                    type="date"
+                  <DynamicDatePicker
                     value={cdtMaturityDate}
+                    onChange={(iso) => setCdtMaturityDate(iso)}
+                    align="right"
                     disabled
-                    style={{
-                      width: "100%",
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      background: "#0f172a",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      color: "#f59e0b",
-                      fontSize: "0.85rem",
-                      fontWeight: 600,
-                    }}
                   />
                 </div>
               </div>
@@ -1145,20 +1203,12 @@ export default function FixedIncomeModal({
                   >
                     Retención en la Fuente (%)
                   </label>
-                  <input
+                  <FloatingInput
                     type="number"
                     step="0.1"
+                    suffix="%"
                     value={cdtReteFuente}
                     onChange={(e) => setCdtReteFuente(Number(e.target.value))}
-                    style={{
-                      width: "100%",
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      background: "#1e293b",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      color: "#f1f5f9",
-                      fontSize: "0.85rem",
-                    }}
                   />
                 </div>
                 <div style={{ display: "flex", alignItems: "center", paddingTop: 18 }}>
@@ -1205,19 +1255,11 @@ export default function FixedIncomeModal({
                       </select>
                     </div>
                     <div>
-                      <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: 4 }}>
-                        Categoría / Bolsa
-                      </label>
-                      <input
-                        type="text"
+                      <FloatingInput
+                        label="Categoría / Bolsa"
                         placeholder="ej. Viaje, Estudios, Deuda"
                         value={cdtCategory}
                         onChange={(e) => setCdtCategory(e.target.value)}
-                        style={{
-                          width: "100%", padding: "8px 12px", borderRadius: 8,
-                          background: "#1e293b", border: "1px solid rgba(255,255,255,0.1)",
-                          color: "#f1f5f9", fontSize: "0.85rem",
-                        }}
                       />
                     </div>
                   </div>
@@ -1229,32 +1271,21 @@ export default function FixedIncomeModal({
                         <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: 4 }}>
                           Monto de Salida ($)
                         </label>
-                        <input
-                          type="number"
-                          step="any"
-                          placeholder="ej. 10500000"
+                        <CurrencyInput
+                          currency={cdtCurrency}
                           value={cdtPayoutAmount}
-                          onChange={(e) => setCdtPayoutAmount(e.target.value)}
-                          style={{
-                            width: "100%", padding: "8px 12px", borderRadius: 8,
-                            background: "#1e293b", border: "1px solid rgba(255,255,255,0.1)",
-                            color: "#f43f5e", fontWeight: 700, fontSize: "0.85rem",
-                          }}
+                          onChange={(val) => setCdtPayoutAmount(val !== "" ? String(val) : "")}
+                          placeholder="0"
                         />
                       </div>
                       <div>
                         <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: 4 }}>
                           Fecha Liquidación
                         </label>
-                        <input
-                          type="date"
+                        <DynamicDatePicker
                           value={cdtPayoutDate}
-                          onChange={(e) => setCdtPayoutDate(e.target.value)}
-                          style={{
-                            width: "100%", padding: "8px 12px", borderRadius: 8,
-                            background: "#1e293b", border: "1px solid rgba(255,255,255,0.1)",
-                            color: "#f1f5f9", fontSize: "0.85rem",
-                          }}
+                          onChange={(iso) => setCdtPayoutDate(iso)}
+                          align="right"
                         />
                       </div>
                     </div>
@@ -1318,52 +1349,20 @@ export default function FixedIncomeModal({
                 >
                   Entidad Bancaria
                 </label>
-                <select
+                <CustomSelectDropdown
+                  options={entityOptions}
                   value={calcEntityId}
-                  onChange={(e) => setCalcEntityId(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "8px 12px",
-                    borderRadius: 8,
-                    background: "#1e293b",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    color: "#f1f5f9",
-                    fontSize: "0.85rem",
-                  }}
-                >
-                  {entities.map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {e.icon} {e.name} ({e.country})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setCalcEntityId(val)}
+                  placeholder="Selecciona una entidad..."
+                />
               </div>
 
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.75rem",
-                    color: "#94a3b8",
-                    marginBottom: 4,
-                  }}
-                >
-                  Nombre de la Cuenta (Opcional)
-                </label>
-                <input
-                  type="text"
+                <FloatingInput
+                  label="Nombre de la Cuenta (Opcional)"
                   placeholder="ej. Cajita Principal Nu"
                   value={calcAccountName}
                   onChange={(e) => setCalcAccountName(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "8px 12px",
-                    borderRadius: 8,
-                    background: "#1e293b",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    color: "#f1f5f9",
-                    fontSize: "0.85rem",
-                  }}
                 />
               </div>
 
@@ -1403,36 +1402,20 @@ export default function FixedIncomeModal({
                       <span style={{ fontSize: "0.75rem", color: "#64748b", minWidth: 20 }}>
                         #{idx + 1}
                       </span>
-                      <input
-                        type="date"
-                        value={dep.date}
-                        onChange={(e) => updateDepositRow(dep.id, "date", e.target.value)}
-                        style={{
-                          flex: 1,
-                          padding: "6px 10px",
-                          borderRadius: 6,
-                          background: "#1e293b",
-                          border: "1px solid rgba(255,255,255,0.1)",
-                          color: "#f1f5f9",
-                          fontSize: "0.8rem",
-                        }}
-                      />
-                      <input
-                        type="number"
-                        placeholder="Monto ($)"
-                        value={dep.amount}
-                        onChange={(e) => updateDepositRow(dep.id, "amount", e.target.value)}
-                        style={{
-                          flex: 1.2,
-                          padding: "6px 10px",
-                          borderRadius: 6,
-                          background: "#1e293b",
-                          border: "1px solid rgba(255,255,255,0.1)",
-                          color: "#10b981",
-                          fontWeight: 700,
-                          fontSize: "0.8rem",
-                        }}
-                      />
+                      <div style={{ flex: 1 }}>
+                        <DynamicDatePicker
+                          value={dep.date}
+                          onChange={(iso) => updateDepositRow(dep.id, "date", iso)}
+                        />
+                      </div>
+                      <div style={{ flex: 1.2 }}>
+                        <CurrencyInput
+                          currency="COP"
+                          value={dep.amount}
+                          onChange={(val) => updateDepositRow(dep.id, "amount", val !== "" ? String(val) : "")}
+                          placeholder="Monto ($)"
+                        />
+                      </div>
                       {calcDeposits.length > 1 && (
                         <button
                           type="button"
@@ -1600,71 +1583,29 @@ export default function FixedIncomeModal({
                 >
                   💡 Seleccionar Banco o Plataforma (Auto-completar datos):
                 </label>
-                <div style={{ position: "relative" }}>
-                  <select
-                    value=""
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (!val) return;
-                      const bp = BANK_PRESETS.find((p) => p.id === val);
-                      if (bp) {
-                        setEntityName(bp.name);
-                        setEntityCountry(bp.country);
-                        setEntityColor(bp.color);
-                        setEntityIcon(bp.icon);
-                        setEntityLogoUrl(svgToDataUri(bp.logoSvg));
-                      }
-                    }}
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      borderRadius: 8,
-                      background: "rgba(30, 41, 59, 0.9)",
-                      border: "1px solid rgba(56, 189, 248, 0.4)",
-                      color: "#f1f5f9",
-                      fontSize: "0.85rem",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      outline: "none",
-                    }}
-                  >
-                    <option value="" disabled>
-                      Selecciona una entidad para auto-llenar campos...
-                    </option>
-                    {BANK_PRESETS.map((bp) => (
-                      <option key={bp.id} value={bp.id}>
-                        {bp.icon} {bp.name} ({bp.country}) • Ref: {bp.defaultRateEA}% E.A.
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <CustomSelectDropdown
+                  options={bankPresetOptions}
+                  placeholder="Selecciona una entidad para auto-llenar campos..."
+                  value=""
+                  onChange={(val) => {
+                    const bp = BANK_PRESETS.find((p) => p.id === val);
+                    if (bp) {
+                      setEntityName(bp.name);
+                      setEntityCountry(bp.country);
+                      setEntityColor(bp.color);
+                      setEntityIcon(bp.icon);
+                      setEntityLogoUrl(svgToDataUri(bp.logoSvg));
+                    }
+                  }}
+                />
               </div>
 
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.75rem",
-                    color: "#94a3b8",
-                    marginBottom: 4,
-                  }}
-                >
-                  Nombre del Banco / Entidad
-                </label>
-                <input
-                  type="text"
+                <FloatingInput
+                  label="Nombre del Banco / Entidad"
                   placeholder="ej. Nu Colombia, Banco Finandina, Lulo Bank, Pibank"
                   value={entityName}
                   onChange={(e) => setEntityName(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "8px 12px",
-                    borderRadius: 8,
-                    background: "#1e293b",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    color: "#f1f5f9",
-                    fontSize: "0.85rem",
-                  }}
                   required
                 />
               </div>
@@ -1701,29 +1642,11 @@ export default function FixedIncomeModal({
                   </select>
                 </div>
                 <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.75rem",
-                      color: "#94a3b8",
-                      marginBottom: 4,
-                    }}
-                  >
-                    Icono Emoji
-                  </label>
-                  <input
-                    type="text"
+                  <FloatingInput
+                    label="Icono Emoji"
+                    placeholder="ej. 💜"
                     value={entityIcon}
                     onChange={(e) => setEntityIcon(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      background: "#1e293b",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      color: "#f1f5f9",
-                      fontSize: "0.85rem",
-                    }}
                   />
                 </div>
                 <div>
@@ -1743,7 +1666,7 @@ export default function FixedIncomeModal({
                     onChange={(e) => setEntityColor(e.target.value)}
                     style={{
                       width: "100%",
-                      height: 38,
+                      height: 42,
                       padding: 2,
                       borderRadius: 8,
                       background: "#1e293b",
@@ -1813,29 +1736,12 @@ export default function FixedIncomeModal({
                 >
                   Cajita o Cuenta Destino
                 </label>
-                <select
+                <CustomSelectDropdown
+                  options={accountOptions}
                   value={txAccountId}
-                  onChange={(e) => setTxAccountId(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "8px 12px",
-                    borderRadius: 8,
-                    background: "#1e293b",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    color: "#f1f5f9",
-                    fontSize: "0.85rem",
-                  }}
-                  required
-                >
-                  {accounts.map((acc) => {
-                    const ent = entities.find((e) => e.id === acc.entityId);
-                    return (
-                      <option key={acc.id} value={acc.id}>
-                        {ent?.name || "Banco"} — {acc.name} (${acc.balance.toLocaleString("en-US")} {acc.currency})
-                      </option>
-                    );
-                  })}
-                </select>
+                  onChange={(val) => setTxAccountId(val)}
+                  placeholder="Selecciona una cajita o cuenta..."
+                />
               </div>
 
               {/* Tipo: Depósito o Retiro */}
@@ -1898,22 +1804,11 @@ export default function FixedIncomeModal({
                   >
                     Monto ({accounts.find((a) => a.id === txAccountId)?.currency || "COP"})
                   </label>
-                  <input
-                    type="number"
-                    step="any"
+                  <CurrencyInput
+                    currency={accounts.find((a) => a.id === txAccountId)?.currency || "COP"}
                     value={txAmount}
-                    onChange={(e) => setTxAmount(e.target.value)}
-                    placeholder="ej. 150000"
-                    style={{
-                      width: "100%",
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      background: "#1e293b",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      color: "#f1f5f9",
-                      fontSize: "0.85rem",
-                    }}
-                    required
+                    onChange={(val) => setTxAmount(val !== "" ? String(val) : "")}
+                    placeholder="0"
                   />
                 </div>
 
@@ -1928,49 +1823,20 @@ export default function FixedIncomeModal({
                   >
                     Fecha del Movimiento
                   </label>
-                  <input
-                    type="date"
+                  <DynamicDatePicker
                     value={txDate}
-                    onChange={(e) => setTxDate(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      background: "#1e293b",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      color: "#f1f5f9",
-                      fontSize: "0.85rem",
-                    }}
-                    required
+                    onChange={(iso) => setTxDate(iso)}
+                    align="right"
                   />
                 </div>
               </div>
 
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.75rem",
-                    color: "#94a3b8",
-                    marginBottom: 4,
-                  }}
-                >
-                  Descripción / Concepto
-                </label>
-                <input
-                  type="text"
+                <FloatingInput
+                  label="Descripción / Concepto"
+                  placeholder={txType === "credit" ? "ej. Aporte nómina, Ahorro viaje" : "ej. Pago tiquetes, Retiro personal"}
                   value={txDescription}
                   onChange={(e) => setTxDescription(e.target.value)}
-                  placeholder={txType === "credit" ? "ej. Aporte nómina, Ahorro viaje" : "ej. Pago tiquetes, Retiro personal"}
-                  style={{
-                    width: "100%",
-                    padding: "8px 12px",
-                    borderRadius: 8,
-                    background: "#1e293b",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    color: "#f1f5f9",
-                    fontSize: "0.85rem",
-                  }}
                 />
               </div>
 

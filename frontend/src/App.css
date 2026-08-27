@@ -538,6 +538,13 @@
   color: #10b981;
 }
 
+.nav-pill-btn.cyan.active {
+  background: rgba(0, 229, 255, 0.15);
+  border-color: #00e5ff;
+  color: #00e5ff;
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.2);
+}
+
 .nav-action-btn {
   display: flex;
   align-items: center;

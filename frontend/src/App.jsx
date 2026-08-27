@@ -5,6 +5,7 @@ import CorrelationHeatmap from "./components/CorrelationHeatmap";
 import CreateStrategyModal from "./components/CreateStrategyModal";
 import DynamicStrategyView from "./components/DynamicStrategyView";
 import FixedIncomeHub from "./components/FixedIncome/FixedIncomeHub";
+import CashFlowHub from "./components/CashFlow/CashFlowHub";
 import HoldingsTable from "./components/HoldingsTable";
 import IndividualPurchasesView from "./components/IndividualPurchasesView";
 import InflationExplorerModal from "./components/InflationExplorerModal";
@@ -452,6 +453,19 @@ export default function App() {
             <span>🏦 Renta Fija & Ahorros</span>
           </button>
 
+          {/* 4. Distribución del Dinero & Flujo de Caja */}
+          <button
+            type="button"
+            className={`nav-pill-btn cyan ${mode === "cash_flow" ? "active" : ""}`}
+            onClick={() => {
+              setMode("cash_flow");
+              setStratOpen(false);
+              setPurchasesOpen(false);
+            }}
+          >
+            <span>🌊 Distribución & Flujo</span>
+          </button>
+
           {/* 5. Exportar CSV */}
           {navData && (
             <button
@@ -478,7 +492,9 @@ export default function App() {
 
       {/* ── Main layout ─────────────────────────────────── */}
       <main className="app-main">
-        {mode === "fixed_income" ? (
+        {mode === "cash_flow" ? (
+          <CashFlowHub />
+        ) : mode === "fixed_income" ? (
           <FixedIncomeHub />
         ) : (purchasePortfolios || []).some((p) => p.id === mode) ? (
           <IndividualPurchasesView portfolioId={mode} />

@@ -8,6 +8,7 @@ import { calculateAccountYield } from "../../utils/yieldCalculator";
 import FixedIncomeModal from "./FixedIncomeModal";
 import FixedIncomeProjectionChart from "./FixedIncomeProjectionChart";
 import StatementImporterModal from "./StatementImporterModal";
+import HourglassRangeSlider from "../Common/HourglassRangeSlider";
 
 const PERIOD_UNLOCK_DAYS = {
   "1M": 7,
@@ -302,7 +303,8 @@ export default function FixedIncomeHub() {
       weightedRateSum += currentRateEA * unfrozenLiquid;
     });
 
-    // 2. CDTs Activos (Rendimientos Devengados + Tasa CDT)
+    // 2. CDTs Activos (Capital + Rendimientos Devengados + Tasa CDT)
+    let cdtsCapitalTotal = 0;
     let cdtsExtraYield = 0;
     let activeCdtsCount = 0;
 
@@ -311,6 +313,7 @@ export default function FixedIncomeHub() {
 
       activeCdtsCount += 1;
       const capitalVal = convertAmount(cdt.capital || 0, cdt.currency);
+      cdtsCapitalTotal += capitalVal;
       const rateDecimal = Number(cdt.interestRateEA || 11.0) / 100;
       const reteFuenteMultiplier = 1 - Number(cdt.reteFuentePct || 4) / 100;
 
@@ -329,9 +332,10 @@ export default function FixedIncomeHub() {
       weightedRateSum += (cdt.interestRateEA || 11.0) * capitalVal;
     });
 
-    // Patrimonio total = Saldo Total de Cajitas + Rendimientos de CDTs
-    const totalPatrimony = liquidBalance + cdtsExtraYield;
-    const weightedEA = liquidBalance > 0 ? weightedRateSum / liquidBalance : (viewAccounts[0]?.interestRateEA || 9.30);
+    // Patrimonio total consolidado = Saldo Total de Cajitas + Capital de CDTs + Rendimientos Devengados de CDTs
+    const totalPatrimony = liquidBalance + cdtsCapitalTotal + cdtsExtraYield;
+    const totalPortfolioBase = liquidBalance + cdtsCapitalTotal;
+    const weightedEA = totalPortfolioBase > 0 ? weightedRateSum / totalPortfolioBase : (viewAccounts[0]?.interestRateEA || 9.30);
     const monthlyIncome = totalDailyIncome * 30.416; // Promedio 30.416 días/mes
 
     // Fisher Equation Real Rate: (1 + EA) / (1 + Inflation) - 1
@@ -340,6 +344,7 @@ export default function FixedIncomeHub() {
 
     return {
       liquidBalance,
+      cdtsCapitalTotal,
       cdtsExtraYield,
       activeCdtsCount,
       totalPatrimony,
@@ -426,14 +431,53 @@ export default function FixedIncomeHub() {
         }
       });
 
-      const getRate = (dStr) => {
-        const rates = historicalRates?.entities?.[acc.entityId]?.savings_rates;
-        if (rates && rates.length > 0) {
-          for (const r of rates) {
-            if (dStr >= r.from && dStr <= r.to) return Number(r.rateEA || acc.interestRateEA || 9.30);
+      const getRate = (dStr, balance = 0) => {
+        if (acc.type === "crypto") {
+          return Number(acc.interestRateEA || 8.0);
+        }
+
+        if (acc.tieredRates && acc.tieredRates.length > 0) {
+          for (const tier of acc.tieredRates) {
+            if (balance <= (tier.maxBalance || Infinity)) {
+              return Number(tier.rateEA || 3.0);
+            }
+          }
+          return Number(acc.tieredRates[acc.tieredRates.length - 1].rateEA || 3.0);
+        }
+
+        let entityRates = historicalRates?.entities?.[acc.entityId]?.savings_rates;
+        if (!entityRates && historicalRates?.entities) {
+          const entName = (acc.entityName || "").toLowerCase();
+          for (const [k, v] of Object.entries(historicalRates.entities)) {
+            const kClean = k.toLowerCase().replace("ent_", "");
+            const vClean = (v.name || "").toLowerCase();
+            if ((entName && (kClean.includes(entName) || vClean.includes(entName))) || (acc.entityId && acc.entityId.includes(kClean))) {
+              entityRates = v.savings_rates;
+              break;
+            }
           }
         }
-        return Number(acc.interestRateEA || 9.30);
+
+        if (!entityRates && (acc.entityId === "ent_nu" || acc.entityId?.includes("nu") || (acc.name || "").toLowerCase().includes("nu"))) {
+          entityRates = [
+            { from: "2023-06-01", to: "2024-10-07", rateEA: 13.0 },
+            { from: "2024-10-08", to: "2024-12-09", rateEA: 12.0 },
+            { from: "2024-12-10", to: "2025-03-09", rateEA: 11.0 },
+            { from: "2025-03-10", to: "2025-05-08", rateEA: 9.5 },
+            { from: "2025-05-09", to: "2025-08-11", rateEA: 9.25 },
+            { from: "2025-08-12", to: "2026-02-05", rateEA: 8.25 },
+            { from: "2026-02-06", to: "2026-04-08", rateEA: 8.75 },
+            { from: "2026-04-09", to: "2099-12-31", rateEA: 9.30 },
+          ];
+        }
+
+        if (entityRates && entityRates.length > 0) {
+          for (const r of entityRates) {
+            if (dStr >= r.from && dStr <= r.to) return Number(r.rateEA || 9.30);
+          }
+        }
+
+        return Number(acc.interestRateEA || (acc.currency === "USD" ? 3.0 : 9.30));
       };
 
       return {
@@ -474,7 +518,7 @@ export default function FixedIncomeHub() {
         }
 
         // Dynamic daily compounding for accounts without explicit monthly payout rows (e.g. Nu)
-        const rateEA = sim.getRate(dStr);
+        const rateEA = sim.getRate(dStr, sim.currBalance);
         if (!sim.hasExplicitPayouts && sim.currBalance > 0) {
           const dailyRate = Math.pow(1 + rateEA / 100, 1 / 360) - 1;
           const dailyInterest = sim.currBalance * dailyRate;
@@ -482,10 +526,16 @@ export default function FixedIncomeHub() {
           sim.currBalance += dailyInterest;
         }
 
-        dayTotalCapital += sim.currCapital;
-        dayTotalBalance += sim.currBalance;
-        dayTotalEarnings += sim.currEarnings;
-        dayWeightedRateSum += rateEA * sim.currBalance;
+        const capConv = convertAmount(sim.currCapital, sim.acc.currency);
+        const balConv = convertAmount(sim.currBalance, sim.acc.currency);
+        const earnConv = convertAmount(sim.currEarnings, sim.acc.currency);
+
+        dayTotalCapital += capConv;
+        dayTotalBalance += balConv;
+        dayTotalEarnings += earnConv;
+        if (balConv > 0) {
+          dayWeightedRateSum += rateEA * balConv;
+        }
       });
 
       // Active CDTs extra yield on this day
@@ -498,13 +548,15 @@ export default function FixedIncomeHub() {
           const sDate = c.startDate || "2024-01-01";
           const mDate = c.maturityDate || c.payoutDate || sDate;
           if (dStr >= sDate && dStr <= mDate) {
-            const cap = Number(c.capital || 0);
+            const capRaw = Number(c.capital || 0);
+            const cap = convertAmount(capRaw, c.currency);
             const rEA = Number(c.interestRateEA || 11.0);
             const rete = 1 - Number(c.reteFuentePct || 4) / 100;
             const startD = new Date(sDate);
             const thisD = new Date(dStr);
             const daysEl = Math.max(0, Math.floor((thisD - startD) / (1000 * 60 * 60 * 24)));
-            const cdtYield = cap * (Math.pow(1 + rEA / 100, daysEl / 360) - 1) * rete;
+            const cdtYieldRaw = capRaw * (Math.pow(1 + rEA / 100, daysEl / 360) - 1) * rete;
+            const cdtYield = convertAmount(cdtYieldRaw, c.currency);
 
             activeCDTsExtraYield += cdtYield;
             activeCDTsCapitalOnDay += cap;
@@ -513,20 +565,27 @@ export default function FixedIncomeHub() {
         }
       });
 
-      const finalBalance = dayTotalBalance + activeCDTsExtraYield;
-      const finalEarnings = dayTotalEarnings + activeCDTsExtraYield;
-      const finalWeightedRate = dayTotalBalance > 0
-        ? (dayWeightedRateSum + activeCDTsRateSum) / (dayTotalBalance + activeCDTsCapitalOnDay)
-        : metrics.weightedEA;
+      const totalPortfolioBalance = dayTotalBalance + activeCDTsCapitalOnDay + activeCDTsExtraYield;
+      const totalPortfolioCapital = dayTotalCapital + activeCDTsCapitalOnDay;
+      const totalPortfolioEarnings = dayTotalEarnings + activeCDTsExtraYield;
+      
+      const totalActiveAssets = dayTotalBalance + activeCDTsCapitalOnDay;
+      let finalWeightedRate = 13.0;
+      if (totalActiveAssets > 0) {
+        finalWeightedRate = (dayWeightedRateSum + activeCDTsRateSum) / totalActiveAssets;
+      } else {
+        const firstSim = accountSimulators[0];
+        finalWeightedRate = firstSim ? firstSim.getRate(dStr, 0) : 13.0;
+      }
 
       const label = currDate.toLocaleDateString("es-CO", { month: "short", year: "2-digit" });
 
       series.push({
         date: dStr,
         dateLabel: label,
-        projectedValue: Number(finalBalance.toFixed(2)),
-        baseCapital: Number(dayTotalCapital.toFixed(2)),
-        earnings: Number(Math.max(0, finalEarnings).toFixed(2)),
+        projectedValue: Number(totalPortfolioBalance.toFixed(2)),
+        baseCapital: Number(totalPortfolioCapital.toFixed(2)),
+        earnings: Number(Math.max(0, totalPortfolioEarnings).toFixed(2)),
         rate: Number((finalWeightedRate || 9.30).toFixed(2)),
       });
 
@@ -534,7 +593,7 @@ export default function FixedIncomeHub() {
     }
 
     return series;
-  }, [viewTransactions, viewCDTs, viewAccounts, historicalRates, metrics, firstOpenDate, hasAnyData, selectedEntityView]);
+  }, [viewTransactions, viewCDTs, viewAccounts, historicalRates, metrics, firstOpenDate, hasAnyData, selectedEntityView, preferredCurrency, fxRate]);
 
   // ── Historical & Future Compound Interest Projection Series ───────────────────
   const projectionSeries = useMemo(() => {
@@ -605,6 +664,39 @@ export default function FixedIncomeHub() {
   }, [historicalSeries, projectionTimeline, futureYears, metrics.weightedEA]);
 
   const currSymbol = preferredCurrency === "COP" ? "COP $" : "USD $";
+
+  // ── Smart Dynamic Layout for Entities (Dominant Master + Stack) ─────────
+  const { isDominantLayout, dominantEntity, stackedEntities } = useMemo(() => {
+    if (activeEntities.length <= 2) {
+      return { isDominantLayout: false, dominantEntity: null, stackedEntities: [] };
+    }
+
+    const scores = activeEntities.map((ent) => {
+      const entAccounts = accounts.filter((a) => a.entityId === ent.id);
+      const entCDTs = cdts.filter((c) => c.entityId === ent.id);
+      const activeCDTs = entCDTs.filter((c) => c.status !== "matured");
+      const maturedCDTs = entCDTs.filter((c) => c.status === "matured");
+      const score = entAccounts.length * 4 + activeCDTs.length * 3 + maturedCDTs.length * 1.5;
+      return { ent, score };
+    });
+
+    scores.sort((a, b) => b.score - a.score);
+    const highest = scores[0];
+    const secondHighest = scores[1];
+
+    // Trigger dominant master layout when highest entity has score >= 8 and is at least 1.7x the second
+    const isDominant = highest && secondHighest && highest.score >= 8 && highest.score >= secondHighest.score * 1.7;
+
+    if (isDominant) {
+      return {
+        isDominantLayout: true,
+        dominantEntity: highest.ent,
+        stackedEntities: scores.slice(1).map((s) => s.ent),
+      };
+    }
+
+    return { isDominantLayout: false, dominantEntity: null, stackedEntities: [] };
+  }, [activeEntities, accounts, cdts]);
 
   return (
     <div className="fade-up" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -728,9 +820,19 @@ export default function FixedIncomeHub() {
             })}
           </div>
           <div style={{ fontSize: "0.68rem", color: "#38bdf8", marginTop: 4, fontWeight: 600, display: "flex", gap: 6, flexWrap: "wrap" }}>
-            <span>💧 Saldo Cajitas: {currSymbol} {metrics.liquidBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-            <span>•</span>
-            <span>📈 Rend. CDTs ({metrics.activeCdtsCount}): +{currSymbol} {metrics.cdtsExtraYield.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <span>💧 Cajitas: {currSymbol} {metrics.liquidBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            {metrics.cdtsCapitalTotal > 0 && (
+              <>
+                <span>•</span>
+                <span>⏳ CDTs ({metrics.activeCdtsCount}): {currSymbol} {metrics.cdtsCapitalTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </>
+            )}
+            {metrics.cdtsExtraYield > 0 && (
+              <>
+                <span>•</span>
+                <span style={{ color: "#10b981" }}>📈 +{currSymbol} {metrics.cdtsExtraYield.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} rend.</span>
+              </>
+            )}
           </div>
           <div style={{ fontSize: "0.68rem", color: "#64748b", marginTop: 2 }}>
             {preferredCurrency === "COP"
@@ -1166,24 +1268,15 @@ export default function FixedIncomeHub() {
           </div>
         </div>
 
-        {/* Range Slider Track */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 2 }}>
-          <span style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 700, minWidth: 45 }}>Hoy (0A)</span>
-          <input
-            type="range"
-            min="0"
-            max="10"
-            step="0.5"
+        {/* Hourglass Range Slider Proyectivo */}
+        <div style={{ margin: "4px 0" }}>
+          <HourglassRangeSlider
+            min={0}
+            max={10}
+            step={0.5}
             value={futureYears}
-            onChange={(e) => setFutureYears(Number(e.target.value))}
-            style={{
-              flex: 1,
-              accentColor: "#38bdf8",
-              cursor: "pointer",
-              height: 6,
-            }}
+            onChange={(val) => setFutureYears(val)}
           />
-          <span style={{ fontSize: "0.7rem", color: "#38bdf8", fontWeight: 800, minWidth: 45, textAlign: "right" }}>+10 Años</span>
         </div>
 
         {/* Live Projections Result Badge */}
@@ -1264,22 +1357,21 @@ export default function FixedIncomeHub() {
         </button>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 480px), 1fr))",
-          gap: 20,
-        }}
-      >
-        {activeEntities.map((entity) => {
+      {/* ── ENTITIES & ACCOUNTS CONTAINER (ADAPTIVE SMART MASONRY) ── */}
+      {(() => {
+        const renderEntityCard = (entity) => {
+          if (!entity) return null;
           const entityAccounts = accounts.filter((a) => a.entityId === entity.id);
           const entityCDTs = cdts.filter((c) => c.entityId === entity.id);
           const activeEntityCDTs = entityCDTs.filter((c) => c.status !== "matured");
 
+          const entityCurrency = entityAccounts[0]?.currency || entityCDTs[0]?.currency || "COP";
+          const entCurrSymbol = entityCurrency === "USD" ? "USD $" : "COP $";
+
           const accountsLiquidTotal = entityAccounts.reduce((sum, a) => {
             const accTx = transactions.filter(t => t.accountId ? t.accountId === a.id : (t.description || "").toLowerCase().includes(a.name.toLowerCase()));
             const yieldData = calculateAccountYield(a, accTx, historicalRates);
-            return sum + convertAmount(yieldData.totalCalculatedBalance || a.balance, a.currency);
+            return sum + (yieldData.totalCalculatedBalance || a.balance || 0);
           }, 0);
 
           // Rendimientos devengados de CDTs activos a la fecha de hoy (base bancaria 360)
@@ -1290,10 +1382,10 @@ export default function FixedIncomeHub() {
             const nowD = new Date();
             const daysEl = Math.max(0, Math.floor((nowD - startD) / (1000 * 60 * 60 * 24)));
             const gain = (cdt.capital || 0) * (Math.pow(1 + rateDecimal, daysEl / 360) - 1) * reteMul;
-            return sum + convertAmount(gain, cdt.currency);
+            return sum + gain;
           }, 0);
 
-          const activeCDTsCapitalTotal = activeEntityCDTs.reduce((sum, c) => sum + convertAmount(c.capital, c.currency), 0);
+          const activeCDTsCapitalTotal = activeEntityCDTs.reduce((sum, c) => sum + (c.capital || 0), 0);
           const entityTotal = accountsLiquidTotal + activeCDTsAccruedYield;
 
           return (
@@ -1404,15 +1496,15 @@ export default function FixedIncomeHub() {
                       style={{ fontWeight: 800, color: "#10b981", fontSize: "1.05rem" }}
                       title={`Líquido Cajitas ($${accountsLiquidTotal.toLocaleString()}) + Rendimiento Devengado CDTs ($${activeCDTsAccruedYield.toLocaleString()})`}
                     >
-                      {currSymbol}{" "}
-                      {entityTotal.toLocaleString("en-US", { maximumFractionDigits: 2 })}
+                      {entCurrSymbol}{" "}
+                      {entityTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                     {activeEntityCDTs.length > 0 && (
                       <div style={{ fontSize: "0.68rem", color: "#f59e0b", marginTop: 2 }}>
-                        + {currSymbol}{activeCDTsCapitalTotal.toLocaleString("en-US", { maximumFractionDigits: 0 })} en {activeEntityCDTs.length} CDT(s)
+                        + {entCurrSymbol}{activeCDTsCapitalTotal.toLocaleString("en-US", { maximumFractionDigits: 0 })} en {activeEntityCDTs.length} CDT(s)
                         {activeCDTsAccruedYield > 0 && (
                           <span style={{ color: "#34d399", marginLeft: 4, fontWeight: 600 }}>
-                            (+$ {activeCDTsAccruedYield.toLocaleString("en-US", { maximumFractionDigits: 0 })} rend. a hoy)
+                            (+$ {activeCDTsAccruedYield.toLocaleString("en-US", { maximumFractionDigits: 2 })} rend. a hoy)
                           </span>
                         )}
                       </div>
@@ -1586,16 +1678,21 @@ export default function FixedIncomeHub() {
                             </div>
                             <div style={{ fontSize: "0.72rem", color: "#94a3b8", marginTop: 2, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                               <span>
-                                Tasa actual:{" "}
+                                {acc.type === "crypto" ? "Tasa Staking:" : "Tasa actual:"}{" "}
                                 <span style={{ color: "#10b981", fontWeight: 700 }}>
                                   {Number(
-                                    historicalRates?.entities?.[acc.entityId]?.savings_rates?.slice(-1)[0]?.rateEA ||
-                                    acc.interestRateEA ||
-                                    9.30
+                                    (acc.type === "crypto" || acc.interestRateEA)
+                                      ? (acc.interestRateEA || historicalRates?.entities?.[acc.entityId]?.savings_rates?.slice(-1)[0]?.rateEA || 8.00)
+                                      : (historicalRates?.entities?.[acc.entityId]?.savings_rates?.slice(-1)[0]?.rateEA || acc.interestRateEA || 9.30)
                                   ).toFixed(2)}% E.A.
                                 </span>
                               </span>
-                              {acc.isTaxExemptGMF && (
+                              {acc.type === "crypto" && (
+                                <span style={{ color: "#f59e0b", fontSize: "0.65rem", fontWeight: 600, background: "rgba(245, 158, 11, 0.15)", padding: "1px 5px", borderRadius: 4, border: "1px solid rgba(245, 158, 11, 0.3)" }}>
+                                  🪙 Inversión / Renta Variable
+                                </span>
+                              )}
+                              {acc.isTaxExemptGMF && acc.type !== "crypto" && (
                                 <span style={{ color: "#38bdf8", fontSize: "0.65rem" }}>
                                   • Exenta 4x1000
                                 </span>
@@ -1838,14 +1935,10 @@ export default function FixedIncomeHub() {
                                         <span>📦 {c.name || c.category} (Cerrado)</span>
                                         <span style={{ color: "#94a3b8" }}>{c.interestRateEA}% E.A.</span>
                                       </div>
-                                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2, fontSize: "0.62rem", color: "#64748b" }}>
-                                        <span>Cap: ${Number(c.capital || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
-                                        <span>{c.startDate} ➔ {c.maturityDate}</span>
-                                      </div>
                                       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2, fontSize: "0.65rem" }}>
                                         <span style={{ color: "#64748b" }}>Ganancia cobrada:</span>
                                         <span style={{ color: "#10b981", fontWeight: 700, fontFamily: "JetBrains Mono" }}>
-                                          +${Number(c.finalProfit || 0).toLocaleString("en-US", { maximumFractionDigits: 2 })} COP
+                                          +${Number(c.finalProfit || 0).toLocaleString("en-US", { maximumFractionDigits: 2 })} {c.currency || acc.currency || "COP"}
                                         </span>
                                       </div>
                                     </div>
@@ -1870,7 +1963,7 @@ export default function FixedIncomeHub() {
                                     📊 Rentabilidad Compuesta en Cajita por Períodos de Tasa:
                                   </span>
                                   <span style={{ fontSize: "0.68rem", color: "#10b981", fontWeight: 700 }}>
-                                    Total Ganado en Cajita: +${yieldData.liquidEarnedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })} COP
+                                    Total Ganado en Cajita: +${yieldData.liquidEarnedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })} {acc.currency || "COP"}
                                   </span>
                                 </div>
                                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 6 }}>
@@ -1891,7 +1984,7 @@ export default function FixedIncomeHub() {
                                       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3, fontSize: "0.65rem" }}>
                                         <span style={{ color: "#64748b" }}>{p.days} días activos</span>
                                         <span style={{ color: "#10b981", fontWeight: 700, fontFamily: "JetBrains Mono" }}>
-                                          +${p.interestEarned.toLocaleString("en-US", { maximumFractionDigits: 2 })}
+                                          +${p.interestEarned.toLocaleString("en-US", { maximumFractionDigits: 2 })} {acc.currency || "COP"}
                                         </span>
                                       </div>
                                     </div>
@@ -2755,8 +2848,43 @@ export default function FixedIncomeHub() {
               </div>
             </div>
           );
-        })}
-      </div>
+        };
+
+        if (isDominantLayout) {
+          return (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 480px), 1fr))",
+                gap: 20,
+                alignItems: "start",
+              }}
+            >
+              {/* Left Column: Dominant Entity (e.g. Nu Colombia) */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                {renderEntityCard(dominantEntity)}
+              </div>
+
+              {/* Right Column: Continuous Vertical Stack (Finandina, MejorCDT, Plenti) */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                {stackedEntities.map((ent) => renderEntityCard(ent))}
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 480px), 1fr))",
+              gap: 20,
+            }}
+          >
+            {activeEntities.map((entity) => renderEntityCard(entity))}
+          </div>
+        );
+      })()}
 
       {/* ── MODAL DE CREACIÓN / EDICIÓN ──────────────────── */}
       <FixedIncomeModal

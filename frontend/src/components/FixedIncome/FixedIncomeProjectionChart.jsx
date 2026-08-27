@@ -166,14 +166,14 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
       const earnVal = param.seriesData.get(seriesRef.current.earnings)?.value;
       const rateVal = param.seriesData.get(seriesRef.current.rate)?.value;
 
-      // Format date from time
+      // Format clean standard date YYYY-MM-DD without overflowing
       let dateStr = "";
       if (typeof param.time === "number") {
-        dateStr = new Date(param.time * 1000).toLocaleDateString("es-CO", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        });
+        const dObj = new Date(param.time * 1000);
+        const y = dObj.getUTCFullYear();
+        const m = String(dObj.getUTCMonth() + 1).padStart(2, "0");
+        const d = String(dObj.getUTCDate()).padStart(2, "0");
+        dateStr = `${y}-${m}-${d}`;
       } else if (typeof param.time === "string") {
         dateStr = param.time;
       }
@@ -521,8 +521,8 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "140px repeat(auto-fit, minmax(135px, 1fr))",
-          gap: 8,
+          gridTemplateColumns: "minmax(115px, auto) repeat(auto-fit, minmax(130px, 1fr))",
+          gap: 10,
           alignItems: "center",
           padding: "6px 14px",
           background: "rgba(0, 0, 0, 0.35)",
@@ -533,8 +533,9 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
           fontFamily: "'JetBrains Mono', monospace",
         }}
       >
-        <div style={{ color: "#94a3b8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          📅 <span style={{ color: "#f8fafc", fontWeight: 600 }}>{currentDisplay.date || "Hoy"}</span>
+        <div style={{ color: "#94a3b8", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 4 }}>
+          <span>📅</span>
+          <span style={{ color: "#f8fafc", fontWeight: 700 }}>{currentDisplay.date || "Hoy"}</span>
         </div>
 
         <div style={{ color: "#10b981", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap", opacity: visibleSeries.balance ? 1 : 0.25 }}>
