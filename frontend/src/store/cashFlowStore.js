@@ -50,7 +50,8 @@ const DEFAULT_CREDIT_CARDS = [
     bankId: "nu",
     color: "#820ad1",
     icon: "💜",
-    totalLimit: 5000000.0,
+    totalLimit: 200000.0,
+    usedLimit: 11900.0,
     closingDay: 15,
     paymentDay: 2,
     rateEA: 24.5,
@@ -64,7 +65,8 @@ const DEFAULT_CREDIT_CARDS = [
     bankId: "rappi",
     color: "#ff441f",
     icon: "🧡",
-    totalLimit: 3500000.0,
+    totalLimit: 2350000.0,
+    usedLimit: 2004157.0,
     closingDay: 20,
     paymentDay: 5,
     rateEA: 24.0,
@@ -303,7 +305,7 @@ export const useCashFlowStore = create(
     startPeriod: getCurrentPeriod(), // Dynamic start month for the user (e.g. "2026-08")
     activePeriod: getCurrentPeriod(), // Currently viewed period
     currency: "COP", // 'COP' | 'USD'
-    allocationModel: "50_30_20", // '50_30_20' | 'pay_yourself_first' | 'envelope'
+    allocationModel: "custom", // 'custom' | '50_30_20' | 'pay_yourself_first' | 'envelope'
     customRatios: DEFAULT_RATIOS,
     emergencyFundTargetMonths: 6,
     payrollAccount: DEFAULT_PAYROLL_ACCOUNT,
@@ -335,22 +337,27 @@ export const useCashFlowStore = create(
           activeP = startP;
         }
 
+        const resolvedRatios =
+          res.customRatios?.needs !== undefined && res.customRatios?.needs !== null
+            ? res.customRatios
+            : DEFAULT_RATIOS;
+
         set({
           startPeriod: startP,
           activePeriod: activeP,
           currency: res.currency || "COP",
-          allocationModel: res.allocationModel || "50_30_20",
-          customRatios: res.customRatios || DEFAULT_RATIOS,
+          allocationModel: res.allocationModel || "custom",
+          customRatios: resolvedRatios,
           emergencyFundTargetMonths: res.emergencyFundTargetMonths ?? 6,
           payrollAccount: res.payrollAccount || DEFAULT_PAYROLL_ACCOUNT,
-          creditCards: res.creditCards?.length > 0 ? res.creditCards : DEFAULT_CREDIT_CARDS,
-          creditPurchases: res.creditPurchases || DEFAULT_CREDIT_PURCHASES,
+          creditCards: Array.isArray(res.creditCards) && res.creditCards.length > 0 ? res.creditCards : DEFAULT_CREDIT_CARDS,
+          creditPurchases: res.creditPurchases || [],
           creditCardPayments: res.creditCardPayments || [],
-          expensesLog: res.expensesLog || [],
-          inflows: res.inflows?.length > 0 ? res.inflows : DEFAULT_INFLOWS,
-          needs: res.needs?.length > 0 ? res.needs : DEFAULT_NEEDS,
-          wants: res.wants?.length > 0 ? res.wants : DEFAULT_WANTS,
-          wealth: res.wealth?.length > 0 ? res.wealth : DEFAULT_WEALTH,
+          expensesLog: Array.isArray(res.expensesLog) ? res.expensesLog : [],
+          inflows: Array.isArray(res.inflows) && res.inflows.length > 0 ? res.inflows : DEFAULT_INFLOWS,
+          needs: Array.isArray(res.needs) && res.needs.length > 0 ? res.needs : DEFAULT_NEEDS,
+          wants: Array.isArray(res.wants) && res.wants.length > 0 ? res.wants : DEFAULT_WANTS,
+          wealth: Array.isArray(res.wealth) && res.wealth.length > 0 ? res.wealth : DEFAULT_WEALTH,
           salaryHistory: res.salaryHistory || [],
           periodsData: res.periodsData || {},
           isInitialized: true,
@@ -363,6 +370,10 @@ export const useCashFlowStore = create(
 
       syncStateWithBackend: async () => {
         const state = get();
+        if (!state.isInitialized) {
+          console.warn("[CashFlow] Safeguard: backend sync blocked because store is not initialized yet!");
+          return;
+        }
         set({ isSyncing: true });
         try {
           await syncCashFlowStateApi({

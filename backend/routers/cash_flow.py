@@ -21,17 +21,24 @@ router = APIRouter()
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DATA_FILE = DATA_DIR / "cash_flow.json"
+BACKUP_FILE = DATA_DIR / "cash_flow_backup.json"
+PUBLIC_DATA_FILE = Path(__file__).resolve().parent.parent.parent / "frontend" / "public" / "data" / "cash_flow.json"
 
 DEFAULT_CASH_FLOW_DATA = {
-    "activePeriod": "2025-02",
+    "activePeriod": "2026-08",
+    "startPeriod": "2026-08",
     "currency": "COP",
-    "allocationModel": "50_30_20",
-    "customRatios": {"needs": 50, "wants": 30, "savings": 20},
+    "allocationModel": "custom",
+    "customRatios": {"needs": 35.0, "wants": 30.0, "savings": 35.0},
     "emergencyFundTargetMonths": 6,
     "inflows": [],
     "needs": [],
     "wants": [],
-    "wealth": []
+    "wealth": [],
+    "expensesLog": [],
+    "creditCards": [],
+    "creditCardPayments": [],
+    "periodsData": {}
 }
 
 
@@ -42,13 +49,19 @@ def load_cash_flow_db() -> dict[str, Any]:
     try:
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
-            # Ensure keys exist
+            # Ensure critical keys exist
             for k, v in DEFAULT_CASH_FLOW_DATA.items():
-                if k not in data:
+                if k not in data or data[k] is None:
                     data[k] = v
             return data
     except Exception as e:
         logger.error(f"[CashFlow] Failed reading data file {DATA_FILE}: {e}")
+        if BACKUP_FILE.exists():
+            try:
+                with open(BACKUP_FILE, "r", encoding="utf-8") as bf:
+                    return json.load(bf)
+            except Exception:
+                pass
         return DEFAULT_CASH_FLOW_DATA.copy()
 
 
@@ -56,9 +69,29 @@ def save_cash_flow_db(data: dict[str, Any]) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     temp_file = DATA_FILE.with_suffix(".tmp")
     try:
+        # Keep a rotating backup before overwriting
+        if DATA_FILE.exists():
+            try:
+                with open(DATA_FILE, "r", encoding="utf-8") as curr_f:
+                    curr_content = curr_f.read()
+                    if curr_content.strip():
+                        with open(BACKUP_FILE, "w", encoding="utf-8") as bk_f:
+                            bk_f.write(curr_content)
+            except Exception as bk_err:
+                logger.warning(f"[CashFlow] Backup creation warning: {bk_err}")
+
         with open(temp_file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
         temp_file.replace(DATA_FILE)
+
+        # Mirror to frontend/public/data/cash_flow.json for offline/static resilience
+        try:
+            PUBLIC_DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
+            with open(PUBLIC_DATA_FILE, "w", encoding="utf-8") as pf:
+                json.dump(data, pf, indent=2, ensure_ascii=False)
+        except Exception as pub_err:
+            logger.warning(f"[CashFlow] Public static sync warning: {pub_err}")
+
     except Exception as e:
         logger.error(f"[CashFlow] Failed writing data file: {e}")
         if temp_file.exists():
@@ -69,9 +102,9 @@ def save_cash_flow_db(data: dict[str, Any]) -> None:
 # ── Pydantic Schemas ─────────────────────────────────────
 
 class CustomRatiosSchema(BaseModel):
-    needs: float = 50.0
+    needs: float = 35.0
     wants: float = 30.0
-    savings: float = 20.0
+    savings: float = 35.0
 
 
 class InflowItem(BaseModel):
