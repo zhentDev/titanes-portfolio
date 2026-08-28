@@ -563,11 +563,18 @@ export default function CashFlowHub() {
         wealth={periodWealth}
         creditCards={creditCards}
         creditPurchases={creditPurchases}
+        creditCardPayments={creditCardPayments}
+        expensesLog={periodExpenses}
         fixedIncomeAccounts={fixedAccounts}
         activePeriod={activePeriod}
         currency={currency}
         fxRate={fxRate}
         onOpenPayrollModal={() => setPayrollEntityModalOpen(true)}
+        onOpenExpenseModal={() => {
+          setExpenseToEdit(null);
+          setExpenseModalOpen(true);
+        }}
+        onOpenPaymentModal={() => setPaymentModalOpen(true)}
       />
 
       {/* ── 5. Dynamic Rule & Strategy Selector ────────────────────── */}
@@ -686,6 +693,17 @@ export default function CashFlowHub() {
           onDeleteTransaction={deleteExpenseTransaction}
           onEditTransaction={(tx) => {
             setExpenseToEdit(tx);
+            setExpenseModalOpen(true);
+          }}
+          onOpenAddExpenseModal={(item) => {
+            setExpenseToEdit({
+              budgetItemId: item.id,
+              budgetItemName: item.name,
+              budgetItemType: "wealth",
+              amount: item.monthlyContribution || item.amount || 0,
+              description: `Aporte a ${item.name}`,
+              paymentSource: item.paymentSource || { type: "payroll", targetName: payrollAccount.name },
+            });
             setExpenseModalOpen(true);
           }}
         />

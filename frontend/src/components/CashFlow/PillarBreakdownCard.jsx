@@ -19,6 +19,7 @@ export default function PillarBreakdownCard({
   onDeleteTransaction,
   onEditTransaction,
   onSettleTransaction,
+  onOpenAddExpenseModal,
 }) {
   const formatMoney = (val, cur = currency) => formatCashFlowMoney(val, cur, fxRate);
   const [expandedItemId, setExpandedItemId] = useState(null);
@@ -345,21 +346,58 @@ export default function PillarBreakdownCard({
                   </div>
                 </div>
 
-                {/* Real Spending vs. Budget Envelope Track (For Needs & Wants) */}
+                {/* Real Spending vs. Budget Envelope Track (For Needs, Wants & Wealth) */}
                 {type !== "inflow" && (
                   <div style={{ borderTop: "1px solid rgba(255, 255, 255, 0.05)", paddingTop: 8 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.74rem", color: "#94a3b8", marginBottom: 4, flexWrap: "wrap", gap: 4 }}>
                       <span>
-                        Gastado Personal: <strong style={{ color: isOverBudget ? "#f43f5e" : "#f1f5f9" }}>{formatMoney(spentAmount, currency)}</strong>
+                        {type === "wealth" ? "Aportado / Invertido Real: " : "Gastado Personal: "}
+                        <strong style={{ color: isOverBudget ? "#f43f5e" : type === "wealth" && spentAmount > 0 ? "#38bdf8" : "#f1f5f9" }}>
+                          {formatMoney(spentAmount, currency)}
+                        </strong>
                       </span>
                       <span>
-                        {isOverBudget ? (
+                        {type === "wealth" ? (
+                          spentAmount >= Number(itemAmt) && Number(itemAmt) > 0 ? (
+                            <span style={{ color: "#10b981", fontWeight: 700 }}>✅ Meta Cumplida 100%</span>
+                          ) : (
+                            <span style={{ color: "#38bdf8" }}>
+                              Pendiente por Transferir: <strong>{formatMoney(remainingBudget, currency)}</strong>
+                            </span>
+                          )
+                        ) : isOverBudget ? (
                           <strong style={{ color: "#f43f5e" }}>Tope excedido ({budgetUsedPct}%)</strong>
                         ) : (
-                          <span style={{ color: "#10b981" }}>Disponible: <strong>{formatMoney(remainingBudget, currency)}</strong> ({100 - budgetUsedPct}%)</span>
+                          <span style={{ color: "#10b981" }}>
+                            Disponible: <strong>{formatMoney(remainingBudget, currency)}</strong> ({100 - budgetUsedPct}%)
+                          </span>
                         )}
                       </span>
                     </div>
+
+                    {type === "wealth" && spentAmount === 0 && (
+                      <div style={{ fontSize: "0.7rem", color: "#64748b", marginBottom: 4, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 4 }}>
+                        <span>💡 Aún en tu cuenta de nómina (no ha salido hasta que hagas la transferencia).</span>
+                        {onOpenAddExpenseModal && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenAddExpenseModal(item)}
+                            style={{
+                              background: "rgba(56, 189, 248, 0.15)",
+                              border: "1px solid rgba(56, 189, 248, 0.35)",
+                              color: "#38bdf8",
+                              borderRadius: "6px",
+                              padding: "2px 8px",
+                              fontSize: "0.7rem",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                            }}
+                          >
+                            ⚡ Transferir / Registrar Aporte
+                          </button>
+                        )}
+                      </div>
+                    )}
 
                     {totalLentAmount > 0 && (
                       <div style={{ fontSize: "0.7rem", color: "#fcd34d", marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
@@ -370,13 +408,13 @@ export default function PillarBreakdownCard({
                       </div>
                     )}
 
-                    {/* Progress Bar of Budget Used */}
+                    {/* Progress Bar of Budget Used / Wealth Contributed */}
                     <div className="cashflow-pillar-progress-track" style={{ height: "5px" }}>
                       <div
                         className="cashflow-pillar-progress-fill"
                         style={{
                           width: `${Math.min(100, Number(budgetUsedPct))}%`,
-                          background: isOverBudget ? "#f43f5e" : Number(budgetUsedPct) > 80 ? "#fbbf24" : color,
+                          background: isOverBudget ? "#f43f5e" : type === "wealth" ? "#38bdf8" : Number(budgetUsedPct) > 80 ? "#fbbf24" : color,
                           boxShadow: isOverBudget ? "0 0 8px rgba(244, 63, 94, 0.8)" : `0 0 6px ${color}66`,
                         }}
                       />
