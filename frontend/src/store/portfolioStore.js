@@ -8,10 +8,13 @@ import { persist } from "zustand/middleware";
 import {
   createPurchaseLot,
   createPurchasePortfolio,
+  deleteCustomStrategyApi,
   deletePurchaseLot,
   deletePurchasePortfolioApi,
+  fetchCustomStrategiesApi,
   fetchHistoricalPrice,
   fetchPurchasesData,
+  saveCustomStrategyApi,
   syncPurchasesMigration,
   togglePortfolioPlanApi,
   updatePortfolioSettingsApi,
@@ -318,25 +321,68 @@ export const usePortfolioStore = create(
           country: "🇺🇸",
           numSlots: 20,
           capital: 1000,
-          activeInvested: 250, // Replaces mm20ActiveInvested
+          activeInvested: 250,
           benchmark: "S&P 500",
-          color: "#10b981", // Replaces hardcoded COLORS.mm20
+          color: "#10b981",
           createdAt: new Date().toISOString(),
-          isSystem: true, // Cannot be deleted
+          isSystem: true,
         },
-      ], // User-created dynamic strategies
+      ],
+      strategyRebalances: {},
+
+      initFetchCustomStrategies: async () => {
+        try {
+          const backendStrats = await fetchCustomStrategiesApi();
+          if (Array.isArray(backendStrats) && backendStrats.length > 0) {
+            set((state) => {
+              const sysStrat = state.customStrategies.find((s) => s.id === "strat_mm20");
+              const existingMap = new Map(state.customStrategies.map((s) => [s.id, s]));
+              backendStrats.forEach((bs) => {
+                existingMap.set(bs.id, { ...existingMap.get(bs.id), ...bs });
+              });
+              if (sysStrat && !existingMap.has("strat_mm20")) {
+                existingMap.set("strat_mm20", sysStrat);
+              }
+              const mergedStrats = Array.from(existingMap.values());
+              const updatedSettings = { ...state.settingsByMode };
+              mergedStrats.forEach((st) => {
+                if (!updatedSettings[st.id]) {
+                  updatedSettings[st.id] = {
+                    tickers: [],
+                    investment: st.capital || 1000,
+                    period: "1Y",
+                    numSlots: st.numSlots || 20,
+                  };
+                }
+              });
+              return {
+                customStrategies: mergedStrats,
+                settingsByMode: updatedSettings,
+              };
+            });
+          }
+        } catch (e) {
+          console.error("Error fetching custom strategies from backend:", e);
+        }
+      },
 
       // ── Actions ──────────────────────────────────────
       addTicker: (ticker) => {
         const upper = ticker.toUpperCase();
         const mode = get().mode in get().settingsByMode ? get().mode : "historical";
-        if (!get().settingsByMode[mode].tickers.includes(upper)) {
+        const currentModeSettings = get().settingsByMode[mode] || {
+          tickers: DEFAULT_TICKERS,
+          investment: 2000,
+          period: "1Y",
+          numSlots: 15,
+        };
+        if (!currentModeSettings.tickers.includes(upper)) {
           set((s) => ({
             settingsByMode: {
               ...s.settingsByMode,
               [mode]: {
-                ...s.settingsByMode[mode],
-                tickers: [...s.settingsByMode[mode].tickers, upper],
+                ...currentModeSettings,
+                tickers: [...currentModeSettings.tickers, upper],
               },
             },
           }));
@@ -345,12 +391,18 @@ export const usePortfolioStore = create(
 
       removeTicker: (ticker) => {
         const mode = get().mode in get().settingsByMode ? get().mode : "historical";
+        const currentModeSettings = get().settingsByMode[mode] || {
+          tickers: DEFAULT_TICKERS,
+          investment: 2000,
+          period: "1Y",
+          numSlots: 15,
+        };
         set((s) => ({
           settingsByMode: {
             ...s.settingsByMode,
             [mode]: {
-              ...s.settingsByMode[mode],
-              tickers: s.settingsByMode[mode].tickers.filter((t) => t !== ticker),
+              ...currentModeSettings,
+              tickers: currentModeSettings.tickers.filter((t) => t !== ticker),
             },
           },
         }));
@@ -359,10 +411,16 @@ export const usePortfolioStore = create(
       setInvestment: (amount) =>
         set((state) => {
           const mode = state.mode in state.settingsByMode ? state.mode : "historical";
+          const currentModeSettings = state.settingsByMode[mode] || {
+            tickers: DEFAULT_TICKERS,
+            investment: 2000,
+            period: "1Y",
+            numSlots: 15,
+          };
           return {
             settingsByMode: {
               ...state.settingsByMode,
-              [mode]: { ...state.settingsByMode[mode], investment: Number(amount) },
+              [mode]: { ...currentModeSettings, investment: Number(amount) },
             },
           };
         }),
@@ -370,11 +428,17 @@ export const usePortfolioStore = create(
       setPeriod: (period) =>
         set((state) => {
           const mode = state.mode in state.settingsByMode ? state.mode : "historical";
+          const currentModeSettings = state.settingsByMode[mode] || {
+            tickers: DEFAULT_TICKERS,
+            investment: 2000,
+            period: "1Y",
+            numSlots: 15,
+          };
           return {
             period,
             settingsByMode: {
               ...state.settingsByMode,
-              [mode]: { ...state.settingsByMode[mode], period },
+              [mode]: { ...currentModeSettings, period },
             },
           };
         }),
@@ -382,7 +446,7 @@ export const usePortfolioStore = create(
       setMode: (mode) =>
         set((state) => {
           const targetMode = mode in state.settingsByMode ? mode : "historical";
-          const currentPeriod = state.settingsByMode[targetMode].period;
+          const currentPeriod = state.settingsByMode[targetMode]?.period || "1Y";
           return { mode, period: currentPeriod };
         }),
 
@@ -394,39 +458,104 @@ export const usePortfolioStore = create(
           },
         })),
 
-      addCustomStrategy: ({ name, country, numSlots, capital, benchmark, color }) => {
+      addCustomStrategy: async ({ name, country, numSlots, capital, benchmark, color }) => {
         const newStrat = {
           id: `strat_${Date.now()}`,
           name: name.trim() || "Nueva Estrategia",
           country: country || "🌎",
-          numSlots: Number(numSlots) || 15,
+          numSlots: Number(numSlots) || 20,
           capital: Number(capital) || 1000,
-          activeInvested: Number(capital) || 1000, // Starts fully invested or equivalent
+          activeInvested: Number(capital) || 1000,
           benchmark: benchmark || "S&P 500",
-          color: color || "#a855f7", // Default to purple if no color provided
+          color: color || "#a855f7",
           createdAt: new Date().toISOString(),
-          isSystem: false, // User created -> CAN be deleted
+          isSystem: false,
         };
         set((s) => ({
           customStrategies: [...s.customStrategies, newStrat],
-          visibleSeries: { ...s.visibleSeries, [newStrat.id]: true }, // Show in NavChart by default
-          mode: newStrat.id, // Immediately switch to new strategy window
+          settingsByMode: {
+            ...s.settingsByMode,
+            [newStrat.id]: {
+              tickers: [],
+              investment: Number(capital) || 1000,
+              period: "1Y",
+              numSlots: Number(numSlots) || 20,
+            },
+          },
+          visibleSeries: { ...s.visibleSeries, [newStrat.id]: true },
+          mode: newStrat.id,
         }));
+        await saveCustomStrategyApi(newStrat);
         return newStrat;
       },
 
-      deleteCustomStrategy: (id) => {
+      updateCustomStrategy: async (id, updates) => {
+        let updatedStrat = null;
+        set((s) => {
+          const nextStrats = s.customStrategies.map((str) => {
+            if (str.id === id) {
+              updatedStrat = { ...str, ...updates };
+              return updatedStrat;
+            }
+            return str;
+          });
+          const nextSettings = { ...s.settingsByMode };
+          if (nextSettings[id]) {
+            nextSettings[id] = {
+              ...nextSettings[id],
+              numSlots:
+                updates.numSlots !== undefined ? Number(updates.numSlots) : nextSettings[id].numSlots,
+              investment:
+                updates.capital !== undefined ? Number(updates.capital) : nextSettings[id].investment,
+            };
+          }
+          return {
+            customStrategies: nextStrats,
+            settingsByMode: nextSettings,
+          };
+        });
+        if (updatedStrat) {
+          await saveCustomStrategyApi(updatedStrat);
+        }
+      },
+
+      deleteCustomStrategy: async (id) => {
         const strat = get().customStrategies.find((s) => s.id === id);
-        if (!strat || strat.isSystem) return; // Prevent deleting system strategies
+        if (!strat || strat.isSystem) return;
         set((s) => {
           const nextSeries = { ...s.visibleSeries };
           delete nextSeries[id];
+          const nextSettings = { ...s.settingsByMode };
+          delete nextSettings[id];
+          const nextRebal = { ...s.strategyRebalances };
+          delete nextRebal[id];
           return {
             customStrategies: s.customStrategies.filter((str) => str.id !== id),
+            settingsByMode: nextSettings,
+            strategyRebalances: nextRebal,
             visibleSeries: nextSeries,
-            mode: s.mode === id ? "historical" : s.mode, // Return to Titanes if active
+            mode: s.mode === id ? "historical" : s.mode,
           };
         });
+        await deleteCustomStrategyApi(id);
+      },
+
+      setStrategyRebalances: (strategyId, rebalances) => {
+        const latestTickers =
+          rebalances.length > 0 ? rebalances[rebalances.length - 1].tickers || [] : [];
+        set((s) => ({
+          strategyRebalances: {
+            ...s.strategyRebalances,
+            [strategyId]: rebalances,
+          },
+          settingsByMode: {
+            ...s.settingsByMode,
+            [strategyId]: {
+              ...(s.settingsByMode[strategyId] || { investment: 1000, period: "1Y", numSlots: 20 }),
+              tickers: latestTickers,
+            },
+          },
+        }));
       },
 
       updateStrategyCapital: (id, capital, activeInvested) => {
@@ -464,39 +593,27 @@ export const usePortfolioStore = create(
     }),
     {
       name: "titanes-portfolio",
-      partialState: (s) => ({
-        tickers: s.tickers,
-        investment: s.investment,
-        period: s.period,
-        numSlots: s.numSlots,
+      partialize: (s) => ({
+        settingsByMode: s.settingsByMode,
         mode: s.mode,
+        period: s.period,
         visibleSeries: s.visibleSeries,
+        mainPortfolioSettings: s.mainPortfolioSettings,
+        purchasePortfolios: s.purchasePortfolios,
+        individualPurchases: s.individualPurchases,
         customStrategies: s.customStrategies,
-        customStrategies: s.customStrategies,
+        strategyRebalances: s.strategyRebalances,
       }),
       merge: (persistedState, currentState) => {
         const merged = { ...currentState, ...persistedState };
         if (!merged.settingsByMode) {
-          const legacyTickers = persistedState.tickers || currentState.tickers;
-          const legacyInvestment = persistedState.investment ?? currentState.investment;
-          const legacyPeriod = persistedState.period || currentState.period;
-          const legacyNumSlots = persistedState.numSlots ?? currentState.numSlots;
-          merged.settingsByMode = {
-            historical: {
-              tickers: legacyTickers,
-              investment: legacyInvestment,
-              period: legacyPeriod,
-              numSlots: legacyNumSlots,
-            },
-            live: {
-              tickers: legacyTickers,
-              investment: legacyInvestment,
-              period: legacyPeriod,
-              numSlots: legacyNumSlots,
-            },
-          };
+          merged.settingsByMode = currentState.settingsByMode;
+        } else {
+          merged.settingsByMode.historical =
+            merged.settingsByMode.historical || currentState.settingsByMode.historical;
+          merged.settingsByMode.live =
+            merged.settingsByMode.live || currentState.settingsByMode.live;
         }
-        // Ensure system strategies (like MM20) are never lost due to old cached state
         if (
           !merged.customStrategies ||
           !merged.customStrategies.find((s) => s.id === "strat_mm20")
@@ -504,10 +621,17 @@ export const usePortfolioStore = create(
           const sysStrat = currentState.customStrategies.find((s) => s.id === "strat_mm20");
           merged.customStrategies = [...(merged.customStrategies || []), sysStrat].filter(Boolean);
         }
-        // Reset transient state
-        merged.isBatchUpdating = false;
-        merged.abortBatch = false;
-        merged.batchProgress = { current: 0, total: 0 };
+        (merged.customStrategies || []).forEach((st) => {
+          if (!merged.settingsByMode[st.id]) {
+            merged.settingsByMode[st.id] = {
+              tickers: [],
+              investment: st.capital || 1000,
+              period: "1Y",
+              numSlots: st.numSlots || 20,
+            };
+          }
+        });
+        merged.batchUpdateStatus = {};
         return merged;
       },
     },

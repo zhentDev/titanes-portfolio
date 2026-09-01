@@ -89,50 +89,146 @@ def init_db():
             )
         """)
 
+        con.execute("""
+            CREATE TABLE IF NOT EXISTS custom_strategies (
+                id VARCHAR PRIMARY KEY,
+                name VARCHAR,
+                country VARCHAR DEFAULT '🌎',
+                num_slots INTEGER DEFAULT 20,
+                capital DOUBLE DEFAULT 1000.0,
+                active_invested DOUBLE DEFAULT 1000.0,
+                benchmark VARCHAR DEFAULT 'S&P 500',
+                color VARCHAR DEFAULT '#a855f7',
+                is_system BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
 
-def add_rebalance(rebalance_date: date, cash_added: float, tickers: list[str]):
+        # Migration: Add strategy_id to rebalances and rebalance_tickers if missing
+        try:
+            rebal_cols = [row[1] for row in con.execute("PRAGMA table_info('rebalances')").fetchall()]
+            if "strategy_id" not in rebal_cols:
+                con.execute("ALTER TABLE rebalances ADD COLUMN strategy_id VARCHAR DEFAULT 'historical'")
+        except duckdb.Error as e:
+            print(f"Rebalances migration error: {e}")
+
+        try:
+            rebal_tick_cols = [row[1] for row in con.execute("PRAGMA table_info('rebalance_tickers')").fetchall()]
+            if "strategy_id" not in rebal_tick_cols:
+                con.execute("ALTER TABLE rebalance_tickers ADD COLUMN strategy_id VARCHAR DEFAULT 'historical'")
+        except duckdb.Error as e:
+            print(f"Rebalance tickers migration error: {e}")
+
+
+def add_rebalance(rebalance_date: date, cash_added: float, tickers: list[str], strategy_id: str = "historical"):
     with get_connection() as con:
-        # Upsert rebalance event
+        # Delete old tickers and rebalance for this specific strategy_id and date
+        con.execute("DELETE FROM rebalance_tickers WHERE rebalance_date = ? AND strategy_id = ?", [rebalance_date, strategy_id])
+        con.execute("DELETE FROM rebalances WHERE rebalance_date = ? AND strategy_id = ?", [rebalance_date, strategy_id])
+        
+        # Insert rebalance event
         con.execute(
             """
-            INSERT INTO rebalances (rebalance_date, cash_added) 
-            VALUES (?, ?)
-            ON CONFLICT (rebalance_date) DO UPDATE SET cash_added = EXCLUDED.cash_added
-        """,
-            [rebalance_date, cash_added],
+            INSERT INTO rebalances (rebalance_date, cash_added, strategy_id) 
+            VALUES (?, ?, ?)
+            """,
+            [rebalance_date, cash_added, strategy_id],
         )
-
-        # Delete old tickers for this date if overwriting
-        con.execute("DELETE FROM rebalance_tickers WHERE rebalance_date = ?", [rebalance_date])
 
         # Insert new tickers
         for ticker in tickers:
             con.execute(
-                "INSERT INTO rebalance_tickers (rebalance_date, ticker) VALUES (?, ?)",
-                [rebalance_date, ticker],
+                "INSERT INTO rebalance_tickers (rebalance_date, ticker, strategy_id) VALUES (?, ?, ?)",
+                [rebalance_date, ticker, strategy_id],
             )
 
 
-def get_all_rebalances() -> list[dict]:
+def get_all_rebalances(strategy_id: str = "historical") -> list[dict]:
     with get_connection() as con:
         results = con.execute("""
             SELECT r.rebalance_date, r.cash_added, list(t.ticker) as tickers
             FROM rebalances r
-            LEFT JOIN rebalance_tickers t ON r.rebalance_date = t.rebalance_date
+            LEFT JOIN rebalance_tickers t ON r.rebalance_date = t.rebalance_date AND r.strategy_id = t.strategy_id
+            WHERE r.strategy_id = ?
             GROUP BY r.rebalance_date, r.cash_added
             ORDER BY r.rebalance_date ASC
-        """).fetchall()
+        """, [strategy_id]).fetchall()
 
         rebalances = []
         for row in results:
-            rebalances.append({"date": row[0].isoformat(), "cash_added": row[1], "tickers": row[2]})
+            clean_tickers = [t for t in (row[2] or []) if t is not None]
+            d_str = row[0].isoformat() if hasattr(row[0], 'isoformat') else str(row[0])
+            rebalances.append({
+                "date": d_str,
+                "rebalance_date": d_str,
+                "cash_added": row[1] or 0.0,
+                "tickers": clean_tickers
+            })
         return rebalances
 
 
-def delete_rebalance(rebalance_date: date):
+def delete_rebalance(rebalance_date: date, strategy_id: str = "historical"):
     with get_connection() as con:
-        con.execute("DELETE FROM rebalance_tickers WHERE rebalance_date = ?", [rebalance_date])
-        con.execute("DELETE FROM rebalances WHERE rebalance_date = ?", [rebalance_date])
+        con.execute("DELETE FROM rebalance_tickers WHERE rebalance_date = ? AND strategy_id = ?", [rebalance_date, strategy_id])
+        con.execute("DELETE FROM rebalances WHERE rebalance_date = ? AND strategy_id = ?", [rebalance_date, strategy_id])
+
+
+def get_custom_strategies() -> list[dict]:
+    with get_connection() as con:
+        rows = con.execute("""
+            SELECT id, name, country, num_slots, capital, active_invested, benchmark, color, is_system, created_at
+            FROM custom_strategies
+            ORDER BY created_at ASC
+        """).fetchall()
+        strategies = []
+        for r in rows:
+            strategies.append({
+                "id": r[0],
+                "name": r[1],
+                "country": r[2] or "🌎",
+                "numSlots": r[3] or 20,
+                "capital": r[4] or 1000.0,
+                "activeInvested": r[5] or 1000.0,
+                "benchmark": r[6] or "S&P 500",
+                "color": r[7] or "#a855f7",
+                "isSystem": bool(r[8]),
+                "createdAt": r[9].isoformat() if hasattr(r[9], 'isoformat') else str(r[9]),
+            })
+        return strategies
+
+
+def save_custom_strategy(strat: dict):
+    with get_connection() as con:
+        con.execute("""
+            INSERT INTO custom_strategies (id, name, country, num_slots, capital, active_invested, benchmark, color, is_system)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (id) DO UPDATE SET
+                name = EXCLUDED.name,
+                country = EXCLUDED.country,
+                num_slots = EXCLUDED.num_slots,
+                capital = EXCLUDED.capital,
+                active_invested = EXCLUDED.active_invested,
+                benchmark = EXCLUDED.benchmark,
+                color = EXCLUDED.color,
+                is_system = EXCLUDED.is_system
+        """, [
+            strat["id"],
+            strat.get("name", "Nueva Estrategia"),
+            strat.get("country", "🌎"),
+            int(strat.get("numSlots", 20)),
+            float(strat.get("capital", 1000.0)),
+            float(strat.get("activeInvested", 1000.0)),
+            strat.get("benchmark", "S&P 500"),
+            strat.get("color", "#a855f7"),
+            bool(strat.get("isSystem", False))
+        ])
+
+
+def delete_custom_strategy(strategy_id: str):
+    with get_connection() as con:
+        con.execute("DELETE FROM custom_strategies WHERE id = ? AND is_system = FALSE", [strategy_id])
+        con.execute("DELETE FROM rebalance_tickers WHERE strategy_id = ?", [strategy_id])
+        con.execute("DELETE FROM rebalances WHERE strategy_id = ?", [strategy_id])
 
 
 # Initialize the database when the module is imported

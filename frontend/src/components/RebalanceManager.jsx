@@ -5,7 +5,14 @@ import { usePortfolioStore } from "../store/portfolioStore";
 import { toastConfirm } from "../utils/toastAlerts";
 
 export default function RebalanceManager({ onRefresh }) {
-  const { numSlots, investment, setInvestment } = usePortfolioStore();
+  const { settingsByMode, mode, setInvestment } = usePortfolioStore();
+  const currentSettings = settingsByMode?.[mode] || settingsByMode?.historical || {
+    tickers: [],
+    investment: 2000,
+    period: "1Y",
+    numSlots: 15,
+  };
+  const { numSlots = 15, investment = 2000 } = currentSettings;
   const [rebalances, setRebalances] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

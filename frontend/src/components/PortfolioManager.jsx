@@ -6,8 +6,14 @@ import { searchTicker } from "../api/client";
 import { usePortfolioStore } from "../store/portfolioStore";
 
 export default function PortfolioManager({ onRefresh }) {
-  const { tickers, investment, numSlots, addTicker, removeTicker, setInvestment } =
-    usePortfolioStore();
+  const { settingsByMode, mode, addTicker, removeTicker, setInvestment } = usePortfolioStore();
+  const currentSettings = settingsByMode?.[mode] || settingsByMode?.historical || {
+    tickers: [],
+    investment: 2000,
+    period: "1Y",
+    numSlots: 15,
+  };
+  const { tickers = [], investment = 2000, numSlots = 15 } = currentSettings;
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [searchResult, setSearchResult] = useState(null);

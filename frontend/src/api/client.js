@@ -174,28 +174,69 @@ export async function searchTickersMultiple(q) {
 }
 
 /** GET /api/rebalances */
-export async function fetchRebalances() {
-  return fetchWithFallback("/rebalances", "rebalances.json");
+export async function fetchRebalances(strategyId = "historical") {
+  const query = strategyId ? `?strategy_id=${encodeURIComponent(strategyId)}` : "";
+  return fetchWithFallback(`/rebalances${query}`, "rebalances.json");
 }
 
 /** POST /api/rebalances */
-export async function createRebalance({ rebalance_date, cash_added, tickers }) {
+export async function createRebalance({ rebalance_date, cash_added, tickers, strategy_id = "historical" }) {
   const res = await fetch(`${BASE}/rebalances`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ rebalance_date, cash_added, tickers }),
+    body: JSON.stringify({ rebalance_date, cash_added, tickers, strategy_id }),
   });
   if (!res.ok) throw new Error("Error al registrar rebalanceo");
   return res.json();
 }
 
 /** DELETE /api/rebalances/:date */
-export async function deleteRebalance(date) {
-  const res = await fetch(`${BASE}/rebalances/${date}`, {
+export async function deleteRebalance(date, strategyId = "historical") {
+  const query = strategyId ? `?strategy_id=${encodeURIComponent(strategyId)}` : "";
+  const res = await fetch(`${BASE}/rebalances/${date}${query}`, {
     method: "DELETE",
   });
   if (!res.ok) throw new Error("Error al eliminar rebalanceo");
   return res.json();
+}
+
+/** CUSTOM STRATEGIES API */
+export async function fetchCustomStrategiesApi() {
+  try {
+    const res = await safeFetch(`${BASE}/custom-strategies`, {}, 2, 400);
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
+}
+
+export async function saveCustomStrategyApi(strat) {
+  try {
+    const res = await safeFetch(`${BASE}/custom-strategies`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(strat),
+    });
+    if (!res.ok) throw new Error("Error al guardar estrategia en backend");
+    return res.json();
+  } catch (e) {
+    console.warn("Backend unavailable for saving custom strategy, using local storage", e);
+    return { status: "local_only" };
+  }
+}
+
+export async function deleteCustomStrategyApi(strategyId) {
+  try {
+    const res = await safeFetch(`${BASE}/custom-strategies/${strategyId}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) throw new Error("Error al eliminar estrategia en backend");
+    return res.json();
+  } catch (e) {
+    console.warn("Backend unavailable for deleting custom strategy", e);
+    return { status: "local_only" };
+  }
 }
 
 /** PURCHASES API */

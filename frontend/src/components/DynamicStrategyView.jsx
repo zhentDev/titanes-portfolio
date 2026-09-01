@@ -1,22 +1,34 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import {
+  createRebalance,
+  deleteRebalance,
   fetchColInflationHistory,
   fetchFxHistory,
   fetchLiveQuotes,
+  fetchRebalances,
   searchTicker,
 } from "../api/client";
 import { usePortfolioStore } from "../store/portfolioStore";
 import { toastConfirm } from "../utils/toastAlerts";
+import CreateStrategyModal from "./CreateStrategyModal";
 import InflationExplorerModal from "./InflationExplorerModal";
 import StrategyChart, { SYNTHETIC_RETURNS } from "./StrategyChart";
 
 const PERIODS = ["1W", "1M", "3M", "6M", "1Y", "3Y", "5Y", "MAX"];
 
-export default function DynamicStrategyView({ strategy, onDelete, onBack, firstInvestDate }) {
+export default function DynamicStrategyView({
+  strategy,
+  onDelete,
+  onUpdate,
+  onBack,
+  firstInvestDate,
+}) {
   const storageKey = `titanes_strat_${strategy.id}_rebalances`;
   const capitalKey = `titanes_strat_${strategy.id}_capital`;
   const settingsKey = `titanes_strat_${strategy.id}_settings`;
+
+  const [showEditModal, setShowEditModal] = useState(false);
 
   // Settings for currency and inflation
   const [stratSettings, setStratSettings] = useState(() => {
@@ -73,11 +85,24 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack, firstI
       .finally(() => setIsFetchingInflation(false));
   }, []);
 
+  const {
+    period: storePeriod,
+    updateStrategyCapital,
+    setStrategyRebalances,
+    strategyRebalances,
+  } = usePortfolioStore();
+
   // Rebalance history for this specific custom strategy
   const [rebalances, setRebalances] = useState(() => {
+    if (strategyRebalances?.[strategy.id]?.length > 0) {
+      return strategyRebalances[strategy.id];
+    }
     try {
       const saved = localStorage.getItem(storageKey);
-      if (saved !== null) return JSON.parse(saved);
+      if (saved !== null) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
     } catch {}
     return [
       {
@@ -88,7 +113,24 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack, firstI
     ];
   });
 
-  const { period: storePeriod, updateStrategyCapital } = usePortfolioStore();
+  useEffect(() => {
+    let isMounted = true;
+    fetchRebalances(strategy.id)
+      .then((data) => {
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          setRebalances(data);
+          setStrategyRebalances(strategy.id, data);
+          const latestTickers = data[data.length - 1].tickers || [];
+          setFormTickers([...latestTickers]);
+        }
+      })
+      .catch((e) => {
+        console.warn("Could not fetch rebalances from backend for strategy", strategy.id, e);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [strategy.id]);
 
   // Umbrales de desbloqueo: un periodo se activa al tener al menos estos días de historial
   // desde la primera inversión. Escala progresiva: cada periodo se desbloquea con una fracción
@@ -254,7 +296,7 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack, firstI
     setSelectedForDeletion([]);
   };
 
-  const handleSaveRebalance = () => {
+  const handleSaveRebalance = async () => {
     if (!date) {
       toast.error("Por favor selecciona una fecha válida");
       return;
@@ -270,17 +312,42 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack, firstI
         rebalance_date: date,
         cash_added: 0,
         tickers: formTickers,
+        strategy_id: strategy.id,
       },
     ].sort((a, b) => (a.rebalance_date > b.rebalance_date ? 1 : -1));
 
     setRebalances(updated);
-    toast.success(`Rebalanceo del ${date} guardado con éxito (${formTickers.length} posiciones)`);
+    setStrategyRebalances(strategy.id, updated);
+    localStorage.setItem(storageKey, JSON.stringify(updated));
+
+    try {
+      await createRebalance({
+        rebalance_date: date,
+        cash_added: 0,
+        tickers: formTickers,
+        strategy_id: strategy.id,
+      });
+      toast.success(`Rebalanceo del ${date} guardado con éxito (${formTickers.length} posiciones)`);
+    } catch (e) {
+      console.warn("Backend save failed, saved locally", e);
+      toast.success(`Rebalanceo del ${date} guardado localmente (${formTickers.length} posiciones)`);
+    }
   };
 
   const handleDeleteRebalance = async (delDate) => {
     const isConfirmed = await toastConfirm(`¿Eliminar el rebalanceo de la fecha ${delDate}?`);
     if (!isConfirmed) return;
-    setRebalances((prev) => prev.filter((r) => r.rebalance_date !== delDate));
+    const updated = rebalances.filter((r) => r.rebalance_date !== delDate);
+    setRebalances(updated);
+    setStrategyRebalances(strategy.id, updated);
+    localStorage.setItem(storageKey, JSON.stringify(updated));
+    try {
+      await deleteRebalance(delDate, strategy.id);
+      toast.success(`Rebalanceo del ${delDate} eliminado`);
+    } catch (e) {
+      console.warn("Backend delete failed, deleted locally", e);
+      toast.success(`Rebalanceo del ${delDate} eliminado localmente`);
+    }
   };
 
   const handleDeleteStrategy = async () => {
@@ -427,6 +494,25 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack, firstI
             </button>
           </div>
 
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost"
+            onClick={() => setShowEditModal(true)}
+            style={{
+              padding: "6px 12px",
+              fontSize: "0.75rem",
+              fontWeight: 700,
+              border: "1px solid var(--border)",
+              color: "var(--text-primary)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+            }}
+            title="Modificar parámetros de esta estrategia"
+          >
+            ✏️ Modificar Estrategia
+          </button>
+
           {!strategy.isSystem && (
             <button
               className="btn btn-sm btn-danger"
@@ -439,6 +525,14 @@ export default function DynamicStrategyView({ strategy, onDelete, onBack, firstI
           )}
         </div>
       </div>
+
+      {/* ── Modal Modificador de Estrategia ─────────────── */}
+      <CreateStrategyModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        editStrategy={strategy}
+        onUpdate={onUpdate}
+      />
 
       {/* ── Yield View Controls for Strategy (Nominal / Divisa / Real) ── */}
       <div

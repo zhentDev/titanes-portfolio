@@ -32,12 +32,14 @@ export default function App() {
     setMode,
     customStrategies,
     addCustomStrategy,
+    updateCustomStrategy,
     deleteCustomStrategy,
     purchasePortfolios,
     addPurchasePortfolio,
     mainPortfolioSettings,
     setMainPortfolioSettings,
     initFetchPurchases,
+    initFetchCustomStrategies,
   } = usePortfolioStore();
   const currentSettings = settingsByMode[mode] || settingsByMode.historical;
   const { tickers, investment, period, numSlots } = currentSettings;
@@ -132,7 +134,8 @@ export default function App() {
   // Only trigger network/DuckDB load on period, investment or rebalance refresh
   useEffect(() => {
     initFetchPurchases();
-  }, [initFetchPurchases]);
+    initFetchCustomStrategies?.();
+  }, [initFetchPurchases, initFetchCustomStrategies]);
 
   useEffect(() => {
     setRefreshKey((k) => k + 1);
@@ -505,6 +508,7 @@ export default function App() {
             key={mode}
             strategy={customStrategies.find((s) => s.id === mode)}
             onDelete={deleteCustomStrategy}
+            onUpdate={updateCustomStrategy}
             onBack={() => setMode("historical")}
             firstInvestDate={baseNavData?.nav?.[0]?.date}
           />

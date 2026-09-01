@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
 const COUNTRIES = [
@@ -20,14 +20,41 @@ const BENCHMARKS = [
   "MSCI World (URTH)",
 ];
 
-export default function CreateStrategyModal({ isOpen, onClose, onCreate }) {
+export default function CreateStrategyModal({
+  isOpen,
+  onClose,
+  onCreate,
+  editStrategy = null,
+  onUpdate = null,
+}) {
   if (!isOpen) return null;
 
-  const [name, setName] = useState("");
-  const [country, setCountry] = useState("🇺🇸");
-  const [numSlots, setNumSlots] = useState(20);
-  const [capital, setCapital] = useState(1000);
-  const [benchmark, setBenchmark] = useState("S&P 500 (^GSPC)");
+  const isEdit = Boolean(editStrategy);
+
+  const [name, setName] = useState(editStrategy?.name || "");
+  const [country, setCountry] = useState(editStrategy?.country || "🇺🇸");
+  const [numSlots, setNumSlots] = useState(editStrategy?.numSlots || 20);
+  const [capital, setCapital] = useState(editStrategy?.capital || 1000);
+  const [benchmark, setBenchmark] = useState(editStrategy?.benchmark || "S&P 500 (^GSPC)");
+  const [color, setColor] = useState(editStrategy?.color || "#a855f7");
+
+  useEffect(() => {
+    if (editStrategy) {
+      setName(editStrategy.name || "");
+      setCountry(editStrategy.country || "🇺🇸");
+      setNumSlots(editStrategy.numSlots || 20);
+      setCapital(editStrategy.capital || 1000);
+      setBenchmark(editStrategy.benchmark || "S&P 500 (^GSPC)");
+      setColor(editStrategy.color || "#a855f7");
+    } else {
+      setName("");
+      setCountry("🇺🇸");
+      setNumSlots(20);
+      setCapital(1000);
+      setBenchmark("S&P 500 (^GSPC)");
+      setColor("#a855f7");
+    }
+  }, [editStrategy, isOpen]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -35,14 +62,24 @@ export default function CreateStrategyModal({ isOpen, onClose, onCreate }) {
       toast.error("Por favor ingresa un nombre para la estrategia");
       return;
     }
-    onCreate({
+
+    const payload = {
       name: name.trim(),
       country,
       numSlots: Number(numSlots) || 20,
       capital: Number(capital) || 1000,
       benchmark,
-    });
-    setName("");
+      color,
+    };
+
+    if (isEdit && onUpdate) {
+      onUpdate(editStrategy.id, payload);
+      toast.success("Estrategia actualizada correctamente");
+    } else if (onCreate) {
+      onCreate(payload);
+      toast.success("Estrategia creada correctamente");
+    }
+
     onClose();
   };
 
@@ -83,9 +120,9 @@ export default function CreateStrategyModal({ isOpen, onClose, onCreate }) {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: "1.4rem" }}>✨</span>
+            <span style={{ fontSize: "1.4rem" }}>{isEdit ? "✏️" : "✨"}</span>
             <h2 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 800, color: "#f1f5f9" }}>
-              Crear Nueva Estrategia
+              {isEdit ? `Modificar Estrategia: ${editStrategy.name}` : "Crear Nueva Estrategia"}
             </h2>
           </div>
           <button
@@ -183,7 +220,7 @@ export default function CreateStrategyModal({ isOpen, onClose, onCreate }) {
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <input
                   type="number"
-                  min={5}
+                  min={1}
                   max={50}
                   step={1}
                   value={numSlots}
@@ -222,7 +259,7 @@ export default function CreateStrategyModal({ isOpen, onClose, onCreate }) {
               </label>
               <input
                 type="number"
-                min={100}
+                min={10}
                 step={100}
                 value={capital}
                 onChange={(e) => setCapital(Number(e.target.value) || 1000)}
@@ -290,7 +327,7 @@ export default function CreateStrategyModal({ isOpen, onClose, onCreate }) {
               className="btn btn-primary"
               style={{ padding: "8px 20px", fontSize: "0.85rem", fontWeight: 700 }}
             >
-              🚀 Crear Estrategia
+              {isEdit ? "💾 Guardar Cambios" : "🚀 Crear Estrategia"}
             </button>
           </div>
         </form>
