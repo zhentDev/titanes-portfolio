@@ -32,6 +32,7 @@ class CustomStrategyModel(BaseModel):
     benchmark: Optional[str] = "S&P 500"
     color: Optional[str] = "#a855f7"
     isSystem: Optional[bool] = False
+    isRealMoney: Optional[bool] = False
 
 
 # ── REBALANCES ENDPOINTS ────────────────────────────────────────────────────────

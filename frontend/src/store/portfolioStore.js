@@ -458,7 +458,15 @@ export const usePortfolioStore = create(
           },
         })),
 
-      addCustomStrategy: async ({ name, country, numSlots, capital, benchmark, color }) => {
+      addCustomStrategy: async ({
+        name,
+        country,
+        numSlots,
+        capital,
+        benchmark,
+        color,
+        isRealMoney = false,
+      }) => {
         const newStrat = {
           id: `strat_${Date.now()}`,
           name: name.trim() || "Nueva Estrategia",
@@ -468,6 +476,7 @@ export const usePortfolioStore = create(
           activeInvested: Number(capital) || 1000,
           benchmark: benchmark || "S&P 500",
           color: color || "#a855f7",
+          isRealMoney: Boolean(isRealMoney),
           createdAt: new Date().toISOString(),
           isSystem: false,
         };

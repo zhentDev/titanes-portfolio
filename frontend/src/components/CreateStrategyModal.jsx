@@ -37,6 +37,7 @@ export default function CreateStrategyModal({
   const [capital, setCapital] = useState(editStrategy?.capital || 1000);
   const [benchmark, setBenchmark] = useState(editStrategy?.benchmark || "S&P 500 (^GSPC)");
   const [color, setColor] = useState(editStrategy?.color || "#a855f7");
+  const [isRealMoney, setIsRealMoney] = useState(editStrategy?.isRealMoney || false);
 
   useEffect(() => {
     if (editStrategy) {
@@ -46,6 +47,7 @@ export default function CreateStrategyModal({
       setCapital(editStrategy.capital || 1000);
       setBenchmark(editStrategy.benchmark || "S&P 500 (^GSPC)");
       setColor(editStrategy.color || "#a855f7");
+      setIsRealMoney(Boolean(editStrategy.isRealMoney));
     } else {
       setName("");
       setCountry("🇺🇸");
@@ -53,6 +55,7 @@ export default function CreateStrategyModal({
       setCapital(1000);
       setBenchmark("S&P 500 (^GSPC)");
       setColor("#a855f7");
+      setIsRealMoney(false);
     }
   }, [editStrategy, isOpen]);
 
@@ -69,7 +72,8 @@ export default function CreateStrategyModal({
       numSlots: Number(numSlots) || 20,
       capital: Number(capital) || 1000,
       benchmark,
-      color,
+      color: isRealMoney ? (color === "#a855f7" ? "#10b981" : color) : color,
+      isRealMoney: Boolean(isRealMoney),
     };
 
     if (isEdit && onUpdate) {
@@ -105,9 +109,11 @@ export default function CreateStrategyModal({
           maxWidth: "520px",
           padding: "28px",
           background: "var(--bg-card)",
-          border: "1px solid var(--border)",
+          border: isRealMoney ? "1px solid rgba(16, 185, 129, 0.4)" : "1px solid var(--border)",
           borderRadius: "var(--radius)",
-          boxShadow: "0 20px 40px rgba(0, 0, 0, 0.6)",
+          boxShadow: isRealMoney
+            ? "0 20px 40px rgba(16, 185, 129, 0.15)"
+            : "0 20px 40px rgba(0, 0, 0, 0.6)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -120,9 +126,9 @@ export default function CreateStrategyModal({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: "1.4rem" }}>{isEdit ? "✏️" : "✨"}</span>
+            <span style={{ fontSize: "1.4rem" }}>{isEdit ? "✏️" : isRealMoney ? "💵" : "✨"}</span>
             <h2 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 800, color: "#f1f5f9" }}>
-              {isEdit ? `Modificar Estrategia: ${editStrategy.name}` : "Crear Nueva Estrategia"}
+              {isEdit ? `Modificar: ${editStrategy.name}` : "Crear Nueva Estrategia"}
             </h2>
           </div>
           <button
@@ -143,6 +149,74 @@ export default function CreateStrategyModal({
           onSubmit={handleSubmit}
           style={{ display: "flex", flexDirection: "column", gap: "16px" }}
         >
+          {/* Tipo de Portafolio: Dinero Real vs Simulación */}
+          <div>
+            <label
+              style={{
+                display: "block",
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                color: "var(--text-muted)",
+                marginBottom: 6,
+              }}
+            >
+              Tipo de Portafolio:
+            </label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setIsRealMoney(false)}
+                style={{
+                  padding: "10px",
+                  borderRadius: "var(--radius-sm)",
+                  border: !isRealMoney
+                    ? "2px solid #a855f7"
+                    : "1px solid var(--border)",
+                  background: !isRealMoney ? "rgba(168, 85, 247, 0.15)" : "var(--bg-surface)",
+                  color: !isRealMoney ? "#c084fc" : "var(--text-muted)",
+                  fontWeight: !isRealMoney ? 700 : 500,
+                  fontSize: "0.8rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 4,
+                  transition: "all 0.2s",
+                }}
+              >
+                <span style={{ fontSize: "1.2rem" }}>🧪</span>
+                <span>Simulación / ProPicks</span>
+                <span style={{ fontSize: "0.68rem", opacity: 0.8 }}>Modelo teórico / Backtest</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsRealMoney(true)}
+                style={{
+                  padding: "10px",
+                  borderRadius: "var(--radius-sm)",
+                  border: isRealMoney
+                    ? "2px solid #10b981"
+                    : "1px solid var(--border)",
+                  background: isRealMoney ? "rgba(16, 185, 129, 0.15)" : "var(--bg-surface)",
+                  color: isRealMoney ? "#34d399" : "var(--text-muted)",
+                  fontWeight: isRealMoney ? 700 : 500,
+                  fontSize: "0.8rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 4,
+                  transition: "all 0.2s",
+                }}
+              >
+                <span style={{ fontSize: "1.2rem" }}>💵</span>
+                <span>Dinero Real Activo</span>
+                <span style={{ fontSize: "0.68rem", opacity: 0.8 }}>Inversión real en vivo</span>
+              </button>
+            </div>
+          </div>
+
           {/* Nombre */}
           <div>
             <label
@@ -158,7 +232,7 @@ export default function CreateStrategyModal({
             </label>
             <input
               type="text"
-              placeholder="Ej. Top Dividendos Aristócratas, Small-caps Tech..."
+              placeholder="Ej. Mejores acciones - sept 2026, Top Dividendos..."
               value={name}
               onChange={(e) => setName(e.target.value)}
               required

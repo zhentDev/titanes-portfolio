@@ -100,9 +100,18 @@ def init_db():
                 benchmark VARCHAR DEFAULT 'S&P 500',
                 color VARCHAR DEFAULT '#a855f7',
                 is_system BOOLEAN DEFAULT FALSE,
+                is_real_money BOOLEAN DEFAULT FALSE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+
+        # Migration: Add is_real_money to custom_strategies if missing
+        try:
+            strat_cols = [row[1] for row in con.execute("PRAGMA table_info('custom_strategies')").fetchall()]
+            if "is_real_money" not in strat_cols:
+                con.execute("ALTER TABLE custom_strategies ADD COLUMN is_real_money BOOLEAN DEFAULT FALSE")
+        except duckdb.Error as e:
+            print(f"Custom strategies migration error: {e}")
 
         # Migration: Add strategy_id to rebalances and rebalance_tickers if missing
         try:
@@ -176,7 +185,7 @@ def delete_rebalance(rebalance_date: date, strategy_id: str = "historical"):
 def get_custom_strategies() -> list[dict]:
     with get_connection() as con:
         rows = con.execute("""
-            SELECT id, name, country, num_slots, capital, active_invested, benchmark, color, is_system, created_at
+            SELECT id, name, country, num_slots, capital, active_invested, benchmark, color, is_system, is_real_money, created_at
             FROM custom_strategies
             ORDER BY created_at ASC
         """).fetchall()
@@ -192,7 +201,8 @@ def get_custom_strategies() -> list[dict]:
                 "benchmark": r[6] or "S&P 500",
                 "color": r[7] or "#a855f7",
                 "isSystem": bool(r[8]),
-                "createdAt": r[9].isoformat() if hasattr(r[9], 'isoformat') else str(r[9]),
+                "isRealMoney": bool(r[9]),
+                "createdAt": r[10].isoformat() if hasattr(r[10], 'isoformat') else str(r[10]),
             })
         return strategies
 
@@ -200,8 +210,8 @@ def get_custom_strategies() -> list[dict]:
 def save_custom_strategy(strat: dict):
     with get_connection() as con:
         con.execute("""
-            INSERT INTO custom_strategies (id, name, country, num_slots, capital, active_invested, benchmark, color, is_system)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO custom_strategies (id, name, country, num_slots, capital, active_invested, benchmark, color, is_system, is_real_money)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (id) DO UPDATE SET
                 name = EXCLUDED.name,
                 country = EXCLUDED.country,
@@ -210,7 +220,8 @@ def save_custom_strategy(strat: dict):
                 active_invested = EXCLUDED.active_invested,
                 benchmark = EXCLUDED.benchmark,
                 color = EXCLUDED.color,
-                is_system = EXCLUDED.is_system
+                is_system = EXCLUDED.is_system,
+                is_real_money = EXCLUDED.is_real_money
         """, [
             strat["id"],
             strat.get("name", "Nueva Estrategia"),
@@ -220,7 +231,8 @@ def save_custom_strategy(strat: dict):
             float(strat.get("activeInvested", 1000.0)),
             strat.get("benchmark", "S&P 500"),
             strat.get("color", "#a855f7"),
-            bool(strat.get("isSystem", False))
+            bool(strat.get("isSystem", False)),
+            bool(strat.get("isRealMoney", strat.get("is_real_money", False)))
         ])
 
 

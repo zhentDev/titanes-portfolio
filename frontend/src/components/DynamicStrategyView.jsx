@@ -393,6 +393,42 @@ export default function DynamicStrategyView({
             <h2 style={{ margin: 0, fontSize: "1.35rem", fontWeight: 800, color: "#f1f5f9" }}>
               {strategy.name}
             </h2>
+            {strategy.isRealMoney ? (
+              <span
+                style={{
+                  fontSize: "0.74rem",
+                  fontWeight: 800,
+                  padding: "3px 10px",
+                  borderRadius: "6px",
+                  background: "rgba(16, 185, 129, 0.2)",
+                  color: "#34d399",
+                  border: "1px solid rgba(16, 185, 129, 0.5)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  boxShadow: "0 0 10px rgba(16, 185, 129, 0.3)",
+                }}
+              >
+                <span>🟢</span> 💵 DINERO REAL
+              </span>
+            ) : (
+              <span
+                style={{
+                  fontSize: "0.72rem",
+                  fontWeight: 800,
+                  padding: "2px 8px",
+                  borderRadius: "4px",
+                  background: "rgba(168, 85, 247, 0.15)",
+                  color: "#c084fc",
+                  border: "1px solid rgba(168, 85, 247, 0.4)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <span>🧪</span> SIMULACIÓN / PROPICKS
+              </span>
+            )}
             {strategy.isSystem && (
               <span
                 style={{
@@ -434,8 +470,9 @@ export default function DynamicStrategyView({
             </span>
           </div>
           <p style={{ margin: 0, fontSize: "0.8125rem", color: "#94a3b8" }}>
-            Estrategia personalizada con {numSlots} posiciones equiponderadas ({weightPerSlot}% por
-            slot).
+            {strategy.isRealMoney
+              ? `Portafolio de dinero real activo con ${numSlots} posiciones equiponderadas (${weightPerSlot}% por slot).`
+              : `Estrategia simulada / modelo con ${numSlots} posiciones equiponderadas (${weightPerSlot}% por slot).`}
           </p>
         </div>
 
@@ -448,16 +485,19 @@ export default function DynamicStrategyView({
               background: "var(--bg-surface)",
               padding: "6px 14px",
               borderRadius: "var(--radius)",
-              border: "1px solid var(--border)",
+              border: strategy.isRealMoney
+                ? "1px solid rgba(16, 185, 129, 0.5)"
+                : "1px solid var(--border)",
+              boxShadow: strategy.isRealMoney ? "0 0 12px rgba(16, 185, 129, 0.15)" : "none",
             }}
           >
             <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-              Capital Simulado:
+              {strategy.isRealMoney ? "Capital Real Invertido:" : "Capital Simulado:"}
             </span>
-            <span style={{ color: strategy.color, fontWeight: 700 }}>$</span>
+            <span style={{ color: strategy.isRealMoney ? "#10b981" : strategy.color, fontWeight: 700 }}>$</span>
             <input
               type="number"
-              min={100}
+              min={10}
               step={100}
               value={simulatedCapital}
               onChange={(e) => setLocalSimulatedCapital(Number(e.target.value))}
@@ -467,7 +507,7 @@ export default function DynamicStrategyView({
                 border: "1px solid var(--border)",
                 borderRadius: 4,
                 padding: "3px 8px",
-                color: strategy.color,
+                color: strategy.isRealMoney ? "#34d399" : strategy.color,
                 fontWeight: 700,
                 fontFamily: "'JetBrains Mono', monospace",
                 fontSize: "0.9rem",

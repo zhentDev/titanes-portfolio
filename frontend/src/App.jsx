@@ -510,7 +510,15 @@ export default function App() {
             onDelete={deleteCustomStrategy}
             onUpdate={updateCustomStrategy}
             onBack={() => setMode("historical")}
-            firstInvestDate={baseNavData?.nav?.[0]?.date}
+            firstInvestDate={
+              (() => {
+                const strat = customStrategies.find((s) => s.id === mode);
+                if (strat?.createdAt) {
+                  return strat.createdAt.slice(0, 10); // "YYYY-MM-DD"
+                }
+                return baseNavData?.nav?.[0]?.date;
+              })()
+            }
           />
         ) : (
           <>
