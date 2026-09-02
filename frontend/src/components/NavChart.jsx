@@ -349,26 +349,47 @@ export default function NavChart({
         const stratBase = strat.activeInvested || 500;
         const isMM20 = strat.id === "strat_mm20" || strat.name.toLowerCase().includes("mm20");
 
-        const sStrat = navData.map((pt, idx) => {
-          const isNasdaqBench =
-            strat.benchmark === "NASDAQ" ||
-            (!isMM20 && strat.name.toLowerCase().includes("acciones"));
-          const benchData = isNasdaqBench ? nasdaqData : sp500Data;
-          const benchPt = benchData?.[idx]?.value ?? pt.value;
-          const benchBase = benchData?.[0]?.value ?? titanesBaseVal;
+        // Only show data from the strategy's creation date onward
+        const stratStartDate = strat.createdAt ? strat.createdAt.slice(0, 10) : null;
 
-          const benchPctGrowth = benchBase > 0 ? (benchPt - benchBase) / benchBase : 0;
+        const sStrat = navData
+          .map((pt, idx) => {
+            const ptDate = pt.date || pt.time;
 
-          // Distinct alpha multipliers: MM20 (1.24x + 0.032 drift) vs Las mejores acciones (1.36x + 0.054 drift)
-          const betaMultiplier = isMM20 ? 1.24 : 1.36;
-          const drift = (idx / Math.max(1, navData.length - 1)) * (isMM20 ? 0.032 : 0.054);
-          const stratPctGrowth = benchPctGrowth * betaMultiplier + drift;
+            // Skip points before this strategy existed
+            if (stratStartDate && ptDate < stratStartDate) return null;
 
-          return {
-            date: pt.date || pt.time,
-            value: stratBase * (1 + stratPctGrowth), // Plotted in actual strategy dollars on LEFT scale!
-          };
-        });
+            const isNasdaqBench =
+              strat.benchmark === "NASDAQ" ||
+              (!isMM20 && strat.name.toLowerCase().includes("acciones"));
+            const benchData = isNasdaqBench ? nasdaqData : sp500Data;
+            const benchPt = benchData?.[idx]?.value ?? pt.value;
+            const benchBase = benchData?.[0]?.value ?? titanesBaseVal;
+
+            const benchPctGrowth = benchBase > 0 ? (benchPt - benchBase) / benchBase : 0;
+
+            // Distinct alpha multipliers: MM20 (1.24x + 0.032 drift) vs Las mejores acciones (1.36x + 0.054 drift)
+            const betaMultiplier = isMM20 ? 1.24 : 1.36;
+            const drift = (idx / Math.max(1, navData.length - 1)) * (isMM20 ? 0.032 : 0.054);
+            const stratPctGrowth = benchPctGrowth * betaMultiplier + drift;
+
+            return {
+              date: ptDate,
+              value: stratBase * (1 + stratPctGrowth), // Plotted in actual strategy dollars on LEFT scale!
+            };
+          })
+          .filter(Boolean);
+
+        // Rebase the first visible point to stratBase so the line starts at the correct capital
+        if (sStrat.length > 0) {
+          const firstVal = sStrat[0].value;
+          if (firstVal !== stratBase && firstVal > 0) {
+            const rebaseRatio = stratBase / firstVal;
+            for (const pt of sStrat) {
+              pt.value = pt.value * rebaseRatio;
+            }
+          }
+        }
 
         const sStratData = toSeries(sStrat);
         if (sStratData.length) {
