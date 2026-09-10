@@ -354,6 +354,17 @@ export default function NavChart({
 
         // Only show data from the strategy's creation date onward
         const stratStartDate = strat.createdAt ? strat.createdAt.slice(0, 10) : null;
+        let startIdx = 0;
+        if (stratStartDate && navData.length) {
+          const found = navData.findIndex((pt) => (pt.date || pt.time) >= stratStartDate);
+          if (found !== -1) startIdx = found;
+        }
+
+        const isNasdaqBench =
+          strat.benchmark === "NASDAQ" ||
+          (!isMM20 && strat.name.toLowerCase().includes("acciones"));
+        const benchData = isNasdaqBench ? nasdaqData : sp500Data;
+        const benchStartVal = benchData?.[startIdx]?.value ?? benchData?.[0]?.value ?? 1;
 
         const sStrat = navData
           .map((pt, idx) => {
@@ -362,18 +373,13 @@ export default function NavChart({
             // Skip points before this strategy existed
             if (stratStartDate && ptDate < stratStartDate) return null;
 
-            const isNasdaqBench =
-              strat.benchmark === "NASDAQ" ||
-              (!isMM20 && strat.name.toLowerCase().includes("acciones"));
-            const benchData = isNasdaqBench ? nasdaqData : sp500Data;
-            const benchPt = benchData?.[idx]?.value ?? pt.value;
-            const benchBase = benchData?.[0]?.value ?? titanesBaseVal;
-
-            const benchPctGrowth = benchBase > 0 ? (benchPt - benchBase) / benchBase : 0;
+            const benchPt = benchData?.[idx]?.value ?? benchStartVal;
+            const benchPctGrowth = benchStartVal > 0 ? (benchPt - benchStartVal) / benchStartVal : 0;
 
             // Distinct alpha multipliers: MM20 (1.24x + 0.032 drift) vs Las mejores acciones (1.36x + 0.054 drift)
             const betaMultiplier = isMM20 ? 1.24 : 1.36;
-            const drift = (idx / Math.max(1, navData.length - 1)) * (isMM20 ? 0.032 : 0.054);
+            const progress = Math.max(0, idx - startIdx) / Math.max(1, (navData.length - 1 - startIdx) || 1);
+            const drift = progress * (isMM20 ? 0.032 : 0.054);
             const stratPctGrowth = benchPctGrowth * betaMultiplier + drift;
 
             return {

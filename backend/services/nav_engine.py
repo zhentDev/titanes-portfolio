@@ -194,49 +194,16 @@ def calculate_nav(
         if bdf.is_empty():
             return []
 
-        # Find initial benchmark price for each rebalance tranche to link returns properly
-        points = []
-        # Group points by rebalance tranche or scale by the active_invested on each date
-        # Map date to active_invested on that date from nav_series
-        nav_date_invested = {}
-        for r in effective_rebalances:
-            pass
-
-        # Build date -> active capital map based on rebalance dates
-        # E.g. dates before 2026-09-01 had 5 slots ($666.67), after had 6 slots ($800)
-        slot_val = investment / num_slots if num_slots > 0 else 0.0
-        active_counts_by_rb = []
-        current_active_set = set()
-        for rb in effective_rebalances:
-            tickers_in_rb = [t for t in rb["tickers"] if selected_tickers is None or t in selected_tickers]
-            current_active_set = set(tickers_in_rb)
-            active_counts_by_rb.append((rb["date"], len(current_active_set) * slot_val))
-
-        def get_invested_for_date(d_str: str) -> float:
-            inv = active_invested
-            for r_date, r_inv in reversed(active_counts_by_rb):
-                if d_str >= r_date:
-                    return r_inv
-            return active_counts_by_rb[0][1] if active_counts_by_rb else active_invested
-
-        # Cumulative chain-linked benchmark return
-        # For each rebalance tranche, benchmark grows by its return, scaled to the tranche's invested capital
-        b_rows = bdf.iter_rows(named=True)
-        if not b_rows:
+        b0 = float(bdf[col][0])
+        if b0 <= 0:
             return []
 
-        # We chain benchmarks per tranche or scale by base:
-        # To reflect portfolio behavior: on day t, benchmark = active_invested_on_day_t * (P_t / P_rb_start)
-        # For simplicity and perfect alignment with portfolio value:
-        first_p = float(bdf[col][0])
-        for r in b_rows:
-            d_str = str(r["date"])
-            inv_on_date = get_invested_for_date(d_str)
-            p_curr = float(r[col])
-            # Ratio from series start scaled to that day's active invested capital
-            val = (p_curr / first_p) * inv_on_date if first_p > 0 else inv_on_date
-            points.append({"date": d_str, "value": round(val, 4)})
-
+        # Pure index percentage growth scaled to active_invested so it reflects true market return
+        # without fictitious cash injection steps
+        points = [
+            {"date": str(r["date"]), "value": round(float(r[col]) / b0 * active_invested, 4)}
+            for r in bdf.iter_rows(named=True)
+        ]
         return points
 
     last_row = prices_pd.iloc[-1]

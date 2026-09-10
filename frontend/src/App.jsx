@@ -222,25 +222,21 @@ export default function App() {
       };
     });
 
-    // Rescaled S&P 500: tranche-aware scaling matching capital on each date
+    // Rescaled S&P 500: pure index percentage growth relative to portfolio benchmark base
     const scaledSP500 = (baseNavData.sp500 || []).map((pt) => {
-      const ptDate = pt.date || pt.time;
-      const capOnDate = getActiveCapitalForDate(ptDate);
       const pctGrowth = baseSP0 > 0 ? pt.value / baseSP0 : 1;
       return {
         ...pt,
-        value: Number((capOnDate * pctGrowth).toFixed(4)),
+        value: Number((activeInvested * pctGrowth).toFixed(4)),
       };
     });
 
-    // Rescaled NASDAQ: tranche-aware scaling matching capital on each date
+    // Rescaled NASDAQ: pure index percentage growth relative to portfolio benchmark base
     const scaledNasdaq = (baseNavData.nasdaq || []).map((pt) => {
-      const ptDate = pt.date || pt.time;
-      const capOnDate = getActiveCapitalForDate(ptDate);
       const pctGrowth = baseND0 > 0 ? pt.value / baseND0 : 1;
       return {
         ...pt,
-        value: Number((capOnDate * pctGrowth).toFixed(4)),
+        value: Number((activeInvested * pctGrowth).toFixed(4)),
       };
     });
 
