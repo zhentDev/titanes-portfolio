@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import {
   createRebalance,
   deleteRebalance,
+  updateRebalanceDateApi,
   fetchColInflationHistory,
   fetchFxHistory,
   fetchLiveQuotes,
@@ -181,6 +182,8 @@ export default function DynamicStrategyView({
     return rebalances.length > 0 ? [...(rebalances[rebalances.length - 1].tickers || [])] : [];
   });
   const [selectedForDeletion, setSelectedForDeletion] = useState([]);
+  const [editingRebalanceDate, setEditingRebalanceDate] = useState(null); // { oldDate: "2026-08-08", tempDate: "2026-08-08" }
+
 
   // Search & Batch paste input
   const [query, setQuery] = useState("");
@@ -331,6 +334,32 @@ export default function DynamicStrategyView({
     } catch (e) {
       console.warn("Backend save failed, saved locally", e);
       toast.success(`Rebalanceo del ${date} guardado localmente (${formTickers.length} posiciones)`);
+    }
+  };
+
+  const handleUpdateRebalanceDate = async (oldDate, newDate) => {
+    if (!newDate || newDate === oldDate) {
+      setEditingRebalanceDate(null);
+      return;
+    }
+    const updated = rebalances.map((r) => {
+      if (r.rebalance_date === oldDate) {
+        return { ...r, rebalance_date: newDate, date: newDate };
+      }
+      return r;
+    }).sort((a, b) => (a.rebalance_date > b.rebalance_date ? 1 : -1));
+
+    setRebalances(updated);
+    setStrategyRebalances(strategy.id, updated);
+    localStorage.setItem(storageKey, JSON.stringify(updated));
+    setEditingRebalanceDate(null);
+
+    try {
+      await updateRebalanceDateApi(oldDate, newDate, strategy.id);
+      toast.success(`Fecha actualizada de ${oldDate} a ${newDate}`);
+    } catch (e) {
+      console.warn("Backend date update failed, updated locally", e);
+      toast.success(`Fecha actualizada localmente a ${newDate}`);
     }
   };
 
@@ -1732,29 +1761,113 @@ export default function DynamicStrategyView({
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span
-                        className="mono"
-                        style={{
-                          fontWeight: 800,
-                          fontSize: "0.9rem",
-                          color: isCurrent ? strategy.color : "var(--text-primary)",
-                        }}
-                      >
-                        {reb.rebalance_date}
-                      </span>
-                      {isCurrent && (
-                        <span
-                          style={{
-                            fontSize: "0.65rem",
-                            padding: "1px 6px",
-                            borderRadius: 4,
-                            background: `${strategy.color}33`,
-                            color: strategy.color,
-                            fontWeight: 700,
-                          }}
-                        >
-                          VIGENTE
-                        </span>
+                      {editingRebalanceDate?.oldDate === reb.rebalance_date ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <input
+                            type="date"
+                            value={editingRebalanceDate.tempDate}
+                            onChange={(e) =>
+                              setEditingRebalanceDate({
+                                ...editingRebalanceDate,
+                                tempDate: e.target.value,
+                              })
+                            }
+                            style={{
+                              background: "rgba(0,0,0,0.4)",
+                              border: `1px solid ${strategy.color}`,
+                              color: "#fff",
+                              borderRadius: 4,
+                              padding: "2px 6px",
+                              fontSize: "0.8rem",
+                              fontFamily: "'JetBrains Mono', monospace",
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleUpdateRebalanceDate(
+                                editingRebalanceDate.oldDate,
+                                editingRebalanceDate.tempDate,
+                              )
+                            }
+                            style={{
+                              background: "rgba(16, 185, 129, 0.2)",
+                              border: "1px solid #10b981",
+                              color: "#34d399",
+                              borderRadius: 4,
+                              padding: "2px 6px",
+                              fontSize: "0.72rem",
+                              cursor: "pointer",
+                              fontWeight: 700,
+                            }}
+                            title="Guardar nueva fecha"
+                          >
+                            ✓ Guardar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingRebalanceDate(null)}
+                            style={{
+                              background: "rgba(255,255,255,0.05)",
+                              border: "1px solid var(--border)",
+                              color: "var(--text-muted)",
+                              borderRadius: 4,
+                              padding: "2px 6px",
+                              fontSize: "0.72rem",
+                              cursor: "pointer",
+                            }}
+                            title="Cancelar"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <span
+                            className="mono"
+                            style={{
+                              fontWeight: 800,
+                              fontSize: "0.9rem",
+                              color: isCurrent ? strategy.color : "var(--text-primary)",
+                            }}
+                          >
+                            {reb.rebalance_date}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setEditingRebalanceDate({
+                                oldDate: reb.rebalance_date,
+                                tempDate: reb.rebalance_date,
+                              })
+                            }
+                            style={{
+                              background: "none",
+                              border: "none",
+                              color: "var(--text-muted)",
+                              cursor: "pointer",
+                              fontSize: "0.75rem",
+                              padding: "0 2px",
+                            }}
+                            title="Modificar fecha de este rebalanceo"
+                          >
+                            ✏️
+                          </button>
+                          {isCurrent && (
+                            <span
+                              style={{
+                                fontSize: "0.65rem",
+                                padding: "1px 6px",
+                                borderRadius: 4,
+                                background: `${strategy.color}33`,
+                                color: strategy.color,
+                                fontWeight: 700,
+                              }}
+                            >
+                              VIGENTE
+                            </span>
+                          )}
+                        </>
                       )}
                     </div>
                     <button

@@ -597,13 +597,21 @@ export default function NavChart({
                 (!isMM20 && strat.name.toLowerCase().includes("acciones"));
               const benchData = isNasdaqBench ? nasdaqData : sp500Data;
 
-              const titanesBaseVal = navData?.[0]?.value || 1;
-              const benchBase = benchData?.[0]?.value ?? titanesBaseVal;
-              const benchPt = benchData?.[lastIdx]?.value ?? navData?.[lastIdx]?.value ?? benchBase;
+              // Calculate growth starting strictly from this strategy's creation date
+              const stratStartDate = strat.createdAt ? strat.createdAt.slice(0, 10) : null;
+              let startIdx = 0;
+              if (stratStartDate && navData?.length) {
+                const found = navData.findIndex((pt) => (pt.date || pt.time) >= stratStartDate);
+                if (found !== -1) startIdx = found;
+              }
 
-              const benchPctGrowth = benchBase > 0 ? (benchPt - benchBase) / benchBase : 0;
+              const benchStartVal = benchData?.[startIdx]?.value ?? navData?.[startIdx]?.value ?? titanesBaseVal;
+              const benchPt = benchData?.[lastIdx]?.value ?? navData?.[lastIdx]?.value ?? benchStartVal;
+
+              const benchPctGrowth = benchStartVal > 0 ? (benchPt - benchStartVal) / benchStartVal : 0;
               const betaMultiplier = isMM20 ? 1.24 : 1.36;
-              const drift = isMM20 ? 0.032 : 0.054;
+              const driftProgress = Math.max(0, lastIdx - startIdx) / Math.max(1, navData?.length - 1 || 1);
+              const drift = driftProgress * (isMM20 ? 0.032 : 0.054);
               const fallbackPctGrowth = benchPctGrowth * betaMultiplier + drift;
 
               const currentChartVal = hoverValues?.[strat.id];
@@ -646,9 +654,23 @@ export default function NavChart({
                       opacity: isVisible ? 1 : 0.3,
                     }}
                   />
-                  <span style={{ fontSize: "0.7rem" }}>{strat.country || "🌎"}</span>
+                  <span style={{ fontSize: "0.7rem" }}>{strat.country || (strat.isRealMoney ? "💵" : "🌎")}</span>
                   <strong>{strat.name}</strong>
-                  {strat.isSystem && (
+                  {strat.isRealMoney ? (
+                    <span
+                      style={{
+                        fontSize: "0.62rem",
+                        padding: "1px 5px",
+                        borderRadius: 3,
+                        background: "rgba(16, 185, 129, 0.25)",
+                        color: "#34d399",
+                        border: "1px solid rgba(16, 185, 129, 0.4)",
+                        fontWeight: 800,
+                      }}
+                    >
+                      REAL
+                    </span>
+                  ) : strat.isSystem ? (
                     <span
                       style={{
                         fontSize: "0.62rem",
@@ -661,7 +683,7 @@ export default function NavChart({
                     >
                       PRO
                     </span>
-                  )}
+                  ) : null}
                   {stratUsd != null && (
                     <span className="mono" style={{ color: strat.color, fontWeight: 700 }}>
                       ${stratUsd.toFixed(2)}

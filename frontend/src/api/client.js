@@ -200,6 +200,17 @@ export async function deleteRebalance(date, strategyId = "historical") {
   return res.json();
 }
 
+/** PUT /api/rebalances/date */
+export async function updateRebalanceDateApi(oldDate, newDate, strategyId = "historical") {
+  const res = await fetch(`${BASE}/rebalances/date`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ old_date: oldDate, new_date: newDate, strategy_id: strategyId }),
+  });
+  if (!res.ok) throw new Error("Error al actualizar fecha de rebalanceo");
+  return res.json();
+}
+
 /** CUSTOM STRATEGIES API */
 export async function fetchCustomStrategiesApi() {
   try {

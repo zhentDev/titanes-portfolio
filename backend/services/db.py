@@ -182,6 +182,24 @@ def delete_rebalance(rebalance_date: date, strategy_id: str = "historical"):
         con.execute("DELETE FROM rebalances WHERE rebalance_date = ? AND strategy_id = ?", [rebalance_date, strategy_id])
 
 
+def update_rebalance_date(old_date: date, new_date: date, strategy_id: str = "historical"):
+    with get_connection() as con:
+        if old_date == new_date:
+            return
+        # If new_date already exists for this strategy, remove target first
+        con.execute("DELETE FROM rebalance_tickers WHERE rebalance_date = ? AND strategy_id = ?", [new_date, strategy_id])
+        con.execute("DELETE FROM rebalances WHERE rebalance_date = ? AND strategy_id = ?", [new_date, strategy_id])
+
+        con.execute(
+            "UPDATE rebalance_tickers SET rebalance_date = ? WHERE rebalance_date = ? AND strategy_id = ?",
+            [new_date, old_date, strategy_id]
+        )
+        con.execute(
+            "UPDATE rebalances SET rebalance_date = ? WHERE rebalance_date = ? AND strategy_id = ?",
+            [new_date, old_date, strategy_id]
+        )
+
+
 def get_custom_strategies() -> list[dict]:
     with get_connection() as con:
         rows = con.execute("""

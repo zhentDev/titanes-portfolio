@@ -1,14 +1,19 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
+const ICON_PRESETS = [
+  "🚀", "💎", "⚡", "🧠", "🔥", "👑", "📈", "🛡️", "💰", "🤖", "🏆", "🎯",
+  "🇺🇸", "🇪🇺", "🇨🇳", "🇯🇵", "🇬🇧", "🇲🇽", "🌎"
+];
+
 const COUNTRIES = [
-  { code: "🇺🇸", name: "Estados Unidos (USA)" },
-  { code: "🇪🇺", name: "Europa (EU)" },
-  { code: "🇨🇳", name: "China / Asia" },
-  { code: "🇯🇵", name: "Japón (JP)" },
-  { code: "🇬🇧", name: "Reino Unido (UK)" },
-  { code: "🇲🇽", name: "México / LatAm" },
-  { code: "🌎", name: "Global / Multi-Región" },
+  { code: "🇺🇸", name: "USA" },
+  { code: "🇪🇺", name: "Europa" },
+  { code: "🇨🇳", name: "China" },
+  { code: "🇯🇵", name: "Japón" },
+  { code: "🇬🇧", name: "UK" },
+  { code: "🇲🇽", name: "LatAm" },
+  { code: "🌎", name: "Global" },
 ];
 
 const BENCHMARKS = [
@@ -248,32 +253,64 @@ export default function CreateStrategyModal({
             />
           </div>
 
-          {/* País / Región */}
+          {/* Icono / Emoji de la Estrategia */}
           <div>
             <label
               style={{
-                display: "block",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
                 fontSize: "0.75rem",
                 fontWeight: 600,
                 color: "var(--text-muted)",
                 marginBottom: 6,
               }}
             >
-              País o Mercado Objetivo:
+              <span>Ícono / Emoji:</span>
+              <span style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>
+                Selecciona uno o escribe tu propio emoji
+              </span>
             </label>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {COUNTRIES.map((c) => (
+            <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
+              {ICON_PRESETS.map((ic) => (
                 <button
                   type="button"
-                  key={c.code}
-                  className={`btn-chip ${country === c.code ? "active" : ""}`}
-                  onClick={() => setCountry(c.code)}
-                  style={{ fontSize: "0.75rem", padding: "6px 10px" }}
+                  key={ic}
+                  onClick={() => setCountry(ic)}
+                  style={{
+                    fontSize: "1.05rem",
+                    padding: "4px 8px",
+                    borderRadius: 6,
+                    border: country === ic ? "2px solid var(--accent-primary)" : "1px solid var(--border)",
+                    background: country === ic ? "rgba(0, 229, 255, 0.15)" : "var(--bg-surface)",
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                  }}
+                  title={ic}
                 >
-                  <span>{c.code}</span>
-                  <span>{c.name.split(" ")[0]}</span>
+                  {ic}
                 </button>
               ))}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Personalizado:</span>
+              <input
+                type="text"
+                maxLength={4}
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                placeholder="Ej. 🚀, ⚡, 🇺🇸"
+                style={{
+                  width: 80,
+                  padding: "4px 8px",
+                  borderRadius: 4,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg-surface)",
+                  color: "#fff",
+                  fontSize: "0.9rem",
+                  textAlign: "center",
+                }}
+              />
             </div>
           </div>
 

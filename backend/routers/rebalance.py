@@ -7,6 +7,7 @@ from services.db import (
     add_rebalance,
     delete_custom_strategy,
     delete_rebalance,
+    update_rebalance_date,
     get_all_rebalances,
     get_custom_strategies,
     save_custom_strategy,
@@ -19,6 +20,12 @@ class RebalanceRequest(BaseModel):
     rebalance_date: date
     cash_added: float = 0.0
     tickers: list[str]
+    strategy_id: Optional[str] = "historical"
+
+
+class UpdateRebalanceDateRequest(BaseModel):
+    old_date: date
+    new_date: date
     strategy_id: Optional[str] = "historical"
 
 
@@ -57,6 +64,13 @@ def create_rebalance(req: RebalanceRequest):
 def remove_rebalance(rebalance_date: date, strategy_id: str = Query("historical")):
     delete_rebalance(rebalance_date, strategy_id=strategy_id)
     return {"status": "ok", "strategy_id": strategy_id}
+
+
+@router.put("/rebalances/date")
+def change_rebalance_date(req: UpdateRebalanceDateRequest):
+    strat_id = req.strategy_id or "historical"
+    update_rebalance_date(req.old_date, req.new_date, strategy_id=strat_id)
+    return {"status": "ok", "old_date": req.old_date, "new_date": req.new_date, "strategy_id": strat_id}
 
 
 # ── CUSTOM STRATEGIES ENDPOINTS ────────────────────────────────────────────────

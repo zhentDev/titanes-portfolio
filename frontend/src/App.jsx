@@ -332,6 +332,7 @@ export default function App() {
               <div className="nav-dropdown-menu fade-up">
                 <div className="dropdown-header">Estrategias & Portafolios</div>
 
+                {/* Core Portfolios */}
                 <button
                   type="button"
                   className={`dropdown-item ${mode === "historical" ? "selected" : ""}`}
@@ -358,25 +359,67 @@ export default function App() {
                   <span className="system-badge pro">LIVE</span>
                 </button>
 
-                {(customStrategies || []).map((strat) => (
-                  <button
-                    type="button"
-                    key={strat.id}
-                    className={`dropdown-item ${mode === strat.id ? "selected" : ""}`}
-                    onClick={() => {
-                      setMode(strat.id);
-                      setStratOpen(false);
-                    }}
-                  >
-                    <span className="item-icon">{strat.country || "🌎"}</span>
-                    <span className="item-title">{strat.name}</span>
-                    {strat.isSystem ? (
-                      <span className="system-badge pro">PRO</span>
-                    ) : (
-                      <span className="system-badge custom">{strat.numSlots} slots</span>
-                    )}
-                  </button>
-                ))}
+                {/* Categoría: Portafolios / Estrategias de Dinero Real */}
+                {(() => {
+                  const realMoneyStrats = (customStrategies || []).filter((s) => s.isRealMoney);
+                  if (realMoneyStrats.length === 0) return null;
+                  return (
+                    <>
+                      <div className="dropdown-divider" />
+                      <div className="dropdown-header" style={{ color: "#34d399" }}>
+                        💵 Dinero Real Activo
+                      </div>
+                      {realMoneyStrats.map((strat) => (
+                        <button
+                          type="button"
+                          key={strat.id}
+                          className={`dropdown-item ${mode === strat.id ? "selected" : ""}`}
+                          onClick={() => {
+                            setMode(strat.id);
+                            setStratOpen(false);
+                          }}
+                        >
+                          <span className="item-icon">{strat.country || "💵"}</span>
+                          <span className="item-title">{strat.name}</span>
+                          <span className="system-badge real">REAL</span>
+                        </button>
+                      ))}
+                    </>
+                  );
+                })()}
+
+                {/* Categoría: Modelos & Simulaciones */}
+                {(() => {
+                  const simulatedStrats = (customStrategies || []).filter((s) => !s.isRealMoney);
+                  if (simulatedStrats.length === 0) return null;
+                  return (
+                    <>
+                      <div className="dropdown-divider" />
+                      <div className="dropdown-header" style={{ color: "#c084fc" }}>
+                        🧪 Modelos & Simulaciones
+                      </div>
+                      {simulatedStrats.map((strat) => (
+                        <button
+                          type="button"
+                          key={strat.id}
+                          className={`dropdown-item ${mode === strat.id ? "selected" : ""}`}
+                          onClick={() => {
+                            setMode(strat.id);
+                            setStratOpen(false);
+                          }}
+                        >
+                          <span className="item-icon">{strat.country || "🌎"}</span>
+                          <span className="item-title">{strat.name}</span>
+                          {strat.isSystem ? (
+                            <span className="system-badge pro">PRO</span>
+                          ) : (
+                            <span className="system-badge custom">{strat.numSlots} slots</span>
+                          )}
+                        </button>
+                      ))}
+                    </>
+                  );
+                })()}
 
                 <div className="dropdown-divider" />
                 <button
