@@ -37,6 +37,7 @@ def calculate_nav(
     # Initial state
     current_shares = {}
     rebalance_prices = {}
+    ticker_entry_dates = {}
     current_cash = 0.0
     current_value = 0.0
     total_invested = investment
@@ -99,9 +100,8 @@ def calculate_nav(
 
             total_portfolio_value = stock_value + current_cash + cash_to_add
 
-            # 3. Distribute equally among the selected tickers
+            # Distribute slots: existing holdings retain their shares & entry price; new tickers buy new slot
             new_tickers = next_rebalance["tickers"]
-            # Filter out tickers that don't have price data today OR are excluded by the user
             valid_tickers = []
             for t in new_tickers:
                 if (
@@ -112,26 +112,35 @@ def calculate_nav(
                 ):
                     valid_tickers.append(t)
 
-            allocated_slots = len(valid_tickers)
-            unallocated_slots = num_slots - allocated_slots
+            slot_value = investment / num_slots if num_slots > 0 else 0.0
 
-            slot_value = total_portfolio_value / num_slots
+            # 1. Liquidate tickers no longer in new valid_tickers
+            liquidated_tickers = [t for t in list(current_shares.keys()) if t not in valid_tickers]
+            for t in liquidated_tickers:
+                del current_shares[t]
+                if t in rebalance_prices:
+                    del rebalance_prices[t]
+                if t in ticker_entry_dates:
+                    del ticker_entry_dates[t]
 
-            # Buy new shares
-            current_shares = {}
-            rebalance_prices = {}
+            # 2. Keep continuing tickers; allocate new slots for new tickers
             for t in valid_tickers:
                 price = row[t]
-                current_shares[t] = slot_value / price
-                rebalance_prices[t] = price
+                if t not in current_shares:
+                    # New position: allocate slot
+                    current_shares[t] = slot_value / price if price > 0 else 0.0
+                    rebalance_prices[t] = price
+                    ticker_entry_dates[t] = str(date_str)
 
             # Remaining cash is unallocated slots
+            allocated_slots = len(current_shares)
+            unallocated_slots = max(0, num_slots - allocated_slots)
             current_cash = slot_value * unallocated_slots
 
             # Advance to next rebalance
             rebalance_idx += 1
-            if rebalance_idx < len(rebalances):
-                next_rebalance = rebalances[rebalance_idx]
+            if rebalance_idx < len(effective_rebalances):
+                next_rebalance = effective_rebalances[rebalance_idx]
             else:
                 next_rebalance = None
 
@@ -142,6 +151,8 @@ def calculate_nav(
             if price is not None and not str(price) == "nan":
                 eod_stock_value += shares * price
 
+        # Active invested capital on this day
+        day_active_invested = len(current_shares) * (investment / num_slots) if num_slots > 0 else investment
         eod_total_value = eod_stock_value + current_cash
         if date_str >= series_start:
             nav_series.append(
@@ -176,21 +187,56 @@ def calculate_nav(
         if col not in prices_df.columns:
             return []
         bdf = (
-            prices_df.filter(pl.col("date").cast(pl.String) >= str(first_hist_date))
+            prices_df.filter(pl.col("date").cast(pl.String) >= str(series_start))
             .select(["date", col])
             .drop_nulls()
         )
         if bdf.is_empty():
             return []
-        b0 = float(bdf[col][0])
-        # Escala el benchmark al capital real invertido en acciones
-        bdf = bdf.with_columns(
-            (pl.col(col) / b0 * active_invested).alias("value"),
-        )
-        points = [
-            {"date": str(r["date"]), "value": round(r["value"], 4)}
-            for r in bdf.iter_rows(named=True)
-        ]
+
+        # Find initial benchmark price for each rebalance tranche to link returns properly
+        points = []
+        # Group points by rebalance tranche or scale by the active_invested on each date
+        # Map date to active_invested on that date from nav_series
+        nav_date_invested = {}
+        for r in effective_rebalances:
+            pass
+
+        # Build date -> active capital map based on rebalance dates
+        # E.g. dates before 2026-09-01 had 5 slots ($666.67), after had 6 slots ($800)
+        slot_val = investment / num_slots if num_slots > 0 else 0.0
+        active_counts_by_rb = []
+        current_active_set = set()
+        for rb in effective_rebalances:
+            tickers_in_rb = [t for t in rb["tickers"] if selected_tickers is None or t in selected_tickers]
+            current_active_set = set(tickers_in_rb)
+            active_counts_by_rb.append((rb["date"], len(current_active_set) * slot_val))
+
+        def get_invested_for_date(d_str: str) -> float:
+            inv = active_invested
+            for r_date, r_inv in reversed(active_counts_by_rb):
+                if d_str >= r_date:
+                    return r_inv
+            return active_counts_by_rb[0][1] if active_counts_by_rb else active_invested
+
+        # Cumulative chain-linked benchmark return
+        # For each rebalance tranche, benchmark grows by its return, scaled to the tranche's invested capital
+        b_rows = bdf.iter_rows(named=True)
+        if not b_rows:
+            return []
+
+        # We chain benchmarks per tranche or scale by base:
+        # To reflect portfolio behavior: on day t, benchmark = active_invested_on_day_t * (P_t / P_rb_start)
+        # For simplicity and perfect alignment with portfolio value:
+        first_p = float(bdf[col][0])
+        for r in b_rows:
+            d_str = str(r["date"])
+            inv_on_date = get_invested_for_date(d_str)
+            p_curr = float(r[col])
+            # Ratio from series start scaled to that day's active invested capital
+            val = (p_curr / first_p) * inv_on_date if first_p > 0 else inv_on_date
+            points.append({"date": d_str, "value": round(val, 4)})
+
         return points
 
     last_row = prices_pd.iloc[-1]
@@ -250,6 +296,7 @@ def calculate_nav(
                 if is_selected and start_price > 0
                 else 0.0,
                 "selected": is_selected,
+                "entry_date": ticker_entry_dates.get(t, series_start),
                 "history": t_history,
             }
         )
@@ -494,7 +541,7 @@ def calculate_nav(
     total_return = current_value - total_invested
     total_return_pct = (total_return / total_invested * 100) if total_invested > 0 else 0.0
 
-    # Series de rendimiento relativo individual para cada ticker
+    # Series de rendimiento relativo individual para cada ticker normalizado a su precio de entrada
     ticker_series = {}
     for t in active_tickers:
         if t in prices_df.columns:
@@ -504,7 +551,11 @@ def calculate_nav(
                 .drop_nulls()
             )
             if not s_t.is_empty():
-                p0 = float(s_t[t][0])
+                entry_d = ticker_entry_dates.get(t, series_start)
+                # Entry price base: use start_price recorded at entry date, fallback to first price
+                p0 = float(rebalance_prices.get(t, 0.0))
+                if p0 <= 0:
+                    p0 = float(s_t[t][0])
                 if p0 > 0:
                     ticker_series[t] = [
                         {"date": str(r["date"]), "factor": round(float(r[t]) / p0, 6)}
@@ -517,6 +568,7 @@ def calculate_nav(
         "nasdaq": nasdaq_series,
         "mm20": mm20_series,
         "ticker_series": ticker_series,
+        "rebalances": effective_rebalances,
         "holdings": sorted(holdings, key=lambda h: h["current_value"], reverse=True),
         "correlations": {
             "tickers": matrix_tickers,

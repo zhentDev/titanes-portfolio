@@ -14,6 +14,9 @@ export default function NavChart({
   sp500Data,
   nasdaqData,
   investment,
+  numSlots = 15,
+  rebalances = [],
+  summary = null,
   holdings = [],
   onToggleTicker,
   selectAll,
@@ -398,21 +401,31 @@ export default function NavChart({
       });
     }
 
-    // Base investment horizontal line
+    // Base investment line (tracks active capital invested per tranche)
     if (navData && navData.length > 1) {
-      const baseVal = navData[0].value;
-      const baseLine = [
-        { date: navData[0].date || navData[0].time, value: baseVal },
-        {
-          date: navData[navData.length - 1].date || navData[navData.length - 1].time,
-          value: baseVal,
-        },
-      ];
+      const slotVal = investment / (numSlots || 15);
+      const baseLine = navData.map((pt) => {
+        const ptDate = pt.date || pt.time;
+        let activeCount = 0;
+        for (const h of holdings) {
+          if (h.selected !== false && h.shares > 0) {
+            const entry = h.entry_date || (rebalances?.[0]?.date || "");
+            if (!entry || ptDate >= entry) {
+              activeCount++;
+            }
+          }
+        }
+        const activeCapOnDate = activeCount > 0 ? activeCount * slotVal : navData[0].value;
+        return {
+          date: ptDate,
+          value: activeCapOnDate,
+        };
+      });
       seriesRef.current.base?.setData(toSeries(baseLine));
     }
 
     chartRef.current.timeScale().fitContent();
-  }, [navData, sp500Data, nasdaqData, customStrategies, investment]);
+  }, [navData, sp500Data, nasdaqData, customStrategies, investment, numSlots, rebalances, holdings]);
 
   const lastNav = navData?.[navData.length - 1]?.value;
   const lastSP = sp500Data?.[sp500Data.length - 1]?.value;
@@ -422,13 +435,28 @@ export default function NavChart({
   const currentSP = hoverValues?.sp500 ?? lastSP;
   const currentNasdaq = hoverValues?.nasdaq ?? lastNasdaq;
 
+  // Active invested capital for the latest period
+  const activeBase = summary?.active_invested || baseActive;
+
   // Real % returns from base active capital
   const navPct =
-    baseActive && currentNav != null ? ((currentNav - baseActive) / baseActive) * 100 : null;
+    summary?.active_return_pct != null
+      ? summary.active_return_pct
+      : activeBase && currentNav != null
+        ? ((currentNav - activeBase) / activeBase) * 100
+        : null;
   const spPct =
-    baseActive && currentSP != null ? ((currentSP - baseActive) / baseActive) * 100 : null;
+    summary?.sp500_return_pct != null
+      ? summary.sp500_return_pct
+      : activeBase && currentSP != null
+        ? ((currentSP - activeBase) / activeBase) * 100
+        : null;
   const nasdaqPct =
-    baseActive && currentNasdaq != null ? ((currentNasdaq - baseActive) / baseActive) * 100 : null;
+    summary?.nasdaq_return_pct != null
+      ? summary.nasdaq_return_pct
+      : activeBase && currentNasdaq != null
+        ? ((currentNasdaq - activeBase) / activeBase) * 100
+        : null;
 
   return (
     <div

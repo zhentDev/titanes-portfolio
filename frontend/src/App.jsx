@@ -186,13 +186,32 @@ export default function App() {
     const baseSP0 = baseNavData.sp500?.[0]?.value || baseFirstVal;
     const baseND0 = baseNavData.nasdaq?.[0]?.value || baseFirstVal;
 
-    // Rescaled Portfolio NAV using exact individual ticker price action
+    // Rescaled Portfolio NAV using exact individual ticker price action per tranche
     const tickerSeriesMap = baseNavData.ticker_series || {};
     const datePoints = baseNavData.nav || [];
+    const rebalancesList = baseNavData.rebalances || [];
+
+    // Helper to get active capital and active tickers for a given date
+    const getActiveCapitalForDate = (ptDate) => {
+      let activeCountOnDate = 0;
+      for (const h of activeList) {
+        const entry = h.entry_date || (rebalancesList[0]?.date || "");
+        if (!entry || ptDate >= entry) {
+          activeCountOnDate++;
+        }
+      }
+      return activeCountOnDate * slotValue;
+    };
 
     const scaledNav = datePoints.map((pt, idx) => {
+      const ptDate = pt.date || pt.time;
       let totalStockVal = 0;
       for (const h of activeList) {
+        const entry = h.entry_date || (rebalancesList[0]?.date || "");
+        // Only include ticker if it was active on ptDate
+        if (entry && ptDate < entry) {
+          continue;
+        }
         const seriesForT = tickerSeriesMap[h.ticker];
         const factor = seriesForT?.[idx]?.factor ?? 1 + (h.return_pct || 0) / 100;
         totalStockVal += slotValue * factor;
@@ -203,21 +222,25 @@ export default function App() {
       };
     });
 
-    // Rescaled S&P 500
+    // Rescaled S&P 500: tranche-aware scaling matching capital on each date
     const scaledSP500 = (baseNavData.sp500 || []).map((pt) => {
+      const ptDate = pt.date || pt.time;
+      const capOnDate = getActiveCapitalForDate(ptDate);
       const pctGrowth = baseSP0 > 0 ? pt.value / baseSP0 : 1;
       return {
         ...pt,
-        value: Number((activeInvested * pctGrowth).toFixed(4)),
+        value: Number((capOnDate * pctGrowth).toFixed(4)),
       };
     });
 
-    // Rescaled NASDAQ
+    // Rescaled NASDAQ: tranche-aware scaling matching capital on each date
     const scaledNasdaq = (baseNavData.nasdaq || []).map((pt) => {
+      const ptDate = pt.date || pt.time;
+      const capOnDate = getActiveCapitalForDate(ptDate);
       const pctGrowth = baseND0 > 0 ? pt.value / baseND0 : 1;
       return {
         ...pt,
-        value: Number((activeInvested * pctGrowth).toFixed(4)),
+        value: Number((capOnDate * pctGrowth).toFixed(4)),
       };
     });
 
@@ -1465,6 +1488,9 @@ export default function App() {
                   sp500Data={navData?.sp500}
                   nasdaqData={navData?.nasdaq}
                   investment={investment}
+                  numSlots={numSlots}
+                  rebalances={navData?.rebalances}
+                  summary={navData?.summary}
                   holdings={holdings}
                   onToggleTicker={toggleTicker}
                   selectAll={selectAll}
