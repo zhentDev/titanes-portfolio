@@ -7,6 +7,7 @@ import {
   fetchColInflationHistory,
   fetchFxHistory,
   fetchLiveQuotes,
+  fetchNAV,
   fetchRebalances,
   searchTicker,
 } from "../api/client";
@@ -16,7 +17,7 @@ import CreateStrategyModal from "./CreateStrategyModal";
 import InflationExplorerModal from "./InflationExplorerModal";
 import StrategyChart, { SYNTHETIC_RETURNS } from "./StrategyChart";
 
-const PERIODS = ["1W", "1M", "3M", "6M", "1Y", "3Y", "5Y", "MAX"];
+const PERIODS = ["1D", "1W", "1M", "3M", "6M", "1Y", "3Y", "5Y", "MAX"];
 
 export default function DynamicStrategyView({
   strategy,
@@ -117,12 +118,30 @@ export default function DynamicStrategyView({
   useEffect(() => {
     let isMounted = true;
     fetchRebalances(strategy.id)
-      .then((data) => {
-        if (isMounted && Array.isArray(data) && data.length > 0) {
+      .then(async (data) => {
+        if (!isMounted) return;
+        if (Array.isArray(data) && data.length > 0) {
           setRebalances(data);
           setStrategyRebalances(strategy.id, data);
           const latestTickers = data[data.length - 1].tickers || [];
           setFormTickers([...latestTickers]);
+        } else {
+          // Backend is empty for this strategy. If we have local rebalances with tickers, sync them!
+          const localRebs = rebalances.filter((r) => Array.isArray(r.tickers) && r.tickers.length > 0);
+          if (localRebs.length > 0) {
+            for (const r of localRebs) {
+              try {
+                await createRebalance({
+                  rebalance_date: r.rebalance_date || r.date,
+                  cash_added: r.cash_added || 0,
+                  tickers: r.tickers,
+                  strategy_id: strategy.id,
+                });
+              } catch (err) {
+                console.warn("Auto-sync rebalance failed", err);
+              }
+            }
+          }
         }
       })
       .catch((e) => {
@@ -133,10 +152,24 @@ export default function DynamicStrategyView({
     };
   }, [strategy.id]);
 
+  // Fecha efectiva de inicio: la fecha del rebalanceo más antiguo registrado/editado, con fallback a firstInvestDate
+  const effectiveFirstInvestDate = useMemo(() => {
+    if (Array.isArray(rebalances) && rebalances.length > 0) {
+      const dates = rebalances
+        .map((r) => r.rebalance_date || r.date)
+        .filter(Boolean);
+      if (dates.length > 0) {
+        return [...dates].sort()[0];
+      }
+    }
+    return firstInvestDate;
+  }, [rebalances, firstInvestDate]);
+
   // Umbrales de desbloqueo: un periodo se activa al tener al menos estos días de historial
   // desde la primera inversión. Escala progresiva: cada periodo se desbloquea con una fracción
   // de su ventana (p. ej. 1M desde la 1ra semana), evitando saltos bruscos entre niveles.
   const UNLOCK_DAYS = {
+    "1D": 0,
     "1W": 1,
     "1M": 7,
     "3M": 30,
@@ -148,21 +181,34 @@ export default function DynamicStrategyView({
   };
   const periodEnabled = useMemo(() => {
     const map = {};
-    const availableDays = firstInvestDate
+    const availableDays = effectiveFirstInvestDate
       ? Math.max(
           0,
           Math.floor(
-            (Date.now() - new Date(`${firstInvestDate}T00:00:00Z`).getTime()) / 86400000,
+            (Date.now() - new Date(`${effectiveFirstInvestDate}T00:00:00Z`).getTime()) / 86400000,
           ),
         )
       : Infinity;
-    for (const p of PERIODS) map[p] = !firstInvestDate || UNLOCK_DAYS[p] <= availableDays;
+    for (const p of PERIODS) map[p] = !effectiveFirstInvestDate || UNLOCK_DAYS[p] <= availableDays;
     return map;
-  }, [firstInvestDate]);
+  }, [effectiveFirstInvestDate]);
+
+  // Periodo activo más alto disponible (excluyendo MAX si hay otros disponibles, o retrocediendo ordenadamente)
+  const highestActivePeriod = useMemo(() => {
+    const selectable = PERIODS.filter((p) => p !== "MAX");
+    return [...selectable].reverse().find((p) => periodEnabled[p]) || "1W";
+  }, [periodEnabled]);
 
   const [period, setPeriod] = useState(() =>
-    periodEnabled[storePeriod] ? storePeriod : PERIODS.find((p) => periodEnabled[p]) || "1W",
+    periodEnabled[storePeriod] ? storePeriod : highestActivePeriod,
   );
+
+  // Si el periodo actual deja de estar habilitado o al montar con datos válidos, asegurar que use el más alto activo
+  useEffect(() => {
+    if (periodEnabled && !periodEnabled[period]) {
+      setPeriod(highestActivePeriod);
+    }
+  }, [highestActivePeriod, period, periodEnabled]);
 
   const [simulatedCapital, setLocalSimulatedCapital] = useState(() => {
     try {
@@ -236,7 +282,104 @@ export default function DynamicStrategyView({
     }
   }, [simulatedCapital, activeInvested, strategy?.id, updateStrategyCapital]);
 
-  const currentReturns = SYNTHETIC_RETURNS[period] || SYNTHETIC_RETURNS["MAX"];
+  // Real NAV data fetched from backend for this strategy
+  const [navData, setNavData] = useState(null);
+  const [isNavLoading, setIsNavLoading] = useState(false);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadNAV = (isSilent = false) => {
+      if (!isSilent) setIsNavLoading(true);
+      fetchNAV({
+        period,
+        investment: simulatedCapital,
+        numSlots,
+        strategyId: strategy.id,
+      })
+        .then((data) => {
+          if (isMounted) {
+            setNavData(data);
+            setIsNavLoading(false);
+            setLastRefreshedAt(new Date());
+          }
+        })
+        .catch((err) => {
+          if (isMounted) {
+            console.warn("Could not fetch real NAV for strategy", strategy.id, err);
+            setIsNavLoading(false);
+          }
+        });
+    };
+
+    // Initial load
+    loadNAV(false);
+
+    // Auto-refresh interval:
+    // When period === "1D", poll every 60 seconds (1 minute) for live hourly bars.
+    // For other historical periods, poll every 60 minutes (3600 seconds).
+    const pollIntervalMs = period === "1D" ? 60 * 1000 : 60 * 60 * 1000;
+    const intervalId = setInterval(() => {
+      loadNAV(true);
+    }, pollIntervalMs);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, [strategy?.id, period, simulatedCapital, numSlots, activeTickers.join(",")]);
+
+  // Compute real market returns instead of hardcoded 12.00%
+  const currentReturns = useMemo(() => {
+    const baseSynthetic = SYNTHETIC_RETURNS[period] || SYNTHETIC_RETURNS["MAX"];
+
+    let realStratReturn = null;
+    let realSpReturn = null;
+    let realNasdaqReturn = null;
+    let realMm20Return = null;
+
+    // 1. If backend returned summary metrics for this strategy
+    if (navData?.summary) {
+      if (typeof navData.summary.active_return_pct === "number" && !isNaN(navData.summary.active_return_pct)) {
+        realStratReturn = navData.summary.active_return_pct / 100;
+      }
+      if (typeof navData.summary.sp500_return_pct === "number" && !isNaN(navData.summary.sp500_return_pct)) {
+        realSpReturn = navData.summary.sp500_return_pct / 100;
+      }
+      if (typeof navData.summary.nasdaq_return_pct === "number" && !isNaN(navData.summary.nasdaq_return_pct)) {
+        realNasdaqReturn = navData.summary.nasdaq_return_pct / 100;
+      }
+      if (typeof navData.summary.mm20_return_pct === "number" && !isNaN(navData.summary.mm20_return_pct)) {
+        realMm20Return = navData.summary.mm20_return_pct / 100;
+      }
+    }
+
+    // 2. Fallback for strategy return: compute from live quotes of active tickers if backend NAV series not yet generated
+    if (realStratReturn === null && activeTickers.length > 0) {
+      const validChanges = activeTickers
+        .map((t) => tickerMetadata[t]?.change_pct)
+        .filter((c) => typeof c === "number" && !isNaN(c));
+      if (validChanges.length > 0) {
+        const avgChangePct = validChanges.reduce((a, b) => a + b, 0) / validChanges.length;
+        realStratReturn = avgChangePct / 100;
+      }
+    }
+
+    // Pick appropriate benchmark return for strategy
+    const isMidCap = strategy?.benchmark === "S&P MidCap 400" || strategy?.id === "strat_mm20";
+    const benchmarkSpReturn = isMidCap ? (realMm20Return ?? realSpReturn) : realSpReturn;
+
+    return {
+      sp: benchmarkSpReturn !== null ? benchmarkSpReturn : baseSynthetic.sp,
+      nasdaq: realNasdaqReturn !== null ? realNasdaqReturn : baseSynthetic.nasdaq,
+      mm20: realMm20Return !== null ? realMm20Return : (baseSynthetic.sp),
+      strat: realStratReturn !== null ? realStratReturn : baseSynthetic.strat,
+      days: baseSynthetic.days,
+      points: baseSynthetic.points,
+      isReal: realStratReturn !== null,
+    };
+  }, [navData, period, activeTickers, tickerMetadata, strategy?.benchmark, strategy?.id]);
 
   const handleSearchAndAdd = async (e) => {
     e?.preventDefault();
@@ -769,7 +912,7 @@ export default function DynamicStrategyView({
                           ? 3
                           : period === "5Y"
                             ? 5
-                            : 5;
+                            : 3 / 12; // MAX equivale al horizonte real de 3M
             inflationFactor = Math.pow(1 + stratSettings.inflationRate / 100, years);
           }
         }
@@ -877,7 +1020,7 @@ export default function DynamicStrategyView({
                         ? 3
                         : period === "5Y"
                           ? 5
-                          : 5;
+                          : 3 / 12; // MAX equivale a 3M
           inflationFactor = Math.pow(1 + yoy / 100, years);
         } else if (stratSettings.inflationRate > 0) {
           const years =
@@ -895,7 +1038,7 @@ export default function DynamicStrategyView({
                         ? 3
                         : period === "5Y"
                           ? 5
-                          : 5;
+                          : 3 / 12; // MAX equivale a 3M
           inflationFactor = Math.pow(1 + stratSettings.inflationRate / 100, years);
         }
 
@@ -1269,7 +1412,40 @@ export default function DynamicStrategyView({
             marginBottom: 14,
           }}
         >
-          <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700 }}>📊 Crecimiento Histórico</h3>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700 }}>📊 Crecimiento Histórico</h3>
+            <span
+              style={{
+                fontSize: "0.72rem",
+                color: period === "1D" ? "#10b981" : "var(--text-muted)",
+                background: period === "1D" ? "rgba(16, 185, 129, 0.12)" : "rgba(255,255,255,0.04)",
+                padding: "2px 8px",
+                borderRadius: "12px",
+                border: period === "1D" ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(255,255,255,0.08)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+              }}
+              title={
+                period === "1D"
+                  ? "Actualización en vivo cada 1 minuto (barras horarias de 9:30 a 16:00 ET)"
+                  : "Actualización de cierre automático cada 1 hora"
+              }
+            >
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  backgroundColor: period === "1D" ? "#10b981" : "#64748b",
+                  display: "inline-block",
+                  animation: period === "1D" ? "pulse 2s infinite" : "none",
+                }}
+              />
+              {period === "1D" ? "En vivo (1m)" : "Auto-actualización (1h)"}
+              {isNavLoading && " ⏳"}
+            </span>
+          </div>
           <div
             className="period-selector"
             style={{ margin: 0, padding: 0, background: "transparent" }}
@@ -1298,11 +1474,15 @@ export default function DynamicStrategyView({
           </div>
         </div>
         <StrategyChart
-                  strategy={strategy}
-                  activeInvested={activeInvested}
-                  period={period}
-                  firstInvestDate={firstInvestDate}
-                />
+          strategy={strategy}
+          activeInvested={activeInvested}
+          period={period}
+          firstInvestDate={effectiveFirstInvestDate}
+          rebalances={rebalances}
+          slotValue={slotValue}
+          targetReturns={currentReturns}
+          navData={navData}
+        />
       </div>
 
       {/* ── Constellation Grid Visualizer (Slots) ────── */}
@@ -1405,12 +1585,32 @@ export default function DynamicStrategyView({
 
                 {isOccupied ? (
                   <>
-                    <strong
-                      className="mono"
-                      style={{ fontSize: "1.05rem", color: strategy.color, lineHeight: 1.1 }}
-                    >
-                      {ticker}
-                    </strong>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4 }}>
+                      <strong
+                        className="mono"
+                        style={{ fontSize: "1.05rem", color: strategy.color, lineHeight: 1.1 }}
+                      >
+                        {ticker}
+                      </strong>
+                      {tickerMetadata[ticker]?.market_open !== undefined && (
+                        <span
+                          title={
+                            tickerMetadata[ticker].market_open
+                              ? `Mercado Abierto (${tickerMetadata[ticker]?.exchange || "US"})`
+                              : `Mercado Cerrado (${tickerMetadata[ticker]?.exchange || "US"})`
+                          }
+                          style={{
+                            width: 7,
+                            height: 7,
+                            borderRadius: "50%",
+                            background: tickerMetadata[ticker].market_open ? "#22c55e" : "#ef4444",
+                            boxShadow: tickerMetadata[ticker].market_open ? "0 0 6px #22c55e" : "none",
+                            display: "inline-block",
+                            flexShrink: 0,
+                          }}
+                        />
+                      )}
+                    </div>
                     {tickerMetadata[ticker] && (
                       <div
                         style={{

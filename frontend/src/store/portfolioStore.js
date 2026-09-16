@@ -14,6 +14,7 @@ import {
   fetchCustomStrategiesApi,
   fetchHistoricalPrice,
   fetchPurchasesData,
+  fetchRebalances,
   saveCustomStrategyApi,
   syncPurchasesMigration,
   togglePortfolioPlanApi,
@@ -46,18 +47,18 @@ export const usePortfolioStore = create(
         historical: {
           tickers: DEFAULT_TICKERS,
           investment: 2000,
-          period: "1Y",
+          period: "3M",
           numSlots: 15,
         },
         live: {
           tickers: DEFAULT_TICKERS,
           investment: 2000,
-          period: "1Y",
+          period: "3M",
           numSlots: 15,
         },
       },
       mode: "historical", // 'historical' | 'live' | custom strategy ID
-      period: "1Y", // Shared top-level period for backward compatibility with StrategyChart and DynamicStrategyView
+      period: "3M", // Shared top-level period for backward compatibility with StrategyChart and DynamicStrategyView
       visibleSeries: {
         nav: true,
         sp500: true,
@@ -355,10 +356,24 @@ export const usePortfolioStore = create(
                   };
                 }
               });
+              const allStrats = mergedStrats;
               return {
                 customStrategies: mergedStrats,
                 settingsByMode: updatedSettings,
               };
+            });
+
+            // Pre-fetch rebalances for all custom strategies asynchronously to populate active tickers
+            const strats = get().customStrategies;
+            strats.forEach(async (st) => {
+              try {
+                const rebs = await fetchRebalances(st.id);
+                if (Array.isArray(rebs) && rebs.length > 0) {
+                  get().setStrategyRebalances(st.id, rebs);
+                }
+              } catch (err) {
+                console.warn(`Could not pre-fetch rebalances for ${st.id}`, err);
+              }
             });
           }
         } catch (e) {

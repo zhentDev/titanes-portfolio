@@ -18,6 +18,8 @@ backend/.ruff_cache/
 # Database
 backend/*.duckdb.wal
 backend/titanes_backup.duckdb
+backend/data/*.duckdb
+backend/*.db
 
 # Environment & AI tools
 .env

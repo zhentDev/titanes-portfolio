@@ -1,99 +1,89 @@
 {
   "activePeriod": "2026-08",
+  "startPeriod": "2026-08",
   "currency": "COP",
   "allocationModel": "custom",
   "customRatios": {
     "needs": 35.0,
-    "wants": 20.0,
-    "savings": 45.0
+    "wants": 30.0,
+    "savings": 35.0
   },
   "emergencyFundTargetMonths": 6,
   "inflows": [
     {
-      "id": "in_salary_base",
-      "name": "Salario Básico Neto (M010)",
+      "id": "in_salary",
+      "name": "Salario Neto (Nómina)",
       "category": "salary",
-      "amount": 3481490.0,
+      "amount": 3662854.0,
       "currency": "COP",
       "isPassive": false,
       "frequency": "monthly",
       "icon": "💼",
-      "createdAt": "2026-08-27T10:00:00.000Z"
-    },
-    {
-      "id": "in_salary_overtime",
-      "name": "Horas Extras Nocturnas (1M80 / 1M30)",
-      "category": "overtime",
-      "amount": 181364.0,
-      "currency": "COP",
-      "isPassive": false,
-      "frequency": "monthly",
-      "icon": "🌙",
-      "createdAt": "2026-08-27T10:00:00.000Z"
+      "createdAt": "2026-09-03T13:59:47.680Z"
     },
     {
       "id": "in_fixed_yield",
       "name": "Rendimientos Cajitas Nu & CDTs",
       "category": "passive_fixed",
-      "amount": 16705.0,
+      "amount": 17396.0,
       "currency": "COP",
       "isPassive": true,
       "frequency": "monthly",
       "icon": "⚡",
-      "createdAt": "2026-08-27T10:00:00.000Z"
+      "createdAt": "2026-09-03T13:59:47.680Z"
     },
     {
       "id": "in_stock_div",
       "name": "Dividendos Titanes Tech ETF",
       "category": "passive_equity",
-      "amount": 10675.0,
+      "amount": 10362.0,
       "currency": "COP",
       "isPassive": true,
       "frequency": "monthly",
       "icon": "📈",
-      "createdAt": "2026-08-27T10:00:00.000Z"
+      "createdAt": "2026-09-03T13:59:47.680Z"
     }
   ],
   "needs": [
     {
-      "id": "need_1787952200114_hzal",
-      "name": "Familia",
-      "category": "housing",
-      "amount": 200000.0,
-      "currency": "COP",
-      "dueDate": null,
-      "icon": "🏠",
-      "createdAt": "2026-08-28T21:23:20.114Z"
-    },
-    {
       "id": "need_housing",
       "name": "Arriendo / Vivienda & Admin",
       "category": "housing",
-      "amount": 450000.0,
+      "amount": 1200000.0,
       "currency": "COP",
       "dueDate": null,
       "icon": "🏠",
-      "createdAt": "2026-08-27T10:00:00.000Z"
+      "createdAt": "2026-09-03T13:59:47.680Z"
     },
     {
       "id": "need_utilities",
       "name": "Servicios Públicos, Luz & Fibra Óptica",
       "category": "utilities",
-      "amount": 150000.0,
+      "amount": 280000.0,
       "currency": "COP",
       "dueDate": null,
       "icon": "💡",
-      "createdAt": "2026-08-27T10:00:00.000Z"
+      "createdAt": "2026-09-03T13:59:47.680Z"
     },
     {
       "id": "need_groceries",
       "name": "Alimentación & Supermercado",
       "category": "groceries",
-      "amount": 400000.0,
+      "amount": 700000.0,
       "currency": "COP",
       "dueDate": null,
       "icon": "🛒",
-      "createdAt": "2026-08-27T10:00:00.000Z"
+      "createdAt": "2026-09-03T13:59:47.680Z"
+    },
+    {
+      "id": "need_health_transport",
+      "name": "Salud, EPS & Transporte",
+      "category": "health_transport",
+      "amount": 320000.0,
+      "currency": "COP",
+      "dueDate": null,
+      "icon": "🏥",
+      "createdAt": "2026-09-03T13:59:47.680Z"
     }
   ],
   "wants": [
@@ -104,7 +94,7 @@
       "amount": 350000.0,
       "currency": "COP",
       "icon": "🍷",
-      "createdAt": "2026-08-27T10:00:00.000Z"
+      "createdAt": "2026-09-03T13:59:47.680Z"
     },
     {
       "id": "want_subs",
@@ -113,7 +103,7 @@
       "amount": 150000.0,
       "currency": "COP",
       "icon": "🍿",
-      "createdAt": "2026-08-27T10:00:00.000Z"
+      "createdAt": "2026-09-03T13:59:47.680Z"
     },
     {
       "id": "want_leisure",
@@ -122,7 +112,7 @@
       "amount": 200000.0,
       "currency": "COP",
       "icon": "🎮",
-      "createdAt": "2026-08-27T10:00:00.000Z"
+      "createdAt": "2026-09-03T13:59:47.680Z"
     }
   ],
   "wealth": [
@@ -132,23 +122,23 @@
       "category": "emergency_fund",
       "targetAmount": 15000000.0,
       "monthlyContribution": 500000.0,
-      "currentBalance": 2793948.0,
+      "currentBalance": 3075449.0,
       "currency": "COP",
       "linkedModule": "fixed_income",
       "icon": "🛡️",
-      "createdAt": "2026-08-27T10:00:00.000Z"
+      "createdAt": "2026-09-03T13:59:47.680Z"
     },
     {
       "id": "wealth_tech_etf",
       "name": "Aporte Titanes Tech ETF (15 Acciones)",
       "category": "equity_investment",
       "targetAmount": 30000000.0,
-      "monthlyContribution": 350000.0,
-      "currentBalance": 6404960.0,
+      "monthlyContribution": 500000.0,
+      "currentBalance": 6217100.0,
       "currency": "COP",
       "linkedModule": "variable_income",
       "icon": "🚀",
-      "createdAt": "2026-08-27T10:00:00.000Z"
+      "createdAt": "2026-09-03T13:59:47.680Z"
     },
     {
       "id": "wealth_high_yield",
@@ -156,11 +146,11 @@
       "category": "fixed_savings",
       "targetAmount": 15000000.0,
       "monthlyContribution": 300000.0,
-      "currentBalance": 2793948.0,
+      "currentBalance": 3075449.0,
       "currency": "COP",
       "linkedModule": "fixed_income",
       "icon": "🏦",
-      "createdAt": "2026-08-27T10:00:00.000Z"
+      "createdAt": "2026-09-03T13:59:47.680Z"
     },
     {
       "id": "wealth_travel_goal",
@@ -172,20 +162,10 @@
       "currency": "COP",
       "linkedModule": "custom",
       "icon": "✈️",
-      "createdAt": "2026-08-27T10:00:00.000Z"
+      "createdAt": "2026-09-03T13:59:47.680Z"
     }
   ],
-  "payrollAccount": {
-    "entityId": "nu",
-    "name": "Nu Colombia (Cuenta Nu Débito)",
-    "accountType": "Ahorros / Débito",
-    "accountNumber": "*1234",
-    "color": "#820ad1",
-    "icon": "💜",
-    "payDay": 25,
-    "targetCycle": "next_month",
-    "paymentFrequency": "monthly"
-  },
+  "expensesLog": [],
   "creditCards": [
     {
       "id": "cc_nu",
@@ -200,7 +180,7 @@
       "rateEA": 24.5,
       "currency": "COP",
       "cardType": "Gold / Platinum",
-      "createdAt": "2026-08-27T10:00:00.000Z"
+      "createdAt": "2026-09-03T13:59:47.680Z"
     },
     {
       "id": "cc_rappi",
@@ -209,654 +189,27 @@
       "color": "#ff441f",
       "icon": "🧡",
       "totalLimit": 2350000,
-      "usedLimit": 2026430,
+      "usedLimit": 2004157,
       "closingDay": 20,
       "paymentDay": 5,
       "rateEA": 24,
       "currency": "COP",
       "cardType": "Cashback / MSI",
-      "createdAt": "2026-08-27T10:00:00.000Z"
+      "createdAt": "2026-09-03T13:59:47.680Z"
     }
   ],
-  "creditPurchases": [],
-  "expensesLog": [
-    {
-      "id": "tx_1787953028511",
-      "period": "2026-08",
-      "budgetItemId": "need_groceries",
-      "budgetItemName": "Alimentación & Supermercado",
-      "budgetItemType": "needs",
-      "description": "Alimentación & Supermercado",
-      "amount": 14810,
-      "currency": "COP",
-      "date": "2026-08-27",
-      "paymentSource": {
-        "type": "credit_card",
-        "targetId": "cc_rappi",
-        "targetName": "RappiCard Visa (MSI) (1 cuota 0%)",
-        "installments": 1
-      },
-      "isLoan": false,
-      "loanRecipient": null,
-      "loanAmount": null,
-      "loanDueDate": null,
-      "loanStatus": null,
-      "createdAt": "2026-08-28T21:37:08.511Z"
-    },
-    {
-      "id": "tx_1787952955096",
-      "period": "2026-08",
-      "budgetItemId": "need_groceries",
-      "budgetItemName": "Alimentación & Supermercado",
-      "budgetItemType": "needs",
-      "description": "Alimentación & Supermercado",
-      "amount": 14180,
-      "currency": "COP",
-      "date": "2026-08-27",
-      "paymentSource": {
-        "type": "credit_card",
-        "targetId": "cc_rappi",
-        "targetName": "RappiCard Visa (MSI) (1 cuota 0%)",
-        "installments": 1
-      },
-      "isLoan": false,
-      "loanRecipient": null,
-      "loanAmount": null,
-      "loanDueDate": null,
-      "loanStatus": null,
-      "createdAt": "2026-08-28T21:35:55.096Z"
-    },
-    {
-      "id": "tx_1787952677638",
-      "period": "2026-08",
-      "budgetItemId": "want_dining",
-      "budgetItemName": "Restaurantes, Cafés & Salidas",
-      "budgetItemType": "wants",
-      "description": "Restaurantes, Cafés & Salidas",
-      "amount": 52500,
-      "currency": "COP",
-      "date": "2026-08-27",
-      "paymentSource": {
-        "type": "payroll",
-        "targetName": "Nu Colombia (Cuenta Nu Débito)"
-      },
-      "isLoan": false,
-      "loanRecipient": null,
-      "loanAmount": null,
-      "loanDueDate": null,
-      "loanStatus": null,
-      "createdAt": "2026-08-28T21:31:17.638Z"
-    },
-    {
-      "id": "tx_1787952622067",
-      "period": "2026-08",
-      "budgetItemId": "need_groceries",
-      "budgetItemName": "Alimentación & Supermercado",
-      "budgetItemType": "needs",
-      "description": "Alimentación & Supermercado",
-      "amount": 48350,
-      "currency": "COP",
-      "date": "2026-08-27",
-      "paymentSource": {
-        "type": "payroll",
-        "targetName": "Nu Colombia (Cuenta Nu Débito)"
-      },
-      "isLoan": false,
-      "loanRecipient": null,
-      "loanAmount": null,
-      "loanDueDate": null,
-      "loanStatus": null,
-      "createdAt": "2026-08-28T21:30:22.067Z"
-    },
-    {
-      "id": "tx_1787952495994",
-      "period": "2026-08",
-      "budgetItemId": "need_utilities",
-      "budgetItemName": "Servicios Públicos, Luz & Fibra Óptica",
-      "budgetItemType": "needs",
-      "description": "Servicios Públicos, Luz & Fibra Óptica",
-      "amount": 79910,
-      "currency": "COP",
-      "date": "2026-08-26",
-      "paymentSource": {
-        "type": "payroll",
-        "targetName": "Nu Colombia (Cuenta Nu Débito)"
-      },
-      "isLoan": true,
-      "loanRecipient": "Vecino-luz-aseo",
-      "loanAmount": 79910,
-      "loanDueDate": null,
-      "loanStatus": "pending",
-      "createdAt": "2026-08-28T21:28:15.994Z"
-    },
-    {
-      "id": "tx_1787952445574",
-      "period": "2026-08",
-      "budgetItemId": "wealth_high_yield",
-      "budgetItemName": "Ahorro Alto Rendimiento (Nu / Plenti / CDTs)",
-      "budgetItemType": "wealth",
-      "description": "Ahorro Alto Rendimiento (Nu / Plenti / CDTs)",
-      "amount": 250000,
-      "currency": "COP",
-      "date": "2026-08-26",
-      "paymentSource": {
-        "type": "payroll",
-        "targetName": "Nu Colombia (Cuenta Nu Débito)"
-      },
-      "isLoan": false,
-      "loanRecipient": null,
-      "loanAmount": null,
-      "loanDueDate": null,
-      "loanStatus": null,
-      "createdAt": "2026-08-28T21:27:25.574Z"
-    },
-    {
-      "id": "tx_1787952247551",
-      "period": "2026-08",
-      "budgetItemId": "need_1787952200114_hzal",
-      "budgetItemName": "Familia",
-      "budgetItemType": "needs",
-      "description": "Familia",
-      "amount": 175000,
-      "currency": "COP",
-      "date": "2026-08-18",
-      "paymentSource": {
-        "type": "fixed_pocket",
-        "targetId": "acc_estudios",
-        "targetName": "Cajita Estudios"
-      },
-      "isLoan": false,
-      "loanRecipient": null,
-      "loanAmount": null,
-      "loanDueDate": null,
-      "loanStatus": null,
-      "createdAt": "2026-08-28T21:24:07.551Z"
-    },
-    {
-      "id": "tx_1787952097462",
-      "period": "2026-08",
-      "budgetItemId": "want_dining",
-      "budgetItemName": "Restaurantes, Cafés & Salidas",
-      "budgetItemType": "wants",
-      "description": "Restaurantes, Cafés & Salidas",
-      "amount": 100000,
-      "currency": "COP",
-      "date": "2026-08-15",
-      "paymentSource": {
-        "type": "fixed_pocket",
-        "targetId": "acc_viaje",
-        "targetName": "Cajita Viaje"
-      },
-      "isLoan": true,
-      "loanRecipient": "Amiga",
-      "loanAmount": 100000,
-      "loanDueDate": null,
-      "loanStatus": "pending",
-      "createdAt": "2026-08-28T21:21:37.463Z"
-    },
-    {
-      "id": "tx_1787951913568",
-      "period": "2026-08",
-      "budgetItemId": "want_subs",
-      "budgetItemName": "Suscripciones (Netflix, Spotify, Gym)",
-      "budgetItemType": "wants",
-      "description": "Suscripciones (Netflix, Spotify, Gym)",
-      "amount": 83000,
-      "currency": "COP",
-      "date": "2026-08-25",
-      "paymentSource": {
-        "type": "payroll",
-        "targetName": "Nu Colombia (Cuenta Nu Débito)"
-      },
-      "isLoan": false,
-      "loanRecipient": null,
-      "loanAmount": null,
-      "loanDueDate": null,
-      "loanStatus": null,
-      "createdAt": "2026-08-28T21:18:33.568Z"
-    },
-    {
-      "id": "tx_1787951879067",
-      "period": "2026-08",
-      "budgetItemId": "want_subs",
-      "budgetItemName": "Suscripciones (Netflix, Spotify, Gym)",
-      "budgetItemType": "wants",
-      "description": "Suscripciones (Netflix, Spotify, Gym)",
-      "amount": 166000,
-      "currency": "COP",
-      "date": "2026-08-26",
-      "paymentSource": {
-        "type": "payroll",
-        "targetName": "Nu Colombia (Cuenta Nu Débito)"
-      },
-      "isLoan": true,
-      "loanRecipient": "Amigos",
-      "loanAmount": 166000,
-      "loanDueDate": null,
-      "loanStatus": "pending",
-      "createdAt": "2026-08-28T21:17:59.067Z"
-    },
-    {
-      "id": "tx_arriendo",
-      "period": "2026-08",
-      "budgetItemId": "need_housing",
-      "budgetItemName": "Arriendo / Vivienda & Admin",
-      "budgetItemType": "needs",
-      "description": "Pago Administración y Arriendo",
-      "amount": 450000,
-      "currency": "COP",
-      "date": "2026-08-05",
-      "paymentSource": {
-        "type": "payroll",
-        "targetName": "Nu Colombia (Cuenta Nu Débito)"
-      },
-      "createdAt": "2026-08-05T12:00:00.000Z"
-    },
-    {
-      "id": "tx_internet",
-      "period": "2026-08",
-      "budgetItemId": "need_utilities",
-      "budgetItemName": "Servicios Públicos, Luz & Fibra Óptica",
-      "budgetItemType": "needs",
-      "description": "Internet Fibra Movistar",
-      "amount": 67893,
-      "currency": "COP",
-      "date": "2026-08-12",
-      "paymentSource": {
-        "type": "payroll",
-        "targetName": "Nu Colombia (Cuenta Nu Débito)"
-      },
-      "createdAt": "2026-08-12T12:00:00.000Z"
-    },
-    {
-      "id": "tx_1787780990660",
-      "period": "2026-08",
-      "budgetItemId": "want_dining",
-      "budgetItemName": "Restaurantes, Cafés & Salidas",
-      "budgetItemType": "wants",
-      "description": "Vuelos de vuelta SM",
-      "amount": 604552,
-      "currency": "COP",
-      "date": "2026-08-26",
-      "paymentSource": {
-        "type": "credit_card",
-        "targetId": "cc_rappi",
-        "targetName": "RappiCard Visa (MSI) (1 cuota 0%)",
-        "installments": 1
-      },
-      "isLoan": true,
-      "loanRecipient": "Compañeros de viaje",
-      "loanAmount": 404552,
-      "loanStatus": "pending",
-      "createdAt": "2026-08-26T21:49:50.660Z"
-    }
-  ],
-  "creditCardPayments": [
-    {
-      "id": "pay_1787952363386",
-      "cardId": "cc_rappi",
-      "cardName": "RappiCard Visa (MSI)",
-      "amount": 417121,
-      "currency": "COP",
-      "date": "2026-08-25",
-      "period": "2026-08",
-      "sourceType": "payroll",
-      "sourceAccount": "Nu Colombia (Cuenta Nu Débito)",
-      "description": "Pago mensual factura tarjeta",
-      "createdAt": "2026-08-28T21:26:03.386Z"
-    }
-  ],
-  "periodsData": {
-    "2026-08": {
-      "inflows": [
-        {
-          "id": "in_salary_base",
-          "name": "Salario Básico Neto (M010)",
-          "category": "salary",
-          "amount": 3481490,
-          "currency": "COP",
-          "isPassive": false,
-          "frequency": "monthly",
-          "icon": "💼",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        },
-        {
-          "id": "in_salary_overtime",
-          "name": "Horas Extras Nocturnas (1M80 / 1M30)",
-          "category": "overtime",
-          "amount": 181364,
-          "currency": "COP",
-          "isPassive": false,
-          "frequency": "monthly",
-          "icon": "🌙",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        },
-        {
-          "id": "in_fixed_yield",
-          "name": "Rendimientos Cajitas Nu & CDTs",
-          "category": "passive_fixed",
-          "amount": 17484,
-          "currency": "COP",
-          "isPassive": true,
-          "frequency": "monthly",
-          "icon": "⚡",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        },
-        {
-          "id": "in_stock_div",
-          "name": "Dividendos Titanes Tech ETF",
-          "category": "passive_equity",
-          "amount": 10675,
-          "currency": "COP",
-          "isPassive": true,
-          "frequency": "monthly",
-          "icon": "📈",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        }
-      ],
-      "needs": [
-        {
-          "id": "need_1787952200114_hzal",
-          "name": "Familia",
-          "category": "housing",
-          "amount": 200000,
-          "currency": "COP",
-          "dueDate": null,
-          "icon": "🏠",
-          "createdAt": "2026-08-28T21:23:20.114Z"
-        },
-        {
-          "id": "need_housing",
-          "name": "Arriendo / Vivienda & Admin",
-          "category": "housing",
-          "amount": 450000,
-          "currency": "COP",
-          "dueDate": null,
-          "icon": "🏠",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        },
-        {
-          "id": "need_utilities",
-          "name": "Servicios Públicos, Luz & Fibra Óptica",
-          "category": "utilities",
-          "amount": 150000,
-          "currency": "COP",
-          "dueDate": null,
-          "icon": "💡",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        },
-        {
-          "id": "need_groceries",
-          "name": "Alimentación & Supermercado",
-          "category": "groceries",
-          "amount": 400000,
-          "currency": "COP",
-          "dueDate": null,
-          "icon": "🛒",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        }
-      ],
-      "wants": [
-        {
-          "id": "want_dining",
-          "name": "Restaurantes, Cafés & Salidas",
-          "category": "dining",
-          "amount": 350000,
-          "currency": "COP",
-          "icon": "🍷",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        },
-        {
-          "id": "want_subs",
-          "name": "Suscripciones (Netflix, Spotify, Gym)",
-          "category": "subscriptions",
-          "amount": 150000,
-          "currency": "COP",
-          "icon": "🍿",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        },
-        {
-          "id": "want_leisure",
-          "name": "Ocio, Hobbies & Compras",
-          "category": "leisure",
-          "amount": 200000,
-          "currency": "COP",
-          "icon": "🎮",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        }
-      ],
-      "wealth": [
-        {
-          "id": "wealth_emergency",
-          "name": "Fondo de Emergencia (6 Meses)",
-          "category": "emergency_fund",
-          "targetAmount": 15000000,
-          "monthlyContribution": 500000,
-          "currentBalance": 3083990,
-          "currency": "COP",
-          "linkedModule": "fixed_income",
-          "icon": "🛡️",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        },
-        {
-          "id": "wealth_tech_etf",
-          "name": "Aporte Titanes Tech ETF (15 Acciones)",
-          "category": "equity_investment",
-          "targetAmount": 30000000,
-          "monthlyContribution": 350000,
-          "currentBalance": 6404960,
-          "currency": "COP",
-          "linkedModule": "variable_income",
-          "icon": "🚀",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        },
-        {
-          "id": "wealth_high_yield",
-          "name": "Ahorro Alto Rendimiento (Nu / Plenti / CDTs)",
-          "category": "fixed_savings",
-          "targetAmount": 15000000,
-          "monthlyContribution": 300000,
-          "currentBalance": 3083990,
-          "currency": "COP",
-          "linkedModule": "fixed_income",
-          "icon": "🏦",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        },
-        {
-          "id": "wealth_travel_goal",
-          "name": "Meta Viaje / Estudio",
-          "category": "medium_term_goal",
-          "targetAmount": 8000000,
-          "monthlyContribution": 150000,
-          "currentBalance": 1500000,
-          "currency": "COP",
-          "linkedModule": "custom",
-          "icon": "✈️",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        }
-      ],
-      "customRatios": {
-        "needs": 35,
-        "wants": 20,
-        "savings": 45
-      },
-      "allocationModel": "custom"
-    },
-    "2026-09": {
-      "inflows": [
-        {
-          "id": "in_salary_base",
-          "name": "Salario Básico Neto (M010)",
-          "category": "salary",
-          "amount": 3481490,
-          "currency": "COP",
-          "isPassive": false,
-          "frequency": "monthly",
-          "icon": "💼",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        },
-        {
-          "id": "in_salary_overtime",
-          "name": "Horas Extras Nocturnas (1M80 / 1M30)",
-          "category": "overtime",
-          "amount": 181364,
-          "currency": "COP",
-          "isPassive": false,
-          "frequency": "monthly",
-          "icon": "🌙",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        },
-        {
-          "id": "in_fixed_yield",
-          "name": "Rendimientos Cajitas Nu & CDTs",
-          "category": "passive_fixed",
-          "amount": 17484,
-          "currency": "COP",
-          "isPassive": true,
-          "frequency": "monthly",
-          "icon": "⚡",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        },
-        {
-          "id": "in_stock_div",
-          "name": "Dividendos Titanes Tech ETF",
-          "category": "passive_equity",
-          "amount": 10675,
-          "currency": "COP",
-          "isPassive": true,
-          "frequency": "monthly",
-          "icon": "📈",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        }
-      ],
-      "needs": [
-        {
-          "id": "need_1787952200114_hzal",
-          "name": "Familia",
-          "category": "housing",
-          "amount": 200000,
-          "currency": "COP",
-          "dueDate": null,
-          "icon": "🏠",
-          "createdAt": "2026-08-28T21:23:20.114Z"
-        },
-        {
-          "id": "need_housing",
-          "name": "Arriendo / Vivienda & Admin",
-          "category": "housing",
-          "amount": 450000,
-          "currency": "COP",
-          "dueDate": null,
-          "icon": "🏠",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        },
-        {
-          "id": "need_utilities",
-          "name": "Servicios Públicos, Luz & Fibra Óptica",
-          "category": "utilities",
-          "amount": 150000,
-          "currency": "COP",
-          "dueDate": null,
-          "icon": "💡",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        },
-        {
-          "id": "need_groceries",
-          "name": "Alimentación & Supermercado",
-          "category": "groceries",
-          "amount": 400000,
-          "currency": "COP",
-          "dueDate": null,
-          "icon": "🛒",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        }
-      ],
-      "wants": [
-        {
-          "id": "want_dining",
-          "name": "Restaurantes, Cafés & Salidas",
-          "category": "dining",
-          "amount": 350000,
-          "currency": "COP",
-          "icon": "🍷",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        },
-        {
-          "id": "want_subs",
-          "name": "Suscripciones (Netflix, Spotify, Gym)",
-          "category": "subscriptions",
-          "amount": 150000,
-          "currency": "COP",
-          "icon": "🍿",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        },
-        {
-          "id": "want_leisure",
-          "name": "Ocio, Hobbies & Compras",
-          "category": "leisure",
-          "amount": 200000,
-          "currency": "COP",
-          "icon": "🎮",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        }
-      ],
-      "wealth": [
-        {
-          "id": "wealth_emergency",
-          "name": "Fondo de Emergencia (6 Meses)",
-          "category": "emergency_fund",
-          "targetAmount": 15000000,
-          "monthlyContribution": 500000,
-          "currentBalance": 3083990,
-          "currency": "COP",
-          "linkedModule": "fixed_income",
-          "icon": "🛡️",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        },
-        {
-          "id": "wealth_tech_etf",
-          "name": "Aporte Titanes Tech ETF (15 Acciones)",
-          "category": "equity_investment",
-          "targetAmount": 30000000,
-          "monthlyContribution": 350000,
-          "currentBalance": 6404960,
-          "currency": "COP",
-          "linkedModule": "variable_income",
-          "icon": "🚀",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        },
-        {
-          "id": "wealth_high_yield",
-          "name": "Ahorro Alto Rendimiento (Nu / Plenti / CDTs)",
-          "category": "fixed_savings",
-          "targetAmount": 15000000,
-          "monthlyContribution": 300000,
-          "currentBalance": 3083990,
-          "currency": "COP",
-          "linkedModule": "fixed_income",
-          "icon": "🏦",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        },
-        {
-          "id": "wealth_travel_goal",
-          "name": "Meta Viaje / Estudio",
-          "category": "medium_term_goal",
-          "targetAmount": 8000000,
-          "monthlyContribution": 150000,
-          "currentBalance": 1500000,
-          "currency": "COP",
-          "linkedModule": "custom",
-          "icon": "✈️",
-          "createdAt": "2026-08-27T10:00:00.000Z"
-        }
-      ],
-      "customRatios": {
-        "needs": 35,
-        "wants": 20,
-        "savings": 45
-      },
-      "allocationModel": "custom"
-    }
+  "creditCardPayments": [],
+  "periodsData": {},
+  "payrollAccount": {
+    "entityId": "nu",
+    "name": "Nu Colombia (Cuenta Nu Débito)",
+    "accountType": "Ahorros / Débito",
+    "accountNumber": "*1234",
+    "color": "#820ad1",
+    "icon": "💜",
+    "payDay": 25,
+    "targetCycle": "next_month",
+    "paymentFrequency": "monthly"
   },
-  "startPeriod": "2026-08"
+  "creditPurchases": []
 }

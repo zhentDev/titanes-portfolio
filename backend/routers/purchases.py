@@ -37,6 +37,7 @@ class PurchaseLot(BaseModel):
     purchasePrice: float
     shares: float
     manualCurrentPrice: Optional[float] = None
+    purchaseTime: Optional[str] = None
 
 
 class SyncPayload(BaseModel):
@@ -51,7 +52,7 @@ def get_all_purchases_data():
             "SELECT id, name, is_plan, plan_config, asset_currency, local_currency, annual_inflation_rate, use_auto_col_inflation FROM purchase_portfolios"
         ).fetchall()
         lots = con.execute(
-            "SELECT id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price FROM individual_purchases"
+            "SELECT id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price, purchase_time FROM individual_purchases"
         ).fetchall()
 
         return {
@@ -77,6 +78,7 @@ def get_all_purchases_data():
                     "purchasePrice": lot[4],
                     "shares": lot[5],
                     "manualCurrentPrice": lot[6],
+                    "purchaseTime": lot[7] if len(lot) > 7 else None,
                 }
                 for lot in lots
             ],
@@ -167,15 +169,16 @@ def create_lot(lot: PurchaseLot):
         con.execute(
             """
             INSERT INTO individual_purchases 
-            (id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            (id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price, purchase_time) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (id) DO UPDATE SET 
                 portfolio_id=EXCLUDED.portfolio_id,
                 ticker=EXCLUDED.ticker,
                 date=EXCLUDED.date,
                 purchase_price=EXCLUDED.purchase_price,
                 shares=EXCLUDED.shares,
-                manual_current_price=EXCLUDED.manual_current_price
+                manual_current_price=EXCLUDED.manual_current_price,
+                purchase_time=EXCLUDED.purchase_time
             """,
             [
                 lot.id,
@@ -185,6 +188,7 @@ def create_lot(lot: PurchaseLot):
                 lot.purchasePrice,
                 lot.shares,
                 lot.manualCurrentPrice,
+                lot.purchaseTime,
             ],
         )
     return {"success": True}
@@ -197,7 +201,7 @@ def update_lots(lots: List[PurchaseLot]):
             con.execute(
                 """
                 UPDATE individual_purchases 
-                SET portfolio_id=?, ticker=?, date=?, purchase_price=?, shares=?, manual_current_price=?
+                SET portfolio_id=?, ticker=?, date=?, purchase_price=?, shares=?, manual_current_price=?, purchase_time=?
                 WHERE id=?
                 """,
                 [
@@ -207,6 +211,7 @@ def update_lots(lots: List[PurchaseLot]):
                     lot.purchasePrice,
                     lot.shares,
                     lot.manualCurrentPrice,
+                    lot.purchaseTime,
                     lot.id,
                 ],
             )
@@ -233,8 +238,8 @@ def sync_migration(payload: SyncPayload):
             con.execute(
                 """
                 INSERT INTO individual_purchases 
-                (id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                (id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price, purchase_time) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (id) DO NOTHING
                 """,
                 [
@@ -245,6 +250,7 @@ def sync_migration(payload: SyncPayload):
                     lot.purchasePrice,
                     lot.shares,
                     lot.manualCurrentPrice,
+                    lot.purchaseTime,
                 ],
             )
     return {

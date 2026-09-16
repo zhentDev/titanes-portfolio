@@ -162,6 +162,44 @@ export default function HoldingsTable({
                         >
                           {h.exchange || "US"}
                         </span>
+                        {h.market_open !== undefined && (
+                          <span
+                            style={{
+                              fontSize: "0.62rem",
+                              padding: "1px 5px",
+                              borderRadius: "10px",
+                              background: h.market_open
+                                ? "rgba(34, 197, 94, 0.12)"
+                                : "rgba(239, 68, 68, 0.12)",
+                              border: `1px solid ${
+                                h.market_open
+                                  ? "rgba(34, 197, 94, 0.25)"
+                                  : "rgba(239, 68, 68, 0.25)"
+                              }`,
+                              color: h.market_open ? "#4ade80" : "#f87171",
+                              fontWeight: 600,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "3px",
+                            }}
+                            title={
+                              h.market_open
+                                ? `Mercado abierto (${h.exchange || "US"})`
+                                : `Mercado cerrado (${h.exchange || "US"})`
+                            }
+                          >
+                            <span
+                              style={{
+                                width: 4,
+                                height: 4,
+                                borderRadius: "50%",
+                                background: h.market_open ? "#22c55e" : "#ef4444",
+                                boxShadow: h.market_open ? "0 0 4px #22c55e" : "none",
+                              }}
+                            />
+                            {h.market_open ? "Abierto" : "Cerrado"}
+                          </span>
+                        )}
                       </div>
                       <span
                         style={{

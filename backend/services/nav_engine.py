@@ -17,6 +17,7 @@ def calculate_nav(
     investment: float = 2000.0,
     num_slots: int = 15,
     selected_tickers: list[str] | None = None,
+    strategy_id: str = "historical",
 ) -> dict:
     """
     Calculate portfolio NAV using DuckDB rebalance history.
@@ -27,7 +28,7 @@ def calculate_nav(
 
     prices_df = prices_df.clone() if hasattr(prices_df, "clone") else prices_df
 
-    rebalances = get_all_rebalances()
+    rebalances = get_all_rebalances(strategy_id=strategy_id)
     if not rebalances:
         return _empty_response(investment)
 
@@ -60,25 +61,64 @@ def calculate_nav(
         if has_any_stock.any():
             prices_pd = prices_pd[has_any_stock]
 
-    prices_pd["date_str"] = prices_pd["date"].astype(str).str[:10]
+    # Detect if data is intraday (numeric UNIX timestamp integer, e.g. for 1D chart)
+    is_intraday = prices_df["date"].dtype.is_numeric()
+
+    if is_intraday:
+        prices_pd["date_str"] = prices_pd["date"].astype(str)
+    else:
+        # Guarantee YYYY-MM-DD string format (first 10 chars)
+        prices_pd["date_str"] = prices_pd["date"].astype(str).str[:10]
     prices_pd.set_index("date_str", inplace=True)
 
     # Prepare effective rebalances list
     first_hist_date = str(prices_pd.index[0])
     effective_rebalances = [dict(r) for r in rebalances]
 
-    # Effective start of the strategy series: first trading day >= first rebalance date
-    first_rb_date = effective_rebalances[0]["date"] if effective_rebalances else first_hist_date
-    series_start = first_hist_date
-    if effective_rebalances:
-        for _d in prices_pd.index:
-            if str(_d) >= first_rb_date:
-                series_start = str(_d)
-                break
+    # Effective start of the strategy series:
+    # For intraday (1D), the whole day is traded under the latest rebalance.
+    if is_intraday:
+        series_start = first_hist_date
+    else:
+        first_rb_date = effective_rebalances[0]["date"] if effective_rebalances else first_hist_date
+        series_start = first_hist_date
+        if effective_rebalances:
+            for _d in prices_pd.index:
+                if str(_d)[:10] >= first_rb_date:
+                    series_start = str(_d)[:10]
+                    break
 
-    # We will simulate day by day
+    # We will simulate step by step (day by day or hour by hour)
     rebalance_idx = 0
     next_rebalance = effective_rebalances[rebalance_idx] if effective_rebalances else None
+
+    # For intraday mode: immediately execute the latest active rebalance on the first bar
+    if is_intraday and effective_rebalances:
+        # Pick latest rebalance
+        active_rebal = effective_rebalances[-1]
+        first_row = prices_pd.iloc[0]
+        slot_value = investment / num_slots if num_slots > 0 else 0.0
+        current_cash = 0.0
+        
+        valid_tickers = []
+        for t in active_rebal["tickers"]:
+            if (
+                (selected_tickers is None or t in selected_tickers)
+                and t in first_row
+                and not pl.Series([first_row[t]]).is_null()[0]
+                and not str(first_row[t]) == "nan"
+            ):
+                valid_tickers.append(t)
+        for t in valid_tickers:
+            price = first_row[t]
+            current_shares[t] = slot_value / price if price > 0 else 0.0
+            rebalance_prices[t] = price
+            ticker_entry_dates[t] = first_hist_date
+        allocated_slots = len(current_shares)
+        unallocated_slots = max(0, num_slots - allocated_slots)
+        current_cash = slot_value * unallocated_slots
+        # Mark rebalances as already done for intraday
+        next_rebalance = None
 
     for date_str, row in prices_pd.iterrows():
         # Check if today is a rebalance day
@@ -164,6 +204,7 @@ def calculate_nav(
                     "total_value": round(eod_total_value, 4),  # Total con cash no desplegado
                     "stock_value": round(eod_stock_value, 4),
                     "cash": round(current_cash, 4),
+                    "active_invested": round(day_active_invested, 4),
                 }
             )
             current_value = eod_total_value
@@ -183,14 +224,22 @@ def calculate_nav(
         round(investment * (active_count / num_slots), 4) if num_slots > 0 else investment
     )
 
+    # Mapping from date to active invested capital on that day
+    date_to_active_cap = {
+        pt["date"]: pt.get("active_invested", active_invested) for pt in nav_series
+    }
+
     def _benchmark_series(col: str) -> list[dict]:
         if col not in prices_df.columns:
             return []
-        bdf = (
-            prices_df.filter(pl.col("date").cast(pl.String) >= str(series_start))
-            .select(["date", col])
-            .drop_nulls()
-        )
+        if is_intraday:
+            bdf = prices_df.select(["date", col]).drop_nulls()
+        else:
+            bdf = (
+                prices_df.filter(pl.col("date").cast(pl.String) >= str(series_start))
+                .select(["date", col])
+                .drop_nulls()
+            )
         if bdf.is_empty():
             return []
 
@@ -198,12 +247,14 @@ def calculate_nav(
         if b0 <= 0:
             return []
 
-        # Pure index percentage growth scaled to active_invested so it reflects true market return
-        # without fictitious cash injection steps
-        points = [
-            {"date": str(r["date"]), "value": round(float(r[col]) / b0 * active_invested, 4)}
-            for r in bdf.iter_rows(named=True)
-        ]
+        # Pure index percentage growth scaled to active capital on that date
+        # so benchmarks accompany Titanes' capital tranches ($666.67 -> $800.00)
+        points = []
+        for r in bdf.iter_rows(named=True):
+            d_str = str(r["date"])
+            cap_on_date = date_to_active_cap.get(d_str, active_invested)
+            val = round(float(r[col]) / b0 * cap_on_date, 4)
+            points.append({"date": d_str, "value": val})
         return points
 
     last_row = prices_pd.iloc[-1]
@@ -234,11 +285,14 @@ def calculate_nav(
         # Historial de factores diarios exactos para graficar la trayectoria real
         t_history = []
         if t in df_cols:
-            s_t = (
-                prices_df.filter(pl.col("date").cast(pl.String) >= series_start)
-                .select(["date", t])
-                .drop_nulls()
-            )
+            if is_intraday:
+                s_t = prices_df.select(["date", t]).drop_nulls()
+            else:
+                s_t = (
+                    prices_df.filter(pl.col("date").cast(pl.String) >= series_start)
+                    .select(["date", t])
+                    .drop_nulls()
+                )
             if not s_t.is_empty():
                 p0 = float(s_t[t][0])
                 if p0 > 0:
@@ -247,12 +301,16 @@ def calculate_nav(
                         for r in s_t.iter_rows(named=True)
                     ]
 
+        exchange = meta.get("exchange", "NASDAQ")
+        from services.market_data import is_ticker_market_open
+        is_open = is_ticker_market_open(t, exchange)
+
         holdings.append(
             {
                 "ticker": t,
                 "name": meta.get("name", t),
                 "sector": meta.get("sector", "Tecnología"),
-                "exchange": meta.get("exchange", "NASDAQ"),
+                "exchange": exchange,
                 "weight": round(slot_weight_pct, 2) if is_selected and shares > 0 else 0.0,
                 "shares": round(shares, 6) if is_selected else 0.0,
                 "start_price": round(start_price, 4),
@@ -265,6 +323,7 @@ def calculate_nav(
                 "selected": is_selected,
                 "entry_date": ticker_entry_dates.get(t, series_start),
                 "history": t_history,
+                "market_open": is_open,
             }
         )
 
@@ -292,12 +351,21 @@ def calculate_nav(
         ((nasdaq_end_val - active_invested) / active_invested * 100) if active_invested > 0 else 0.0
     )
 
+    mm20_end_val = mm20_series[-1]["value"] if mm20_series else active_invested
+    mm20_return = mm20_end_val - active_invested
+    mm20_return_pct = (
+        ((mm20_end_val - active_invested) / active_invested * 100) if active_invested > 0 else 0.0
+    )
+
     # Métricas ProPicks AI: Alfa en Porcentaje (%) y en Dólares ($)
     alpha_sp500 = round(active_return_pct - sp500_return_pct, 2)
     alpha_sp500_usd = round(active_return - sp500_return, 2)
 
     alpha_nasdaq = round(active_return_pct - nasdaq_return_pct, 2)
     alpha_nasdaq_usd = round(active_return - nasdaq_return, 2)
+
+    alpha_mm20 = round(active_return_pct - mm20_return_pct, 2)
+    alpha_mm20_usd = round(active_return - mm20_return, 2)
 
     # Métricas Cuantitativas Avanzadas (Sharpe, Sortino, Beta, Volatilidad, Win Rate)
     import math
@@ -557,10 +625,14 @@ def calculate_nav(
             "sp500_return_pct": round(sp500_return_pct, 2),
             "nasdaq_return": round(nasdaq_return, 2),
             "nasdaq_return_pct": round(nasdaq_return_pct, 2),
+            "mm20_return": round(mm20_return, 2),
+            "mm20_return_pct": round(mm20_return_pct, 2),
             "alpha_sp500": alpha_sp500,
             "alpha_sp500_usd": alpha_sp500_usd,
             "alpha_nasdaq": alpha_nasdaq,
             "alpha_nasdaq_usd": alpha_nasdaq_usd,
+            "alpha_mm20": alpha_mm20,
+            "alpha_mm20_usd": alpha_mm20_usd,
             "sharpe_ratio": sharpe_ratio,
             "sortino_ratio": sortino_ratio,
             "beta_sp500": beta_sp500,

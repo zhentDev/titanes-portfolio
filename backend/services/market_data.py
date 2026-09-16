@@ -224,6 +224,7 @@ def _cache_set(key: str, data: object, ttl: int | None = None) -> None:
 # Historical prices
 # ──────────────────────────────────────────────
 PERIOD_MAP = {
+    "1D": "1d",
     "1W": "1wk",
     "1M": "1mo",
     "3M": "3mo",
@@ -239,29 +240,43 @@ def get_historical_prices(
     tickers: list[str],
     period: str = "1Y",
     include_benchmarks: bool = True,
+    start_date: str | None = None,
 ) -> pl.DataFrame:
     """
     Download adjusted closing prices for tickers (and benchmarks).
     Returns a Polars DataFrame with columns: date, <ticker1>, <ticker2>, …
+    For period='1D', downloads 1-hour interval intraday data for the current trading day.
     """
     all_tickers = list(tickers)
     if include_benchmarks:
         all_tickers += BENCHMARKS
 
-    cache_key = f"hist:{','.join(sorted(all_tickers))}:{period}"
+    period_upper = period.upper()
+    cache_key = f"hist:{','.join(sorted(all_tickers))}:{period_upper}:{start_date}"
     cached = _cache_get(cache_key)
     if cached is not None:
         return cached.clone() if hasattr(cached, "clone") else cached  # type: ignore[return-value]
 
-    yf_period = PERIOD_MAP.get(period.upper(), "1y")
+    yf_period = PERIOD_MAP.get(period_upper, "1y")
+
+    download_kwargs = {
+        "auto_adjust": True,
+        "progress": False,
+        "threads": True,
+        "session": _yf_session,
+    }
+
+    if period_upper == "1D":
+        download_kwargs["period"] = "1d"
+        download_kwargs["interval"] = "1h"
+    elif start_date:
+        download_kwargs["start"] = start_date
+    else:
+        download_kwargs["period"] = yf_period
 
     raw: pd.DataFrame = yf.download(
         all_tickers,
-        period=yf_period,
-        auto_adjust=True,
-        progress=False,
-        threads=True,
-        session=_yf_session,
+        **download_kwargs,
     )
 
     # yfinance returns MultiIndex when multiple tickers
@@ -274,7 +289,15 @@ def get_historical_prices(
 
     closes.index.name = "date"
     closes = closes.reset_index()
-    closes["date"] = pd.to_datetime(closes["date"]).dt.date
+
+    if period_upper == "1D":
+        # Keep UNIX timestamp seconds (integer) for lightweight-charts intraday time scale
+        try:
+            closes["date"] = [int(pd.to_datetime(t).timestamp()) for t in closes["date"]]
+        except Exception:
+            pass
+    else:
+        closes["date"] = pd.to_datetime(closes["date"]).dt.date
 
     df = pl.from_pandas(closes)
 
@@ -287,7 +310,9 @@ def get_historical_prices(
     if rename_map:
         df = df.rename(rename_map)
 
-    _cache_set(cache_key, df)
+    # Cache 1D for LIVE_TTL (60s), historical for HISTORICAL_TTL (1h)
+    ttl = LIVE_TTL if period_upper == "1D" else HISTORICAL_TTL
+    _cache_set(cache_key, df, ttl=ttl)
     return df
 
 
@@ -311,6 +336,7 @@ def get_live_quotes(tickers: list[str]) -> list[dict]:
     results: list[dict] = []
     for ticker in tickers:
         ticker_clean = ticker.strip().upper()
+        meta = get_ticker_meta(ticker_clean)
         try:
             t = get_yf_ticker(ticker_clean)
             price = None
@@ -333,10 +359,15 @@ def get_live_quotes(tickers: list[str]) -> list[dict]:
                         price = float(closes.iloc[-1])
                         prev = float(closes.iloc[-2]) if len(closes) > 1 else price
 
-            # Handle GBP vs GBX (Pence) conversion for London tickers (.L)
-            currency = "USD"
-            if ticker_clean.endswith(".L"):
-                currency = "GBP"
+            # Detect real currency from fast_info or info
+            currency = getattr(getattr(t, "fast_info", None), "currency", None)
+            if not currency:
+                try:
+                    currency = getattr(t, "info", {}).get("currency")
+                except Exception:
+                    pass
+            if not currency:
+                currency = "GBP" if ticker_clean.endswith(".L") else "USD"
 
             if price is not None and not pd.isna(price) and price > 0:
                 price = float(price)
@@ -344,20 +375,21 @@ def get_live_quotes(tickers: list[str]) -> list[dict]:
                 change = price - prev
                 change_pct = (change / prev * 100) if prev > 0 else 0.0
 
-                meta = get_ticker_meta(ticker_clean)
+                exchange = meta.get("exchange") or ("LSE" if ticker_clean.endswith(".L") else ("HKG" if ticker_clean.endswith(".HK") else "US"))
+                is_open = is_ticker_market_open(ticker_clean, exchange)
                 results.append(
                     {
                         "ticker": ticker_clean,
                         "name": meta.get("name") or ticker_clean,
                         "sector": meta.get("sector") or "Tecnología",
-                        "exchange": meta.get("exchange") or ("LSE" if ticker_clean.endswith(".L") else "US"),
+                        "exchange": exchange,
                         "currency": currency,
                         "quoteType": "EQUITY",
                         "price": round(price, 4),
                         "change": round(change, 4),
                         "change_pct": round(change_pct, 4),
                         "previous_close": round(prev, 4),
-                        "market_open": _is_market_open(),
+                        "market_open": is_open,
                     }
                 )
             else:
@@ -365,19 +397,20 @@ def get_live_quotes(tickers: list[str]) -> list[dict]:
 
         except Exception as exc:
             meta = get_ticker_meta(ticker)
+            exchange = meta.get("exchange") or ("LSE" if ticker.endswith(".L") else ("HKG" if ticker.endswith(".HK") else "US"))
             results.append(
                 {
                     "ticker": ticker,
                     "name": meta.get("name") or ticker,
                     "sector": meta.get("sector") or "Desconocido",
-                    "exchange": "US",
+                    "exchange": exchange,
                     "currency": "USD",
                     "quoteType": "EQUITY",
                     "price": None,
                     "change": None,
                     "change_pct": None,
                     "previous_close": None,
-                    "market_open": False,
+                    "market_open": is_ticker_market_open(ticker, exchange),
                     "error": str(exc),
                 }
             )
@@ -427,18 +460,75 @@ def get_intraday(ticker: str) -> list[dict]:
 
 
 # ──────────────────────────────────────────────
-# Helpers
+# Helpers: Market Open/Closed per Exchange
 # ──────────────────────────────────────────────
-def _is_market_open() -> bool:
+import zoneinfo
+
+def is_ticker_market_open(ticker: str, exchange: str | None = None) -> bool:
     """
-    Rough check: NYSE is open Mon–Fri 14:30–21:00 UTC.
-    Does NOT account for holidays — good enough for UI indicator.
+    Determina si el mercado para un ticker o exchange específico está abierto o cerrado en este momento.
+    Cubre:
+    - EE.UU. (NYSE, NASDAQ, NMS, NYQ, etc.): Mon-Fri 09:30 - 16:00 US/Eastern
+    - Londres (LSE, LON, .L): Mon-Fri 08:00 - 16:30 Europe/London
+    - Hong Kong (HKG, HKEX, .HK): Mon-Fri 09:30 - 12:00 y 13:00 - 16:00 Asia/Hong_Kong
+    - Europa (Euronext, XETRA, etc.): Mon-Fri 09:00 - 17:30 Europe/Paris
+    - Colombia (BVC): Mon-Fri 09:30 - 16:00 America/Bogota
     """
-    now = datetime.now(timezone.utc)
-    if now.weekday() >= 5:  # Saturday / Sunday
-        return False
-    hour_utc = now.hour + now.minute / 60
-    return 14.5 <= hour_utc < 21.0
+    t_clean = ticker.strip().upper() if ticker else ""
+    ex_clean = (exchange or "").strip().upper()
+
+    try:
+        if t_clean.endswith(".HK") or ex_clean in ["HKG", "HKEX", "HONG KONG"]:
+            tz = zoneinfo.ZoneInfo("Asia/Hong_Kong")
+            now = datetime.now(tz)
+            if now.weekday() >= 5:
+                return False
+            time_dec = now.hour + now.minute / 60.0
+            return (9.5 <= time_dec <= 12.0) or (13.0 <= time_dec <= 16.0)
+
+        elif t_clean.endswith(".L") or ex_clean in ["LSE", "LON", "LONDON", "FTSE"]:
+            tz = zoneinfo.ZoneInfo("Europe/London")
+            now = datetime.now(tz)
+            if now.weekday() >= 5:
+                return False
+            time_dec = now.hour + now.minute / 60.0
+            return 8.0 <= time_dec <= 16.5
+
+        elif any(t_clean.endswith(sfx) for sfx in [".PA", ".DE", ".AS", ".MI", ".MC"]) or ex_clean in ["EURONEXT", "XETRA", "PAR", "GER"]:
+            tz = zoneinfo.ZoneInfo("Europe/Paris")
+            now = datetime.now(tz)
+            if now.weekday() >= 5:
+                return False
+            time_dec = now.hour + now.minute / 60.0
+            return 9.0 <= time_dec <= 17.5
+
+        elif t_clean.endswith(".CL") or ex_clean in ["BVC", "COLOMBIA"]:
+            tz = zoneinfo.ZoneInfo("America/Bogota")
+            now = datetime.now(tz)
+            if now.weekday() >= 5:
+                return False
+            time_dec = now.hour + now.minute / 60.0
+            return 9.5 <= time_dec <= 16.0
+
+        else:
+            # Por defecto bolsas de EE.UU. (NYSE, NASDAQ, AMEX, ETFs globales)
+            tz = zoneinfo.ZoneInfo("America/New_York")
+            now = datetime.now(tz)
+            if now.weekday() >= 5:
+                return False
+            time_dec = now.hour + now.minute / 60.0
+            return 9.5 <= time_dec <= 16.0
+    except Exception:
+        # Fallback genérico UTC
+        now_utc = datetime.now(timezone.utc)
+        if now_utc.weekday() >= 5:
+            return False
+        h_utc = now_utc.hour + now_utc.minute / 60.0
+        return 14.5 <= h_utc < 21.0
+
+
+def _is_market_open(ticker: str = "SPY", exchange: str | None = None) -> bool:
+    return is_ticker_market_open(ticker, exchange)
 
 
 # ──────────────────────────────────────────────

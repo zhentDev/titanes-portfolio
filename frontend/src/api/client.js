@@ -81,17 +81,19 @@ export async function fetchNAV({
   investment = 2000,
   numSlots = 15,
   selectedTickers,
+  strategyId = "historical",
 }) {
   const params = new URLSearchParams({
     period,
     investment: String(investment),
     num_slots: String(numSlots),
+    strategy_id: strategyId || "historical",
   });
   if (selectedTickers && selectedTickers.length > 0) {
     params.set("selected_tickers", selectedTickers.join(","));
   }
 
-  const staticFile = `nav_${period}.json`;
+  const staticFile = strategyId === "historical" || !strategyId ? `nav_${period}.json` : null;
   let data = await fetchWithFallback(`/nav?${params}`, staticFile);
 
   // If running on static data and selectedTickers is provided, do client-side what-if simulation
@@ -148,11 +150,12 @@ export async function fetchIndicesHistory(startDate) {
   return {};
 }
 
-/** GET /api/prices/historical/:ticker?date=YYYY-MM-DD */
-export async function fetchHistoricalPrice(ticker, date) {
+/** GET /api/prices/historical/:ticker?date=YYYY-MM-DD&time=HH:MM */
+export async function fetchHistoricalPrice(ticker, date, time = null) {
   // Try to fetch from backend. If offline, return a mock object.
   try {
-    const res = await fetch(`${BASE}/prices/historical/${encodeURIComponent(ticker)}?date=${date}`);
+    const timeParam = time ? `&time=${encodeURIComponent(time)}` : "";
+    const res = await fetch(`${BASE}/prices/historical/${encodeURIComponent(ticker)}?date=${date}${timeParam}`);
     if (res.ok) {
       return await res.json();
     }
@@ -176,7 +179,8 @@ export async function searchTickersMultiple(q) {
 /** GET /api/rebalances */
 export async function fetchRebalances(strategyId = "historical") {
   const query = strategyId ? `?strategy_id=${encodeURIComponent(strategyId)}` : "";
-  return fetchWithFallback(`/rebalances${query}`, "rebalances.json");
+  const staticFile = (!strategyId || strategyId === "historical") ? "rebalances.json" : null;
+  return fetchWithFallback(`/rebalances${query}`, staticFile);
 }
 
 /** POST /api/rebalances */

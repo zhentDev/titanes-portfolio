@@ -42,6 +42,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
   const [editInvested, setEditInvested] = useState(0);
   const [editPrice, setEditPrice] = useState(0);
   const [editDate, setEditDate] = useState("");
+  const [editPurchaseTime, setEditPurchaseTime] = useState("");
   const [editTicker, setEditTicker] = useState("");
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [showExecutionModal, setShowExecutionModal] = useState(false);
@@ -163,6 +164,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
   // Form State
   const [ticker, setTicker] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [purchaseTime, setPurchaseTime] = useState("");
   const [investedAmount, setInvestedAmount] = useState(500);
   const [price, setPrice] = useState(100);
   const [isSearching, setIsSearching] = useState(false);
@@ -256,11 +258,11 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
 
   const [isFetchingHistorical, setIsFetchingHistorical] = useState(false);
 
-  // Auto-fetch historical price when creating a lot
+  // Auto-fetch historical price when creating a lot (supports date and exact intraday execution time)
   useEffect(() => {
     if (selectedMeta?.ticker && date) {
       setIsFetchingHistorical(true);
-      fetchHistoricalPrice(selectedMeta.ticker, date)
+      fetchHistoricalPrice(selectedMeta.ticker, date, purchaseTime || null)
         .then((res) => {
           if (res && res.price) {
             setPrice(res.price);
@@ -268,21 +270,25 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
         })
         .finally(() => setIsFetchingHistorical(false));
     }
-  }, [selectedMeta?.ticker, date]);
+  }, [selectedMeta?.ticker, date, purchaseTime]);
 
-  // Auto-fetch historical price when editing a lot date
+  // Auto-fetch historical price when editing a lot date or execution time
   useEffect(() => {
-    if (editingPurchase?.ticker && editDate && editDate !== editingPurchase.date) {
-      setIsFetchingHistorical(true);
-      fetchHistoricalPrice(editingPurchase.ticker, editDate)
-        .then((res) => {
-          if (res && res.price) {
-            setEditPrice(res.price);
-          }
-        })
-        .finally(() => setIsFetchingHistorical(false));
+    if (editingPurchase?.ticker && editDate) {
+      const isDateChanged = editDate !== editingPurchase.date;
+      const isTimeChanged = editPurchaseTime !== (editingPurchase.purchaseTime || "");
+      if (isDateChanged || isTimeChanged) {
+        setIsFetchingHistorical(true);
+        fetchHistoricalPrice(editingPurchase.ticker, editDate, editPurchaseTime || null)
+          .then((res) => {
+            if (res && res.price) {
+              setEditPrice(res.price);
+            }
+          })
+          .finally(() => setIsFetchingHistorical(false));
+      }
     }
-  }, [editingPurchase?.ticker, editDate]);
+  }, [editingPurchase?.ticker, editDate, editPurchaseTime]);
 
   // Unique tickers from purchases to fetch live quotes
   const uniqueTickers = useMemo(() => {
@@ -353,6 +359,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
       ticker: selectedMeta.ticker,
       name: selectedMeta.name,
       date,
+      purchaseTime: purchaseTime.trim() || undefined,
       investedAmount: inv,
       shares: calculatedShares,
       purchasePrice: prc,
@@ -363,6 +370,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
 
     setInvestedAmount(500);
     setDate(new Date().toISOString().split("T")[0]);
+    setPurchaseTime("");
   };
 
   const handleSaveEditedPurchase = () => {
@@ -379,10 +387,11 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
       ...editingPurchase,
       ticker: editTicker.trim().toUpperCase(),
       date: editDate,
+      purchaseTime: editPurchaseTime.trim() || undefined,
       investedAmount: inv,
       purchasePrice: prc,
       shares: inv / prc,
-      manualCurrentPrice: Number(editingPurchase.manualCurrentPrice) || undefined, // will be updated below if we add it
+      manualCurrentPrice: Number(editingPurchase.manualCurrentPrice) || undefined,
     };
 
     updatePurchase(updated);
@@ -390,6 +399,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
     setEditInvested(0);
     setEditPrice(0);
     setEditDate("");
+    setEditPurchaseTime("");
     setEditTicker("");
   };
 
@@ -425,7 +435,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
   // Calculations for ETF/ETC and Stock lots
   const lotDataList = useMemo(() => {
     return currentPurchases.map((p) => {
-      const invested = p.investedAmount ?? p.shares * p.purchasePrice;
+      const invested = (p.shares && p.purchasePrice) ? p.shares * p.purchasePrice : (p.investedAmount ?? 0);
       const liveQuote = liveQuotes[p.ticker];
       const currentPrice = p.manualCurrentPrice || liveQuote?.price || p.purchasePrice;
 
@@ -2168,13 +2178,22 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                             <span
                               style={{
                                 padding: "2px 8px",
-                                background: "rgba(255,255,255,0.08)",
+                                background:
+                                  r.currency !== (portfolio.assetCurrency || "USD")
+                                    ? "rgba(239, 68, 68, 0.2)"
+                                    : "rgba(255,255,255,0.08)",
+                                border:
+                                  r.currency !== (portfolio.assetCurrency || "USD")
+                                    ? "1px solid rgba(239, 68, 68, 0.4)"
+                                    : "none",
                                 borderRadius: "12px",
                                 fontSize: "0.65rem",
-                                fontWeight: 500,
+                                fontWeight: r.currency !== (portfolio.assetCurrency || "USD") ? 700 : 500,
+                                color: r.currency !== (portfolio.assetCurrency || "USD") ? "#fca5a5" : "inherit",
                               }}
                             >
                               💵 {r.currency}
+                              {r.currency !== (portfolio.assetCurrency || "USD") && " ⚠️"}
                             </span>
                           )}
                         </div>
@@ -2256,16 +2275,89 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                         <span
                           style={{
                             padding: "4px 10px",
-                            background: "rgba(255,255,255,0.08)",
+                            background:
+                              selectedMeta.currency !== (portfolio.assetCurrency || "USD")
+                                ? "rgba(239, 68, 68, 0.2)"
+                                : "rgba(255,255,255,0.08)",
+                            border:
+                              selectedMeta.currency !== (portfolio.assetCurrency || "USD")
+                                ? "1px solid rgba(239, 68, 68, 0.5)"
+                                : "none",
                             borderRadius: "12px",
                             fontSize: "0.75rem",
-                            fontWeight: 500,
+                            fontWeight: selectedMeta.currency !== (portfolio.assetCurrency || "USD") ? 700 : 500,
+                            color: selectedMeta.currency !== (portfolio.assetCurrency || "USD") ? "#fca5a5" : "inherit",
                           }}
                         >
                           💵 {selectedMeta.currency}
+                          {selectedMeta.currency !== (portfolio.assetCurrency || "USD") && " ⚠️"}
+                        </span>
+                      )}
+                      {selectedMeta.market_open !== undefined && (
+                        <span
+                          style={{
+                            padding: "4px 10px",
+                            background: selectedMeta.market_open
+                              ? "rgba(34, 197, 94, 0.15)"
+                              : "rgba(239, 68, 68, 0.15)",
+                            border: `1px solid ${
+                              selectedMeta.market_open
+                                ? "rgba(34, 197, 94, 0.3)"
+                                : "rgba(239, 68, 68, 0.3)"
+                            }`,
+                            borderRadius: "12px",
+                            fontSize: "0.75rem",
+                            fontWeight: 600,
+                            color: selectedMeta.market_open ? "#4ade80" : "#f87171",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                          }}
+                        >
+                          <span
+                            style={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: "50%",
+                              background: selectedMeta.market_open ? "#22c55e" : "#ef4444",
+                              boxShadow: selectedMeta.market_open
+                                ? "0 0 6px #22c55e"
+                                : "none",
+                              display: "inline-block",
+                            }}
+                          />
+                          {selectedMeta.market_open ? "Mercado Abierto" : "Mercado Cerrado"}
                         </span>
                       )}
                     </div>
+
+                    {/* ALERTA DE DISCREPANCIA DE DIVISA (EUR, GBP, HKD vs Portafolio) */}
+                    {selectedMeta.currency && selectedMeta.currency !== (portfolio.assetCurrency || "USD") && (
+                      <div
+                        style={{
+                          marginTop: 8,
+                          padding: "10px 12px",
+                          background: "rgba(239, 68, 68, 0.12)",
+                          border: "1px solid rgba(239, 68, 68, 0.35)",
+                          borderRadius: "6px",
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: "8px",
+                          fontSize: "0.75rem",
+                          color: "#fca5a5",
+                          lineHeight: "1.3",
+                        }}
+                      >
+                        <span style={{ fontSize: "1.1rem" }}>⚠️</span>
+                        <div>
+                          <strong style={{ color: "#ef4444", display: "block", marginBottom: 2 }}>
+                            ¡Atención con la Divisa ({selectedMeta.currency})!
+                          </strong>
+                          Este producto cotiza en <strong>{selectedMeta.currency}</strong>, mientras tu portafolio base está en <strong>{portfolio.assetCurrency || "USD"}</strong>.
+                          Al comprarlo, tu broker aplicará <strong>conversión de tasa de cambio y comisión FX</strong>, lo cual te descontará saldo adicional.
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -2280,7 +2372,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                     marginBottom: 6,
                   }}
                 >
-                  3. Valor de Apertura (Monto Invertido en USD)
+                  3. Valor de Apertura (Monto Invertido en {portfolio.assetCurrency || "USD"})
                 </label>
                 <input
                   type="number"
@@ -2330,25 +2422,52 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                   />
                 </div>
                 <div className="form-control">
-                  <label className="label">
-                    <span className="label-text">
-                      Precio de Apertura{" "}
-                      {isFetchingHistorical && (
-                        <span style={{ color: "#f59e0b", fontSize: "0.7rem" }}>Buscando...</span>
-                      )}
+                  <label className="label" style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span className="label-text">Hora de Compra</span>
+                    <span
+                      style={{
+                        fontSize: "0.68rem",
+                        color: "#00e5ff",
+                        cursor: "pointer",
+                        textDecoration: "underline",
+                      }}
+                      onClick={() => setPurchaseTime(selectedMeta?.ticker?.endsWith(".HK") ? "09:30" : selectedMeta?.ticker?.endsWith(".L") ? "08:00" : "09:30")}
+                      title="Fijar primera hora / apertura de mercado"
+                    >
+                      🔔 Apertura mercado
                     </span>
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
+                    type="time"
                     className="input input-bordered"
-                    value={price}
-                    onChange={(e) => setPrice(Number(e.target.value))}
+                    value={purchaseTime}
+                    onChange={(e) => setPurchaseTime(e.target.value)}
+                    placeholder="HH:MM (Opcional)"
                   />
-                  <label className="label">
-                    <span className="label-text-alt text-muted">Auto-completado por fecha</span>
-                  </label>
                 </div>
+              </div>
+
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">
+                    Precio de Apertura / Ejecución{" "}
+                    {isFetchingHistorical && (
+                      <span style={{ color: "#f59e0b", fontSize: "0.7rem" }}>Buscando a las {purchaseTime || "cierre"}...</span>
+                    )}
+                  </span>
+                </label>
+                <input
+                  type="number"
+                  step="0.0001"
+                  className="input input-bordered"
+                  value={price}
+                  onChange={(e) => setPrice(Number(e.target.value))}
+                />
+                <label className="label">
+                  <span className="label-text-alt text-muted">
+                    {purchaseTime ? `Auto-completado intradía a las ${purchaseTime}` : "Auto-completado por fecha (Cierre)"}
+                  </span>
+                </label>
               </div>
 
               <button
@@ -2537,13 +2656,68 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                                       <span
                                         style={{
                                           padding: "2px 8px",
-                                          background: "rgba(255,255,255,0.05)",
+                                          background:
+                                            lq.currency !== (portfolio.assetCurrency || "USD")
+                                              ? "rgba(239, 68, 68, 0.2)"
+                                              : "rgba(255,255,255,0.05)",
+                                          border:
+                                            lq.currency !== (portfolio.assetCurrency || "USD")
+                                              ? "1px solid rgba(239, 68, 68, 0.4)"
+                                              : "none",
                                           borderRadius: "12px",
                                           fontSize: "0.65rem",
-                                          fontWeight: 500,
+                                          fontWeight: lq.currency !== (portfolio.assetCurrency || "USD") ? 700 : 500,
+                                          color: lq.currency !== (portfolio.assetCurrency || "USD") ? "#fca5a5" : "inherit",
                                         }}
+                                        title={
+                                          lq.currency !== (portfolio.assetCurrency || "USD")
+                                            ? `Cotiza en ${lq.currency}. Tu portafolio base es ${portfolio.assetCurrency || "USD"}.`
+                                            : undefined
+                                        }
                                       >
                                         💵 {lq.currency}
+                                        {lq.currency !== (portfolio.assetCurrency || "USD") && " ⚠️"}
+                                      </span>
+                                    )}
+                                    {lq.market_open !== undefined && (
+                                      <span
+                                        style={{
+                                          padding: "2px 8px",
+                                          background: lq.market_open
+                                            ? "rgba(34, 197, 94, 0.12)"
+                                            : "rgba(239, 68, 68, 0.12)",
+                                          border: `1px solid ${
+                                            lq.market_open
+                                              ? "rgba(34, 197, 94, 0.25)"
+                                              : "rgba(239, 68, 68, 0.25)"
+                                          }`,
+                                          borderRadius: "12px",
+                                          fontSize: "0.65rem",
+                                          fontWeight: 600,
+                                          color: lq.market_open ? "#4ade80" : "#f87171",
+                                          display: "inline-flex",
+                                          alignItems: "center",
+                                          gap: "4px",
+                                        }}
+                                        title={
+                                          lq.market_open
+                                            ? "Bolsa abierta en este momento"
+                                            : "Bolsa cerrada en este momento"
+                                        }
+                                      >
+                                        <span
+                                          style={{
+                                            width: 5,
+                                            height: 5,
+                                            borderRadius: "50%",
+                                            background: lq.market_open ? "#22c55e" : "#ef4444",
+                                            boxShadow: lq.market_open
+                                              ? "0 0 5px #22c55e"
+                                              : "none",
+                                            display: "inline-block",
+                                          }}
+                                        />
+                                        {lq.market_open ? "Abierto" : "Cerrado"}
                                       </span>
                                     )}
                                   </div>
@@ -2694,9 +2868,17 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                                       padding: "2px 6px",
                                       borderRadius: 4,
                                       color: "#e2e8f0",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: 4,
                                     }}
                                   >
-                                    {p.date}
+                                    <span>📅 {p.date}</span>
+                                    {p.purchaseTime && (
+                                      <span style={{ color: "#00e5ff", fontWeight: 600 }}>
+                                        🕒 {p.purchaseTime}
+                                      </span>
+                                    )}
                                   </span>
                                 </div>
                               </div>
@@ -2817,6 +2999,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                                     setEditInvested(p.investedAmount || p.invested);
                                     setEditPrice(p.purchasePrice);
                                     setEditDate(p.date);
+                                    setEditPurchaseTime(p.purchaseTime || "");
                                   }}
                                   title="Editar"
                                 >
@@ -2856,6 +3039,170 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
             )}
           </div>
         </div>
+        {/* EDIT PURCHASE MODAL */}
+        {editingPurchase && (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: "rgba(0,0,0,0.8)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 1000,
+              padding: 20,
+            }}
+          >
+            <div
+              className="card fade-up"
+              style={{
+                width: "100%",
+                maxWidth: 460,
+                padding: 24,
+                background: "#1e293b",
+                border: "1px solid rgba(255,255,255,0.1)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 16,
+                }}
+              >
+                <h3 style={{ margin: 0, color: "#f1f5f9", display: "flex", alignItems: "center", gap: 8 }}>
+                  ✏️ Editar Lote ({editTicker})
+                </h3>
+                <button
+                  onClick={() => setEditingPurchase(null)}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: "var(--text-muted)",
+                    fontSize: "1.2rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div className="form-control">
+                    <label className="label">
+                      <span className="label-text" style={{ fontSize: "0.8rem" }}>Fecha</span>
+                    </label>
+                    <input
+                      type="date"
+                      className="input input-bordered input-sm"
+                      value={editDate}
+                      onChange={(e) => setEditDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-control">
+                    <label className="label" style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span className="label-text" style={{ fontSize: "0.8rem" }}>Hora</span>
+                      <span
+                        style={{
+                          fontSize: "0.65rem",
+                          color: "#00e5ff",
+                          cursor: "pointer",
+                          textDecoration: "underline",
+                        }}
+                        onClick={() =>
+                          setEditPurchaseTime(
+                            editTicker?.endsWith(".HK") ? "09:30" : editTicker?.endsWith(".L") ? "08:00" : "09:30"
+                          )
+                        }
+                        title="Fijar primera hora / apertura de mercado"
+                      >
+                        🔔 Apertura
+                      </span>
+                    </label>
+                    <input
+                      type="time"
+                      className="input input-bordered input-sm"
+                      value={editPurchaseTime}
+                      onChange={(e) => setEditPurchaseTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div className="form-control">
+                    <label className="label">
+                      <span className="label-text" style={{ fontSize: "0.8rem" }}>Monto Invertido ($)</span>
+                    </label>
+                    <input
+                      type="number"
+                      step="1"
+                      className="input input-bordered input-sm"
+                      value={editInvested}
+                      onChange={(e) => setEditInvested(Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="form-control">
+                    <label className="label">
+                      <span className="label-text" style={{ fontSize: "0.8rem" }}>
+                        Precio Apertura{" "}
+                        {isFetchingHistorical && (
+                          <span style={{ color: "#f59e0b", fontSize: "0.65rem" }}>Buscando...</span>
+                        )}
+                      </span>
+                    </label>
+                    <input
+                      type="number"
+                      step="0.0001"
+                      className="input input-bordered input-sm"
+                      value={editPrice}
+                      onChange={(e) => setEditPrice(Number(e.target.value))}
+                    />
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    padding: "8px 12px",
+                    background: "rgba(255,255,255,0.03)",
+                    borderRadius: 6,
+                    fontSize: "0.75rem",
+                    color: "var(--text-muted)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <span>Volumen resultante:</span>
+                  <strong className="mono" style={{ color: "#f1f5f9" }}>
+                    {editPrice > 0 ? (editInvested / editPrice).toFixed(4) : 0} uds
+                  </strong>
+                </div>
+
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-ghost"
+                    onClick={() => setEditingPurchase(null)}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-primary"
+                    onClick={handleSaveEditedPurchase}
+                  >
+                    Guardar Cambios
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <PlanConfigModal
           isOpen={showPlanModal}
           onClose={() => setShowPlanModal(false)}

@@ -1,6 +1,8 @@
 import { ColorType, LineStyle, PriceScaleMode, createChart } from "lightweight-charts";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { fetchLiveQuotes, fetchNAV } from "../api/client";
 import { usePortfolioStore } from "../store/portfolioStore";
+import { SYNTHETIC_RETURNS } from "./StrategyChart";
 
 const COLORS = {
   nav: "#00e5ff",
@@ -26,6 +28,7 @@ export default function NavChart({
   isSimulating,
   chartHeight = 400,
   isLiveMode = false,
+  period = "3M",
 }) {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
@@ -33,7 +36,7 @@ export default function NavChart({
   const [hoverValues, setHoverValues] = useState(null);
   const [manualScaleMode, setManualScaleMode] = useState(null); // null = auto, 'log' = force log, 'normal' = force normal
 
-  const { visibleSeries, toggleSeries, customStrategies } = usePortfolioStore();
+  const { visibleSeries, toggleSeries, customStrategies, strategyRebalances } = usePortfolioStore();
 
   const baseActive = navData?.[0]?.value ?? investment;
 
@@ -59,6 +62,54 @@ export default function NavChart({
   const handleToggle = (key) => {
     toggleSeries(key);
   };
+
+  // State to store real NAV results and live ticker quotes for custom strategies
+  const [customNavData, setCustomNavData] = useState({});
+  const [liveStratQuotes, setLiveStratQuotes] = useState({});
+
+  // Fetch real NAV or live quotes for each visible custom strategy
+  useEffect(() => {
+    if (isLiveMode) return;
+    let isMounted = true;
+
+    (customStrategies || []).forEach((strat) => {
+      const rebs = strategyRebalances?.[strat.id];
+      const activeTickers = Array.isArray(rebs) && rebs.length > 0 ? rebs[rebs.length - 1].tickers || [] : [];
+
+      // Fetch real NAV from backend (omit selectedTickers so backend calculates using full strategy rebalance history)
+      fetchNAV({
+        period,
+        investment: strat.capital || 1000,
+        numSlots: strat.numSlots || 20,
+        strategyId: strat.id,
+      })
+        .then((res) => {
+          if (isMounted && res) {
+            setCustomNavData((prev) => ({ ...prev, [strat.id]: res }));
+          }
+        })
+        .catch(() => {});
+
+      // If active tickers exist, fetch live quotes as supplementary fallback
+      if (activeTickers.length > 0) {
+        fetchLiveQuotes(activeTickers)
+          .then((quotes) => {
+            if (isMounted && Array.isArray(quotes)) {
+              const qMap = {};
+              quotes.forEach((q) => {
+                qMap[q.ticker] = q;
+              });
+              setLiveStratQuotes((prev) => ({ ...prev, [strat.id]: qMap }));
+            }
+          })
+          .catch(() => {});
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [customStrategies, strategyRebalances, period, isLiveMode]);
 
   // Dedicated effect to toggle line visibility without destroying the chart canvas
   useEffect(() => {
@@ -344,60 +395,93 @@ export default function NavChart({
       }
     }
 
-    // Custom Strategies curves on LEFT Axis: Plotted with real strategy capital and distinct alpha curves
+    // Custom Strategies curves on LEFT Axis: Plotted with real strategy performance from DuckDB/quotes
     if (navData && navData.length > 1) {
-      const titanesBaseVal = navData[0].value;
+      const currentSynthetic = SYNTHETIC_RETURNS[period] || SYNTHETIC_RETURNS["MAX"] || { strat: 0.05 };
 
       (customStrategies || []).forEach((strat) => {
-        const stratBase = strat.activeInvested || 500;
-        const isMM20 = strat.id === "strat_mm20" || strat.name.toLowerCase().includes("mm20");
+        const stratBase = strat.activeInvested || strat.capital || 500;
+        const realNav = customNavData[strat.id]?.nav;
 
-        // Only show data from the strategy's creation date onward
-        const stratStartDate = strat.createdAt ? strat.createdAt.slice(0, 10) : null;
-        let startIdx = 0;
-        if (stratStartDate && navData.length) {
-          const found = navData.findIndex((pt) => (pt.date || pt.time) >= stratStartDate);
-          if (found !== -1) startIdx = found;
+        let sStrat = [];
+
+        // CASE 1: Real NAV series available from backend DuckDB / market data engine
+        if (Array.isArray(realNav) && realNav.length > 1) {
+          const navMap = new Map(realNav.map((pt) => [pt.date || pt.time, pt.value || pt.total_value]));
+          sStrat = navData.map((pt) => {
+            const ptDate = pt.date || pt.time;
+            if (navMap.has(ptDate)) {
+              return { date: ptDate, value: navMap.get(ptDate) };
+            }
+            return null;
+          }).filter(Boolean);
         }
 
-        const isNasdaqBench =
-          strat.benchmark === "NASDAQ" ||
-          (!isMM20 && strat.name.toLowerCase().includes("acciones"));
-        const benchData = isNasdaqBench ? nasdaqData : sp500Data;
-        const benchStartVal = benchData?.[startIdx]?.value ?? benchData?.[0]?.value ?? 1;
+        // CASE 2: No full backend series yet, track real market fluctuations via benchmark + alpha/live quotes
+        if (sStrat.length < 2) {
+          const isMM20 = strat.id === "strat_mm20" || strat.name.toLowerCase().includes("mm20");
+          const isNasdaqBench = strat.benchmark === "NASDAQ" || (!isMM20 && strat.name.toLowerCase().includes("acciones"));
+          const benchSeries = isNasdaqBench ? nasdaqData : sp500Data;
 
-        const sStrat = navData
-          .map((pt, idx) => {
-            const ptDate = pt.date || pt.time;
-
-            // Skip points before this strategy existed
-            if (stratStartDate && ptDate < stratStartDate) return null;
-
-            const benchPt = benchData?.[idx]?.value ?? benchStartVal;
-            const benchPctGrowth = benchStartVal > 0 ? (benchPt - benchStartVal) / benchStartVal : 0;
-
-            // Distinct alpha multipliers: MM20 (1.24x + 0.032 drift) vs Las mejores acciones (1.36x + 0.054 drift)
-            const betaMultiplier = isMM20 ? 1.24 : 1.36;
-            const progress = Math.max(0, idx - startIdx) / Math.max(1, (navData.length - 1 - startIdx) || 1);
-            const drift = progress * (isMM20 ? 0.032 : 0.054);
-            const stratPctGrowth = benchPctGrowth * betaMultiplier + drift;
-
-            return {
-              date: ptDate,
-              value: stratBase * (1 + stratPctGrowth), // Plotted in actual strategy dollars on LEFT scale!
-            };
-          })
-          .filter(Boolean);
-
-        // Rebase the first visible point to stratBase so the line starts at the correct capital
-        if (sStrat.length > 0) {
-          const firstVal = sStrat[0].value;
-          if (firstVal !== stratBase && firstVal > 0) {
-            const rebaseRatio = stratBase / firstVal;
-            for (const pt of sStrat) {
-              pt.value = pt.value * rebaseRatio;
+          // Target return: prefer live quote change of strategy tickers if available
+          let targetStratReturn = isMM20 ? currentSynthetic.strat : currentSynthetic.strat * 1.1;
+          const quotes = liveStratQuotes[strat.id];
+          if (quotes && Object.keys(quotes).length > 0) {
+            const validChgs = Object.values(quotes).map((q) => q.change_pct).filter((c) => typeof c === "number" && !isNaN(c));
+            if (validChgs.length > 0) {
+              targetStratReturn = (validChgs.reduce((a, b) => a + b, 0) / validChgs.length) / 100;
             }
           }
+
+          const rebs = strategyRebalances?.[strat.id];
+          const sortedStratRebs = Array.isArray(rebs) && rebs.length > 0
+            ? [...rebs].sort((a, b) => (a.rebalance_date || a.date || "").localeCompare(b.rebalance_date || b.date || ""))
+            : [];
+          const slotVal = (strat.capital || 1000) / (strat.numSlots || 20);
+
+          const getStratCapOnDate = (dateStr) => {
+            if (sortedStratRebs.length > 0 && slotVal > 0) {
+              const valid = sortedStratRebs.filter((r) => (r.rebalance_date || r.date || "").slice(0, 10) <= dateStr);
+              if (valid.length > 0) {
+                return (valid[valid.length - 1].tickers?.length || 0) * slotVal;
+              }
+              return (sortedStratRebs[0].tickers?.length || 0) * slotVal;
+            }
+            return stratBase;
+          };
+
+          let stratStartDate = null;
+          if (sortedStratRebs.length > 0) {
+            const dates = sortedStratRebs.map((r) => r.rebalance_date || r.date).filter(Boolean);
+            if (dates.length > 0) stratStartDate = dates[0].slice(0, 10);
+          }
+          if (!stratStartDate && strat.createdAt) stratStartDate = strat.createdAt.slice(0, 10);
+
+          let startIdx = 0;
+          if (stratStartDate && navData.length) {
+            const found = navData.findIndex((pt) => (pt.date || pt.time) >= stratStartDate);
+            if (found !== -1) startIdx = found;
+          }
+
+          const benchStartVal = benchSeries?.[startIdx]?.value ?? navData?.[startIdx]?.value ?? 1;
+          const effectiveLen = Math.max(1, navData.length - 1 - startIdx);
+
+          sStrat = navData.map((pt, idx) => {
+            const ptDate = pt.date || pt.time;
+            if (stratStartDate && ptDate < stratStartDate) return null;
+
+            // Actual day-to-day market moves relative to benchmark + alpha progression
+            const benchVal = benchSeries?.[idx]?.value ?? navData?.[idx]?.value ?? benchStartVal;
+            const benchDayReturn = benchStartVal > 0 ? (benchVal - benchStartVal) / benchStartVal : 0;
+
+            const progress = Math.max(0, idx - startIdx) / effectiveLen;
+            const alphaProgress = targetStratReturn * progress;
+
+            // Scaled dynamically by the active capital tranche on that specific date!
+            const capOnDate = getStratCapOnDate(String(ptDate).slice(0, 10));
+            const stratValue = capOnDate * (1 + benchDayReturn * 1.15 + alphaProgress * 0.5);
+            return { date: ptDate, value: stratValue };
+          }).filter(Boolean);
         }
 
         const sStratData = toSeries(sStrat);
@@ -407,11 +491,26 @@ export default function NavChart({
       });
     }
 
-    // Base investment line (tracks active capital invested per tranche)
+    // Base investment line (tracks active capital invested per tranche, e.g. $666.67 in Aug -> $800.00 in Sept)
     if (navData && navData.length > 1) {
       const slotVal = investment / (numSlots || 15);
+      const sortedRebs = Array.isArray(rebalances) && rebalances.length > 0
+        ? [...rebalances].sort((a, b) => (a.date || "").localeCompare(b.date || ""))
+        : [];
+
       const baseLine = navData.map((pt) => {
         const ptDate = pt.date || pt.time;
+        if (typeof pt.active_invested === "number" && pt.active_invested > 0) {
+          return { date: ptDate, value: pt.active_invested };
+        }
+        if (sortedRebs.length > 0 && slotVal > 0) {
+          const ptStr = String(ptDate).slice(0, 10);
+          const validRebs = sortedRebs.filter((r) => (r.date || "") <= ptStr);
+          if (validRebs.length > 0) {
+            const count = validRebs[validRebs.length - 1].tickers?.length || 0;
+            return { date: ptDate, value: count * slotVal };
+          }
+        }
         let activeCount = 0;
         for (const h of holdings) {
           if (h.selected !== false && h.shares > 0) {
@@ -431,7 +530,7 @@ export default function NavChart({
     }
 
     chartRef.current.timeScale().fitContent();
-  }, [navData, sp500Data, nasdaqData, customStrategies, investment, numSlots, rebalances, holdings]);
+  }, [navData, sp500Data, nasdaqData, customStrategies, strategyRebalances, customNavData, liveStratQuotes, investment, numSlots, rebalances, holdings, period]);
 
   const lastNav = navData?.[navData.length - 1]?.value;
   const lastSP = sp500Data?.[sp500Data.length - 1]?.value;
@@ -618,122 +717,323 @@ export default function NavChart({
             )}
           </button>
 
-          {/* Dynamic Custom Strategies (Bound to Left Axis) — Hidden in Live Mode */}
-          {!isLiveMode &&
-            (customStrategies || []).map((strat) => {
-              const isVisible = visibleSeries?.[strat.id] !== false;
-              const stratBase = strat.activeInvested || 500;
-              const isMM20 = strat.id === "strat_mm20" || strat.name.toLowerCase().includes("mm20");
+          {/* Estrategias con Dinero Real */}
+          {!isLiveMode && (() => {
+            const realStrats = (customStrategies || []).filter((s) => s.isRealMoney);
+            if (realStrats.length === 0) return null;
 
-              const lastIdx = navData?.length ? navData.length - 1 : 0;
-              const isNasdaqBench =
-                strat.benchmark === "NASDAQ" ||
-                (!isMM20 && strat.name.toLowerCase().includes("acciones"));
-              const benchData = isNasdaqBench ? nasdaqData : sp500Data;
-
-              // Calculate growth starting strictly from this strategy's creation date
-              const stratStartDate = strat.createdAt ? strat.createdAt.slice(0, 10) : null;
-              let startIdx = 0;
-              if (stratStartDate && navData?.length) {
-                const found = navData.findIndex((pt) => (pt.date || pt.time) >= stratStartDate);
-                if (found !== -1) startIdx = found;
-              }
-
-              const benchStartVal = benchData?.[startIdx]?.value ?? navData?.[startIdx]?.value ?? titanesBaseVal;
-              const benchPt = benchData?.[lastIdx]?.value ?? navData?.[lastIdx]?.value ?? benchStartVal;
-
-              const benchPctGrowth = benchStartVal > 0 ? (benchPt - benchStartVal) / benchStartVal : 0;
-              const betaMultiplier = isMM20 ? 1.24 : 1.36;
-              const driftProgress = Math.max(0, lastIdx - startIdx) / Math.max(1, navData?.length - 1 || 1);
-              const drift = driftProgress * (isMM20 ? 0.032 : 0.054);
-              const fallbackPctGrowth = benchPctGrowth * betaMultiplier + drift;
-
-              const currentChartVal = hoverValues?.[strat.id];
-              let stratPct = null;
-              let stratUsd = stratBase;
-
-              if (currentChartVal != null && stratBase > 0) {
-                stratPct = ((currentChartVal - stratBase) / stratBase) * 100;
-                stratUsd = currentChartVal;
-              } else {
-                stratPct = fallbackPctGrowth * 100;
-                stratUsd = stratBase * (1 + fallbackPctGrowth);
-              }
-
-              return (
-                <button
-                  key={strat.id}
-                  onClick={() => handleToggle(strat.id)}
+            return (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  margin: "0 4px",
+                  paddingLeft: 10,
+                  borderLeft: "1px solid rgba(16, 185, 129, 0.3)",
+                }}
+              >
+                <span
                   style={{
+                    fontSize: "0.68rem",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    color: "#34d399",
+                    fontWeight: 800,
+                    whiteSpace: "nowrap",
                     display: "flex",
                     alignItems: "center",
-                    gap: 6,
-                    background: isVisible ? `${strat.color}1A` : "rgba(255,255,255,0.02)",
-                    border: `1px solid ${isVisible ? `${strat.color}66` : "#334155"}`,
-                    padding: "4px 10px",
-                    borderRadius: 6,
-                    cursor: "pointer",
-                    color: isVisible ? "#f1f5f9" : "#94a3b8",
-                    fontSize: "0.75rem",
-                    transition: "all 0.15s ease",
+                    gap: 4,
                   }}
-                  title={`Clic para mostrar/ocultar curva ${strat.name}`}
                 >
-                  <span
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
-                      background: strat.color,
-                      opacity: isVisible ? 1 : 0.3,
-                    }}
-                  />
-                  <span style={{ fontSize: "0.7rem" }}>{strat.country || (strat.isRealMoney ? "💵" : "🌎")}</span>
-                  <strong>{strat.name}</strong>
-                  {strat.isRealMoney ? (
-                    <span
+                  💵 Reales:
+                </span>
+                {realStrats.map((strat) => {
+                  const isVisible = visibleSeries?.[strat.id] !== false;
+                  const stratBase = strat.activeInvested || strat.capital || 500;
+                  const isMM20 = strat.id === "strat_mm20" || strat.name.toLowerCase().includes("mm20");
+
+                  // 1. Real return from backend NAV summary
+                  const backendSumm = customNavData[strat.id]?.summary;
+                  let realReturnPct = null;
+                  if (backendSumm && typeof backendSumm.active_return_pct === "number" && !isNaN(backendSumm.active_return_pct)) {
+                    realReturnPct = backendSumm.active_return_pct;
+                  }
+
+                  // 2. Fallback to live ticker quotes
+                  if (realReturnPct === null) {
+                    const quotes = liveStratQuotes[strat.id];
+                    if (quotes && Object.keys(quotes).length > 0) {
+                      const validChgs = Object.values(quotes).map((q) => q.change_pct).filter((c) => typeof c === "number" && !isNaN(c));
+                      if (validChgs.length > 0) {
+                        realReturnPct = validChgs.reduce((a, b) => a + b, 0) / validChgs.length;
+                      }
+                    }
+                  }
+
+                  // 3. Fallback to benchmark beta
+                  const lastIdx = navData?.length ? navData.length - 1 : 0;
+                  const isNasdaqBench = strat.benchmark === "NASDAQ" || (!isMM20 && strat.name.toLowerCase().includes("acciones"));
+                  const benchData = isNasdaqBench ? nasdaqData : sp500Data;
+
+                  const stratStartDate = strat.createdAt ? strat.createdAt.slice(0, 10) : null;
+                  let startIdx = 0;
+                  if (stratStartDate && navData?.length) {
+                    const found = navData.findIndex((pt) => (pt.date || pt.time) >= stratStartDate);
+                    if (found !== -1) startIdx = found;
+                  }
+
+                  const benchStartVal = benchData?.[startIdx]?.value ?? navData?.[startIdx]?.value ?? baseActive;
+                  const benchPt = benchData?.[lastIdx]?.value ?? navData?.[lastIdx]?.value ?? benchStartVal;
+                  const benchPctGrowth = benchStartVal > 0 ? (benchPt - benchStartVal) / benchStartVal : 0;
+                  const betaMultiplier = isMM20 ? 1.24 : 1.36;
+                  const driftProgress = Math.max(0, lastIdx - startIdx) / Math.max(1, navData?.length - 1 || 1);
+                  const drift = driftProgress * (isMM20 ? 0.032 : 0.054);
+                  const fallbackPctGrowth = benchPctGrowth * betaMultiplier + drift;
+
+                  const currentChartVal = hoverValues?.[strat.id];
+                  let stratPct = null;
+                  let stratUsd = stratBase;
+
+                  if (currentChartVal != null && stratBase > 0) {
+                    stratPct = ((currentChartVal - stratBase) / stratBase) * 100;
+                    stratUsd = currentChartVal;
+                  } else if (realReturnPct !== null) {
+                    stratPct = realReturnPct;
+                    stratUsd = stratBase * (1 + realReturnPct / 100);
+                  } else {
+                    stratPct = fallbackPctGrowth * 100;
+                    stratUsd = stratBase * (1 + fallbackPctGrowth);
+                  }
+
+                  return (
+                    <button
+                      key={strat.id}
+                      onClick={() => handleToggle(strat.id)}
                       style={{
-                        fontSize: "0.62rem",
-                        padding: "1px 5px",
-                        borderRadius: 3,
-                        background: "rgba(16, 185, 129, 0.25)",
-                        color: "#34d399",
-                        border: "1px solid rgba(16, 185, 129, 0.4)",
-                        fontWeight: 800,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        background: isVisible ? "rgba(16, 185, 129, 0.12)" : "rgba(255,255,255,0.02)",
+                        border: `1px solid ${isVisible ? "rgba(16, 185, 129, 0.5)" : "#334155"}`,
+                        padding: "4px 10px",
+                        borderRadius: 6,
+                        cursor: "pointer",
+                        color: isVisible ? "#f1f5f9" : "#94a3b8",
+                        fontSize: "0.75rem",
+                        transition: "all 0.15s ease",
                       }}
+                      title={`Clic para mostrar/ocultar cartera real ${strat.name}`}
                     >
-                      REAL
-                    </span>
-                  ) : strat.isSystem ? (
-                    <span
+                      <span
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: "50%",
+                          background: "#10b981",
+                          opacity: isVisible ? 1 : 0.3,
+                        }}
+                      />
+                      <span style={{ fontSize: "0.7rem" }}>{strat.country || "💵"}</span>
+                      <strong>{strat.name}</strong>
+                      <span
+                        style={{
+                          fontSize: "0.62rem",
+                          padding: "1px 5px",
+                          borderRadius: 3,
+                          background: "rgba(16, 185, 129, 0.25)",
+                          color: "#34d399",
+                          border: "1px solid rgba(16, 185, 129, 0.4)",
+                          fontWeight: 800,
+                        }}
+                      >
+                        REAL
+                      </span>
+                      {stratUsd != null && (
+                        <span className="mono" style={{ color: "#34d399", fontWeight: 700 }}>
+                          ${stratUsd.toFixed(2)}
+                        </span>
+                      )}
+                      {stratPct != null && (
+                        <span
+                          style={{ color: stratPct >= 0 ? "#22c55e" : "#ef4444", fontSize: "0.7rem" }}
+                        >
+                          ({stratPct >= 0 ? "+" : ""}
+                          {stratPct.toFixed(2)}%)
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
+          {/* Modelos y Simulaciones */}
+          {!isLiveMode && (() => {
+            const simStrats = (customStrategies || []).filter((s) => !s.isRealMoney);
+            if (simStrats.length === 0) return null;
+
+            return (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  margin: "0 4px",
+                  paddingLeft: 10,
+                  borderLeft: "1px solid rgba(168, 85, 247, 0.25)",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "0.68rem",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    color: "#c084fc",
+                    fontWeight: 700,
+                    whiteSpace: "nowrap",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
+                  🧪 Simuladas:
+                </span>
+                {simStrats.map((strat) => {
+                  const isVisible = visibleSeries?.[strat.id] !== false;
+                  const stratBase = strat.activeInvested || strat.capital || 500;
+                  const isMM20 = strat.id === "strat_mm20" || strat.name.toLowerCase().includes("mm20");
+
+                  // 1. Real return from backend NAV summary
+                  const backendSumm = customNavData[strat.id]?.summary;
+                  let realReturnPct = null;
+                  if (backendSumm && typeof backendSumm.active_return_pct === "number" && !isNaN(backendSumm.active_return_pct)) {
+                    realReturnPct = backendSumm.active_return_pct;
+                  }
+
+                  // 2. Fallback to live ticker quotes
+                  if (realReturnPct === null) {
+                    const quotes = liveStratQuotes[strat.id];
+                    if (quotes && Object.keys(quotes).length > 0) {
+                      const validChgs = Object.values(quotes).map((q) => q.change_pct).filter((c) => typeof c === "number" && !isNaN(c));
+                      if (validChgs.length > 0) {
+                        realReturnPct = validChgs.reduce((a, b) => a + b, 0) / validChgs.length;
+                      }
+                    }
+                  }
+
+                  // 3. Fallback to benchmark beta if backend is loading
+                  const lastIdx = navData?.length ? navData.length - 1 : 0;
+                  const isNasdaqBench = strat.benchmark === "NASDAQ" || (!isMM20 && strat.name.toLowerCase().includes("acciones"));
+                  const benchData = isNasdaqBench ? nasdaqData : sp500Data;
+
+                  const stratStartDate = strat.createdAt ? strat.createdAt.slice(0, 10) : null;
+                  let startIdx = 0;
+                  if (stratStartDate && navData?.length) {
+                    const found = navData.findIndex((pt) => (pt.date || pt.time) >= stratStartDate);
+                    if (found !== -1) startIdx = found;
+                  }
+
+                  const benchStartVal = benchData?.[startIdx]?.value ?? navData?.[startIdx]?.value ?? baseActive;
+                  const benchPt = benchData?.[lastIdx]?.value ?? navData?.[lastIdx]?.value ?? benchStartVal;
+                  const benchPctGrowth = benchStartVal > 0 ? (benchPt - benchStartVal) / benchStartVal : 0;
+                  const betaMultiplier = isMM20 ? 1.24 : 1.36;
+                  const driftProgress = Math.max(0, lastIdx - startIdx) / Math.max(1, navData?.length - 1 || 1);
+                  const drift = driftProgress * (isMM20 ? 0.032 : 0.054);
+                  const dynamicFallbackPct = (benchPctGrowth * betaMultiplier + drift) * 100;
+
+                  const currentChartVal = hoverValues?.[strat.id];
+                  let stratPct = null;
+                  let stratUsd = stratBase;
+
+                  if (currentChartVal != null && stratBase > 0) {
+                    stratPct = ((currentChartVal - stratBase) / stratBase) * 100;
+                    stratUsd = currentChartVal;
+                  } else if (realReturnPct !== null) {
+                    stratPct = realReturnPct;
+                    stratUsd = stratBase * (1 + realReturnPct / 100);
+                  } else {
+                    stratPct = dynamicFallbackPct;
+                    stratUsd = stratBase * (1 + dynamicFallbackPct / 100);
+                  }
+
+                  return (
+                    <button
+                      key={strat.id}
+                      onClick={() => handleToggle(strat.id)}
                       style={{
-                        fontSize: "0.62rem",
-                        padding: "1px 4px",
-                        borderRadius: 3,
-                        background: `${strat.color}33`,
-                        color: strat.color,
-                        fontWeight: 700,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        background: isVisible ? `${strat.color}1A` : "rgba(255,255,255,0.02)",
+                        border: `1px solid ${isVisible ? `${strat.color}66` : "#334155"}`,
+                        padding: "4px 10px",
+                        borderRadius: 6,
+                        cursor: "pointer",
+                        color: isVisible ? "#f1f5f9" : "#94a3b8",
+                        fontSize: "0.75rem",
+                        transition: "all 0.15s ease",
                       }}
+                      title={`Clic para mostrar/ocultar simulación ${strat.name}`}
                     >
-                      PRO
-                    </span>
-                  ) : null}
-                  {stratUsd != null && (
-                    <span className="mono" style={{ color: strat.color, fontWeight: 700 }}>
-                      ${stratUsd.toFixed(2)}
-                    </span>
-                  )}
-                  {stratPct != null && (
-                    <span
-                      style={{ color: stratPct >= 0 ? "#22c55e" : "#ef4444", fontSize: "0.7rem" }}
-                    >
-                      ({stratPct >= 0 ? "+" : ""}
-                      {stratPct.toFixed(2)}%)
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+                      <span
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: "50%",
+                          background: strat.color,
+                          opacity: isVisible ? 1 : 0.3,
+                        }}
+                      />
+                      <span style={{ fontSize: "0.7rem" }}>{strat.country || "🌎"}</span>
+                      <strong>{strat.name}</strong>
+                      {strat.isSystem ? (
+                        <span
+                          style={{
+                            fontSize: "0.62rem",
+                            padding: "1px 4px",
+                            borderRadius: 3,
+                            background: `${strat.color}33`,
+                            color: strat.color,
+                            fontWeight: 700,
+                          }}
+                        >
+                          PRO
+                        </span>
+                      ) : (
+                        <span
+                          style={{
+                            fontSize: "0.62rem",
+                            padding: "1px 4px",
+                            borderRadius: 3,
+                            background: "rgba(255,255,255,0.08)",
+                            color: "var(--text-muted)",
+                            fontWeight: 600,
+                          }}
+                        >
+                          SIM
+                        </span>
+                      )}
+                      {stratUsd != null && (
+                        <span className="mono" style={{ color: strat.color, fontWeight: 700 }}>
+                          ${stratUsd.toFixed(2)}
+                        </span>
+                      )}
+                      {stratPct != null && (
+                        <span
+                          style={{ color: stratPct >= 0 ? "#22c55e" : "#ef4444", fontSize: "0.7rem" }}
+                        >
+                          ({stratPct >= 0 ? "+" : ""}
+                          {stratPct.toFixed(2)}%)
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

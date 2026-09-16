@@ -226,6 +226,8 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
     return {
       ticker: h.ticker,
       name: h.name || h.ticker,
+      exchange: h.exchange || q?.exchange || "US",
+      market_open: q?.market_open ?? h.market_open,
       currentValue,
       currentWeight,
       targetWeight,
@@ -604,23 +606,41 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
                       }}
                     >
                       <td style={{ padding: "8px 4px", fontWeight: 600 }}>
-                        <span style={{ color: hasCrossed ? "#fca5a5" : "var(--text-primary)" }}>
-                          {d.ticker}
-                        </span>
-                        {hasCrossed && (
-                          <span
-                            style={{
-                              marginLeft: 6,
-                              fontSize: "0.65rem",
-                              padding: "1px 4px",
-                              borderRadius: 3,
-                              background: "rgba(239, 68, 68, 0.15)",
-                              color: "var(--loss)",
-                            }}
-                          >
-                            DRIFT!
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ color: hasCrossed ? "#fca5a5" : "var(--text-primary)" }}>
+                            {d.ticker}
                           </span>
-                        )}
+                          {d.market_open !== undefined && (
+                            <span
+                              title={
+                                d.market_open
+                                  ? `Mercado abierto (${d.exchange})`
+                                  : `Mercado cerrado (${d.exchange})`
+                              }
+                              style={{
+                                width: 7,
+                                height: 7,
+                                borderRadius: "50%",
+                                background: d.market_open ? "#22c55e" : "#ef4444",
+                                boxShadow: d.market_open ? "0 0 6px #22c55e" : "none",
+                                display: "inline-block",
+                              }}
+                            />
+                          )}
+                          {hasCrossed && (
+                            <span
+                              style={{
+                                fontSize: "0.65rem",
+                                padding: "1px 4px",
+                                borderRadius: 3,
+                                background: "rgba(239, 68, 68, 0.15)",
+                                color: "var(--loss)",
+                              }}
+                            >
+                              DRIFT!
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td
                         style={{
@@ -856,6 +876,41 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
                       >
                         {h.exchange || "US"}
                       </span>
+                      {(q?.market_open !== undefined || h.market_open !== undefined) && (
+                        <span
+                          style={{
+                            fontSize: "0.62rem",
+                            padding: "1px 6px",
+                            borderRadius: 10,
+                            background: (q?.market_open ?? h.market_open)
+                              ? "rgba(34, 197, 94, 0.12)"
+                              : "rgba(239, 68, 68, 0.12)",
+                            border: `1px solid ${
+                              (q?.market_open ?? h.market_open)
+                                ? "rgba(34, 197, 94, 0.25)"
+                                : "rgba(239, 68, 68, 0.25)"
+                            }`,
+                            color: (q?.market_open ?? h.market_open) ? "#4ade80" : "#f87171",
+                            fontWeight: 600,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                          }}
+                        >
+                          <span
+                            style={{
+                              width: 5,
+                              height: 5,
+                              borderRadius: "50%",
+                              background: (q?.market_open ?? h.market_open) ? "#22c55e" : "#ef4444",
+                              boxShadow: (q?.market_open ?? h.market_open)
+                                ? "0 0 5px #22c55e"
+                                : "none",
+                            }}
+                          />
+                          {(q?.market_open ?? h.market_open) ? "Abierto" : "Cerrado"}
+                        </span>
+                      )}
                     </div>
                     <div
                       style={{

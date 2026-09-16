@@ -42,7 +42,7 @@
       "name": "Cajita Viaje",
       "type": "pocket",
       "currency": "COP",
-      "balance": 745161.3991667994,
+      "balance": 642683.3781871866,
       "interestRateEA": 9.25,
       "isTaxExemptGMF": true,
       "startDate": "2023-06-01",
@@ -55,7 +55,7 @@
       "name": "Cajita Estudios",
       "type": "pocket",
       "currency": "COP",
-      "balance": 508719.3666270631,
+      "balance": 326174.5938794982,
       "interestRateEA": 9.25,
       "isTaxExemptGMF": true,
       "startDate": "2023-06-01",
@@ -68,7 +68,7 @@
       "name": "Cajita Deuda mom",
       "type": "pocket",
       "currency": "COP",
-      "balance": 260577.44264549247,
+      "balance": 260679.70791434398,
       "interestRateEA": 9.25,
       "isTaxExemptGMF": true,
       "startDate": "2023-06-01",
@@ -98,8 +98,8 @@
       "name": "Bolsillo a la vista",
       "type": "pocket",
       "currency": "USD",
-      "balance": 875.59,
-      "interestRateEA": 3,
+      "balance": 370.55,
+      "interestRateEA": 3.0,
       "isTaxExemptGMF": true,
       "rateHistory": [
         {
@@ -137,8 +137,8 @@
       "name": "Plenti Oro (PAXG)",
       "type": "crypto",
       "currency": "USD",
-      "balance": 404.000361,
-      "interestRateEA": 8.0,
+      "balance": 16.05002444078877,
+      "interestRateEA": 8,
       "isTaxExemptGMF": true,
       "rateHistory": [
         {
@@ -403,9 +403,63 @@
       "isAutoRenew": true,
       "status": "active",
       "createdAt": "2026-08-15T07:05:25.850Z"
+    },
+    {
+      "id": "cdt_1787766378348_mhdian",
+      "entityId": "ent_1786775922508",
+      "name": "KOA",
+      "capital": 250000,
+      "currency": "COP",
+      "interestRateEA": 12.9,
+      "termDays": 360,
+      "startDate": "2026-08-26",
+      "maturityDate": "2027-08-21",
+      "reteFuentePct": 4,
+      "isAutoRenew": false,
+      "createdAt": "2026-08-26T17:46:18.348Z"
     }
   ],
   "transactions": [
+    {
+      "id": "tx_1788401808276_evuz0z",
+      "accountId": "acc_1786777955489",
+      "date": "2026-09-03",
+      "description": "Aporte a Bolsillo a la vista",
+      "amount": 94.96,
+      "currency": "USD",
+      "type": "credit",
+      "createdAt": "2026-09-03T02:16:48.276Z"
+    },
+    {
+      "id": "tx_1787576414025_287du8",
+      "accountId": "acc_1786777955489",
+      "date": "2026-08-24",
+      "description": "Retiro de Bolsillo a la vista",
+      "amount": -600,
+      "currency": "USD",
+      "type": "debit",
+      "createdAt": "2026-08-24T13:00:14.025Z"
+    },
+    {
+      "id": "tx_1787084146842_0uj1u6",
+      "accountId": "acc_estudios",
+      "date": "2026-08-18",
+      "description": "Retiro de Cajita Estudios",
+      "amount": -175000,
+      "currency": "COP",
+      "type": "debit",
+      "createdAt": "2026-08-18T20:15:46.842Z"
+    },
+    {
+      "id": "tx_1787013156149_j7ey9g",
+      "accountId": "acc_viaje",
+      "date": "2026-08-17",
+      "description": "Retiro de Cajita Viaje",
+      "amount": -100000,
+      "currency": "COP",
+      "type": "debit",
+      "createdAt": "2026-08-18T00:32:36.149Z"
+    },
     {
       "id": "tx_1786780280546_ptsnho",
       "accountId": "acc_1786780168348",

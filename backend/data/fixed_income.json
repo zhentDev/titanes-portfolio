@@ -98,7 +98,7 @@
       "name": "Bolsillo a la vista",
       "type": "pocket",
       "currency": "USD",
-      "balance": 275.59000000000003,
+      "balance": 370.55,
       "interestRateEA": 3.0,
       "isTaxExemptGMF": true,
       "rateHistory": [
@@ -138,7 +138,7 @@
       "type": "crypto",
       "currency": "USD",
       "balance": 16.05002444078877,
-      "interestRateEA": 8.0,
+      "interestRateEA": 8,
       "isTaxExemptGMF": true,
       "rateHistory": [
         {
@@ -408,18 +408,28 @@
       "id": "cdt_1787766378348_mhdian",
       "entityId": "ent_1786775922508",
       "name": "KOA",
-      "capital": 250000.0,
+      "capital": 250000,
       "currency": "COP",
       "interestRateEA": 12.9,
       "termDays": 360,
       "startDate": "2026-08-26",
       "maturityDate": "2027-08-21",
-      "reteFuentePct": 4.0,
+      "reteFuentePct": 4,
       "isAutoRenew": false,
       "createdAt": "2026-08-26T17:46:18.348Z"
     }
   ],
   "transactions": [
+    {
+      "id": "tx_1788401808276_evuz0z",
+      "accountId": "acc_1786777955489",
+      "date": "2026-09-03",
+      "description": "Aporte a Bolsillo a la vista",
+      "amount": 94.96,
+      "currency": "USD",
+      "type": "credit",
+      "createdAt": "2026-09-03T02:16:48.276Z"
+    },
     {
       "id": "tx_1787576414025_287du8",
       "accountId": "acc_1786777955489",

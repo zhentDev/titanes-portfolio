@@ -2,7 +2,9 @@ from datetime import date
 
 import duckdb
 
-DB_PATH = "titanes.duckdb"
+from pathlib import Path
+
+DB_PATH = str(Path(__file__).resolve().parent.parent / "titanes.duckdb")
 
 
 def get_connection():
@@ -14,16 +16,18 @@ def init_db():
         # Table to store rebalance events
         con.execute("""
             CREATE TABLE IF NOT EXISTS rebalances (
-                rebalance_date DATE PRIMARY KEY,
-                cash_added DOUBLE
+                rebalance_date DATE,
+                cash_added DOUBLE,
+                strategy_id VARCHAR DEFAULT 'historical',
+                PRIMARY KEY (rebalance_date, strategy_id)
             )
         """)
-        # Table to store the 15 tickers for each rebalance event
+        # Table to store tickers for each rebalance event
         con.execute("""
             CREATE TABLE IF NOT EXISTS rebalance_tickers (
                 rebalance_date DATE,
                 ticker VARCHAR,
-                FOREIGN KEY (rebalance_date) REFERENCES rebalances(rebalance_date)
+                strategy_id VARCHAR DEFAULT 'historical'
             )
         """)
 
@@ -84,10 +88,19 @@ def init_db():
                 purchase_price DOUBLE,
                 shares DOUBLE,
                 manual_current_price DOUBLE,
+                purchase_time VARCHAR,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (portfolio_id) REFERENCES purchase_portfolios(id)
             )
         """)
+
+        # Migration: Add purchase_time to individual_purchases if missing
+        try:
+            ip_cols = [row[1] for row in con.execute("PRAGMA table_info('individual_purchases')").fetchall()]
+            if "purchase_time" not in ip_cols:
+                con.execute("ALTER TABLE individual_purchases ADD COLUMN purchase_time VARCHAR")
+        except duckdb.Error as e:
+            print(f"Individual purchases migration error: {e}")
 
         con.execute("""
             CREATE TABLE IF NOT EXISTS custom_strategies (

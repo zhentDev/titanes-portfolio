@@ -1,1 +1,27 @@
-[]
+[
+  {
+    "date": "2026-08-03",
+    "rebalance_date": "2026-08-03",
+    "cash_added": 0.0,
+    "tickers": [
+      "ON",
+      "HPQ",
+      "ORCL",
+      "AMAT",
+      "NTAP"
+    ]
+  },
+  {
+    "date": "2026-09-01",
+    "rebalance_date": "2026-09-01",
+    "cash_added": 0.0,
+    "tickers": [
+      "ON",
+      "HPQ",
+      "ORCL",
+      "AMAT",
+      "NTAP",
+      "ACN"
+    ]
+  }
+]

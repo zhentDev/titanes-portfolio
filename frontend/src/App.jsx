@@ -38,6 +38,7 @@ export default function App() {
     addPurchasePortfolio,
     mainPortfolioSettings,
     setMainPortfolioSettings,
+    strategyRebalances,
     initFetchPurchases,
     initFetchCustomStrategies,
   } = usePortfolioStore();
@@ -222,23 +223,21 @@ export default function App() {
       };
     });
 
-    // Rescaled S&P 500: pure index percentage growth relative to portfolio benchmark base
-    const scaledSP500 = (baseNavData.sp500 || []).map((pt) => {
-      const pctGrowth = baseSP0 > 0 ? pt.value / baseSP0 : 1;
-      return {
-        ...pt,
-        value: Number((activeInvested * pctGrowth).toFixed(4)),
-      };
-    });
+    // Rescaled S&P 500 and NASDAQ:
+    // baseNavData.sp500 / nasdaq from backend already scale to daily active capital ($666.67 -> $800.00).
+    // If the user unchecks holdings in UI, scale proportionally by activeInvested / defaultActiveInvested.
+    const defaultActiveInvested = baseNavData.summary?.active_invested || activeInvested;
+    const filterRatio = defaultActiveInvested > 0 ? activeInvested / defaultActiveInvested : 1;
 
-    // Rescaled NASDAQ: pure index percentage growth relative to portfolio benchmark base
-    const scaledNasdaq = (baseNavData.nasdaq || []).map((pt) => {
-      const pctGrowth = baseND0 > 0 ? pt.value / baseND0 : 1;
-      return {
-        ...pt,
-        value: Number((activeInvested * pctGrowth).toFixed(4)),
-      };
-    });
+    const scaledSP500 = (baseNavData.sp500 || []).map((pt) => ({
+      ...pt,
+      value: Number((pt.value * filterRatio).toFixed(4)),
+    }));
+
+    const scaledNasdaq = (baseNavData.nasdaq || []).map((pt) => ({
+      ...pt,
+      value: Number((pt.value * filterRatio).toFixed(4)),
+    }));
 
     const sp500Pct = baseNavData.summary?.sp500_return_pct || 0;
     const nasdaqPct = baseNavData.summary?.nasdaq_return_pct || 0;
@@ -306,6 +305,45 @@ export default function App() {
   };
 
   const isSimulating = selectedTickers !== null && selectedTickers.length < allTickers.length;
+
+  // ── Period unlock logic ──────────────────────────────────
+  // A period button becomes enabled once the portfolio has enough days of history.
+  // Same progressive thresholds used in DynamicStrategyView.
+  const UNLOCK_DAYS = {
+    "1W": 1,
+    "1M": 7,
+    "3M": 30,
+    "6M": 90,
+    "1Y": 180,
+    "3Y": 365,
+    "5Y": 1095,
+    MAX: 0,
+  };
+
+  const firstInvestDate = baseNavData?.nav?.[0]?.date || baseNavData?.rebalances?.[0]?.date;
+
+  const periodEnabled = useMemo(() => {
+    const map = {};
+    const availableDays = firstInvestDate
+      ? Math.max(
+          0,
+          Math.floor(
+            (Date.now() - new Date(`${firstInvestDate}T00:00:00Z`).getTime()) / 86400000,
+          ),
+        )
+      : Infinity;
+    for (const p of PERIODS) map[p] = !firstInvestDate || UNLOCK_DAYS[p] <= availableDays;
+    return map;
+  }, [firstInvestDate]);
+
+  // Si el periodo actual seleccionado no está habilitado para el historial disponible,
+  // retroceder al periodo más alto que sí esté habilitado (o "1W").
+  useEffect(() => {
+    if (periodEnabled && period && !periodEnabled[period]) {
+      const fallbackPeriod = [...PERIODS].reverse().find((p) => periodEnabled[p]) || "1W";
+      setPeriod(fallbackPeriod);
+    }
+  }, [period, periodEnabled, setPeriod]);
 
   return (
     <div className="app-wrapper">
@@ -575,6 +613,18 @@ export default function App() {
             firstInvestDate={
               (() => {
                 const strat = customStrategies.find((s) => s.id === mode);
+                const rebs = strategyRebalances?.[mode];
+                if (Array.isArray(rebs) && rebs.length > 0) {
+                  const dates = rebs
+                    .map((r) => r.rebalance_date || r.date)
+                    .filter(Boolean);
+                  if (dates.length > 0) {
+                    return [...dates].sort()[0];
+                  }
+                }
+                if (strat?.isSystem) {
+                  return baseNavData?.nav?.[0]?.date || "2026-08-03";
+                }
                 if (strat?.createdAt) {
                   return strat.createdAt.slice(0, 10); // "YYYY-MM-DD"
                 }
@@ -1382,6 +1432,16 @@ export default function App() {
                   key={p}
                   className={`period-btn ${p === period ? "active" : ""}`}
                   onClick={() => setPeriod(p)}
+                  disabled={!periodEnabled[p]}
+                  title={
+                    periodEnabled[p]
+                      ? undefined
+                      : "Requiere más historial desde tu primera inversión"
+                  }
+                  style={{
+                    opacity: periodEnabled[p] ? 1 : 0.35,
+                    cursor: periodEnabled[p] ? "pointer" : "not-allowed",
+                  }}
                 >
                   {p}
                 </button>
@@ -1485,6 +1545,7 @@ export default function App() {
                   nasdaqData={navData?.nasdaq}
                   investment={investment}
                   numSlots={numSlots}
+                  period={period}
                   rebalances={navData?.rebalances}
                   summary={navData?.summary}
                   holdings={holdings}

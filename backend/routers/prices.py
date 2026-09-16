@@ -9,7 +9,7 @@ from pathlib import Path
 
 import yfinance as yf
 from fastapi import APIRouter, Query
-from services.market_data import DEFAULT_TICKERS, get_intraday, get_live_quotes, get_ticker_meta
+from services.market_data import DEFAULT_TICKERS, get_intraday, get_live_quotes, get_ticker_meta, is_ticker_market_open
 
 
 def get_yf_ticker(ticker: str) -> yf.Ticker:
@@ -44,6 +44,7 @@ def intraday(ticker: str):
 
 
 import time
+import time as time_module
 import pandas as pd
 
 _indices_cache = {}
@@ -120,19 +121,67 @@ def indices_history(start_date: str = Query("2020-01-01", description="Start dat
 
 
 @router.get("/prices/historical/{ticker}")
-def historical_price(ticker: str, date: str = Query(..., description="Date in YYYY-MM-DD")):
+def historical_price(
+    ticker: str,
+    date: str = Query(..., description="Date in YYYY-MM-DD"),
+    time: str | None = Query(None, description="Time in HH:MM (e.g. 08:00 or 09:30)"),
+):
     """
-    Returns the historical closing price of the ticker on the specified date.
+    Returns the historical closing or intraday price of the ticker on the specified date (and optional time).
+    If time is specified, searches intraday 5m/1m candles for the closest tick to that execution time.
     If the date is a weekend/holiday, returns the closest previous trading day's close.
     """
     ticker_clean = ticker.strip().upper()
-    cache_key = f"{ticker_clean}:{date}"
+    time_val = str(time).strip() if (time is not None and not hasattr(time, "default") and str(time) != "PydanticUndefined") else None
+    time_clean = time_val if (time_val and time_val != "None") else None
+    cache_key = f"{ticker_clean}:{date}:{time_clean or 'close'}"
     cached = _hist_price_cache.get(cache_key)
-    if cached and (time.time() - cached[0] < HIST_PRICE_TTL):
+    if cached and (time_module.time() - cached[0] < HIST_PRICE_TTL):
         return cached[1]
     try:
         t = get_yf_ticker(ticker_clean)
         target_date = datetime.datetime.strptime(date, "%Y-%m-%d")
+
+        # 1. Si el usuario proporcionó una hora, intentar consultar data intradía (5m)
+        if time_clean:
+            try:
+                # yfinance permite intradía con start/end dentro de los últimos 60 días
+                start_dt = target_date - datetime.timedelta(days=1)
+                end_dt = target_date + datetime.timedelta(days=2)
+                df_intra = t.history(
+                    start=start_dt.strftime("%Y-%m-%d"),
+                    end=end_dt.strftime("%Y-%m-%d"),
+                    interval="5m",
+                )
+                if not df_intra.empty:
+                    df_intra["day_str"] = df_intra.index.strftime("%Y-%m-%d")
+                    df_day = df_intra[df_intra["day_str"] == date]
+                    if df_day.empty:
+                        df_day = df_intra  # fallback al día más cercano encontrado
+
+                    # Convertir target_dt con la misma zona horaria del índice del ticker
+                    target_dt = pd.to_datetime(f"{date} {time_clean}").tz_localize(df_day.index.tz)
+                    idx = df_day.index.get_indexer([target_dt], method="nearest")[0]
+                    matched_row = df_day.iloc[idx]
+                    matched_time = df_day.index[idx].strftime("%H:%M")
+                    # Usamos el precio de apertura de esa vela (momento de ejecución de la orden)
+                    price_val = float(matched_row["Open"]) if not pd.isna(matched_row["Open"]) else float(matched_row["Close"])
+
+                    result = {
+                        "ticker": ticker_clean,
+                        "requested_date": date,
+                        "requested_time": time_clean,
+                        "actual_date": df_day.index[idx].strftime("%Y-%m-%d"),
+                        "actual_time": matched_time,
+                        "price": round(price_val, 4),
+                        "source": "intraday",
+                    }
+                    _hist_price_cache[cache_key] = (time_module.time(), result)
+                    return result
+            except Exception as intra_exc:
+                print(f"Intraday lookup fallback to daily for {ticker_clean}: {intra_exc}")
+
+        # 2. Fallback estándar a datos diarios (cierre del día o día de trading anterior)
         # end date is exclusive in yfinance, so we add 1 day
         end_date = target_date + datetime.timedelta(days=1)
         # go back 7 days to ensure we hit a trading day (e.g. over long weekends)
@@ -140,15 +189,29 @@ def historical_price(ticker: str, date: str = Query(..., description="Date in YY
 
         df = t.history(start=start_date.strftime("%Y-%m-%d"), end=end_date.strftime("%Y-%m-%d"))
         if not df.empty:
-            last_close = df["Close"].iloc[-1]
-            actual_date = df.index[-1].strftime("%Y-%m-%d")
+            # Si se solicitó hora temprana (ej. <= 09:30 o primera hora), intentar usar Open del día si existe
+            if time_clean and time_clean <= "09:30" and "Open" in df.columns:
+                target_day_rows = df[df.index.strftime("%Y-%m-%d") == date]
+                if not target_day_rows.empty:
+                    chosen_price = target_day_rows["Open"].iloc[0]
+                    actual_date = target_day_rows.index[0].strftime("%Y-%m-%d")
+                else:
+                    chosen_price = df["Close"].iloc[-1]
+                    actual_date = df.index[-1].strftime("%Y-%m-%d")
+            else:
+                chosen_price = df["Close"].iloc[-1]
+                actual_date = df.index[-1].strftime("%Y-%m-%d")
+
             result = {
                 "ticker": ticker_clean,
                 "requested_date": date,
+                "requested_time": time_clean,
                 "actual_date": actual_date,
-                "price": round(float(last_close), 4),
+                "actual_time": time_clean or "close",
+                "price": round(float(chosen_price), 4),
+                "source": "daily",
             }
-            _hist_price_cache[cache_key] = (time.time(), result)
+            _hist_price_cache[cache_key] = (time_module.time(), result)
             return result
         else:
             return {"error": "No historical data found for this date range."}
@@ -176,6 +239,7 @@ def search_ticker(
             or info.get("regularMarketPrice")
             or getattr(t.fast_info, "last_price", 0.0)
         )
+        exchange = meta.get("exchange") or info.get("exchange") or "US"
         return {
             "ticker": ticker_clean,
             "name": meta.get("name")
@@ -186,10 +250,11 @@ def search_ticker(
             or info.get("sector")
             or info.get("industry")
             or "Tecnología",
-            "exchange": meta.get("exchange") or info.get("exchange") or "US",
+            "exchange": exchange,
             "currency": info.get("currency") or "USD",
             "quoteType": info.get("quoteType") or "EQUITY",
             "price": round(last_price or 0.0, 2),
+            "market_open": is_ticker_market_open(ticker_clean, exchange),
             "valid": last_price is not None,
         }
     except Exception as exc:
@@ -200,6 +265,7 @@ def search_ticker(
             "exchange": "US",
             "currency": "USD",
             "quoteType": "EQUITY",
+            "market_open": False,
             "valid": False,
             "error": str(exc),
         }
@@ -240,6 +306,7 @@ def search_tickers_multiple(
                 or getattr(t.fast_info, "last_price", 0.0)
             )
 
+            exchange = info.get("exchange") or quote.get("exchange") or "US"
             results.append(
                 {
                     "ticker": sym,
@@ -252,23 +319,26 @@ def search_tickers_multiple(
                     or info.get("industry")
                     or quote.get("sectorDisp")
                     or "Tecnología",
-                    "exchange": info.get("exchange") or quote.get("exchange") or "US",
-                    "currency": info.get("currency") or "USD",
+                    "exchange": exchange,
+                    "currency": info.get("currency") or quote.get("currency") or "USD",
                     "quoteType": info.get("quoteType") or quote.get("quoteType") or "EQUITY",
                     "price": round(last_price or 0.0, 2),
+                    "market_open": is_ticker_market_open(sym, exchange),
                     "valid": last_price is not None,
                 }
             )
         except Exception:
+            ex = quote.get("exchange") or "US"
             results.append(
                 {
                     "ticker": sym,
                     "name": quote.get("longname") or quote.get("shortname") or sym,
                     "sector": quote.get("sectorDisp") or "Tecnología",
-                    "exchange": quote.get("exchange") or "US",
+                    "exchange": ex,
                     "currency": "USD",
                     "quoteType": quote.get("quoteType") or "EQUITY",
                     "price": 0.0,
+                    "market_open": is_ticker_market_open(sym, ex),
                     "valid": False,
                 }
             )
