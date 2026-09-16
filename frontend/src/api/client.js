@@ -217,13 +217,7 @@ export async function updateRebalanceDateApi(oldDate, newDate, strategyId = "his
 
 /** CUSTOM STRATEGIES API */
 export async function fetchCustomStrategiesApi() {
-  try {
-    const res = await safeFetch(`${BASE}/custom-strategies`, {}, 2, 400);
-    if (!res.ok) return [];
-    return res.json();
-  } catch {
-    return [];
-  }
+  return await fetchWithFallback("/custom-strategies", "custom_strategies.json");
 }
 
 export async function saveCustomStrategyApi(strat) {
@@ -256,9 +250,11 @@ export async function deleteCustomStrategyApi(strategyId) {
 
 /** PURCHASES API */
 export async function fetchPurchasesData() {
-  const res = await safeFetch(`${BASE}/purchases/portfolios`, {}, 2, 500);
-  if (!res.ok) throw new Error("Error fetching purchases data");
-  return res.json();
+  const data = await fetchWithFallback("/purchases/portfolios", "purchases.json");
+  if (!data || (!data.purchasePortfolios && !data.individualPurchases)) {
+    throw new Error("Error fetching purchases data");
+  }
+  return data;
 }
 
 export async function createPurchasePortfolio(id, name, isPlan = false) {
