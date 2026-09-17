@@ -108,7 +108,7 @@ const DEFAULT_INFLOWS = [
   },
   {
     id: "in_fixed_yield",
-    name: "Rendimientos Cajitas Nu & CDTs",
+    name: "Ingreso por Renta Fija",
     category: "passive_fixed",
     amount: 385000.0,
     currency: "COP",
@@ -116,13 +116,13 @@ const DEFAULT_INFLOWS = [
     isAutoSynced: true,
     linkedModule: "fixed_income",
     frequency: "monthly",
-    paymentSource: { type: "fixed_pocket", targetName: "Cajitas Nu & CDTs" },
+    paymentSource: { type: "fixed_pocket", targetName: "Renta Fija (Cuentas & CDTs)" },
     icon: "⚡",
     createdAt: new Date().toISOString(),
   },
   {
     id: "in_stock_div",
-    name: "Dividendos Titanes Tech ETF",
+    name: "Ingreso por Renta Variable",
     category: "passive_equity",
     amount: 150000.0,
     currency: "COP",
@@ -130,7 +130,7 @@ const DEFAULT_INFLOWS = [
     isAutoSynced: true,
     linkedModule: "variable_income",
     frequency: "monthly",
-    paymentSource: { type: "investment_cash", targetName: "Portafolio Titanes Tech" },
+    paymentSource: { type: "investment_cash", targetName: "Portafolio de Inversión (Acciones, ETFs, Estrategias)" },
     icon: "📈",
     createdAt: new Date().toISOString(),
   },
@@ -1371,7 +1371,7 @@ export const useCashFlowStore = create(
           if (!nextInflows.some((i) => i.category === "passive_fixed" || i.id === "in_fixed_yield") && roundedYield > 0) {
             nextInflows.push({
               id: "in_fixed_yield",
-              name: "Rendimientos Cajitas Nu & CDTs",
+              name: "Ingreso por Renta Fija",
               category: "passive_fixed",
               amount: roundedYield,
               currency: "COP",
@@ -1379,6 +1379,7 @@ export const useCashFlowStore = create(
               isAutoSynced: true,
               linkedModule: "fixed_income",
               frequency: "monthly",
+              paymentSource: { type: "fixed_pocket", targetName: "Renta Fija (Cuentas & CDTs)" },
               icon: "⚡",
               createdAt: new Date().toISOString(),
             });
@@ -1400,6 +1401,7 @@ export const useCashFlowStore = create(
         get().syncStateWithBackend();
       },
 
+
       syncFromPortfolio: (currentEquityValue = 0, fxRate = 4150) => {
         if (!currentEquityValue || currentEquityValue <= 0) return;
 
@@ -1411,6 +1413,8 @@ export const useCashFlowStore = create(
             if (i.category === "passive_equity" || i.id === "in_stock_div") {
               return {
                 ...i,
+                name: "Ingreso por Renta Variable",
+                paymentSource: { type: "investment_cash", targetName: "Portafolio de Inversión (Acciones, ETFs, Estrategias)" },
                 amount: monthlyDividendCOP > 0 ? monthlyDividendCOP : i.amount,
                 isPassive: true,
                 isAutoSynced: true,
@@ -1419,6 +1423,23 @@ export const useCashFlowStore = create(
             }
             return i;
           });
+
+          if (!nextInflows.some((i) => i.category === "passive_equity" || i.id === "in_stock_div") && monthlyDividendCOP > 0) {
+            nextInflows.push({
+              id: "in_stock_div",
+              name: "Ingreso por Renta Variable",
+              category: "passive_equity",
+              amount: monthlyDividendCOP,
+              currency: "COP",
+              isPassive: true,
+              isAutoSynced: true,
+              linkedModule: "variable_income",
+              frequency: "monthly",
+              paymentSource: { type: "investment_cash", targetName: "Portafolio de Inversión (Acciones, ETFs, Estrategias)" },
+              icon: "📈",
+              createdAt: new Date().toISOString(),
+            });
+          }
 
           const nextWealth = state.wealth.map((w) => {
             if (w.linkedModule === "variable_income" || w.category === "equity_investment") {
@@ -1434,5 +1455,6 @@ export const useCashFlowStore = create(
 
         get().syncStateWithBackend();
       },
+
     })
 );

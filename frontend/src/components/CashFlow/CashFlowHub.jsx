@@ -80,7 +80,7 @@ export default function CashFlowHub() {
   } = useCashFlowStore();
 
   const { accounts: fixedAccounts, cdts: fixedCdts } = useFixedIncomeStore();
-  const { settingsByMode, mode } = usePortfolioStore();
+  const { settingsByMode, mode, customStrategies, individualPurchases } = usePortfolioStore();
 
   const [fxRate, setFxRate] = useState(4150);
   const [modalOpen, setModalOpen] = useState(false);
@@ -118,13 +118,26 @@ export default function CashFlowHub() {
       if (fixedAccounts?.length > 0 || fixedCdts?.length > 0) {
         syncFromFixedIncome(fixedAccounts || [], fixedCdts || [], fxRate);
       }
-      const currentSettings = settingsByMode[mode] || settingsByMode.historical;
-      const inv = currentSettings?.investment || 0;
-      if (inv > 0) {
-        syncFromPortfolio(inv, fxRate);
+
+      // Sum ALL strategies capital (historical + all custom strategies)
+      let totalEquityUSD = settingsByMode?.historical?.investment || 0;
+      if (Array.isArray(customStrategies)) {
+        customStrategies.forEach((strat) => {
+          totalEquityUSD += Number(strat.capital || settingsByMode?.[strat.id]?.investment || 0);
+        });
+      }
+      // Add individual purchase lots (shares * purchasePrice per lot)
+      if (Array.isArray(individualPurchases)) {
+        individualPurchases.forEach((lot) => {
+          totalEquityUSD += Number(lot.shares || 0) * Number(lot.purchasePrice || 0);
+        });
+      }
+
+      if (totalEquityUSD > 0) {
+        syncFromPortfolio(totalEquityUSD, fxRate);
       }
     }
-  }, [isInitialized, fixedAccounts, fixedCdts, settingsByMode, mode, fxRate, syncFromFixedIncome, syncFromPortfolio]);
+  }, [isInitialized, fixedAccounts, fixedCdts, settingsByMode, mode, customStrategies, individualPurchases, fxRate, syncFromFixedIncome, syncFromPortfolio]);
 
   const formatMoney = (val, cur = currency) => formatCashFlowMoneyWithCode(val, cur, fxRate);
 
