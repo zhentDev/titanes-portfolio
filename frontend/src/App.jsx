@@ -1062,8 +1062,41 @@ export default function App() {
                         const nomReturnPct = summary.active_return_pct ?? 0;
 
                         const fxMult = mainFxData.current || 1.0;
-                        const fxInvested = nomInvested * fxMult;
-                        const fxStockVal = rawActiveStockVal * fxMult;
+                        const currentFx = fxMult;
+                        let startFx = currentFx;
+                        const rebs = strategyRebalances?.historical;
+                        const startDate =
+                          (Array.isArray(rebs) && rebs[0]?.rebalance_date) ||
+                          navData?.[0]?.date ||
+                          "2026-08-03";
+                        if (startDate && mainFxData.history && Object.keys(mainFxData.history).length > 0) {
+                          if (mainFxData.history[startDate]) {
+                            startFx = mainFxData.history[startDate];
+                          } else {
+                            const histDates = Object.keys(mainFxData.history).sort();
+                            const pastDates = histDates.filter((d) => d <= startDate);
+                            if (pastDates.length > 0) {
+                              startFx = mainFxData.history[pastDates[pastDates.length - 1]];
+                            } else if (histDates.length > 0) {
+                              startFx = mainFxData.history[0];
+                            }
+                          }
+                        }
+
+                        const pureAssetGainCOP = nomReturnUsd * currentFx;
+                        const pureAssetGainCOPPct =
+                          nomInvested * startFx > 0
+                            ? (pureAssetGainCOP / (nomInvested * startFx)) * 100
+                            : 0;
+
+                        const fxEffectCOP = nomInvested * (currentFx - startFx);
+                        const fxEffectCOPPct =
+                          nomInvested * startFx > 0
+                            ? (fxEffectCOP / (nomInvested * startFx)) * 100
+                            : 0;
+
+                        const fxInvested = nomInvested * startFx;
+                        const fxStockVal = rawActiveStockVal * currentFx;
                         const fxReturnNet = fxStockVal - fxInvested;
                         const fxReturnPct = fxInvested > 0 ? (fxReturnNet / fxInvested) * 100 : 0;
 
@@ -1213,6 +1246,119 @@ export default function App() {
                                 </div>
                               </div>
                             </div>
+
+                            {/* FX Effect Isolated Block */}
+                            {mainSettings.localCurrency &&
+                              mainSettings.localCurrency !== (mainSettings.assetCurrency || "USD") && (
+                                <div
+                                  style={{
+                                    marginTop: 12,
+                                    padding: "10px 14px",
+                                    background: "rgba(0, 229, 255, 0.04)",
+                                    borderRadius: 8,
+                                    border: "1px dashed rgba(0, 229, 255, 0.2)",
+                                    fontSize: "0.78rem",
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      fontWeight: 700,
+                                      color: "#00e5ff",
+                                      marginBottom: 6,
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      alignItems: "center",
+                                      flexWrap: "wrap",
+                                      gap: 6,
+                                    }}
+                                  >
+                                    <span>
+                                      💱 Desglose Cambiario Aislado (
+                                      {mainSettings.assetCurrency || "USD"} ➔{" "}
+                                      {mainSettings.localCurrency || "COP"})
+                                    </span>
+                                    <span
+                                      style={{
+                                        fontSize: "0.72rem",
+                                        color: "var(--text-muted)",
+                                        fontWeight: 400,
+                                      }}
+                                    >
+                                      TRM Inicio: $
+                                      {startFx.toLocaleString("en-US", { maximumFractionDigits: 2 })}{" "}
+                                      ➔ Hoy: $
+                                      {currentFx.toLocaleString("en-US", { maximumFractionDigits: 2 })}
+                                    </span>
+                                  </div>
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      flexWrap: "wrap",
+                                      alignItems: "center",
+                                      gap: 8,
+                                    }}
+                                  >
+                                    <span style={{ color: "#94a3b8", fontWeight: 600 }}>
+                                      Ganancia activo puro ({mainSettings.localCurrency || "COP"}):
+                                    </span>
+                                    <span
+                                      className="mono"
+                                      style={{
+                                        fontWeight: 700,
+                                        color: pureAssetGainCOP >= 0 ? "#4ade80" : "#f87171",
+                                      }}
+                                    >
+                                      {pureAssetGainCOP >= 0 ? "+" : ""}$
+                                      {pureAssetGainCOP.toLocaleString("en-US", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
+                                      <span style={{ fontSize: "0.72rem", marginLeft: 4 }}>
+                                        ({pureAssetGainCOPPct >= 0 ? "+" : ""}
+                                        {pureAssetGainCOPPct.toFixed(2)}%)
+                                      </span>
+                                    </span>
+                                    <span style={{ color: "var(--text-muted)" }}>➕</span>
+                                    <span style={{ color: "#00e5ff", fontWeight: 600 }}>
+                                      Efecto variación divisa:
+                                    </span>
+                                    <span
+                                      className="mono"
+                                      style={{
+                                        fontWeight: 700,
+                                        color: fxEffectCOP >= 0 ? "#4ade80" : "#f87171",
+                                      }}
+                                    >
+                                      {fxEffectCOP >= 0 ? "+" : ""}$
+                                      {fxEffectCOP.toLocaleString("en-US", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
+                                      <span style={{ fontSize: "0.72rem", marginLeft: 4 }}>
+                                        ({fxEffectCOPPct >= 0 ? "+" : ""}
+                                        {fxEffectCOPPct.toFixed(2)}%)
+                                      </span>
+                                    </span>
+                                    <span style={{ color: "var(--text-muted)" }}>🟰</span>
+                                    <span style={{ color: "#f1f5f9", fontWeight: 700 }}>
+                                      Ganancia Bruta {mainSettings.localCurrency || "COP"}:
+                                    </span>
+                                    <span
+                                      className="mono"
+                                      style={{
+                                        fontWeight: 800,
+                                        color: fxReturnNet >= 0 ? "#4ade80" : "#f87171",
+                                      }}
+                                    >
+                                      {fxReturnNet >= 0 ? "+" : ""}$
+                                      {fxReturnNet.toLocaleString("en-US", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
 
                             {/* Explicit Deduction Equation Bar */}
                             <div

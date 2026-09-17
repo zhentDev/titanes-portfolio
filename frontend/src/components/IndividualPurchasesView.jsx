@@ -1302,8 +1302,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
             </div>
 
             {/* FX Effect Isolated Block */}
-            {yieldViewMode !== "USD" && (fxData.current !== 1.0 || Object.keys(fxData.history || {}).length > 0) && (
-              <div
+            {portfolio.localCurrency &&
+              portfolio.localCurrency !== (portfolio.assetCurrency || "USD") && (
+                <div
                 style={{
                   marginTop: 12,
                   padding: "10px 14px",
