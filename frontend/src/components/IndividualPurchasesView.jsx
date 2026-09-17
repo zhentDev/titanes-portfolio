@@ -13,6 +13,7 @@ import {
 import { usePortfolioStore } from "../store/portfolioStore";
 import { analyzeInvestmentPlan } from "../utils/investmentPlanAnalyzer";
 import { toastConfirm, toastPrompt } from "../utils/toastAlerts";
+import { getBrokerEquivalenceInfo } from "../utils/marketHours";
 import { MarketScheduleBadge } from "./Common";
 import ChangeTickerModal from "./ChangeTickerModal";
 import InflationExplorerModal from "./InflationExplorerModal";
@@ -2146,8 +2147,26 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                           {r.name}
                         </div>
                         <div
-                          style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: 4 }}
+                          style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: 4, alignItems: "center" }}
                         >
+                          {(() => {
+                            const eq = getBrokerEquivalenceInfo(r.ticker, r.exchange);
+                            return (
+                              <span
+                                style={{
+                                  padding: "2px 8px",
+                                  background: "rgba(56, 189, 248, 0.12)",
+                                  border: "1px solid rgba(56, 189, 248, 0.25)",
+                                  borderRadius: "12px",
+                                  fontSize: "0.65rem",
+                                  fontWeight: 600,
+                                  color: "#38bdf8",
+                                }}
+                              >
+                                {eq.flag} {eq.marketLabel}
+                              </span>
+                            );
+                          })()}
                           {r.exchange && (
                             <span
                               style={{
@@ -2198,6 +2217,25 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                           )}
                           <MarketScheduleBadge ticker={r.ticker} exchange={r.exchange} size="xs" />
                         </div>
+                        {(() => {
+                          const eq = getBrokerEquivalenceInfo(r.ticker, r.exchange);
+                          if (!eq.brokerTip) return null;
+                          return (
+                            <div
+                              style={{
+                                marginTop: 4,
+                                fontSize: "0.68rem",
+                                color: "#94a3b8",
+                                background: "rgba(255, 255, 255, 0.03)",
+                                padding: "2px 6px",
+                                borderRadius: 4,
+                                borderLeft: "2px solid #00e5ff",
+                              }}
+                            >
+                              💡 {eq.brokerTip}
+                            </div>
+                          );
+                        })()}
                       </div>
                     ))}
                   </div>

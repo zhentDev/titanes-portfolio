@@ -232,3 +232,138 @@ export function getMarketSchedule(ticker = "", exchange = "") {
     currentColombiaTime: colTimeStr,
   };
 }
+
+/**
+ * Regiones y filtros de mercado disponibles para búsqueda de activos.
+ */
+export const MARKET_REGIONS = [
+  { id: "ALL", label: "Todos", icon: "🌐" },
+  { id: "US", label: "EE.UU.", icon: "🇺🇸", hint: "NYSE / NASDAQ (Sin sufijo)" },
+  { id: "GER", label: "Alemania", icon: "🇩🇪", hint: "Frankfurt .F / Xetra .DE (XTB: .DE)" },
+  { id: "UK", label: "Londres", icon: "🇬🇧", hint: "LSE .L (XTB: .UK)" },
+  { id: "EU", label: "Europa", icon: "🇪🇺", hint: "París .PA, Ámsterdam .AS, Madrid .MC" },
+  { id: "HK", label: "Hong Kong", icon: "🇭🇰", hint: "HKEX .HK (ej. 0700.HK)" },
+];
+
+/**
+ * Detecta y traduce sufijos de brokers como XTB o Interactive Brokers al estándar de Yahoo Finance.
+ * Ejemplos:
+ *  - "NNND.DE" -> sugerir "NNND.F" y "NNND.DE"
+ *  - "CSPX.UK" -> sugerir "CSPX.L"
+ *  - "VUAA.UK" -> sugerir "VUAA.L"
+ *  - "VUSA.DE" -> sugerir "VUSA.F" o "VUSA.DE"
+ */
+export function translateBrokerTicker(rawInput = "") {
+  const clean = rawInput.trim().toUpperCase();
+  if (!clean) return { clean, suggestions: [] };
+
+  const suggestions = [];
+
+  if (clean.endsWith(".UK")) {
+    const base = clean.slice(0, -3);
+    suggestions.push({
+      ticker: `${base}.L`,
+      note: "Londres (LSE en Yahoo Finance)",
+      badge: "🇬🇧 LSE (.L)",
+    });
+  } else if (clean.endsWith(".DE")) {
+    const base = clean.slice(0, -3);
+    suggestions.push({
+      ticker: `${base}.F`,
+      note: "Bolsa de Fráncfort (Yahoo Finance)",
+      badge: "🇩🇪 Frankfurt (.F)",
+    });
+    suggestions.push({
+      ticker: `${base}.DE`,
+      note: "XETRA Alemania",
+      badge: "🇩🇪 XETRA (.DE)",
+    });
+  } else if (clean.endsWith(".FR")) {
+    const base = clean.slice(0, -3);
+    suggestions.push({
+      ticker: `${base}.PA`,
+      note: "Euronext París (Yahoo Finance)",
+      badge: "🇫🇷 París (.PA)",
+    });
+  } else if (clean.endsWith(".NL")) {
+    const base = clean.slice(0, -3);
+    suggestions.push({
+      ticker: `${base}.AS`,
+      note: "Euronext Ámsterdam (Yahoo Finance)",
+      badge: "🇳🇱 Ámsterdam (.AS)",
+    });
+  } else if (clean.endsWith(".ES")) {
+    const base = clean.slice(0, -3);
+    suggestions.push({
+      ticker: `${base}.MC`,
+      note: "Bolsas y Mercados Españoles (BME)",
+      badge: "🇪🇸 Madrid (.MC)",
+    });
+  }
+
+  return { clean, suggestions };
+}
+
+/**
+ * Retorna etiquetas de ayuda y equivalencia de brokers para un ticker o exchange dado.
+ */
+export function getBrokerEquivalenceInfo(ticker = "", exchange = "") {
+  const t = String(ticker).trim().toUpperCase();
+  const e = String(exchange).trim().toUpperCase();
+
+  if (t.endsWith(".F")) {
+    return {
+      region: "GER",
+      marketLabel: "Bolsa de Fráncfort (.F)",
+      flag: "🇩🇪",
+      brokerTip: "En XTB suele figurar con sufijo .DE (ej. NNND.DE). En Yahoo Finance se consulta como .F.",
+    };
+  }
+  if (t.endsWith(".DE") || ["XETRA", "GER"].includes(e)) {
+    return {
+      region: "GER",
+      marketLabel: "Alemania XETRA (.DE)",
+      flag: "🇩🇪",
+      brokerTip: "En XTB suele figurar con .DE. Si no cotiza en vivo, prueba su equivalente .F (Frankfurt).",
+    };
+  }
+  if (t.endsWith(".L") || ["LSE", "LON", "LONDON"].includes(e)) {
+    return {
+      region: "UK",
+      marketLabel: "Bolsa de Londres (.L)",
+      flag: "🇬🇧",
+      brokerTip: "En XTB suele figurar con sufijo .UK (ej. CSPX.UK). En Yahoo Finance siempre es .L (CSPX.L).",
+    };
+  }
+  if (t.endsWith(".HK") || ["HKG", "HKEX"].includes(e)) {
+    return {
+      region: "HK",
+      marketLabel: "Bolsa de Hong Kong (.HK)",
+      flag: "🇭🇰",
+      brokerTip: "HKEX opera en horario nocturno para América Latina (cierra de madrugada). En XTB las acciones chinas suelen negociarse vía Europa (.DE/.F) o EE.UU. (ADR).",
+    };
+  }
+  if (t.endsWith(".PA") || t.endsWith(".AS") || t.endsWith(".MC") || ["EURONEXT", "PARIS", "AMSTERDAM"].includes(e)) {
+    return {
+      region: "EU",
+      marketLabel: "Europa Continental (Euronext / BME)",
+      flag: "🇪🇺",
+      brokerTip: "Cotiza en Euros (EUR). Horario europeo (cierre aprox. 10:30 AM Colombia).",
+    };
+  }
+  if (!t.includes(".") || ["NYSE", "NASDAQ", "AMEX", "US"].includes(e)) {
+    return {
+      region: "US",
+      marketLabel: "Wall Street EE.UU. (NYSE / NASDAQ)",
+      flag: "🇺🇸",
+      brokerTip: "Activos estadounidenses sin sufijo (ej. AAPL, MSFT, SPY). Cotizan en USD de 08:30 a 15:00/16:00 Col.",
+    };
+  }
+
+  return {
+    region: "ALL",
+    marketLabel: exchange || "Global",
+    flag: "🌐",
+    brokerTip: null,
+  };
+}

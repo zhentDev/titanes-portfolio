@@ -280,17 +280,46 @@ def search_tickers_multiple(
 
     urllib3.disable_warnings()
 
-    try:
-        res = requests.get(
-            f"https://query2.finance.yahoo.com/v1/finance/search?q={q}",
-            headers={"User-Agent": "Mozilla/5.0"},
-            verify=False,
-            timeout=5,
-        ).json()
-    except Exception as e:
-        return {"results": []}
+    clean_q = q.strip().upper()
+    queries_to_try = [q.strip()]
 
-    quotes = res.get("quotes", [])
+    # Intelligent translation of common broker suffixes to Yahoo Finance format
+    if clean_q.endswith(".UK"):
+        base = clean_q[:-3]
+        queries_to_try.insert(0, f"{base}.L")
+    elif clean_q.endswith(".DE"):
+        base = clean_q[:-3]
+        # Try both Frankfurt (.F) and Xetra (.DE)
+        queries_to_try.insert(0, f"{base}.F")
+    elif clean_q.endswith(".FR"):
+        base = clean_q[:-3]
+        queries_to_try.insert(0, f"{base}.PA")
+    elif clean_q.endswith(".NL"):
+        base = clean_q[:-3]
+        queries_to_try.insert(0, f"{base}.AS")
+    elif clean_q.endswith(".ES"):
+        base = clean_q[:-3]
+        queries_to_try.insert(0, f"{base}.MC")
+
+    quotes = []
+    seen_symbols = set()
+
+    for try_q in queries_to_try:
+        try:
+            res = requests.get(
+                f"https://query2.finance.yahoo.com/v1/finance/search?q={try_q}",
+                headers={"User-Agent": "Mozilla/5.0"},
+                verify=False,
+                timeout=5,
+            ).json()
+            for item in res.get("quotes", []):
+                sym = item.get("symbol")
+                if sym and sym not in seen_symbols:
+                    seen_symbols.add(sym)
+                    quotes.append(item)
+        except Exception:
+            pass
+
     valid_quotes = [q for q in quotes if q.get("symbol")]
 
     results = []
