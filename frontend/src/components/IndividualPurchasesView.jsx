@@ -14,6 +14,7 @@ import { usePortfolioStore } from "../store/portfolioStore";
 import { analyzeInvestmentPlan } from "../utils/investmentPlanAnalyzer";
 import { toastConfirm, toastPrompt } from "../utils/toastAlerts";
 import { MarketScheduleBadge } from "./Common";
+import ChangeTickerModal from "./ChangeTickerModal";
 import InflationExplorerModal from "./InflationExplorerModal";
 import PlanConfigModal from "./PlanConfigModal";
 import PlanExecutionModal from "./PlanExecutionModal";
@@ -49,6 +50,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
   const [showExecutionModal, setShowExecutionModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showInflationExplorer, setShowInflationExplorer] = useState(false);
+  const [changingTickerGroup, setChangingTickerGroup] = useState(null);
 
   const portfolio = purchasePortfolios?.find((p) => p.id === portfolioId) || {
     name: "Histórico",
@@ -627,26 +629,23 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
   const toggleExpand = (ticker) =>
     setExpandedTickers((prev) => ({ ...prev, [ticker]: !prev[ticker] }));
 
-  const handleEditParentTicker = async (group, e) => {
-    e.stopPropagation();
-    const newTicker = await toastPrompt(
-      `Cambiar Ticker Padre: ${group.ticker}\n\nEscribe el nuevo Ticker. Esto modificará los ${group.lots.length} lotes automáticamente:`,
-      group.ticker,
-    );
-    if (!newTicker || newTicker.trim().toUpperCase() === group.ticker) return;
+  const handleEditParentTicker = (group, e) => {
+    if (e) e.stopPropagation();
+    setChangingTickerGroup(group);
+  };
 
-    const tickerUpper = newTicker.trim().toUpperCase();
-    const isConfirmed = await toastConfirm(
-      `¿Estás súper seguro de cambiar el ticker de TODOS los ${group.lots.length} lote(s) a "${tickerUpper}"?`,
-    );
-    if (!isConfirmed) return;
+  const handleConfirmChangeTicker = async (selectedAsset) => {
+    if (!changingTickerGroup || !selectedAsset) return;
+    const tickerUpper = selectedAsset.ticker.trim().toUpperCase();
+    const newName = selectedAsset.name || changingTickerGroup.name;
 
-    const updates = group.lots.map((p) => ({
+    const updates = changingTickerGroup.lots.map((p) => ({
       ...p,
       ticker: tickerUpper,
+      name: newName,
     }));
+
     updateMultiplePurchases(updates);
-    toast.success(`Se actualizaron ${group.lots.length} lotes al nuevo ticker ${tickerUpper}.`);
   };
 
   const handleStopBatch = () => {
@@ -2553,21 +2552,30 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                             <button
                               onClick={(e) => handleEditParentTicker(group, e)}
                               style={{
-                                background: "transparent",
-                                border: "none",
-                                color: "var(--text-muted)",
+                                background: "rgba(0, 229, 255, 0.08)",
+                                border: "1px solid rgba(0, 229, 255, 0.25)",
+                                color: "#00e5ff",
                                 cursor: "pointer",
-                                padding: "2px 4px",
-                                borderRadius: "4px",
-                                fontSize: "0.9rem",
+                                padding: "2px 7px",
+                                borderRadius: "6px",
+                                fontSize: "0.75rem",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 4,
+                                fontWeight: 500,
+                                transition: "all 0.15s ease",
                               }}
-                              title="Editar Ticker a todos los lotes"
-                              onMouseEnter={(e) => (e.currentTarget.style.color = "#00e5ff")}
-                              onMouseLeave={(e) =>
-                                (e.currentTarget.style.color = "var(--text-muted)")
-                              }
+                              title="Cambiar Acción o ETF a todos los lotes de esta posición"
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = "rgba(0, 229, 255, 0.2)";
+                                e.currentTarget.style.borderColor = "#00e5ff";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = "rgba(0, 229, 255, 0.08)";
+                                e.currentTarget.style.borderColor = "rgba(0, 229, 255, 0.25)";
+                              }}
                             >
-                              ✏️
+                              <span>🔄</span> Cambiar activo
                             </button>
                             <span
                               style={{
@@ -3154,6 +3162,14 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
           isOpen={showInflationExplorer}
           onClose={() => setShowInflationExplorer(false)}
           inflationData={colInflationData}
+        />
+        <ChangeTickerModal
+          isOpen={Boolean(changingTickerGroup)}
+          onClose={() => setChangingTickerGroup(null)}
+          group={changingTickerGroup}
+          liveQuote={changingTickerGroup ? liveQuotes[changingTickerGroup.ticker] : null}
+          portfolioCurrency={portfolio.assetCurrency || "USD"}
+          onConfirmChange={handleConfirmChangeTicker}
         />
       </div>
     </>
