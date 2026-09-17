@@ -13,6 +13,7 @@ import {
 import { usePortfolioStore } from "../store/portfolioStore";
 import { analyzeInvestmentPlan } from "../utils/investmentPlanAnalyzer";
 import { toastConfirm, toastPrompt } from "../utils/toastAlerts";
+import { MarketScheduleBadge } from "./Common";
 import InflationExplorerModal from "./InflationExplorerModal";
 import PlanConfigModal from "./PlanConfigModal";
 import PlanExecutionModal from "./PlanExecutionModal";
@@ -2196,6 +2197,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                               {r.currency !== (portfolio.assetCurrency || "USD") && " ⚠️"}
                             </span>
                           )}
+                          <MarketScheduleBadge ticker={r.ticker} exchange={r.exchange} size="xs" />
                         </div>
                       </div>
                     ))}
@@ -2293,42 +2295,11 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                           {selectedMeta.currency !== (portfolio.assetCurrency || "USD") && " ⚠️"}
                         </span>
                       )}
-                      {selectedMeta.market_open !== undefined && (
-                        <span
-                          style={{
-                            padding: "4px 10px",
-                            background: selectedMeta.market_open
-                              ? "rgba(34, 197, 94, 0.15)"
-                              : "rgba(239, 68, 68, 0.15)",
-                            border: `1px solid ${
-                              selectedMeta.market_open
-                                ? "rgba(34, 197, 94, 0.3)"
-                                : "rgba(239, 68, 68, 0.3)"
-                            }`,
-                            borderRadius: "12px",
-                            fontSize: "0.75rem",
-                            fontWeight: 600,
-                            color: selectedMeta.market_open ? "#4ade80" : "#f87171",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "4px",
-                          }}
-                        >
-                          <span
-                            style={{
-                              width: 6,
-                              height: 6,
-                              borderRadius: "50%",
-                              background: selectedMeta.market_open ? "#22c55e" : "#ef4444",
-                              boxShadow: selectedMeta.market_open
-                                ? "0 0 6px #22c55e"
-                                : "none",
-                              display: "inline-block",
-                            }}
-                          />
-                          {selectedMeta.market_open ? "Mercado Abierto" : "Mercado Cerrado"}
-                        </span>
-                      )}
+                      <MarketScheduleBadge
+                        ticker={selectedMeta.ticker}
+                        exchange={selectedMeta.exchange}
+                        size="sm"
+                      />
                     </div>
 
                     {/* ALERTA DE DISCREPANCIA DE DIVISA (EUR, GBP, HKD vs Portafolio) */}
@@ -2679,47 +2650,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                                         {lq.currency !== (portfolio.assetCurrency || "USD") && " ⚠️"}
                                       </span>
                                     )}
-                                    {lq.market_open !== undefined && (
-                                      <span
-                                        style={{
-                                          padding: "2px 8px",
-                                          background: lq.market_open
-                                            ? "rgba(34, 197, 94, 0.12)"
-                                            : "rgba(239, 68, 68, 0.12)",
-                                          border: `1px solid ${
-                                            lq.market_open
-                                              ? "rgba(34, 197, 94, 0.25)"
-                                              : "rgba(239, 68, 68, 0.25)"
-                                          }`,
-                                          borderRadius: "12px",
-                                          fontSize: "0.65rem",
-                                          fontWeight: 600,
-                                          color: lq.market_open ? "#4ade80" : "#f87171",
-                                          display: "inline-flex",
-                                          alignItems: "center",
-                                          gap: "4px",
-                                        }}
-                                        title={
-                                          lq.market_open
-                                            ? "Bolsa abierta en este momento"
-                                            : "Bolsa cerrada en este momento"
-                                        }
-                                      >
-                                        <span
-                                          style={{
-                                            width: 5,
-                                            height: 5,
-                                            borderRadius: "50%",
-                                            background: lq.market_open ? "#22c55e" : "#ef4444",
-                                            boxShadow: lq.market_open
-                                              ? "0 0 5px #22c55e"
-                                              : "none",
-                                            display: "inline-block",
-                                          }}
-                                        />
-                                        {lq.market_open ? "Abierto" : "Cerrado"}
-                                      </span>
-                                    )}
+                                    <MarketScheduleBadge ticker={group.ticker} exchange={lq?.exchange} size="xs" />
                                   </div>
                                 )}
                               </>

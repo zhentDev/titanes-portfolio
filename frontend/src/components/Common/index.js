@@ -5,3 +5,4 @@ export { default as CustomSelectDropdown } from "./CustomSelectDropdown";
 export { default as HourglassRangeSlider } from "./HourglassRangeSlider";
 export { default as GlassModalWrapper } from "./GlassModalWrapper";
 export { default as InfoTooltip } from "./InfoTooltip";
+export { default as MarketScheduleBadge } from "./MarketScheduleBadge";
