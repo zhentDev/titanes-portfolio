@@ -102,10 +102,16 @@ export function detectExchangeKey(ticker = "", exchange = "") {
   if (
     t.endsWith(".DE") ||
     t.endsWith(".F") ||
+    t.endsWith(".BE") ||
+    t.endsWith(".MU") ||
+    t.endsWith(".DU") ||
+    t.endsWith(".HM") ||
+    t.endsWith(".HA") ||
+    t.endsWith(".SG") ||
     t.endsWith(".PA") ||
     t.endsWith(".AS") ||
     t.endsWith(".MC") ||
-    ["XETRA", "EURONEXT", "GER", "FRA", "PARIS", "AMSTERDAM"].includes(e)
+    ["XETRA", "EURONEXT", "GER", "FRA", "BER", "MUN", "DUS", "HAM", "STU", "PARIS", "AMSTERDAM"].includes(e)
   ) {
     return "XETRA";
   }
@@ -316,7 +322,39 @@ export function getBrokerEquivalenceInfo(ticker = "", exchange = "") {
       region: "GER",
       marketLabel: "Bolsa de Fráncfort (.F)",
       flag: "🇩🇪",
-      brokerTip: "En XTB suele figurar con sufijo .DE (ej. NNND.DE). En Yahoo Finance se consulta como .F.",
+      brokerTip: "En XTB suele figurar con sufijo .DE (ej. NNND.DE o 3CP.DE). En Yahoo Finance se consulta como .F (la más líquida).",
+    };
+  }
+  if (t.endsWith(".BE") || ["BER", "BERLIN"].includes(e)) {
+    return {
+      region: "GER",
+      marketLabel: "Bolsa de Berlín (.BE)",
+      flag: "🇩🇪",
+      brokerTip: "Bolsa de Berlín. XTB enruta ciertas órdenes alemanas aquí bajo el código .DE. En Yahoo es .BE o su equivalente principal .F.",
+    };
+  }
+  if (t.endsWith(".MU") || ["MUN", "MUNICH"].includes(e)) {
+    return {
+      region: "GER",
+      marketLabel: "Bolsa de Múnich (.MU)",
+      flag: "🇩🇪",
+      brokerTip: "Bolsa regional de Múnich (Alemania). Cotiza en Euros (EUR).",
+    };
+  }
+  if (t.endsWith(".DU") || ["DUS", "DUSSELDORF"].includes(e)) {
+    return {
+      region: "GER",
+      marketLabel: "Bolsa de Düsseldorf (.DU)",
+      flag: "🇩🇪",
+      brokerTip: "Bolsa regional de Düsseldorf (Alemania). Cotiza en Euros (EUR).",
+    };
+  }
+  if (t.endsWith(".HM") || t.endsWith(".HA") || ["HAM", "HAMBURG", "HANNOVER"].includes(e)) {
+    return {
+      region: "GER",
+      marketLabel: "Bolsa de Hamburgo/Hanover (.HM)",
+      flag: "🇩🇪",
+      brokerTip: "Bolsa regional de Hamburgo / Hanover (Alemania). Cotiza en Euros (EUR).",
     };
   }
   if (t.endsWith(".DE") || ["XETRA", "GER"].includes(e)) {
@@ -324,7 +362,7 @@ export function getBrokerEquivalenceInfo(ticker = "", exchange = "") {
       region: "GER",
       marketLabel: "Alemania XETRA (.DE)",
       flag: "🇩🇪",
-      brokerTip: "En XTB suele figurar con .DE. Si no cotiza en vivo, prueba su equivalente .F (Frankfurt).",
+      brokerTip: "En XTB se usa .DE como código genérico para Alemania (Fráncfort/Berlín). En Yahoo es .DE o .F.",
     };
   }
   if (t.endsWith(".L") || ["LSE", "LON", "LONDON"].includes(e)) {
