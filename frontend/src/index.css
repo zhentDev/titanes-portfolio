@@ -249,12 +249,14 @@ h3 {
 
 /* ── Period Selector ─────────────────────────── */
 .period-selector {
-  display: flex;
+  display: inline-flex;
+  width: fit-content;
   gap: 2px;
   background: var(--bg-surface);
   border-radius: var(--radius-sm);
   padding: 3px;
   border: 1px solid var(--border);
+  margin-bottom: 12px;
 }
 .period-btn {
   padding: 5px 12px;

@@ -166,7 +166,7 @@ export default function RebalanceManager({ onRefresh }) {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "18px", height: "100%" }}>
       {/* GLOBAL SETTINGS */}
       <div>
         <h3 style={{ margin: "0 0 8px 0", fontSize: "1rem", fontWeight: 700 }}>
@@ -223,8 +223,8 @@ export default function RebalanceManager({ onRefresh }) {
           onClick={() => setActiveTab("history")}
           style={{
             flex: 1,
-            padding: "8px 12px",
-            fontSize: "0.8rem",
+            padding: "8px 10px",
+            fontSize: "0.78rem",
             fontWeight: 700,
             borderRadius: 4,
             border: "none",
@@ -236,6 +236,7 @@ export default function RebalanceManager({ onRefresh }) {
             justifyContent: "center",
             gap: 6,
             transition: "all 0.15s ease",
+            whiteSpace: "nowrap",
           }}
         >
           <span>📜 Historial</span>
@@ -257,8 +258,8 @@ export default function RebalanceManager({ onRefresh }) {
           onClick={() => setActiveTab("create")}
           style={{
             flex: 1,
-            padding: "8px 12px",
-            fontSize: "0.8rem",
+            padding: "8px 10px",
+            fontSize: "0.78rem",
             fontWeight: 700,
             borderRadius: 4,
             border: "none",
@@ -270,15 +271,16 @@ export default function RebalanceManager({ onRefresh }) {
             justifyContent: "center",
             gap: 6,
             transition: "all 0.15s ease",
+            whiteSpace: "nowrap",
           }}
         >
-          <span>⚡ + Nuevo Rebalanceo</span>
+          <span>⚡ + Rebalancear</span>
         </button>
       </div>
 
       {/* TAB CONTENT: HISTORY */}
       {activeTab === "history" && (
-        <div className="fade-up">
+        <div className="fade-up" style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
           <div
             style={{
               display: "flex",
@@ -328,7 +330,9 @@ export default function RebalanceManager({ onRefresh }) {
                 display: "flex",
                 flexDirection: "column",
                 gap: "10px",
-                maxHeight: 340,
+                flex: 1,
+                minHeight: 280,
+                maxHeight: 420,
                 overflowY: "auto",
               }}
             >

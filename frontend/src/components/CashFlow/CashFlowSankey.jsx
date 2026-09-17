@@ -19,6 +19,7 @@ export default function CashFlowSankey({
 }) {
   const formatAmount = (val, cur = currency) => formatCashFlowMoneyWithCode(val, cur, fxRate);
   const [hoveredItem, setHoveredItem] = useState(null);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // ── 1. Calculate Aggregate Financial Values ──────────
   const totalInflow = useMemo(() => {
@@ -286,36 +287,65 @@ export default function CashFlowSankey({
   return (
     <div className="cashflow-sankey-section">
       {/* Header & Legend */}
-      <div className="cashflow-sankey-header">
-        <h3 className="cashflow-sankey-title">
-          <span>🌊</span> Cascada Dinámica del Flujo de Capital (Sankey Flow)
-        </h3>
-        <div className="cashflow-sankey-legend">
-          <div className="cashflow-legend-item">
-            <span className="cashflow-legend-dot" style={{ background: "#10b981" }} />
-            <span>Ingresos Activos</span>
-          </div>
-          <div className="cashflow-legend-item">
-            <span className="cashflow-legend-dot" style={{ background: "#00e5ff" }} />
-            <span>Rendimientos Pasivos</span>
-          </div>
-          <div className="cashflow-legend-item">
-            <span className="cashflow-legend-dot" style={{ background: "#38bdf8" }} />
-            <span>Ahorro & Inversión ({customRatios.savings}%)</span>
-          </div>
-          <div className="cashflow-legend-item">
-            <span className="cashflow-legend-dot" style={{ background: "#f43f5e" }} />
-            <span>Gastos Fijos ({customRatios.needs}%)</span>
-          </div>
-          <div className="cashflow-legend-item">
-            <span className="cashflow-legend-dot" style={{ background: "#a855f7" }} />
-            <span>Estilo de Vida ({customRatios.wants}%)</span>
-          </div>
+      <div
+        className="cashflow-sankey-header"
+        style={{ cursor: "pointer" }}
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", flexWrap: "wrap", gap: 10 }}>
+          <h3 className="cashflow-sankey-title" style={{ margin: 0 }}>
+            <span>🌊</span> Cascada Dinámica del Flujo de Capital (Sankey Flow)
+          </h3>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsExpanded(!isExpanded);
+            }}
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: 6,
+              padding: "2px 8px",
+              color: "var(--text-muted)",
+              fontSize: "0.72rem",
+              cursor: "pointer",
+            }}
+          >
+            {isExpanded ? "▲ Ocultar Cascada" : "▼ Desplegar Cascada"}
+          </button>
         </div>
+
+        {isExpanded && (
+          <div className="cashflow-sankey-legend" style={{ marginTop: 10 }}>
+            <div className="cashflow-legend-item">
+              <span className="cashflow-legend-dot" style={{ background: "#10b981" }} />
+              <span>Ingresos Activos</span>
+            </div>
+            <div className="cashflow-legend-item">
+              <span className="cashflow-legend-dot" style={{ background: "#00e5ff" }} />
+              <span>Rendimientos Pasivos</span>
+            </div>
+            <div className="cashflow-legend-item">
+              <span className="cashflow-legend-dot" style={{ background: "#38bdf8" }} />
+              <span>Ahorro & Inversión ({customRatios.savings}%)</span>
+            </div>
+            <div className="cashflow-legend-item">
+              <span className="cashflow-legend-dot" style={{ background: "#f43f5e" }} />
+              <span>Gastos Fijos ({customRatios.needs}%)</span>
+            </div>
+            <div className="cashflow-legend-item">
+              <span className="cashflow-legend-dot" style={{ background: "#a855f7" }} />
+              <span>Estilo de Vida ({customRatios.wants}%)</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Responsive SVG Canvas */}
-      <div className="cashflow-sankey-svg-wrapper">
+      {isExpanded && (
+        <>
+          <div className="cashflow-sankey-svg-wrapper">
         <svg
           viewBox={`0 0 ${layout.W} ${layout.H}`}
           style={{ width: "100%", height: "auto", display: "block" }}
@@ -519,8 +549,10 @@ export default function CashFlowSankey({
             <span style={{ fontSize: "0.8rem", color: "#38bdf8" }}>
               ({hoveredItem.pct || "0"}% del ingreso)
             </span>
+            </div>
           </div>
-        </div>
+        )}
+        </>
       )}
     </div>
   );

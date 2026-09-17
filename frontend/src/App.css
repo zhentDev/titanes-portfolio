@@ -204,12 +204,18 @@
 /* ── Bottom grid ──────────────────────── */
 .bottom-grid {
   display: grid;
-  grid-template-columns: 1fr 380px;
+  grid-template-columns: 1fr minmax(400px, 440px);
   gap: 20px;
-  align-items: start;
+  align-items: stretch;
 }
 
-@media (max-width: 900px) {
+.bottom-grid > .card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+@media (max-width: 960px) {
   .bottom-grid {
     grid-template-columns: 1fr;
   }

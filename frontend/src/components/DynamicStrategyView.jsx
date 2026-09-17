@@ -58,8 +58,8 @@ export default function DynamicStrategyView({
     monthly_rates: [],
   });
   const [isFetchingInflation, setIsFetchingInflation] = useState(false);
-  const [showBreakdownCard, setShowBreakdownCard] = useState(true);
-  const [showQuantIntelligence, setShowQuantIntelligence] = useState(true);
+  const [showBreakdownCard, setShowBreakdownCard] = useState(false);
+  const [showQuantIntelligence, setShowQuantIntelligence] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(settingsKey, JSON.stringify(stratSettings));

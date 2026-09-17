@@ -63,8 +63,8 @@ export default function App() {
     monthly_rates: [],
   });
   const [isFetchingMainInflation, setIsFetchingMainInflation] = useState(false);
-  const [showBreakdownCard, setShowBreakdownCard] = useState(true);
-  const [showQuantIntelligence, setShowQuantIntelligence] = useState(true);
+  const [showBreakdownCard, setShowBreakdownCard] = useState(false);
+  const [showQuantIntelligence, setShowQuantIntelligence] = useState(false);
 
   // Navigation Dropdown States & Outside Click Handlers
   const [stratOpen, setStratOpen] = useState(false);

@@ -52,6 +52,8 @@ export default function FixedIncomeHub() {
   const [showAllEntities, setShowAllEntities] = useState(false);
   const [selectedEntityView, setSelectedEntityView] = useState("all"); // 'all' | entityId
   const [futureYears, setFutureYears] = useState(0); // 0 to 10 years future simulation
+  const [showSimulator, setShowSimulator] = useState(false); // Collapsible simulator
+  const [showFixedIncomeChart, setShowFixedIncomeChart] = useState(false); // Collapsible chart
   const [selectedModalEntityId, setSelectedModalEntityId] = useState(null); // Pre-select entity in modal
   const [fxRate, setFxRate] = useState(4150); // USD-COP fallback
   const [colInflationRate, setColInflationRate] = useState(5.16); // YoY IPC fallback
@@ -1244,18 +1246,43 @@ export default function FixedIncomeHub() {
             </div>
           </div>
 
-          {/* Quick preset buttons */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-            {[0, 1, 3, 5, 10].map((yr) => (
-              <button
-                key={yr}
-                onClick={() => setFutureYears(yr)}
-                style={{
-                  padding: "4px 9px",
-                  borderRadius: 6,
-                  border: `1px solid ${futureYears === yr ? "#38bdf8" : "rgba(255,255,255,0.1)"}`,
-                  background: futureYears === yr ? "rgba(56, 189, 248, 0.2)" : "rgba(0,0,0,0.25)",
-                  color: futureYears === yr ? "#38bdf8" : "#94a3b8",
+          {/* Toggle button */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowSimulator(!showSimulator);
+              }}
+              style={{
+                background: "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: 6,
+                padding: "4px 10px",
+                color: "var(--text-muted)",
+                fontSize: "0.74rem",
+                cursor: "pointer",
+              }}
+            >
+              {showSimulator ? "▲ Ocultar Simulador" : "▼ Desplegar Simulador"}
+            </button>
+          </div>
+        </div>
+
+        {showSimulator && (
+          <>
+            {/* Quick preset buttons */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
+              {[0, 1, 3, 5, 10].map((yr) => (
+                <button
+                  key={yr}
+                  onClick={() => setFutureYears(yr)}
+                  style={{
+                    padding: "4px 9px",
+                    borderRadius: 6,
+                    border: `1px solid ${futureYears === yr ? "#38bdf8" : "rgba(255,255,255,0.1)"}`,
+                    background: futureYears === yr ? "rgba(56, 189, 248, 0.2)" : "rgba(0,0,0,0.25)",
+                    color: futureYears === yr ? "#38bdf8" : "#94a3b8",
                   fontSize: "0.7rem",
                   fontWeight: futureYears === yr ? 800 : 500,
                   cursor: "pointer",
@@ -1266,7 +1293,6 @@ export default function FixedIncomeHub() {
               </button>
             ))}
           </div>
-        </div>
 
         {/* Hourglass Range Slider Proyectivo */}
         <div style={{ margin: "4px 0" }}>
@@ -1320,14 +1346,64 @@ export default function FixedIncomeHub() {
             </div>
           );
         })()}
+        </>
+      )}
       </div>
 
       {/* ── INTERACTIVE HISTORICAL & FUTURE GROWTH CHART ───────── */}
-      <FixedIncomeProjectionChart
-        projectionData={projectionSeries}
-        currency={preferredCurrency}
-        mode={projectionMode}
-      />
+      <div
+        style={{
+          background: "rgba(15, 23, 42, 0.4)",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+          borderRadius: 14,
+          padding: showFixedIncomeChart ? "14px" : "12px 18px",
+          transition: "all 0.2s ease",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            cursor: "pointer",
+            marginBottom: showFixedIncomeChart ? 12 : 0,
+          }}
+          onClick={() => setShowFixedIncomeChart(!showFixedIncomeChart)}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span>📈</span>
+            <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "#f1f5f9" }}>
+              Gráfico de Crecimiento Histórico & Curva de Proyección
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowFixedIncomeChart(!showFixedIncomeChart);
+            }}
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: 6,
+              padding: "4px 10px",
+              color: "var(--text-muted)",
+              fontSize: "0.74rem",
+              cursor: "pointer",
+            }}
+          >
+            {showFixedIncomeChart ? "▲ Ocultar Gráfico" : "▼ Desplegar Gráfico"}
+          </button>
+        </div>
+
+        {showFixedIncomeChart && (
+          <FixedIncomeProjectionChart
+            projectionData={projectionSeries}
+            currency={preferredCurrency}
+            mode={projectionMode}
+          />
+        )}
+      </div>
 
       {/* ── ENTITIES & ACCOUNTS GRID HEADER ──────────────── */}
       <div

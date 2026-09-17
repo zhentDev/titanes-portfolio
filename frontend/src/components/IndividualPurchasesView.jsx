@@ -67,6 +67,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
   const [isFetchingFx, setIsFetchingFx] = useState(false);
   const [colInflationData, setColInflationData] = useState({ history: {} });
   const [isFetchingInflation, setIsFetchingInflation] = useState(false);
+  const [showBreakdownCard, setShowBreakdownCard] = useState(false);
 
   useEffect(() => {
     if (
@@ -1180,34 +1181,60 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                 fontSize: "0.82rem",
                 fontWeight: 700,
                 color: "var(--text-secondary)",
-                marginBottom: 12,
+                marginBottom: showBreakdownCard ? 12 : 0,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
+                cursor: "pointer",
+                flexWrap: "wrap",
+                gap: 6,
               }}
+              onClick={() => setShowBreakdownCard(!showBreakdownCard)}
             >
-              <span>📊 Comparativa de Rendimiento Multinivel (Nominal ➔ Divisa ➔ Real)</span>
-              <span
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <span>📊 Comparativa de Rendimiento Multinivel (Nominal ➔ Divisa ➔ Real)</span>
+                <span
+                  style={{
+                    fontSize: "0.74rem",
+                    color: "#f59e0b",
+                    background: "rgba(245,158,11,0.1)",
+                    padding: "2px 8px",
+                    borderRadius: 6,
+                  }}
+                >
+                  {portfolio.useAutoColInflation
+                    ? "IPC Automático (FRED/DANE)"
+                    : `Inflación Manual ${portfolio.inflationRate || 0}%/año`}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowBreakdownCard(!showBreakdownCard);
+                }}
                 style={{
-                  fontSize: "0.74rem",
-                  color: "#f59e0b",
-                  background: "rgba(245,158,11,0.1)",
-                  padding: "2px 8px",
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.12)",
                   borderRadius: 6,
+                  padding: "2px 8px",
+                  color: "var(--text-muted)",
+                  fontSize: "0.72rem",
+                  cursor: "pointer",
                 }}
               >
-                {portfolio.useAutoColInflation
-                  ? "IPC Automático (FRED/DANE)"
-                  : `Inflación Manual ${portfolio.inflationRate || 0}%/año`}
-              </span>
+                {showBreakdownCard ? "▲ Ocultar" : "▼ Desplegar"}
+              </button>
             </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-                gap: 14,
-              }}
-            >
+            {showBreakdownCard && (
+              <>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                    gap: 14,
+                  }}
+                >
               {/* Level 1: Nominal */}
               <div
                 style={{
@@ -1413,8 +1440,10 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                 </span>
               </div>
             </div>
-          </div>
-        </div>
+          </>
+        )}
+      </div>
+    </div>
 
         {showSettingsModal && (
           <div

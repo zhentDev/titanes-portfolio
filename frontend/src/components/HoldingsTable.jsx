@@ -13,7 +13,7 @@ export default function HoldingsTable({
   const slotValue = investment / numSlots;
 
   return (
-    <div>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <div
         style={{
           display: "flex",
