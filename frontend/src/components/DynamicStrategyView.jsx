@@ -58,6 +58,8 @@ export default function DynamicStrategyView({
     monthly_rates: [],
   });
   const [isFetchingInflation, setIsFetchingInflation] = useState(false);
+  const [showBreakdownCard, setShowBreakdownCard] = useState(true);
+  const [showQuantIntelligence, setShowQuantIntelligence] = useState(true);
 
   useEffect(() => {
     localStorage.setItem(settingsKey, JSON.stringify(stratSettings));
@@ -1116,31 +1118,57 @@ export default function DynamicStrategyView({
                 fontSize: "0.82rem",
                 fontWeight: 700,
                 color: "var(--text-secondary)",
-                marginBottom: 10,
+                marginBottom: showBreakdownCard ? 10 : 0,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
+                cursor: "pointer",
+                flexWrap: "wrap",
+                gap: 6,
               }}
+              onClick={() => setShowBreakdownCard(!showBreakdownCard)}
             >
-              <span>📊 Comparativa de Rendimiento Multinivel (Nominal ➔ Divisa ➔ Real)</span>
-              <span
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <span>📊 Comparativa de Rendimiento Multinivel (Nominal ➔ Divisa ➔ Real)</span>
+                <span
+                  style={{
+                    fontSize: "0.74rem",
+                    color: "#f59e0b",
+                    background: "rgba(245,158,11,0.1)",
+                    padding: "2px 8px",
+                    borderRadius: 6,
+                  }}
+                >
+                  {stratSettings.useAutoColInflation
+                    ? "IPC Automático (FRED/DANE)"
+                    : `Inflación Manual ${stratSettings.inflationRate || 0}%/año`}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowBreakdownCard(!showBreakdownCard);
+                }}
                 style={{
-                  fontSize: "0.74rem",
-                  color: "#f59e0b",
-                  background: "rgba(245,158,11,0.1)",
-                  padding: "2px 8px",
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.12)",
                   borderRadius: 6,
+                  padding: "2px 8px",
+                  color: "var(--text-muted)",
+                  fontSize: "0.72rem",
+                  cursor: "pointer",
                 }}
               >
-                {stratSettings.useAutoColInflation
-                  ? "IPC Automático (FRED/DANE)"
-                  : `Inflación Manual ${stratSettings.inflationRate || 0}%/año`}
-              </span>
+                {showBreakdownCard ? "▲ Ocultar" : "▼ Desplegar"}
+              </button>
             </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            {showBreakdownCard && (
+              <>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
                 gap: 12,
               }}
             >
@@ -1391,6 +1419,8 @@ export default function DynamicStrategyView({
                 </span>
               </div>
             </div>
+          </>
+        )}
           </div>
         );
       })()}

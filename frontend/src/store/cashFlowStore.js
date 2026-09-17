@@ -120,20 +120,6 @@ const DEFAULT_INFLOWS = [
     icon: "⚡",
     createdAt: new Date().toISOString(),
   },
-  {
-    id: "in_stock_div",
-    name: "Ingreso por Renta Variable",
-    category: "passive_equity",
-    amount: 150000.0,
-    currency: "COP",
-    isPassive: true,
-    isAutoSynced: true,
-    linkedModule: "variable_income",
-    frequency: "monthly",
-    paymentSource: { type: "investment_cash", targetName: "Portafolio de Inversión (Acciones, ETFs, Estrategias)" },
-    icon: "📈",
-    createdAt: new Date().toISOString(),
-  },
 ];
 
 const DEFAULT_NEEDS = [
@@ -1406,50 +1392,43 @@ export const useCashFlowStore = create(
         if (!currentEquityValue || currentEquityValue <= 0) return;
 
         const valInCOP = Math.round(currentEquityValue * fxRate);
-        const monthlyDividendCOP = Math.round((valInCOP * 0.02) / 12);
 
         set((state) => {
-          const nextInflows = state.inflows.map((i) => {
-            if (i.category === "passive_equity" || i.id === "in_stock_div") {
-              return {
-                ...i,
-                name: "Ingreso por Renta Variable",
-                paymentSource: { type: "investment_cash", targetName: "Portafolio de Inversión (Acciones, ETFs, Estrategias)" },
-                amount: monthlyDividendCOP > 0 ? monthlyDividendCOP : i.amount,
-                isPassive: true,
-                isAutoSynced: true,
-                linkedModule: "variable_income",
-              };
-            }
-            return i;
-          });
-
-          if (!nextInflows.some((i) => i.category === "passive_equity" || i.id === "in_stock_div") && monthlyDividendCOP > 0) {
-            nextInflows.push({
-              id: "in_stock_div",
-              name: "Ingreso por Renta Variable",
-              category: "passive_equity",
-              amount: monthlyDividendCOP,
-              currency: "COP",
-              isPassive: true,
-              isAutoSynced: true,
-              linkedModule: "variable_income",
-              frequency: "monthly",
-              paymentSource: { type: "investment_cash", targetName: "Portafolio de Inversión (Acciones, ETFs, Estrategias)" },
-              icon: "📈",
-              createdAt: new Date().toISOString(),
-            });
-          }
-
+          // La Renta Variable es un patrimonio activo con valoración en tiempo real (al día/hora)
+          // No debe inyectarse un dividendo fijo inventado del 2% como ingreso mensual recurrente
           const nextWealth = state.wealth.map((w) => {
             if (w.linkedModule === "variable_income" || w.category === "equity_investment") {
               return {
                 ...w,
+                name: "Portafolio Renta Variable (Al día / Tiempo Real)",
                 currentBalance: valInCOP,
               };
             }
             return w;
           });
+
+          // Si no existe el ítem de patrimonio en renta variable, crearlo
+          if (!nextWealth.some((w) => w.linkedModule === "variable_income" || w.category === "equity_investment")) {
+            nextWealth.push({
+              id: "wealth_equity_portfolio",
+              name: "Portafolio Renta Variable (Al día / Tiempo Real)",
+              category: "equity_investment",
+              targetAmount: valInCOP * 2,
+              monthlyContribution: 0,
+              currentBalance: valInCOP,
+              currency: "COP",
+              linkedModule: "variable_income",
+              paymentSource: { type: "investment_cash", targetName: "Portafolio Acciones & ETFs" },
+              icon: "🚀",
+              createdAt: new Date().toISOString(),
+            });
+          }
+
+          // Limpiar cualquier ingreso automático residual de dividendo ficticio para no inflar el flujo de caja
+          const nextInflows = state.inflows.filter(
+            (i) => !(i.id === "in_stock_div" && i.isAutoSynced)
+          );
+
           return { inflows: nextInflows, wealth: nextWealth };
         });
 

@@ -18,6 +18,7 @@ export default function RebalanceManager({ onRefresh }) {
   const [error, setError] = useState(null);
 
   // Form State
+  const [activeTab, setActiveTab] = useState("history"); // 'history' | 'create'
   const [localInvestment, setLocalInvestment] = useState(investment);
   const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [formTickers, setFormTickers] = useState([]);
@@ -140,6 +141,7 @@ export default function RebalanceManager({ onRefresh }) {
         tickers: formTickers,
       });
       await loadRebalances();
+      setActiveTab("history");
       onRefresh?.();
       toast.success(
         `Rebalanceo de Titanes guardado con éxito para el ${date} (${formTickers.length} posiciones)`,
@@ -205,129 +207,238 @@ export default function RebalanceManager({ onRefresh }) {
 
       <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: 0 }} />
 
-      {/* HISTORY SECTION WITH GROUP DELETION */}
-      <div>
-        <div
+      {/* TABS NAVIGATION */}
+      <div
+        style={{
+          display: "flex",
+          gap: 6,
+          background: "rgba(255, 255, 255, 0.03)",
+          padding: 4,
+          borderRadius: "var(--radius-sm)",
+          border: "1px solid var(--border)",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setActiveTab("history")}
           style={{
+            flex: 1,
+            padding: "8px 12px",
+            fontSize: "0.8rem",
+            fontWeight: 700,
+            borderRadius: 4,
+            border: "none",
+            background: activeTab === "history" ? "var(--accent-primary)" : "transparent",
+            color: activeTab === "history" ? "#000" : "var(--text-secondary)",
+            cursor: "pointer",
             display: "flex",
-            justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: "12px",
+            justifyContent: "center",
+            gap: 6,
+            transition: "all 0.15s ease",
           }}
         >
-          <h3 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 700 }}>
-            📜 Historial de Rebalanceos Titanes ({rebalances.length})
-          </h3>
-        </div>
+          <span>📜 Historial</span>
+          <span
+            style={{
+              fontSize: "0.7rem",
+              padding: "1px 6px",
+              borderRadius: 10,
+              background: activeTab === "history" ? "rgba(0,0,0,0.25)" : "rgba(255,255,255,0.08)",
+              color: activeTab === "history" ? "#000" : "var(--text-muted)",
+            }}
+          >
+            {rebalances.length}
+          </span>
+        </button>
 
-        {loading ? (
-          <div className="spinner" />
-        ) : error ? (
-          <div style={{ color: "var(--loss)", fontSize: "0.8rem" }}>{error}</div>
-        ) : rebalances.length === 0 ? (
-          <div style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>
-            No hay rebalanceos registrados. Agrega el primero.
-          </div>
-        ) : (
+        <button
+          type="button"
+          onClick={() => setActiveTab("create")}
+          style={{
+            flex: 1,
+            padding: "8px 12px",
+            fontSize: "0.8rem",
+            fontWeight: 700,
+            borderRadius: 4,
+            border: "none",
+            background: activeTab === "create" ? "var(--accent-primary)" : "transparent",
+            color: activeTab === "create" ? "#000" : "var(--text-secondary)",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            transition: "all 0.15s ease",
+          }}
+        >
+          <span>⚡ + Nuevo Rebalanceo</span>
+        </button>
+      </div>
+
+      {/* TAB CONTENT: HISTORY */}
+      {activeTab === "history" && (
+        <div className="fade-up">
           <div
             style={{
               display: "flex",
-              flexDirection: "column",
-              gap: "10px",
-              maxHeight: 280,
-              overflowY: "auto",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "12px",
             }}
           >
-            {rebalances.map((r, idx) => {
-              const isLatest = idx === rebalances.length - 1;
-              return (
-                <div
-                  key={r.date}
-                  style={{
-                    background: isLatest ? "rgba(0, 229, 255, 0.05)" : "var(--bg-surface)",
-                    padding: "12px 14px",
-                    borderRadius: "var(--radius-sm)",
-                    border: `1px solid ${isLatest ? "rgba(0, 229, 255, 0.3)" : "var(--border)"}`,
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: 10,
-                  }}
-                >
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <strong
-                        className="mono"
-                        style={{
-                          color: isLatest ? "var(--accent-primary)" : "var(--text-primary)",
-                          fontSize: "0.85rem",
-                        }}
-                      >
-                        {r.date}
-                      </strong>
-                      {isLatest && (
-                        <span
-                          style={{
-                            fontSize: "0.65rem",
-                            padding: "1px 5px",
-                            borderRadius: 4,
-                            background: "rgba(0,229,255,0.15)",
-                            color: "var(--accent-primary)",
-                            fontWeight: 700,
-                          }}
-                        >
-                          ACTIVO
-                        </span>
-                      )}
-                    </div>
-                    <div
-                      style={{
-                        marginTop: "6px",
-                        fontSize: "0.75rem",
-                        color: "var(--text-secondary)",
-                        display: "flex",
-                        gap: 4,
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      {r.tickers.map((t) => (
-                        <span
-                          key={t}
+            <h3 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 700 }}>
+              📜 Historial de Rebalanceos Titanes ({rebalances.length})
+            </h3>
+            <button
+              type="button"
+              className="btn btn-sm btn-ghost"
+              onClick={() => setActiveTab("create")}
+              style={{ fontSize: "0.72rem", padding: "3px 8px" }}
+            >
+              + Nuevo
+            </button>
+          </div>
+
+          {loading ? (
+            <div className="spinner" />
+          ) : error ? (
+            <div style={{ color: "var(--loss)", fontSize: "0.8rem" }}>{error}</div>
+          ) : rebalances.length === 0 ? (
+            <div
+              style={{
+                color: "var(--text-muted)",
+                fontSize: "0.78rem",
+                textAlign: "center",
+                padding: "24px 0",
+              }}
+            >
+              <p style={{ margin: "0 0 10px 0" }}>No hay rebalanceos registrados.</p>
+              <button
+                className="btn btn-sm btn-primary"
+                onClick={() => setActiveTab("create")}
+                style={{ fontSize: "0.75rem" }}
+              >
+                + Registrar Primer Rebalanceo
+              </button>
+            </div>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px",
+                maxHeight: 340,
+                overflowY: "auto",
+              }}
+            >
+              {rebalances.map((r, idx) => {
+                const isLatest = idx === rebalances.length - 1;
+                return (
+                  <div
+                    key={r.date}
+                    style={{
+                      background: isLatest ? "rgba(0, 229, 255, 0.05)" : "var(--bg-surface)",
+                      padding: "12px 14px",
+                      borderRadius: "var(--radius-sm)",
+                      border: `1px solid ${isLatest ? "rgba(0, 229, 255, 0.3)" : "var(--border)"}`,
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 10,
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <strong
                           className="mono"
                           style={{
-                            background: "rgba(255,255,255,0.06)",
-                            padding: "1px 5px",
-                            borderRadius: 3,
-                            fontSize: "0.7rem",
+                            color: isLatest ? "var(--accent-primary)" : "var(--text-primary)",
+                            fontSize: "0.85rem",
                           }}
                         >
-                          {t}
-                        </span>
-                      ))}
+                          {r.date}
+                        </strong>
+                        {isLatest && (
+                          <span
+                            style={{
+                              fontSize: "0.65rem",
+                              padding: "1px 5px",
+                              borderRadius: 4,
+                              background: "rgba(0,229,255,0.15)",
+                              color: "var(--accent-primary)",
+                              fontWeight: 700,
+                            }}
+                          >
+                            ACTIVO
+                          </span>
+                        )}
+                      </div>
+                      <div
+                        style={{
+                          marginTop: "6px",
+                          fontSize: "0.75rem",
+                          color: "var(--text-secondary)",
+                          display: "flex",
+                          gap: 4,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        {r.tickers.map((t) => (
+                          <span
+                            key={t}
+                            className="mono"
+                            style={{
+                              background: "rgba(255,255,255,0.06)",
+                              padding: "1px 5px",
+                              borderRadius: 3,
+                              fontSize: "0.7rem",
+                            }}
+                          >
+                            {t}
+                          </span>
+                        ))}
+                      </div>
                     </div>
+                    <button
+                      className="btn btn-sm btn-danger"
+                      onClick={() => handleDelete(r.date)}
+                      style={{ fontSize: "0.72rem", padding: "4px 8px", whiteSpace: "nowrap" }}
+                      title="Eliminar este grupo de rebalanceo completo"
+                    >
+                      🗑️ Eliminar Grupo
+                    </button>
                   </div>
-                  <button
-                    className="btn btn-sm btn-danger"
-                    onClick={() => handleDelete(r.date)}
-                    style={{ fontSize: "0.72rem", padding: "4px 8px", whiteSpace: "nowrap" }}
-                    title="Eliminar este grupo de rebalanceo completo"
-                  >
-                    🗑️ Eliminar Grupo
-                  </button>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB CONTENT: NEW REBALANCE FORM */}
+      {activeTab === "create" && (
+        <div className="fade-up">
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "12px",
+            }}
+          >
+            <h3 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 700 }}>
+              ⚡ Nuevo Rebalanceo Mensual (Titanes Tech)
+            </h3>
+            <button
+              type="button"
+              className="btn btn-sm btn-ghost"
+              onClick={() => setActiveTab("history")}
+              style={{ fontSize: "0.72rem", padding: "3px 8px" }}
+            >
+              ← Ver Historial
+            </button>
           </div>
-        )}
-      </div>
-
-      <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: 0 }} />
-
-      {/* NEW REBALANCE FORM WITH BATCH ADDER */}
-      <div>
-        <h3 style={{ margin: "0 0 14px 0", fontSize: "0.95rem", fontWeight: 700 }}>
-          ⚡ Nuevo Rebalanceo Mensual (Titanes Tech)
-        </h3>
 
         <div style={{ marginBottom: "14px" }}>
           <label
@@ -648,7 +759,8 @@ export default function RebalanceManager({ onRefresh }) {
         >
           Guardar Rebalanceo ({date})
         </button>
-      </div>
+        </div>
+      )}
     </div>
   );
 }

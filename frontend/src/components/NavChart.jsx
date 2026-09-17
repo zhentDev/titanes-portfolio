@@ -68,6 +68,7 @@ export default function NavChart({
   const [customNavData, setCustomNavData] = useState({});
   const [liveStratQuotes, setLiveStratQuotes] = useState({});
   const [stratLastValues, setStratLastValues] = useState({});
+  const [showStrategiesPanel, setShowStrategiesPanel] = useState(true);
 
   // Helper to get active capital for a custom strategy on a given date or latest date
   const getStratCap = useCallback((strat, dateStr) => {
@@ -741,335 +742,34 @@ export default function NavChart({
               </span>
             )}
           </button>
-
-          {/* Estrategias con Dinero Real */}
-          {!isLiveMode && (() => {
-            const realStrats = (customStrategies || []).filter((s) => s.isRealMoney);
-            if (realStrats.length === 0) return null;
-
-            return (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  margin: "0 4px",
-                  paddingLeft: 10,
-                  borderLeft: "1px solid rgba(16, 185, 129, 0.3)",
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: "0.68rem",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                    color: "#34d399",
-                    fontWeight: 800,
-                    whiteSpace: "nowrap",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                  }}
-                >
-                  💵 Reales:
-                </span>
-                {realStrats.map((strat) => {
-                  const isVisible = visibleSeries?.[strat.id] !== false;
-                  const isMM20 = strat.id === "strat_mm20" || strat.name.toLowerCase().includes("mm20");
-
-                  // Current active capital on date (hover date or latest date)
-                  const currentDateStr = hoverValues?.date
-                    ? String(hoverValues.date).slice(0, 10)
-                    : (navData?.[navData.length - 1]?.date || "").slice(0, 10);
-                  const stratBase = getStratCap(strat, currentDateStr);
-
-                  // 1. Real return from backend NAV summary
-                  const backendSumm = customNavData[strat.id]?.summary;
-                  let realReturnPct = null;
-                  if (backendSumm && typeof backendSumm.active_return_pct === "number" && !isNaN(backendSumm.active_return_pct)) {
-                    realReturnPct = backendSumm.active_return_pct;
-                  }
-
-                  // 2. Fallback to live ticker quotes
-                  if (realReturnPct === null) {
-                    const quotes = liveStratQuotes[strat.id];
-                    if (quotes && Object.keys(quotes).length > 0) {
-                      const validChgs = Object.values(quotes).map((q) => q.change_pct).filter((c) => typeof c === "number" && !isNaN(c));
-                      if (validChgs.length > 0) {
-                        realReturnPct = validChgs.reduce((a, b) => a + b, 0) / validChgs.length;
-                      }
-                    }
-                  }
-
-                  // 3. Fallback to benchmark beta (using pure normalized index growth without capital injection steps)
-                  const lastIdx = navData?.length ? navData.length - 1 : 0;
-                  const isNasdaqBench = strat.benchmark === "NASDAQ" || (!isMM20 && strat.name.toLowerCase().includes("acciones"));
-                  const benchData = isNasdaqBench ? nasdaqData : sp500Data;
-
-                  const stratStartDate = strat.createdAt ? strat.createdAt.slice(0, 10) : null;
-                  let startIdx = 0;
-                  if (stratStartDate && navData?.length) {
-                    const found = navData.findIndex((pt) => (pt.date || pt.time) >= stratStartDate);
-                    if (found !== -1) startIdx = found;
-                  }
-
-                  const benchStartNorm = getBenchNorm(benchData, startIdx);
-                  const benchPtNorm = getBenchNorm(benchData, lastIdx);
-                  const benchPctGrowth = benchStartNorm > 0 ? (benchPtNorm - benchStartNorm) / benchStartNorm : 0;
-                  const betaMultiplier = isMM20 ? 1.24 : 1.36;
-                  const driftProgress = Math.max(0, lastIdx - startIdx) / Math.max(1, navData?.length - 1 || 1);
-                  const drift = driftProgress * (isMM20 ? 0.032 : 0.054);
-                  const fallbackPctGrowth = benchPctGrowth * betaMultiplier + drift;
-
-                  const lastPlottedVal = stratLastValues[strat.id];
-                  const currentChartVal = hoverValues?.[strat.id] ?? lastPlottedVal;
-                  let stratPct = null;
-                  let stratUsd = stratBase;
-
-                  if (currentChartVal != null && stratBase > 0) {
-                    stratPct = ((currentChartVal - stratBase) / stratBase) * 100;
-                    stratUsd = currentChartVal;
-                  } else if (realReturnPct !== null) {
-                    stratPct = realReturnPct;
-                    stratUsd = stratBase * (1 + realReturnPct / 100);
-                  }
-                  // No fallback: if no real data yet, show nothing (avoid invented values)
-
-                  return (
-                    <button
-                      key={strat.id}
-                      onClick={() => handleToggle(strat.id)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        background: isVisible ? "rgba(16, 185, 129, 0.12)" : "rgba(255,255,255,0.02)",
-                        border: `1px solid ${isVisible ? "rgba(16, 185, 129, 0.5)" : "#334155"}`,
-                        padding: "4px 10px",
-                        borderRadius: 6,
-                        cursor: "pointer",
-                        color: isVisible ? "#f1f5f9" : "#94a3b8",
-                        fontSize: "0.75rem",
-                        transition: "all 0.15s ease",
-                      }}
-                      title={`Clic para mostrar/ocultar cartera real ${strat.name}`}
-                    >
-                      <span
-                        style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: "50%",
-                          background: "#10b981",
-                          opacity: isVisible ? 1 : 0.3,
-                        }}
-                      />
-                      <span style={{ fontSize: "0.7rem" }}>{strat.country || "💵"}</span>
-                      <strong>{strat.name}</strong>
-                      <span
-                        style={{
-                          fontSize: "0.62rem",
-                          padding: "1px 5px",
-                          borderRadius: 3,
-                          background: "rgba(16, 185, 129, 0.25)",
-                          color: "#34d399",
-                          border: "1px solid rgba(16, 185, 129, 0.4)",
-                          fontWeight: 800,
-                        }}
-                      >
-                        REAL
-                      </span>
-                      {stratUsd != null && (
-                        <span className="mono" style={{ color: "#34d399", fontWeight: 700 }}>
-                          ${stratUsd.toFixed(2)}
-                        </span>
-                      )}
-                      {stratPct != null && (
-                        <span
-                          style={{ color: stratPct >= 0 ? "#22c55e" : "#ef4444", fontSize: "0.7rem" }}
-                        >
-                          ({stratPct >= 0 ? "+" : ""}
-                          {stratPct.toFixed(2)}%)
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            );
-          })()}
-
-          {/* Modelos y Simulaciones */}
-          {!isLiveMode && (() => {
-            const simStrats = (customStrategies || []).filter((s) => !s.isRealMoney);
-            if (simStrats.length === 0) return null;
-
-            return (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  margin: "0 4px",
-                  paddingLeft: 10,
-                  borderLeft: "1px solid rgba(168, 85, 247, 0.25)",
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: "0.68rem",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                    color: "#c084fc",
-                    fontWeight: 700,
-                    whiteSpace: "nowrap",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                  }}
-                >
-                  🧪 Simuladas:
-                </span>
-                {simStrats.map((strat) => {
-                  const isVisible = visibleSeries?.[strat.id] !== false;
-                  const isMM20 = strat.id === "strat_mm20" || strat.name.toLowerCase().includes("mm20");
-
-                  // Current active capital on date (hover date or latest date)
-                  const currentDateStr = hoverValues?.date
-                    ? String(hoverValues.date).slice(0, 10)
-                    : (navData?.[navData.length - 1]?.date || "").slice(0, 10);
-                  const stratBase = getStratCap(strat, currentDateStr);
-
-                  // 1. Real return from backend NAV summary
-                  const backendSumm = customNavData[strat.id]?.summary;
-                  let realReturnPct = null;
-                  if (backendSumm && typeof backendSumm.active_return_pct === "number" && !isNaN(backendSumm.active_return_pct)) {
-                    realReturnPct = backendSumm.active_return_pct;
-                  }
-
-                  // 2. Fallback to live ticker quotes
-                  if (realReturnPct === null) {
-                    const quotes = liveStratQuotes[strat.id];
-                    if (quotes && Object.keys(quotes).length > 0) {
-                      const validChgs = Object.values(quotes).map((q) => q.change_pct).filter((c) => typeof c === "number" && !isNaN(c));
-                      if (validChgs.length > 0) {
-                        realReturnPct = validChgs.reduce((a, b) => a + b, 0) / validChgs.length;
-                      }
-                    }
-                  }
-
-                  // 3. Fallback to benchmark beta if backend is loading (using pure normalized index growth)
-                  const lastIdx = navData?.length ? navData.length - 1 : 0;
-                  const isNasdaqBench = strat.benchmark === "NASDAQ" || (!isMM20 && strat.name.toLowerCase().includes("acciones"));
-                  const benchData = isNasdaqBench ? nasdaqData : sp500Data;
-
-                  const stratStartDate = strat.createdAt ? strat.createdAt.slice(0, 10) : null;
-                  let startIdx = 0;
-                  if (stratStartDate && navData?.length) {
-                    const found = navData.findIndex((pt) => (pt.date || pt.time) >= stratStartDate);
-                    if (found !== -1) startIdx = found;
-                  }
-
-                  const benchStartNorm = getBenchNorm(benchData, startIdx);
-                  const benchPtNorm = getBenchNorm(benchData, lastIdx);
-                  const benchPctGrowth = benchStartNorm > 0 ? (benchPtNorm - benchStartNorm) / benchStartNorm : 0;
-                  const betaMultiplier = isMM20 ? 1.24 : 1.36;
-                  const driftProgress = Math.max(0, lastIdx - startIdx) / Math.max(1, navData?.length - 1 || 1);
-                  const drift = driftProgress * (isMM20 ? 0.032 : 0.054);
-                  const dynamicFallbackPct = (benchPctGrowth * betaMultiplier + drift) * 100;
-
-                  const lastPlottedVal = stratLastValues[strat.id];
-                  const currentChartVal = hoverValues?.[strat.id] ?? lastPlottedVal;
-                  let stratPct = null;
-                  let stratUsd = stratBase;
-
-                  if (currentChartVal != null && stratBase > 0) {
-                    stratPct = ((currentChartVal - stratBase) / stratBase) * 100;
-                    stratUsd = currentChartVal;
-                  } else if (realReturnPct !== null) {
-                    stratPct = realReturnPct;
-                    stratUsd = stratBase * (1 + realReturnPct / 100);
-                  }
-                  // No fallback: if no real data yet, show nothing (avoid invented values)
-
-                  return (
-                    <button
-                      key={strat.id}
-                      onClick={() => handleToggle(strat.id)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        background: isVisible ? `${strat.color}1A` : "rgba(255,255,255,0.02)",
-                        border: `1px solid ${isVisible ? `${strat.color}66` : "#334155"}`,
-                        padding: "4px 10px",
-                        borderRadius: 6,
-                        cursor: "pointer",
-                        color: isVisible ? "#f1f5f9" : "#94a3b8",
-                        fontSize: "0.75rem",
-                        transition: "all 0.15s ease",
-                      }}
-                      title={`Clic para mostrar/ocultar simulación ${strat.name}`}
-                    >
-                      <span
-                        style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: "50%",
-                          background: strat.color,
-                          opacity: isVisible ? 1 : 0.3,
-                        }}
-                      />
-                      <span style={{ fontSize: "0.7rem" }}>{strat.country || "🌎"}</span>
-                      <strong>{strat.name}</strong>
-                      {strat.isSystem ? (
-                        <span
-                          style={{
-                            fontSize: "0.62rem",
-                            padding: "1px 4px",
-                            borderRadius: 3,
-                            background: `${strat.color}33`,
-                            color: strat.color,
-                            fontWeight: 700,
-                          }}
-                        >
-                          PRO
-                        </span>
-                      ) : (
-                        <span
-                          style={{
-                            fontSize: "0.62rem",
-                            padding: "1px 4px",
-                            borderRadius: 3,
-                            background: "rgba(255,255,255,0.08)",
-                            color: "var(--text-muted)",
-                            fontWeight: 600,
-                          }}
-                        >
-                          SIM
-                        </span>
-                      )}
-                      {stratUsd != null && (
-                        <span className="mono" style={{ color: strat.color, fontWeight: 700 }}>
-                          ${stratUsd.toFixed(2)}
-                        </span>
-                      )}
-                      {stratPct != null && (
-                        <span
-                          style={{ color: stratPct >= 0 ? "#22c55e" : "#ef4444", fontSize: "0.7rem" }}
-                        >
-                          ({stratPct >= 0 ? "+" : ""}
-                          {stratPct.toFixed(2)}%)
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            );
-          })()}
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {/* Toggle Estrategias Adicionales */}
+          {!isLiveMode && (customStrategies || []).length > 0 && (
+            <button
+              onClick={() => setShowStrategiesPanel((prev) => !prev)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "4px 10px",
+                borderRadius: 6,
+                fontSize: "0.72rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                background: showStrategiesPanel ? "rgba(192, 132, 252, 0.12)" : "rgba(255, 255, 255, 0.04)",
+                border: `1px solid ${showStrategiesPanel ? "rgba(192, 132, 252, 0.35)" : "rgba(255, 255, 255, 0.1)"}`,
+                color: showStrategiesPanel ? "#c084fc" : "var(--text-muted)",
+                transition: "all 0.15s ease",
+              }}
+              title="Mostrar / Ocultar panel de estrategias adicionales en el gráfico"
+            >
+              <span>🔬 Estrategias ({(customStrategies || []).length})</span>
+              <span>{showStrategiesPanel ? "▲" : "▼"}</span>
+            </button>
+          )}
+
           {/* Interactive Scale Mode Toggle */}
           <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
             <button
@@ -1159,6 +859,249 @@ export default function NavChart({
           </span>
         </div>
       </div>
+
+      {/* ── Subpanel Colapsable de Estrategias Comparativas (Reales & Simuladas) ── */}
+      {!isLiveMode && showStrategiesPanel && (customStrategies || []).length > 0 && (
+        <div
+          className="fade-up"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 12,
+            padding: "8px 12px",
+            marginBottom: "14px",
+            background: "rgba(0, 0, 0, 0.2)",
+            border: "1px solid rgba(255, 255, 255, 0.06)",
+            borderRadius: 8,
+          }}
+        >
+          {/* Bloque Reales */}
+          {(() => {
+            const realStrats = (customStrategies || []).filter((s) => s.isRealMoney);
+            if (realStrats.length === 0) return null;
+            return (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                <span
+                  style={{
+                    fontSize: "0.68rem",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    color: "#34d399",
+                    fontWeight: 800,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  💵 Reales:
+                </span>
+                {realStrats.map((strat) => {
+                  const isVisible = visibleSeries?.[strat.id] !== false;
+                  const backendSumm = customNavData[strat.id]?.summary;
+                  const currentDateStr = hoverValues?.date
+                    ? String(hoverValues.date).slice(0, 10)
+                    : (navData?.[navData.length - 1]?.date || "").slice(0, 10);
+                  const stratBase = getStratCap(strat, currentDateStr);
+
+                  let stratPct = null;
+                  let stratUsd = null;
+
+                  if (hoverValues?.[strat.id] != null) {
+                    stratUsd = hoverValues[strat.id];
+                    if (stratBase > 0) {
+                      stratPct = ((stratUsd - stratBase) / stratBase) * 100;
+                    }
+                  } else if (backendSumm) {
+                    stratUsd =
+                      backendSumm.active_stock_value ??
+                      backendSumm.end_value ??
+                      backendSumm.invested_value;
+                    stratPct = backendSumm.active_return_pct ?? backendSumm.total_return_pct;
+                  }
+
+                  return (
+                    <button
+                      key={strat.id}
+                      onClick={() => handleToggle(strat.id)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        background: isVisible
+                          ? "rgba(16, 185, 129, 0.12)"
+                          : "rgba(255,255,255,0.02)",
+                        border: `1px solid ${isVisible ? "rgba(16, 185, 129, 0.5)" : "#334155"}`,
+                        padding: "3px 8px",
+                        borderRadius: 6,
+                        cursor: "pointer",
+                        color: isVisible ? "#f1f5f9" : "#94a3b8",
+                        fontSize: "0.72rem",
+                        transition: "all 0.15s ease",
+                      }}
+                      title={`Clic para mostrar/ocultar cartera real ${strat.name}`}
+                    >
+                      <span
+                        style={{
+                          width: 7,
+                          height: 7,
+                          borderRadius: "50%",
+                          background: "#10b981",
+                          opacity: isVisible ? 1 : 0.3,
+                        }}
+                      />
+                      <span style={{ fontSize: "0.68rem" }}>{strat.country || "💵"}</span>
+                      <strong>{strat.name}</strong>
+                      <span
+                        style={{
+                          fontSize: "0.6rem",
+                          padding: "1px 4px",
+                          borderRadius: 3,
+                          background: "rgba(16, 185, 129, 0.2)",
+                          color: "#34d399",
+                          fontWeight: 700,
+                        }}
+                      >
+                        REAL
+                      </span>
+                      {stratUsd != null && (
+                        <span className="mono" style={{ color: "#34d399", fontWeight: 700 }}>
+                          ${stratUsd.toFixed(2)}
+                        </span>
+                      )}
+                      {stratPct != null && (
+                        <span
+                          style={{
+                            color: stratPct >= 0 ? "#22c55e" : "#ef4444",
+                            fontSize: "0.68rem",
+                          }}
+                        >
+                          ({stratPct >= 0 ? "+" : ""}
+                          {stratPct.toFixed(2)}%)
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
+          {/* Bloque Simuladas */}
+          {(() => {
+            const simStrats = (customStrategies || []).filter((s) => !s.isRealMoney);
+            if (simStrats.length === 0) return null;
+            return (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  flexWrap: "wrap",
+                  paddingLeft: 8,
+                  borderLeft: "1px solid rgba(255,255,255,0.1)",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "0.68rem",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    color: "#c084fc",
+                    fontWeight: 700,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  🧪 Simuladas:
+                </span>
+                {simStrats.map((strat) => {
+                  const isVisible = visibleSeries?.[strat.id] !== false;
+                  const backendSumm = customNavData[strat.id]?.summary;
+                  const currentDateStr = hoverValues?.date
+                    ? String(hoverValues.date).slice(0, 10)
+                    : (navData?.[navData.length - 1]?.date || "").slice(0, 10);
+                  const stratBase = getStratCap(strat, currentDateStr);
+
+                  let stratPct = null;
+                  let stratUsd = null;
+
+                  if (hoverValues?.[strat.id] != null) {
+                    stratUsd = hoverValues[strat.id];
+                    if (stratBase > 0) {
+                      stratPct = ((stratUsd - stratBase) / stratBase) * 100;
+                    }
+                  } else if (backendSumm) {
+                    stratUsd =
+                      backendSumm.active_stock_value ??
+                      backendSumm.end_value ??
+                      backendSumm.invested_value;
+                    stratPct = backendSumm.active_return_pct ?? backendSumm.total_return_pct;
+                  }
+
+                  return (
+                    <button
+                      key={strat.id}
+                      onClick={() => handleToggle(strat.id)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        background: isVisible ? `${strat.color}1A` : "rgba(255,255,255,0.02)",
+                        border: `1px solid ${isVisible ? `${strat.color}66` : "#334155"}`,
+                        padding: "3px 8px",
+                        borderRadius: 6,
+                        cursor: "pointer",
+                        color: isVisible ? "#f1f5f9" : "#94a3b8",
+                        fontSize: "0.72rem",
+                        transition: "all 0.15s ease",
+                      }}
+                      title={`Clic para mostrar/ocultar simulación ${strat.name}`}
+                    >
+                      <span
+                        style={{
+                          width: 7,
+                          height: 7,
+                          borderRadius: "50%",
+                          background: strat.color,
+                          opacity: isVisible ? 1 : 0.3,
+                        }}
+                      />
+                      <span style={{ fontSize: "0.68rem" }}>{strat.country || "🌎"}</span>
+                      <strong>{strat.name}</strong>
+                      <span
+                        style={{
+                          fontSize: "0.6rem",
+                          padding: "1px 4px",
+                          borderRadius: 3,
+                          background: `${strat.color}22`,
+                          color: strat.color,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {strat.isSystem ? "PRO" : "SIM"}
+                      </span>
+                      {stratUsd != null && (
+                        <span className="mono" style={{ color: strat.color, fontWeight: 700 }}>
+                          ${stratUsd.toFixed(2)}
+                        </span>
+                      )}
+                      {stratPct != null && (
+                        <span
+                          style={{
+                            color: stratPct >= 0 ? "#22c55e" : "#ef4444",
+                            fontSize: "0.68rem",
+                          }}
+                        >
+                          ({stratPct >= 0 ? "+" : ""}
+                          {stratPct.toFixed(2)}%)
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       {/* ── Integrated Interactive Ticker Activator Bar (Position Switchers with Smooth Animations) ── */}
       {holdings && holdings.length > 0 && onToggleTicker && (

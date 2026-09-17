@@ -63,6 +63,8 @@ export default function App() {
     monthly_rates: [],
   });
   const [isFetchingMainInflation, setIsFetchingMainInflation] = useState(false);
+  const [showBreakdownCard, setShowBreakdownCard] = useState(true);
+  const [showQuantIntelligence, setShowQuantIntelligence] = useState(true);
 
   // Navigation Dropdown States & Outside Click Handlers
   const [stratOpen, setStratOpen] = useState(false);
@@ -1031,30 +1033,54 @@ export default function App() {
                           fontSize: "0.82rem",
                           fontWeight: 700,
                           color: "var(--text-secondary)",
-                          marginBottom: 10,
+                          marginBottom: showBreakdownCard ? 10 : 0,
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "space-between",
+                          cursor: "pointer",
+                          flexWrap: "wrap",
+                          gap: 6,
                         }}
+                        onClick={() => setShowBreakdownCard(!showBreakdownCard)}
                       >
-                        <span>
-                          📊 Comparativa de Rendimiento Multinivel (Nominal ➔ Divisa ➔ Real)
-                        </span>
-                        <span
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                          <span>
+                            📊 Comparativa de Rendimiento Multinivel (Nominal ➔ Divisa ➔ Real)
+                          </span>
+                          <span
+                            style={{
+                              fontSize: "0.74rem",
+                              color: "#f59e0b",
+                              background: "rgba(245,158,11,0.1)",
+                              padding: "2px 8px",
+                              borderRadius: 6,
+                            }}
+                          >
+                            {mainSettings.useAutoColInflation
+                              ? "IPC Automático (FRED/DANE)"
+                              : `Inflación Manual ${mainSettings.inflationRate || 0}%/año`}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowBreakdownCard(!showBreakdownCard);
+                          }}
                           style={{
-                            fontSize: "0.74rem",
-                            color: "#f59e0b",
-                            background: "rgba(245,158,11,0.1)",
-                            padding: "2px 8px",
+                            background: "rgba(255,255,255,0.06)",
+                            border: "1px solid rgba(255,255,255,0.12)",
                             borderRadius: 6,
+                            padding: "2px 8px",
+                            color: "var(--text-muted)",
+                            fontSize: "0.72rem",
+                            cursor: "pointer",
                           }}
                         >
-                          {mainSettings.useAutoColInflation
-                            ? "IPC Automático (FRED/DANE)"
-                            : `Inflación Manual ${mainSettings.inflationRate || 0}%/año`}
-                        </span>
+                          {showBreakdownCard ? "▲ Ocultar" : "▼ Desplegar"}
+                        </button>
                       </div>
-                      {(() => {
+                      {showBreakdownCard && (() => {
                         const nomInvested = rawActiveInvested;
                         const nomReturnUsd =
                           summary.active_return ??
@@ -1734,42 +1760,89 @@ export default function App() {
 
             {/* ── Quantitative Intelligence & Allocation Grid ── */}
             {summary && !loading && (
-              <>
-                {/* Row 1: Institutional Quant Suite, 360 Radar & Sector Allocation */}
+              <div style={{ marginBottom: "20px" }}>
                 <div
                   style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-                    gap: "20px",
-                    marginBottom: "20px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "10px 16px",
+                    background: "rgba(255,255,255,0.02)",
+                    border: "1px solid rgba(255,255,255,0.06)",
+                    borderRadius: "var(--radius)",
+                    marginBottom: showQuantIntelligence ? "14px" : 0,
+                    cursor: "pointer",
+                    flexWrap: "wrap",
+                    gap: 8,
                   }}
+                  onClick={() => setShowQuantIntelligence(!showQuantIntelligence)}
                 >
-                  <QuantitativeCard summary={summary} />
-                  <QuantRadar radar={navData?.radar} />
-                  <SectorAllocation
-                    holdings={navData?.holdings}
-                    investment={investment}
-                    numSlots={numSlots}
-                  />
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                      🧠 Inteligencia Cuantitativa & Métricas Institucionales (6 Módulos)
+                    </span>
+                    <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 400 }}>
+                      Radar 360°, Sharpe, Sectores, Monte Carlo, Correlaciones, Rebalanceo
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowQuantIntelligence(!showQuantIntelligence);
+                    }}
+                    style={{
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      borderRadius: 6,
+                      padding: "3px 10px",
+                      color: "var(--text-secondary)",
+                      fontSize: "0.72rem",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {showQuantIntelligence ? "▲ Ocultar Métricas" : "▼ Expandir Métricas"}
+                  </button>
                 </div>
 
-                {/* Row 2: Monte Carlo Simulation & Correlation Heatmap & Rebalance Timer */}
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-                    gap: "20px",
-                    marginBottom: "20px",
-                  }}
-                >
-                  <MonteCarloCard
-                    monteCarlo={navData?.monte_carlo}
-                    activeInvested={summary.active_invested}
-                  />
-                  <CorrelationHeatmap correlations={navData?.correlations} />
-                  <RebalanceTimer rebalances={navData?.rebalances} holdings={navData?.holdings} />
-                </div>
-              </>
+                {showQuantIntelligence && (
+                  <>
+                    {/* Row 1: Institutional Quant Suite, 360 Radar & Sector Allocation */}
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                        gap: "20px",
+                        marginBottom: "20px",
+                      }}
+                    >
+                      <QuantitativeCard summary={summary} />
+                      <QuantRadar radar={navData?.radar} />
+                      <SectorAllocation
+                        holdings={navData?.holdings}
+                        investment={investment}
+                        numSlots={numSlots}
+                      />
+                    </div>
+
+                    {/* Row 2: Monte Carlo Simulation & Correlation Heatmap & Rebalance Timer */}
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                        gap: "20px",
+                      }}
+                    >
+                      <MonteCarloCard
+                        monteCarlo={navData?.monte_carlo}
+                        activeInvested={summary.active_invested}
+                      />
+                      <CorrelationHeatmap correlations={navData?.correlations} />
+                      <RebalanceTimer rebalances={navData?.rebalances} holdings={navData?.holdings} />
+                    </div>
+                  </>
+                )}
+              </div>
             )}
 
             {/* ── Bottom grid ───────────────────────────── */}
