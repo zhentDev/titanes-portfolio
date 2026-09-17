@@ -832,10 +832,8 @@ export default function NavChart({
                   } else if (realReturnPct !== null) {
                     stratPct = realReturnPct;
                     stratUsd = stratBase * (1 + realReturnPct / 100);
-                  } else {
-                    stratPct = fallbackPctGrowth * 100;
-                    stratUsd = stratBase * (1 + fallbackPctGrowth);
                   }
+                  // No fallback: if no real data yet, show nothing (avoid invented values)
 
                   return (
                     <button
@@ -990,10 +988,8 @@ export default function NavChart({
                   } else if (realReturnPct !== null) {
                     stratPct = realReturnPct;
                     stratUsd = stratBase * (1 + realReturnPct / 100);
-                  } else {
-                    stratPct = dynamicFallbackPct;
-                    stratUsd = stratBase * (1 + dynamicFallbackPct / 100);
                   }
+                  // No fallback: if no real data yet, show nothing (avoid invented values)
 
                   return (
                     <button
