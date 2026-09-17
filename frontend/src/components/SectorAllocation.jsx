@@ -1,3 +1,5 @@
+import { InfoTooltip } from "./Common";
+
 export default function SectorAllocation({ holdings, investment, numSlots }) {
   if (!holdings || holdings.length === 0) return null;
 
@@ -38,8 +40,28 @@ export default function SectorAllocation({ holdings, investment, numSlots }) {
         }}
       >
         <div>
-          <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700 }}>
-            🍩 Exposición y Concentración Sectorial
+          <h3
+            style={{
+              margin: 0,
+              fontSize: "1rem",
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            <span>🍩 Exposición y Concentración Sectorial</span>
+            <InfoTooltip
+              customContent={{
+                title: "Concentración Sectorial & Diversificación",
+                tag: "Gestión de Riesgo",
+                tagColor: "#a855f7",
+                explanation:
+                  "Muestra cómo se distribuye el capital activo entre las diferentes industrias tecnológicas (Semiconductores, Software, Nube, Ciberseguridad) y la proporción restante en liquidez de slots no asignados.",
+                rule:
+                  "Evita que la cartera dependa excesivamente del desempeño de un único subsector en caso de rotaciones agresivas de mercado.",
+              }}
+            />
           </h3>
           <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
             Distribución del capital activo entre industrias tecnológicas y liquidez

@@ -1,3 +1,5 @@
+import { InfoTooltip } from "./Common";
+
 export default function HoldingsTable({
   holdings,
   investment,
@@ -20,8 +22,18 @@ export default function HoldingsTable({
           marginBottom: "14px",
         }}
       >
-        <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 600 }}>
-          Detalle de Posiciones Activas
+        <h3
+          style={{
+            margin: 0,
+            fontSize: "1rem",
+            fontWeight: 600,
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          <span>Detalle de Posiciones Activas</span>
+          <InfoTooltip conceptKey="active_invested" />
         </h3>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Unidad:</span>

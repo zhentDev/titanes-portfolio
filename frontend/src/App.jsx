@@ -17,6 +17,7 @@ import QuantitativeCard from "./components/QuantitativeCard";
 import RebalanceManager from "./components/RebalanceManager";
 import RebalanceTimer from "./components/RebalanceTimer";
 import SectorAllocation from "./components/SectorAllocation";
+import { InfoTooltip } from "./components/Common";
 import { usePortfolioStore } from "./store/portfolioStore";
 import { exportPortfolioCSV } from "./utils/exportReport";
 import { toastPrompt } from "./utils/toastAlerts";
@@ -847,7 +848,12 @@ export default function App() {
                   <>
                     <div className="summary-strip fade-up" style={{ position: "relative" }}>
                       <SummaryItem
-                        label={`Capital Activo (${summary.num_holdings} Acciones - ${currSymbol})`}
+                        label={
+                          <span style={{ display: "inline-flex", alignItems: "center" }}>
+                            Capital Activo ({summary.num_holdings} Acciones - {currSymbol})
+                            <InfoTooltip conceptKey="active_invested" />
+                          </span>
+                        }
                         value={`$${activeInvested.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                         large
                         mono
@@ -863,9 +869,10 @@ export default function App() {
                               width: "100%",
                             }}
                           >
-                            <span>
+                            <span style={{ display: "inline-flex", alignItems: "center" }}>
                               Rendimiento{" "}
                               {mainYieldViewMode === "REAL" ? "Real (Ajustado)" : "Titanes"}
+                              <InfoTooltip conceptKey={mainYieldViewMode === "REAL" ? "real_return" : "nav"} />
                             </span>
                           </div>
                         }
@@ -890,7 +897,12 @@ export default function App() {
                       />
                       <div className="summary-divider" />
                       <SummaryItem
-                        label="Alfa vs S&P 500 (α)"
+                        label={
+                          <span style={{ display: "inline-flex", alignItems: "center" }}>
+                            Alfa vs S&P 500 (α)
+                            <InfoTooltip conceptKey="alpha_sp500" />
+                          </span>
+                        }
                         value={
                           <span
                             className={`badge ${alphaSPPct >= 0 ? "gain" : "loss"}`}
@@ -908,7 +920,12 @@ export default function App() {
                       />
                       <div className="summary-divider" />
                       <SummaryItem
-                        label="Alfa vs NASDAQ (α)"
+                        label={
+                          <span style={{ display: "inline-flex", alignItems: "center" }}>
+                            Alfa vs NASDAQ (α)
+                            <InfoTooltip conceptKey="alpha_nasdaq" />
+                          </span>
+                        }
                         value={
                           <span
                             className={`badge ${alphaNDPct >= 0 ? "gain" : "loss"}`}
@@ -926,7 +943,12 @@ export default function App() {
                       />
                       <div className="summary-divider" />
                       <SummaryItem
-                        label="Max Drawdown"
+                        label={
+                          <span style={{ display: "inline-flex", alignItems: "center" }}>
+                            Max Drawdown
+                            <InfoTooltip conceptKey="max_drawdown" />
+                          </span>
+                        }
                         value={
                           <span
                             style={{
@@ -946,7 +968,12 @@ export default function App() {
                       />
                       <div className="summary-divider" />
                       <SummaryItem
-                        label="Cash Reservado (Q)"
+                        label={
+                          <span style={{ display: "inline-flex", alignItems: "center" }}>
+                            Cash Reservado (Q)
+                            <InfoTooltip conceptKey="cash_reserved" />
+                          </span>
+                        }
                         value={`$${((summary.cash_reserved ?? 0) * (mainYieldViewMode !== "USD" ? fxMultiplier : 1.0)).toFixed(2)}`}
                         muted
                         mono

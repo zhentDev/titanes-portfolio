@@ -16,6 +16,7 @@ import { toastConfirm } from "../utils/toastAlerts";
 import CreateStrategyModal from "./CreateStrategyModal";
 import InflationExplorerModal from "./InflationExplorerModal";
 import StrategyChart, { SYNTHETIC_RETURNS } from "./StrategyChart";
+import { InfoTooltip } from "./Common";
 
 const PERIODS = ["1D", "1W", "1M", "3M", "6M", "1Y", "3Y", "5Y", "MAX"];
 
@@ -625,9 +626,13 @@ export default function DynamicStrategyView({
                 background: "rgba(255,255,255,0.1)",
                 color: "#fff",
                 border: "1px solid rgba(255,255,255,0.2)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
               }}
             >
               {numSlots} SLOTS
+              <InfoTooltip conceptKey="active_invested" size="sm" />
             </span>
             <span
               style={{

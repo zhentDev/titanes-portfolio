@@ -1,3 +1,5 @@
+import { InfoTooltip } from "./Common";
+
 export default function QuantRadar({ radar }) {
   if (!radar || !radar.length) return null;
 
@@ -43,8 +45,18 @@ export default function QuantRadar({ radar }) {
         }}
       >
         <div>
-          <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700 }}>
-            🕸️ Radar Cuantitativo 360°
+          <h3
+            style={{
+              margin: 0,
+              fontSize: "1rem",
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            <span>🕸️ Radar Cuantitativo 360°</span>
+            <InfoTooltip conceptKey="quant_radar" />
           </h3>
           <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
             Evaluación multidimensional de factores cuantitativos

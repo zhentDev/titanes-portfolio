@@ -32,6 +32,14 @@
         "stock_value": 798.4987,
         "cash": 1200.0,
         "active_invested": 800.0
+      },
+      {
+        "date": "2026-09-15",
+        "value": 796.0371,
+        "total_value": 1996.0371,
+        "stock_value": 796.0371,
+        "cash": 1200.0,
+        "active_invested": 800.0
       }
     ],
     "sp500": [
@@ -94,6 +102,10 @@
       {
         "date": "2026-09-14",
         "value": 791.7382
+      },
+      {
+        "date": "2026-09-15",
+        "value": 788.1435
       }
     ],
     "ticker_series": {
@@ -113,6 +125,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.009439
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 1.031276
         }
       ],
       "HPQ": [
@@ -131,6 +147,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.050324
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 1.044149
         }
       ],
       "ORCL": [
@@ -149,6 +169,10 @@
         {
           "date": "2026-09-14",
           "factor": 0.895811
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 0.868341
         }
       ],
       "AMAT": [
@@ -167,6 +191,10 @@
         {
           "date": "2026-09-14",
           "factor": 0.904788
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 0.898304
         }
       ],
       "NTAP": [
@@ -185,6 +213,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.019162
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 1.028093
         }
       ],
       "ACN": [
@@ -203,6 +235,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.109215
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 1.100114
         }
       ]
     },
@@ -242,10 +278,10 @@
         "weight": 6.67,
         "shares": 0.758438,
         "start_price": 175.8,
-        "current_price": 195.0,
-        "current_value": 147.8953,
-        "return_pct": 10.9215,
-        "return_usd": 14.56,
+        "current_price": 193.4,
+        "current_value": 146.6818,
+        "return_pct": 10.0114,
+        "return_usd": 13.35,
         "selected": true,
         "entry_date": "2026-09-09",
         "history": [
@@ -264,6 +300,10 @@
           {
             "date": "2026-09-14",
             "factor": 1.109215
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 1.100114
           }
         ],
         "market_open": false
@@ -276,10 +316,10 @@
         "weight": 6.67,
         "shares": 4.116497,
         "start_price": 32.39,
-        "current_price": 34.02,
-        "current_value": 140.0432,
-        "return_pct": 5.0324,
-        "return_usd": 6.71,
+        "current_price": 33.82,
+        "current_value": 139.2199,
+        "return_pct": 4.4149,
+        "return_usd": 5.89,
         "selected": true,
         "entry_date": "2026-09-09",
         "history": [
@@ -298,40 +338,10 @@
           {
             "date": "2026-09-14",
             "factor": 1.050324
-          }
-        ],
-        "market_open": false
-      },
-      {
-        "ticker": "NTAP",
-        "name": "NetApp, Inc.",
-        "sector": "Almacenamiento H\u00edbrido & Nube",
-        "exchange": "NASDAQ",
-        "weight": 6.67,
-        "shares": 0.721735,
-        "start_price": 184.74,
-        "current_price": 188.28,
-        "current_value": 135.8883,
-        "return_pct": 1.9162,
-        "return_usd": 2.55,
-        "selected": true,
-        "entry_date": "2026-09-09",
-        "history": [
-          {
-            "date": "2026-09-09",
-            "factor": 1.0
           },
           {
-            "date": "2026-09-10",
-            "factor": 0.993829
-          },
-          {
-            "date": "2026-09-11",
-            "factor": 1.078705
-          },
-          {
-            "date": "2026-09-14",
-            "factor": 1.019162
+            "date": "2026-09-15",
+            "factor": 1.044149
           }
         ],
         "market_open": false
@@ -344,10 +354,10 @@
         "weight": 6.67,
         "shares": 1.878463,
         "start_price": 70.98,
-        "current_price": 71.65,
-        "current_value": 134.5919,
-        "return_pct": 0.9439,
-        "return_usd": 1.26,
+        "current_price": 73.2,
+        "current_value": 137.5035,
+        "return_pct": 3.1276,
+        "return_usd": 4.17,
         "selected": true,
         "entry_date": "2026-09-09",
         "history": [
@@ -366,6 +376,48 @@
           {
             "date": "2026-09-14",
             "factor": 1.009439
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 1.031276
+          }
+        ],
+        "market_open": false
+      },
+      {
+        "ticker": "NTAP",
+        "name": "NetApp, Inc.",
+        "sector": "Almacenamiento H\u00edbrido & Nube",
+        "exchange": "NASDAQ",
+        "weight": 6.67,
+        "shares": 0.721735,
+        "start_price": 184.74,
+        "current_price": 189.93,
+        "current_value": 137.0791,
+        "return_pct": 2.8093,
+        "return_usd": 3.75,
+        "selected": true,
+        "entry_date": "2026-09-09",
+        "history": [
+          {
+            "date": "2026-09-09",
+            "factor": 1.0
+          },
+          {
+            "date": "2026-09-10",
+            "factor": 0.993829
+          },
+          {
+            "date": "2026-09-11",
+            "factor": 1.078705
+          },
+          {
+            "date": "2026-09-14",
+            "factor": 1.019162
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 1.028093
           }
         ],
         "market_open": false
@@ -378,10 +430,10 @@
         "weight": 6.67,
         "shares": 0.284384,
         "start_price": 468.85,
-        "current_price": 424.21,
-        "current_value": 120.6384,
-        "return_pct": -9.5212,
-        "return_usd": -12.69,
+        "current_price": 421.17,
+        "current_value": 119.7739,
+        "return_pct": -10.1696,
+        "return_usd": -13.56,
         "selected": true,
         "entry_date": "2026-09-09",
         "history": [
@@ -400,6 +452,10 @@
           {
             "date": "2026-09-14",
             "factor": 0.904788
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 0.898304
           }
         ],
         "market_open": false
@@ -412,10 +468,10 @@
         "weight": 6.67,
         "shares": 0.824929,
         "start_price": 161.63,
-        "current_price": 144.79,
-        "current_value": 119.4415,
-        "return_pct": -10.4189,
-        "return_usd": -13.89,
+        "current_price": 140.35,
+        "current_value": 115.7788,
+        "return_pct": -13.1659,
+        "return_usd": -17.55,
         "selected": true,
         "entry_date": "2026-09-09",
         "history": [
@@ -434,6 +490,10 @@
           {
             "date": "2026-09-14",
             "factor": 0.895811
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 0.868341
           }
         ],
         "market_open": false
@@ -452,70 +512,70 @@
       "matrix": [
         [
           1.0,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5
+          0.93,
+          0.69,
+          0.95,
+          0.99,
+          -0.36,
+          0.84
         ],
         [
-          0.5,
+          0.93,
           1.0,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5
+          0.55,
+          0.81,
+          0.97,
+          -0.14,
+          0.89
         ],
         [
-          0.5,
-          0.5,
+          0.69,
+          0.55,
           1.0,
-          0.5,
-          0.5,
-          0.5,
-          0.5
+          0.53,
+          0.66,
+          0.15,
+          0.81
         ],
         [
-          0.5,
-          0.5,
-          0.5,
+          0.95,
+          0.81,
+          0.53,
           1.0,
-          0.5,
-          0.5,
-          0.5
+          0.91,
+          -0.63,
+          0.63
         ],
         [
-          0.5,
-          0.5,
-          0.5,
-          0.5,
+          0.99,
+          0.97,
+          0.66,
+          0.91,
           1.0,
-          0.5,
-          0.5
+          -0.27,
+          0.88
         ],
         [
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
+          -0.36,
+          -0.14,
+          0.15,
+          -0.63,
+          -0.27,
           1.0,
-          0.5
+          0.21
         ],
         [
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
+          0.84,
+          0.89,
+          0.81,
+          0.63,
+          0.88,
+          0.21,
           1.0
         ]
       ],
-      "avg_correlation": 0.5,
-      "diversification_score": 8.5
+      "avg_correlation": 0.66,
+      "diversification_score": 6.9
     },
     "monte_carlo": {
       "days": [
@@ -527,48 +587,48 @@
         90
       ],
       "median": [
-        798.5,
-        797.89,
-        797.27,
-        796.66,
-        796.05,
-        794.83
+        796.04,
+        786.43,
+        776.95,
+        767.58,
+        758.32,
+        740.13
       ],
       "bull_95": [
-        798.5,
-        1096.16,
-        1249.88,
-        1382.3,
-        1504.78,
-        1735.09
+        796.04,
+        1028.26,
+        1143.27,
+        1240.18,
+        1328.23,
+        1490.19
       ],
       "bear_5": [
-        798.5,
-        581.44,
-        509.84,
-        460.94,
-        423.38,
-        367.12
+        796.04,
+        612.41,
+        549.37,
+        505.44,
+        471.14,
+        418.75
       ],
       "scenarios": {
         "ai_rally": {
           "name": "Rally de Inteligencia Artificial",
           "impact_pct": 25.0,
-          "projected_value": 998.12,
+          "projected_value": 995.05,
           "prob": "Alta (Catalizador Q3/Q4)",
           "color": "#10b981"
         },
         "rate_shock": {
           "name": "Correcci\u00f3n Tech / Shock de Tasas",
           "impact_pct": -15.0,
-          "projected_value": 678.72,
+          "projected_value": 676.63,
           "prob": "Media (Protegido por Cash Q)",
           "color": "#ef4444"
         },
         "sideways": {
           "name": "Mercado Lateral / Rango",
           "impact_pct": 4.5,
-          "projected_value": 834.43,
+          "projected_value": 831.86,
           "prob": "Muy Alta (Consolidaci\u00f3n)",
           "color": "#f59e0b"
         }
@@ -577,17 +637,17 @@
     "radar": [
       {
         "factor": "Momentum Relativo",
-        "score": 59,
+        "score": 58,
         "benchmark": 55
       },
       {
         "factor": "Resiliencia / Drawdown",
-        "score": 73,
+        "score": 71,
         "benchmark": 60
       },
       {
         "factor": "Alfa vs S&P 500",
-        "score": 68,
+        "score": 66,
         "benchmark": 50
       },
       {
@@ -597,42 +657,42 @@
       },
       {
         "factor": "Diversificaci\u00f3n",
-        "score": 80,
+        "score": 65,
         "benchmark": 60
       }
     ],
     "summary": {
       "start_value": 2000.0,
-      "end_value": 1998.5,
+      "end_value": 1996.04,
       "invested_value": 2000.0,
       "active_invested": 800.0,
-      "active_stock_value": 798.5,
-      "active_return": -1.5,
-      "active_return_pct": -0.19,
+      "active_stock_value": 796.04,
+      "active_return": -3.96,
+      "active_return_pct": -0.5,
       "sp500_return": -5.3,
       "sp500_return_pct": -0.66,
       "nasdaq_return": -8.28,
       "nasdaq_return_pct": -1.04,
-      "mm20_return": -8.26,
-      "mm20_return_pct": -1.03,
-      "alpha_sp500": 0.48,
-      "alpha_sp500_usd": 3.8,
-      "alpha_nasdaq": 0.85,
-      "alpha_nasdaq_usd": 6.78,
-      "alpha_mm20": 0.85,
-      "alpha_mm20_usd": 6.76,
-      "sharpe_ratio": -0.08,
-      "sortino_ratio": -0.16,
-      "beta_sp500": 4.94,
-      "beta_nasdaq": 4.4,
-      "annualized_vol_pct": 66.3,
+      "mm20_return": -11.86,
+      "mm20_return_pct": -1.48,
+      "alpha_sp500": 0.17,
+      "alpha_sp500_usd": 1.34,
+      "alpha_nasdaq": 0.54,
+      "alpha_nasdaq_usd": 4.32,
+      "alpha_mm20": 0.99,
+      "alpha_mm20_usd": 7.89,
+      "sharpe_ratio": -0.45,
+      "sortino_ratio": -0.84,
+      "beta_sp500": 4.62,
+      "beta_nasdaq": 3.68,
+      "annualized_vol_pct": 54.19,
       "win_rate_pct": 66.7,
-      "diversification_score": 8.5,
-      "max_drawdown_pct": -3.35,
-      "max_drawdown_usd": -27.67,
+      "diversification_score": 6.9,
+      "max_drawdown_pct": -3.65,
+      "max_drawdown_usd": -30.14,
       "cash_reserved": 1200.0,
-      "total_return": -1.5,
-      "total_return_pct": -0.08,
+      "total_return": -3.96,
+      "total_return_pct": -0.2,
       "num_holdings": 6,
       "num_slots": 15,
       "unallocated_slots": 9
@@ -797,6 +857,14 @@
         "value": 768.947,
         "total_value": 1968.947,
         "stock_value": 768.947,
+        "cash": 1200.0,
+        "active_invested": 800.0
+      },
+      {
+        "date": "2026-09-15",
+        "value": 765.6581,
+        "total_value": 1965.6581,
+        "stock_value": 765.6581,
         "cash": 1200.0,
         "active_invested": 800.0
       }
@@ -1053,6 +1121,10 @@
       {
         "date": "2026-09-14",
         "value": 752.1916
+      },
+      {
+        "date": "2026-09-15",
+        "value": 748.7765
       }
     ],
     "ticker_series": {
@@ -1136,6 +1208,10 @@
         {
           "date": "2026-09-14",
           "factor": 0.859319
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 0.877908
         }
       ],
       "HPQ": [
@@ -1218,6 +1294,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.168388
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 1.161519
         }
       ],
       "ORCL": [
@@ -1300,6 +1380,10 @@
         {
           "date": "2026-09-14",
           "factor": 0.987317
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 0.957041
         }
       ],
       "AMAT": [
@@ -1382,6 +1466,10 @@
         {
           "date": "2026-09-14",
           "factor": 0.793304
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 0.787619
         }
       ],
       "NTAP": [
@@ -1464,6 +1552,10 @@
         {
           "date": "2026-09-14",
           "factor": 0.922037
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 0.930118
         }
       ],
       "ACN": [
@@ -1546,6 +1638,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.036738
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 1.028231
         }
       ]
     },
@@ -1585,10 +1681,10 @@
         "weight": 6.67,
         "shares": 4.579221,
         "start_price": 29.117,
-        "current_price": 34.02,
-        "current_value": 155.7851,
-        "return_pct": 16.8388,
-        "return_usd": 22.45,
+        "current_price": 33.82,
+        "current_value": 154.8692,
+        "return_pct": 16.1519,
+        "return_usd": 21.54,
         "selected": true,
         "entry_date": "2026-08-17",
         "history": [
@@ -1671,6 +1767,10 @@
           {
             "date": "2026-09-14",
             "factor": 1.168388
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 1.161519
           }
         ],
         "market_open": false
@@ -1683,10 +1783,10 @@
         "weight": 6.67,
         "shares": 0.708881,
         "start_price": 188.09,
-        "current_price": 195.0,
-        "current_value": 138.2317,
-        "return_pct": 3.6738,
-        "return_usd": 4.9,
+        "current_price": 193.4,
+        "current_value": 137.0975,
+        "return_pct": 2.8231,
+        "return_usd": 3.76,
         "selected": true,
         "entry_date": "2026-09-01",
         "history": [
@@ -1769,6 +1869,10 @@
           {
             "date": "2026-09-14",
             "factor": 1.147194
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 1.137781
           }
         ],
         "market_open": false
@@ -1781,10 +1885,10 @@
         "weight": 6.67,
         "shares": 0.909194,
         "start_price": 146.65,
-        "current_price": 144.79,
-        "current_value": 131.6422,
-        "return_pct": -1.2683,
-        "return_usd": -1.69,
+        "current_price": 140.35,
+        "current_value": 127.6054,
+        "return_pct": -4.2959,
+        "return_usd": -5.73,
         "selected": true,
         "entry_date": "2026-08-17",
         "history": [
@@ -1867,6 +1971,10 @@
           {
             "date": "2026-09-14",
             "factor": 0.987317
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 0.957041
           }
         ],
         "market_open": false
@@ -1879,10 +1987,10 @@
         "weight": 6.67,
         "shares": 0.652955,
         "start_price": 204.2,
-        "current_price": 188.28,
-        "current_value": 122.9383,
-        "return_pct": -7.7963,
-        "return_usd": -10.4,
+        "current_price": 189.93,
+        "current_value": 124.0157,
+        "return_pct": -6.9882,
+        "return_usd": -9.32,
         "selected": true,
         "entry_date": "2026-08-17",
         "history": [
@@ -1965,6 +2073,10 @@
           {
             "date": "2026-09-14",
             "factor": 0.922037
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 0.930118
           }
         ],
         "market_open": false
@@ -1977,10 +2089,10 @@
         "weight": 6.67,
         "shares": 1.599105,
         "start_price": 83.38,
-        "current_price": 71.65,
-        "current_value": 114.5758,
-        "return_pct": -14.0681,
-        "return_usd": -18.76,
+        "current_price": 73.2,
+        "current_value": 117.0544,
+        "return_pct": -12.2092,
+        "return_usd": -16.28,
         "selected": true,
         "entry_date": "2026-08-17",
         "history": [
@@ -2063,6 +2175,10 @@
           {
             "date": "2026-09-14",
             "factor": 0.859319
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 0.877908
           }
         ],
         "market_open": false
@@ -2075,10 +2191,10 @@
         "weight": 6.67,
         "shares": 0.249343,
         "start_price": 534.7382,
-        "current_price": 424.21,
-        "current_value": 105.7739,
-        "return_pct": -20.6696,
-        "return_usd": -27.56,
+        "current_price": 421.17,
+        "current_value": 105.0159,
+        "return_pct": -21.2381,
+        "return_usd": -28.32,
         "selected": true,
         "entry_date": "2026-08-17",
         "history": [
@@ -2161,6 +2277,10 @@
           {
             "date": "2026-09-14",
             "factor": 0.793304
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 0.787619
           }
         ],
         "market_open": false
@@ -2179,70 +2299,70 @@
       "matrix": [
         [
           1.0,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5
+          0.52,
+          0.23,
+          0.46,
+          0.72,
+          -0.05,
+          0.59
         ],
         [
-          0.5,
+          0.52,
           1.0,
+          -0.03,
+          0.01,
           0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5
+          -0.11,
+          0.21
         ],
         [
-          0.5,
-          0.5,
+          0.23,
+          -0.03,
           1.0,
-          0.5,
-          0.5,
-          0.5,
-          0.5
+          0.57,
+          0.23,
+          -0.15,
+          0.63
         ],
         [
-          0.5,
-          0.5,
-          0.5,
+          0.46,
+          0.01,
+          0.57,
           1.0,
-          0.5,
-          0.5,
-          0.5
+          0.52,
+          -0.64,
+          0.18
         ],
         [
+          0.72,
           0.5,
-          0.5,
-          0.5,
-          0.5,
+          0.23,
+          0.52,
           1.0,
-          0.5,
-          0.5
+          -0.29,
+          0.37
         ],
         [
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
+          -0.05,
+          -0.11,
+          -0.15,
+          -0.64,
+          -0.29,
           1.0,
-          0.5
+          0.43
         ],
         [
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
+          0.59,
+          0.21,
+          0.63,
+          0.18,
+          0.37,
+          0.43,
           1.0
         ]
       ],
-      "avg_correlation": 0.5,
-      "diversification_score": 8.5
+      "avg_correlation": 0.35,
+      "diversification_score": 10.0
     },
     "monte_carlo": {
       "days": [
@@ -2254,48 +2374,48 @@
         90
       ],
       "median": [
-        768.95,
-        874.9,
-        995.46,
-        1132.63,
-        1288.7,
-        1668.32
+        765.66,
+        862.78,
+        972.23,
+        1095.56,
+        1234.54,
+        1567.61
       ],
       "bull_95": [
-        768.95,
-        1160.74,
-        1376.61,
-        1569.11,
-        1752.16,
-        2108.43
+        765.66,
+        1142.06,
+        1347.77,
+        1530.42,
+        1703.49,
+        2038.9
       ],
       "bear_5": [
-        768.95,
-        544.51,
-        471.98,
-        422.95,
-        385.59,
-        330.18
+        765.66,
+        545.97,
+        474.6,
+        426.24,
+        389.31,
+        334.41
       ],
       "scenarios": {
         "ai_rally": {
           "name": "Rally de Inteligencia Artificial",
           "impact_pct": 25.0,
-          "projected_value": 961.18,
+          "projected_value": 957.07,
           "prob": "Alta (Catalizador Q3/Q4)",
           "color": "#10b981"
         },
         "rate_shock": {
           "name": "Correcci\u00f3n Tech / Shock de Tasas",
           "impact_pct": -15.0,
-          "projected_value": 653.6,
+          "projected_value": 650.81,
           "prob": "Media (Protegido por Cash Q)",
           "color": "#ef4444"
         },
         "sideways": {
           "name": "Mercado Lateral / Rango",
           "impact_pct": 4.5,
-          "projected_value": 803.55,
+          "projected_value": 800.11,
           "prob": "Muy Alta (Consolidaci\u00f3n)",
           "color": "#f59e0b"
         }
@@ -2304,7 +2424,7 @@
     "radar": [
       {
         "factor": "Momentum Relativo",
-        "score": 44,
+        "score": 42,
         "benchmark": 55
       },
       {
@@ -2314,7 +2434,7 @@
       },
       {
         "factor": "Alfa vs S&P 500",
-        "score": 50,
+        "score": 47,
         "benchmark": 50
       },
       {
@@ -2324,42 +2444,42 @@
       },
       {
         "factor": "Diversificaci\u00f3n",
-        "score": 80,
+        "score": 95,
         "benchmark": 60
       }
     ],
     "summary": {
       "start_value": 2000.0,
-      "end_value": 1968.95,
+      "end_value": 1965.66,
       "invested_value": 2000.0,
       "active_invested": 800.0,
-      "active_stock_value": 768.95,
-      "active_return": -31.05,
-      "active_return_pct": -3.88,
+      "active_stock_value": 765.66,
+      "active_return": -34.34,
+      "active_return_pct": -4.29,
       "sp500_return": -16.46,
       "sp500_return_pct": -2.06,
       "nasdaq_return": -19.92,
       "nasdaq_return_pct": -2.49,
-      "mm20_return": -47.81,
-      "mm20_return_pct": -5.98,
-      "alpha_sp500": -1.82,
-      "alpha_sp500_usd": -14.6,
-      "alpha_nasdaq": -1.39,
-      "alpha_nasdaq_usd": -11.14,
-      "alpha_mm20": 2.09,
-      "alpha_mm20_usd": 16.76,
-      "sharpe_ratio": 2.69,
-      "sortino_ratio": 10.03,
+      "mm20_return": -51.22,
+      "mm20_return_pct": -6.4,
+      "alpha_sp500": -2.24,
+      "alpha_sp500_usd": -17.88,
+      "alpha_nasdaq": -1.8,
+      "alpha_nasdaq_usd": -14.43,
+      "alpha_mm20": 2.11,
+      "alpha_mm20_usd": 16.88,
+      "sharpe_ratio": 2.55,
+      "sortino_ratio": 9.48,
       "beta_sp500": 1.06,
       "beta_nasdaq": 1.08,
-      "annualized_vol_pct": 79.14,
+      "annualized_vol_pct": 77.17,
       "win_rate_pct": 33.3,
-      "diversification_score": 8.5,
+      "diversification_score": 10.0,
       "max_drawdown_pct": -7.47,
       "max_drawdown_usd": -59.37,
       "cash_reserved": 1200.0,
-      "total_return": -31.05,
-      "total_return_pct": -1.55,
+      "total_return": -34.34,
+      "total_return_pct": -1.72,
       "num_holdings": 6,
       "num_slots": 15,
       "unallocated_slots": 9
@@ -2606,6 +2726,14 @@
         "stock_value": 808.5377,
         "cash": 1200.0,
         "active_invested": 800.0
+      },
+      {
+        "date": "2026-09-15",
+        "value": 805.2274,
+        "total_value": 2005.2274,
+        "stock_value": 805.2274,
+        "cash": 1200.0,
+        "active_invested": 800.0
       }
     ],
     "sp500": [
@@ -2980,6 +3108,10 @@
       {
         "date": "2026-09-14",
         "value": 775.6142
+      },
+      {
+        "date": "2026-09-15",
+        "value": 772.0927
       }
     ],
     "ticker_series": {
@@ -3103,6 +3235,10 @@
         {
           "date": "2026-09-14",
           "factor": 0.891169
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 0.910448
         }
       ],
       "HPQ": [
@@ -3225,6 +3361,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.266615
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 1.259169
         }
       ],
       "ORCL": [
@@ -3347,6 +3487,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.020726
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 0.989425
         }
       ],
       "AMAT": [
@@ -3469,6 +3613,10 @@
         {
           "date": "2026-09-14",
           "factor": 0.819482
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 0.813609
         }
       ],
       "NTAP": [
@@ -3591,6 +3739,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.029302
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 1.038323
         }
       ],
       "ACN": [
@@ -3713,6 +3865,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.036738
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 1.028231
         }
       ]
     },
@@ -3752,10 +3908,10 @@
         "weight": 6.67,
         "shares": 4.964199,
         "start_price": 26.859,
-        "current_price": 34.02,
-        "current_value": 168.8821,
-        "return_pct": 26.6615,
-        "return_usd": 35.55,
+        "current_price": 33.82,
+        "current_value": 167.8892,
+        "return_pct": 25.9169,
+        "return_usd": 34.56,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -3878,144 +4034,10 @@
           {
             "date": "2026-09-14",
             "factor": 1.266615
-          }
-        ],
-        "market_open": false
-      },
-      {
-        "ticker": "ACN",
-        "name": "Accenture plc",
-        "sector": "Technology",
-        "exchange": "NYQ",
-        "weight": 6.67,
-        "shares": 0.708881,
-        "start_price": 188.09,
-        "current_price": 195.0,
-        "current_value": 138.2317,
-        "return_pct": 3.6738,
-        "return_usd": 4.9,
-        "selected": true,
-        "entry_date": "2026-09-01",
-        "history": [
-          {
-            "date": "2026-08-03",
-            "factor": 1.0
           },
           {
-            "date": "2026-08-04",
-            "factor": 1.028173
-          },
-          {
-            "date": "2026-08-05",
-            "factor": 1.029983
-          },
-          {
-            "date": "2026-08-06",
-            "factor": 1.032276
-          },
-          {
-            "date": "2026-08-07",
-            "factor": 1.060087
-          },
-          {
-            "date": "2026-08-10",
-            "factor": 1.07535
-          },
-          {
-            "date": "2026-08-11",
-            "factor": 1.084822
-          },
-          {
-            "date": "2026-08-12",
-            "factor": 1.086752
-          },
-          {
-            "date": "2026-08-13",
-            "factor": 1.076798
-          },
-          {
-            "date": "2026-08-14",
-            "factor": 1.067145
-          },
-          {
-            "date": "2026-08-17",
-            "factor": 1.025459
-          },
-          {
-            "date": "2026-08-18",
-            "factor": 1.043255
-          },
-          {
-            "date": "2026-08-19",
-            "factor": 1.105031
-          },
-          {
-            "date": "2026-08-20",
-            "factor": 1.094052
-          },
-          {
-            "date": "2026-08-21",
-            "factor": 1.117761
-          },
-          {
-            "date": "2026-08-24",
-            "factor": 1.125302
-          },
-          {
-            "date": "2026-08-25",
-            "factor": 1.127715
-          },
-          {
-            "date": "2026-08-26",
-            "factor": 1.094233
-          },
-          {
-            "date": "2026-08-27",
-            "factor": 1.13043
-          },
-          {
-            "date": "2026-08-28",
-            "factor": 1.143883
-          },
-          {
-            "date": "2026-08-31",
-            "factor": 1.144788
-          },
-          {
-            "date": "2026-09-01",
-            "factor": 1.134713
-          },
-          {
-            "date": "2026-09-02",
-            "factor": 1.132239
-          },
-          {
-            "date": "2026-09-03",
-            "factor": 1.165058
-          },
-          {
-            "date": "2026-09-04",
-            "factor": 1.126448
-          },
-          {
-            "date": "2026-09-08",
-            "factor": 1.080056
-          },
-          {
-            "date": "2026-09-09",
-            "factor": 1.06057
-          },
-          {
-            "date": "2026-09-10",
-            "factor": 1.073299
-          },
-          {
-            "date": "2026-09-11",
-            "factor": 1.109435
-          },
-          {
-            "date": "2026-09-14",
-            "factor": 1.1764
+            "date": "2026-09-15",
+            "factor": 1.259169
           }
         ],
         "market_open": false
@@ -4028,10 +4050,10 @@
         "weight": 6.67,
         "shares": 0.728916,
         "start_price": 182.92,
-        "current_price": 188.28,
-        "current_value": 137.2403,
-        "return_pct": 2.9302,
-        "return_usd": 3.91,
+        "current_price": 189.93,
+        "current_value": 138.443,
+        "return_pct": 3.8323,
+        "return_usd": 5.11,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -4154,6 +4176,152 @@
           {
             "date": "2026-09-14",
             "factor": 1.029302
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 1.038323
+          }
+        ],
+        "market_open": false
+      },
+      {
+        "ticker": "ACN",
+        "name": "Accenture plc",
+        "sector": "Technology",
+        "exchange": "NYQ",
+        "weight": 6.67,
+        "shares": 0.708881,
+        "start_price": 188.09,
+        "current_price": 193.4,
+        "current_value": 137.0975,
+        "return_pct": 2.8231,
+        "return_usd": 3.76,
+        "selected": true,
+        "entry_date": "2026-09-01",
+        "history": [
+          {
+            "date": "2026-08-03",
+            "factor": 1.0
+          },
+          {
+            "date": "2026-08-04",
+            "factor": 1.028173
+          },
+          {
+            "date": "2026-08-05",
+            "factor": 1.029983
+          },
+          {
+            "date": "2026-08-06",
+            "factor": 1.032276
+          },
+          {
+            "date": "2026-08-07",
+            "factor": 1.060087
+          },
+          {
+            "date": "2026-08-10",
+            "factor": 1.07535
+          },
+          {
+            "date": "2026-08-11",
+            "factor": 1.084822
+          },
+          {
+            "date": "2026-08-12",
+            "factor": 1.086752
+          },
+          {
+            "date": "2026-08-13",
+            "factor": 1.076798
+          },
+          {
+            "date": "2026-08-14",
+            "factor": 1.067145
+          },
+          {
+            "date": "2026-08-17",
+            "factor": 1.025459
+          },
+          {
+            "date": "2026-08-18",
+            "factor": 1.043255
+          },
+          {
+            "date": "2026-08-19",
+            "factor": 1.105031
+          },
+          {
+            "date": "2026-08-20",
+            "factor": 1.094052
+          },
+          {
+            "date": "2026-08-21",
+            "factor": 1.117761
+          },
+          {
+            "date": "2026-08-24",
+            "factor": 1.125302
+          },
+          {
+            "date": "2026-08-25",
+            "factor": 1.127715
+          },
+          {
+            "date": "2026-08-26",
+            "factor": 1.094233
+          },
+          {
+            "date": "2026-08-27",
+            "factor": 1.13043
+          },
+          {
+            "date": "2026-08-28",
+            "factor": 1.143883
+          },
+          {
+            "date": "2026-08-31",
+            "factor": 1.144788
+          },
+          {
+            "date": "2026-09-01",
+            "factor": 1.134713
+          },
+          {
+            "date": "2026-09-02",
+            "factor": 1.132239
+          },
+          {
+            "date": "2026-09-03",
+            "factor": 1.165058
+          },
+          {
+            "date": "2026-09-04",
+            "factor": 1.126448
+          },
+          {
+            "date": "2026-09-08",
+            "factor": 1.080056
+          },
+          {
+            "date": "2026-09-09",
+            "factor": 1.06057
+          },
+          {
+            "date": "2026-09-10",
+            "factor": 1.073299
+          },
+          {
+            "date": "2026-09-11",
+            "factor": 1.109435
+          },
+          {
+            "date": "2026-09-14",
+            "factor": 1.1764
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 1.166747
           }
         ],
         "market_open": false
@@ -4166,10 +4334,10 @@
         "weight": 6.67,
         "shares": 0.93996,
         "start_price": 141.85,
-        "current_price": 144.79,
-        "current_value": 136.0968,
-        "return_pct": 2.0726,
-        "return_usd": 2.76,
+        "current_price": 140.35,
+        "current_value": 131.9234,
+        "return_pct": -1.0575,
+        "return_usd": -1.41,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -4292,6 +4460,10 @@
           {
             "date": "2026-09-14",
             "factor": 1.020726
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 0.989425
           }
         ],
         "market_open": false
@@ -4304,10 +4476,10 @@
         "weight": 6.67,
         "shares": 1.658375,
         "start_price": 80.4,
-        "current_price": 71.65,
-        "current_value": 118.8226,
-        "return_pct": -10.8831,
-        "return_usd": -14.51,
+        "current_price": 73.2,
+        "current_value": 121.393,
+        "return_pct": -8.9552,
+        "return_usd": -11.94,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -4430,6 +4602,10 @@
           {
             "date": "2026-09-14",
             "factor": 0.891169
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 0.910448
           }
         ],
         "market_open": false
@@ -4442,10 +4618,10 @@
         "weight": 6.67,
         "shares": 0.257571,
         "start_price": 517.6565,
-        "current_price": 424.21,
-        "current_value": 109.2642,
-        "return_pct": -18.0518,
-        "return_usd": -24.07,
+        "current_price": 421.17,
+        "current_value": 108.4812,
+        "return_pct": -18.6391,
+        "return_usd": -24.85,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -4568,6 +4744,10 @@
           {
             "date": "2026-09-14",
             "factor": 0.819482
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 0.813609
           }
         ],
         "market_open": false
@@ -4586,70 +4766,70 @@
       "matrix": [
         [
           1.0,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5
+          0.09,
+          0.3,
+          0.53,
+          0.38,
+          -0.37,
+          0.43
         ],
         [
-          0.5,
+          0.09,
           1.0,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5
+          0.09,
+          -0.21,
+          0.42,
+          0.2,
+          0.17
         ],
         [
-          0.5,
-          0.5,
+          0.3,
+          0.09,
           1.0,
-          0.5,
-          0.5,
-          0.5,
-          0.5
+          0.34,
+          0.31,
+          -0.13,
+          0.65
         ],
         [
-          0.5,
-          0.5,
-          0.5,
+          0.53,
+          -0.21,
+          0.34,
           1.0,
-          0.5,
-          0.5,
-          0.5
+          0.17,
+          -0.61,
+          0.48
         ],
         [
-          0.5,
-          0.5,
-          0.5,
-          0.5,
+          0.38,
+          0.42,
+          0.31,
+          0.17,
           1.0,
-          0.5,
-          0.5
+          -0.13,
+          0.41
         ],
         [
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
+          -0.37,
+          0.2,
+          -0.13,
+          -0.61,
+          -0.13,
           1.0,
-          0.5
+          -0.12
         ],
         [
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
+          0.43,
+          0.17,
+          0.65,
+          0.48,
+          0.41,
+          -0.12,
           1.0
         ]
       ],
-      "avg_correlation": 0.5,
-      "diversification_score": 8.5
+      "avg_correlation": 0.31,
+      "diversification_score": 10.0
     },
     "monte_carlo": {
       "days": [
@@ -4661,48 +4841,48 @@
         90
       ],
       "median": [
-        808.54,
-        903.17,
-        1008.88,
-        1126.96,
-        1258.86,
-        1570.79
+        805.23,
+        894.33,
+        993.29,
+        1103.2,
+        1225.27,
+        1511.43
       ],
       "bull_95": [
-        808.54,
-        1125.76,
-        1291.17,
-        1434.41,
-        1567.43,
-        1818.86
+        805.23,
+        1114.09,
+        1274.45,
+        1412.99,
+        1541.42,
+        1783.61
       ],
       "bear_5": [
-        808.54,
-        614.86,
-        548.93,
-        503.18,
-        467.58,
-        413.43
+        805.23,
+        614.4,
+        549.29,
+        504.04,
+        468.8,
+        415.14
       ],
       "scenarios": {
         "ai_rally": {
           "name": "Rally de Inteligencia Artificial",
           "impact_pct": 25.0,
-          "projected_value": 1010.67,
+          "projected_value": 1006.53,
           "prob": "Alta (Catalizador Q3/Q4)",
           "color": "#10b981"
         },
         "rate_shock": {
           "name": "Correcci\u00f3n Tech / Shock de Tasas",
           "impact_pct": -15.0,
-          "projected_value": 687.26,
+          "projected_value": 684.44,
           "prob": "Media (Protegido por Cash Q)",
           "color": "#ef4444"
         },
         "sideways": {
           "name": "Mercado Lateral / Rango",
           "impact_pct": 4.5,
-          "projected_value": 844.92,
+          "projected_value": 841.46,
           "prob": "Muy Alta (Consolidaci\u00f3n)",
           "color": "#f59e0b"
         }
@@ -4711,7 +4891,7 @@
     "radar": [
       {
         "factor": "Momentum Relativo",
-        "score": 64,
+        "score": 62,
         "benchmark": 55
       },
       {
@@ -4721,7 +4901,7 @@
       },
       {
         "factor": "Alfa vs S&P 500",
-        "score": 75,
+        "score": 71,
         "benchmark": 50
       },
       {
@@ -4731,42 +4911,42 @@
       },
       {
         "factor": "Diversificaci\u00f3n",
-        "score": 80,
+        "score": 95,
         "benchmark": 60
       }
     ],
     "summary": {
       "start_value": 2000.0,
-      "end_value": 2008.54,
+      "end_value": 2005.23,
       "invested_value": 2000.0,
       "active_invested": 800.0,
-      "active_stock_value": 808.54,
-      "active_return": 8.54,
-      "active_return_pct": 1.07,
+      "active_stock_value": 805.23,
+      "active_return": 5.23,
+      "active_return_pct": 0.65,
       "sp500_return": -1.55,
       "sp500_return_pct": -0.19,
       "nasdaq_return": 2.09,
       "nasdaq_return_pct": 0.26,
-      "mm20_return": -24.39,
-      "mm20_return_pct": -3.05,
-      "alpha_sp500": 1.26,
-      "alpha_sp500_usd": 10.09,
-      "alpha_nasdaq": 0.81,
-      "alpha_nasdaq_usd": 6.45,
-      "alpha_mm20": 4.12,
-      "alpha_mm20_usd": 32.92,
-      "sharpe_ratio": 2.88,
-      "sortino_ratio": 9.28,
+      "mm20_return": -27.91,
+      "mm20_return_pct": -3.49,
+      "alpha_sp500": 0.85,
+      "alpha_sp500_usd": 6.78,
+      "alpha_nasdaq": 0.39,
+      "alpha_nasdaq_usd": 3.14,
+      "alpha_mm20": 4.14,
+      "alpha_mm20_usd": 33.13,
+      "sharpe_ratio": 2.77,
+      "sortino_ratio": 8.92,
       "beta_sp500": 1.01,
-      "beta_nasdaq": 1.04,
-      "annualized_vol_pct": 63.24,
-      "win_rate_pct": 66.7,
-      "diversification_score": 8.5,
+      "beta_nasdaq": 1.03,
+      "annualized_vol_pct": 62.23,
+      "win_rate_pct": 50.0,
+      "diversification_score": 10.0,
       "max_drawdown_pct": -9.45,
       "max_drawdown_usd": -79.09,
       "cash_reserved": 1200.0,
-      "total_return": 8.54,
-      "total_return_pct": 0.43,
+      "total_return": 5.23,
+      "total_return_pct": 0.26,
       "num_holdings": 6,
       "num_slots": 15,
       "unallocated_slots": 9
@@ -5013,6 +5193,14 @@
         "stock_value": 808.5377,
         "cash": 1200.0,
         "active_invested": 800.0
+      },
+      {
+        "date": "2026-09-15",
+        "value": 805.2274,
+        "total_value": 2005.2274,
+        "stock_value": 805.2274,
+        "cash": 1200.0,
+        "active_invested": 800.0
       }
     ],
     "sp500": [
@@ -5387,6 +5575,10 @@
       {
         "date": "2026-09-14",
         "value": 775.6142
+      },
+      {
+        "date": "2026-09-15",
+        "value": 772.0927
       }
     ],
     "ticker_series": {
@@ -5510,6 +5702,10 @@
         {
           "date": "2026-09-14",
           "factor": 0.891169
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 0.910448
         }
       ],
       "HPQ": [
@@ -5632,6 +5828,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.266615
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 1.259169
         }
       ],
       "ORCL": [
@@ -5754,6 +5954,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.020726
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 0.989425
         }
       ],
       "AMAT": [
@@ -5876,6 +6080,10 @@
         {
           "date": "2026-09-14",
           "factor": 0.819482
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 0.813609
         }
       ],
       "NTAP": [
@@ -5998,6 +6206,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.029302
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 1.038323
         }
       ],
       "ACN": [
@@ -6120,6 +6332,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.036738
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 1.028231
         }
       ]
     },
@@ -6159,10 +6375,10 @@
         "weight": 6.67,
         "shares": 4.964199,
         "start_price": 26.859,
-        "current_price": 34.02,
-        "current_value": 168.8821,
-        "return_pct": 26.6615,
-        "return_usd": 35.55,
+        "current_price": 33.82,
+        "current_value": 167.8892,
+        "return_pct": 25.9169,
+        "return_usd": 34.56,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -6285,144 +6501,10 @@
           {
             "date": "2026-09-14",
             "factor": 1.266615
-          }
-        ],
-        "market_open": false
-      },
-      {
-        "ticker": "ACN",
-        "name": "Accenture plc",
-        "sector": "Technology",
-        "exchange": "NYQ",
-        "weight": 6.67,
-        "shares": 0.708881,
-        "start_price": 188.09,
-        "current_price": 195.0,
-        "current_value": 138.2317,
-        "return_pct": 3.6738,
-        "return_usd": 4.9,
-        "selected": true,
-        "entry_date": "2026-09-01",
-        "history": [
-          {
-            "date": "2026-08-03",
-            "factor": 1.0
           },
           {
-            "date": "2026-08-04",
-            "factor": 1.028173
-          },
-          {
-            "date": "2026-08-05",
-            "factor": 1.029983
-          },
-          {
-            "date": "2026-08-06",
-            "factor": 1.032276
-          },
-          {
-            "date": "2026-08-07",
-            "factor": 1.060087
-          },
-          {
-            "date": "2026-08-10",
-            "factor": 1.07535
-          },
-          {
-            "date": "2026-08-11",
-            "factor": 1.084822
-          },
-          {
-            "date": "2026-08-12",
-            "factor": 1.086752
-          },
-          {
-            "date": "2026-08-13",
-            "factor": 1.076798
-          },
-          {
-            "date": "2026-08-14",
-            "factor": 1.067145
-          },
-          {
-            "date": "2026-08-17",
-            "factor": 1.025459
-          },
-          {
-            "date": "2026-08-18",
-            "factor": 1.043255
-          },
-          {
-            "date": "2026-08-19",
-            "factor": 1.105031
-          },
-          {
-            "date": "2026-08-20",
-            "factor": 1.094052
-          },
-          {
-            "date": "2026-08-21",
-            "factor": 1.117761
-          },
-          {
-            "date": "2026-08-24",
-            "factor": 1.125302
-          },
-          {
-            "date": "2026-08-25",
-            "factor": 1.127715
-          },
-          {
-            "date": "2026-08-26",
-            "factor": 1.094233
-          },
-          {
-            "date": "2026-08-27",
-            "factor": 1.13043
-          },
-          {
-            "date": "2026-08-28",
-            "factor": 1.143883
-          },
-          {
-            "date": "2026-08-31",
-            "factor": 1.144788
-          },
-          {
-            "date": "2026-09-01",
-            "factor": 1.134713
-          },
-          {
-            "date": "2026-09-02",
-            "factor": 1.132239
-          },
-          {
-            "date": "2026-09-03",
-            "factor": 1.165058
-          },
-          {
-            "date": "2026-09-04",
-            "factor": 1.126448
-          },
-          {
-            "date": "2026-09-08",
-            "factor": 1.080056
-          },
-          {
-            "date": "2026-09-09",
-            "factor": 1.06057
-          },
-          {
-            "date": "2026-09-10",
-            "factor": 1.073299
-          },
-          {
-            "date": "2026-09-11",
-            "factor": 1.109435
-          },
-          {
-            "date": "2026-09-14",
-            "factor": 1.1764
+            "date": "2026-09-15",
+            "factor": 1.259169
           }
         ],
         "market_open": false
@@ -6435,10 +6517,10 @@
         "weight": 6.67,
         "shares": 0.728916,
         "start_price": 182.92,
-        "current_price": 188.28,
-        "current_value": 137.2403,
-        "return_pct": 2.9302,
-        "return_usd": 3.91,
+        "current_price": 189.93,
+        "current_value": 138.443,
+        "return_pct": 3.8323,
+        "return_usd": 5.11,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -6561,6 +6643,152 @@
           {
             "date": "2026-09-14",
             "factor": 1.029302
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 1.038323
+          }
+        ],
+        "market_open": false
+      },
+      {
+        "ticker": "ACN",
+        "name": "Accenture plc",
+        "sector": "Technology",
+        "exchange": "NYQ",
+        "weight": 6.67,
+        "shares": 0.708881,
+        "start_price": 188.09,
+        "current_price": 193.4,
+        "current_value": 137.0975,
+        "return_pct": 2.8231,
+        "return_usd": 3.76,
+        "selected": true,
+        "entry_date": "2026-09-01",
+        "history": [
+          {
+            "date": "2026-08-03",
+            "factor": 1.0
+          },
+          {
+            "date": "2026-08-04",
+            "factor": 1.028173
+          },
+          {
+            "date": "2026-08-05",
+            "factor": 1.029983
+          },
+          {
+            "date": "2026-08-06",
+            "factor": 1.032276
+          },
+          {
+            "date": "2026-08-07",
+            "factor": 1.060087
+          },
+          {
+            "date": "2026-08-10",
+            "factor": 1.07535
+          },
+          {
+            "date": "2026-08-11",
+            "factor": 1.084822
+          },
+          {
+            "date": "2026-08-12",
+            "factor": 1.086752
+          },
+          {
+            "date": "2026-08-13",
+            "factor": 1.076798
+          },
+          {
+            "date": "2026-08-14",
+            "factor": 1.067145
+          },
+          {
+            "date": "2026-08-17",
+            "factor": 1.025459
+          },
+          {
+            "date": "2026-08-18",
+            "factor": 1.043255
+          },
+          {
+            "date": "2026-08-19",
+            "factor": 1.105031
+          },
+          {
+            "date": "2026-08-20",
+            "factor": 1.094052
+          },
+          {
+            "date": "2026-08-21",
+            "factor": 1.117761
+          },
+          {
+            "date": "2026-08-24",
+            "factor": 1.125302
+          },
+          {
+            "date": "2026-08-25",
+            "factor": 1.127715
+          },
+          {
+            "date": "2026-08-26",
+            "factor": 1.094233
+          },
+          {
+            "date": "2026-08-27",
+            "factor": 1.13043
+          },
+          {
+            "date": "2026-08-28",
+            "factor": 1.143883
+          },
+          {
+            "date": "2026-08-31",
+            "factor": 1.144788
+          },
+          {
+            "date": "2026-09-01",
+            "factor": 1.134713
+          },
+          {
+            "date": "2026-09-02",
+            "factor": 1.132239
+          },
+          {
+            "date": "2026-09-03",
+            "factor": 1.165058
+          },
+          {
+            "date": "2026-09-04",
+            "factor": 1.126448
+          },
+          {
+            "date": "2026-09-08",
+            "factor": 1.080056
+          },
+          {
+            "date": "2026-09-09",
+            "factor": 1.06057
+          },
+          {
+            "date": "2026-09-10",
+            "factor": 1.073299
+          },
+          {
+            "date": "2026-09-11",
+            "factor": 1.109435
+          },
+          {
+            "date": "2026-09-14",
+            "factor": 1.1764
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 1.166747
           }
         ],
         "market_open": false
@@ -6573,10 +6801,10 @@
         "weight": 6.67,
         "shares": 0.93996,
         "start_price": 141.85,
-        "current_price": 144.79,
-        "current_value": 136.0968,
-        "return_pct": 2.0726,
-        "return_usd": 2.76,
+        "current_price": 140.35,
+        "current_value": 131.9234,
+        "return_pct": -1.0575,
+        "return_usd": -1.41,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -6699,6 +6927,10 @@
           {
             "date": "2026-09-14",
             "factor": 1.020726
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 0.989425
           }
         ],
         "market_open": false
@@ -6711,10 +6943,10 @@
         "weight": 6.67,
         "shares": 1.658375,
         "start_price": 80.4,
-        "current_price": 71.65,
-        "current_value": 118.8226,
-        "return_pct": -10.8831,
-        "return_usd": -14.51,
+        "current_price": 73.2,
+        "current_value": 121.393,
+        "return_pct": -8.9552,
+        "return_usd": -11.94,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -6837,6 +7069,10 @@
           {
             "date": "2026-09-14",
             "factor": 0.891169
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 0.910448
           }
         ],
         "market_open": false
@@ -6849,10 +7085,10 @@
         "weight": 6.67,
         "shares": 0.257571,
         "start_price": 517.6565,
-        "current_price": 424.21,
-        "current_value": 109.2642,
-        "return_pct": -18.0518,
-        "return_usd": -24.07,
+        "current_price": 421.17,
+        "current_value": 108.4812,
+        "return_pct": -18.6391,
+        "return_usd": -24.85,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -6975,6 +7211,10 @@
           {
             "date": "2026-09-14",
             "factor": 0.819482
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 0.813609
           }
         ],
         "market_open": false
@@ -6993,70 +7233,70 @@
       "matrix": [
         [
           1.0,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5
+          0.07,
+          0.28,
+          0.57,
+          0.27,
+          -0.38,
+          0.54
         ],
         [
-          0.5,
+          0.07,
           1.0,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5
+          0.26,
+          -0.09,
+          0.58,
+          0.3,
+          0.15
         ],
         [
-          0.5,
-          0.5,
+          0.28,
+          0.26,
           1.0,
-          0.5,
-          0.5,
-          0.5,
-          0.5
+          0.24,
+          0.4,
+          0.12,
+          0.53
         ],
         [
-          0.5,
-          0.5,
-          0.5,
+          0.57,
+          -0.09,
+          0.24,
           1.0,
-          0.5,
-          0.5,
-          0.5
+          0.14,
+          -0.52,
+          0.55
         ],
         [
-          0.5,
-          0.5,
-          0.5,
-          0.5,
+          0.27,
+          0.58,
+          0.4,
+          0.14,
           1.0,
-          0.5,
-          0.5
+          0.08,
+          0.27
         ],
         [
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
+          -0.38,
+          0.3,
+          0.12,
+          -0.52,
+          0.08,
           1.0,
-          0.5
+          -0.06
         ],
         [
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
+          0.54,
+          0.15,
+          0.53,
+          0.55,
+          0.27,
+          -0.06,
           1.0
         ]
       ],
-      "avg_correlation": 0.5,
-      "diversification_score": 8.5
+      "avg_correlation": 0.3,
+      "diversification_score": 10.0
     },
     "monte_carlo": {
       "days": [
@@ -7068,48 +7308,48 @@
         90
       ],
       "median": [
-        808.54,
-        903.17,
-        1008.88,
-        1126.96,
-        1258.86,
-        1570.79
+        805.23,
+        894.33,
+        993.29,
+        1103.2,
+        1225.27,
+        1511.43
       ],
       "bull_95": [
-        808.54,
-        1125.76,
-        1291.17,
-        1434.41,
-        1567.43,
-        1818.86
+        805.23,
+        1114.09,
+        1274.45,
+        1412.99,
+        1541.42,
+        1783.61
       ],
       "bear_5": [
-        808.54,
-        614.86,
-        548.93,
-        503.18,
-        467.58,
-        413.43
+        805.23,
+        614.4,
+        549.29,
+        504.04,
+        468.8,
+        415.14
       ],
       "scenarios": {
         "ai_rally": {
           "name": "Rally de Inteligencia Artificial",
           "impact_pct": 25.0,
-          "projected_value": 1010.67,
+          "projected_value": 1006.53,
           "prob": "Alta (Catalizador Q3/Q4)",
           "color": "#10b981"
         },
         "rate_shock": {
           "name": "Correcci\u00f3n Tech / Shock de Tasas",
           "impact_pct": -15.0,
-          "projected_value": 687.26,
+          "projected_value": 684.44,
           "prob": "Media (Protegido por Cash Q)",
           "color": "#ef4444"
         },
         "sideways": {
           "name": "Mercado Lateral / Rango",
           "impact_pct": 4.5,
-          "projected_value": 844.92,
+          "projected_value": 841.46,
           "prob": "Muy Alta (Consolidaci\u00f3n)",
           "color": "#f59e0b"
         }
@@ -7118,7 +7358,7 @@
     "radar": [
       {
         "factor": "Momentum Relativo",
-        "score": 64,
+        "score": 62,
         "benchmark": 55
       },
       {
@@ -7128,7 +7368,7 @@
       },
       {
         "factor": "Alfa vs S&P 500",
-        "score": 75,
+        "score": 71,
         "benchmark": 50
       },
       {
@@ -7138,42 +7378,42 @@
       },
       {
         "factor": "Diversificaci\u00f3n",
-        "score": 80,
+        "score": 95,
         "benchmark": 60
       }
     ],
     "summary": {
       "start_value": 2000.0,
-      "end_value": 2008.54,
+      "end_value": 2005.23,
       "invested_value": 2000.0,
       "active_invested": 800.0,
-      "active_stock_value": 808.54,
-      "active_return": 8.54,
-      "active_return_pct": 1.07,
+      "active_stock_value": 805.23,
+      "active_return": 5.23,
+      "active_return_pct": 0.65,
       "sp500_return": -1.55,
       "sp500_return_pct": -0.19,
       "nasdaq_return": 2.09,
       "nasdaq_return_pct": 0.26,
-      "mm20_return": -24.39,
-      "mm20_return_pct": -3.05,
-      "alpha_sp500": 1.26,
-      "alpha_sp500_usd": 10.09,
-      "alpha_nasdaq": 0.81,
-      "alpha_nasdaq_usd": 6.45,
-      "alpha_mm20": 4.12,
-      "alpha_mm20_usd": 32.92,
-      "sharpe_ratio": 2.88,
-      "sortino_ratio": 9.28,
+      "mm20_return": -27.91,
+      "mm20_return_pct": -3.49,
+      "alpha_sp500": 0.85,
+      "alpha_sp500_usd": 6.78,
+      "alpha_nasdaq": 0.39,
+      "alpha_nasdaq_usd": 3.14,
+      "alpha_mm20": 4.14,
+      "alpha_mm20_usd": 33.13,
+      "sharpe_ratio": 2.77,
+      "sortino_ratio": 8.92,
       "beta_sp500": 1.01,
-      "beta_nasdaq": 1.04,
-      "annualized_vol_pct": 63.24,
-      "win_rate_pct": 66.7,
-      "diversification_score": 8.5,
+      "beta_nasdaq": 1.03,
+      "annualized_vol_pct": 62.23,
+      "win_rate_pct": 50.0,
+      "diversification_score": 10.0,
       "max_drawdown_pct": -9.45,
       "max_drawdown_usd": -79.09,
       "cash_reserved": 1200.0,
-      "total_return": 8.54,
-      "total_return_pct": 0.43,
+      "total_return": 5.23,
+      "total_return_pct": 0.26,
       "num_holdings": 6,
       "num_slots": 15,
       "unallocated_slots": 9
@@ -7420,6 +7660,14 @@
         "stock_value": 808.5377,
         "cash": 1200.0,
         "active_invested": 800.0
+      },
+      {
+        "date": "2026-09-15",
+        "value": 805.2274,
+        "total_value": 2005.2274,
+        "stock_value": 805.2274,
+        "cash": 1200.0,
+        "active_invested": 800.0
       }
     ],
     "sp500": [
@@ -7794,6 +8042,10 @@
       {
         "date": "2026-09-14",
         "value": 775.6142
+      },
+      {
+        "date": "2026-09-15",
+        "value": 772.0927
       }
     ],
     "ticker_series": {
@@ -7917,6 +8169,10 @@
         {
           "date": "2026-09-14",
           "factor": 0.891169
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 0.910448
         }
       ],
       "HPQ": [
@@ -8039,6 +8295,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.266615
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 1.259169
         }
       ],
       "ORCL": [
@@ -8161,6 +8421,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.020726
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 0.989425
         }
       ],
       "AMAT": [
@@ -8283,6 +8547,10 @@
         {
           "date": "2026-09-14",
           "factor": 0.819482
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 0.813609
         }
       ],
       "NTAP": [
@@ -8405,6 +8673,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.029302
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 1.038323
         }
       ],
       "ACN": [
@@ -8527,6 +8799,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.036738
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 1.028231
         }
       ]
     },
@@ -8566,10 +8842,10 @@
         "weight": 6.67,
         "shares": 4.964199,
         "start_price": 26.859,
-        "current_price": 34.02,
-        "current_value": 168.8821,
-        "return_pct": 26.6615,
-        "return_usd": 35.55,
+        "current_price": 33.82,
+        "current_value": 167.8892,
+        "return_pct": 25.9169,
+        "return_usd": 34.56,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -8692,144 +8968,10 @@
           {
             "date": "2026-09-14",
             "factor": 1.266615
-          }
-        ],
-        "market_open": false
-      },
-      {
-        "ticker": "ACN",
-        "name": "Accenture plc",
-        "sector": "Technology",
-        "exchange": "NYQ",
-        "weight": 6.67,
-        "shares": 0.708881,
-        "start_price": 188.09,
-        "current_price": 195.0,
-        "current_value": 138.2317,
-        "return_pct": 3.6738,
-        "return_usd": 4.9,
-        "selected": true,
-        "entry_date": "2026-09-01",
-        "history": [
-          {
-            "date": "2026-08-03",
-            "factor": 1.0
           },
           {
-            "date": "2026-08-04",
-            "factor": 1.028173
-          },
-          {
-            "date": "2026-08-05",
-            "factor": 1.029983
-          },
-          {
-            "date": "2026-08-06",
-            "factor": 1.032276
-          },
-          {
-            "date": "2026-08-07",
-            "factor": 1.060087
-          },
-          {
-            "date": "2026-08-10",
-            "factor": 1.07535
-          },
-          {
-            "date": "2026-08-11",
-            "factor": 1.084822
-          },
-          {
-            "date": "2026-08-12",
-            "factor": 1.086752
-          },
-          {
-            "date": "2026-08-13",
-            "factor": 1.076798
-          },
-          {
-            "date": "2026-08-14",
-            "factor": 1.067145
-          },
-          {
-            "date": "2026-08-17",
-            "factor": 1.025459
-          },
-          {
-            "date": "2026-08-18",
-            "factor": 1.043255
-          },
-          {
-            "date": "2026-08-19",
-            "factor": 1.105031
-          },
-          {
-            "date": "2026-08-20",
-            "factor": 1.094052
-          },
-          {
-            "date": "2026-08-21",
-            "factor": 1.117761
-          },
-          {
-            "date": "2026-08-24",
-            "factor": 1.125302
-          },
-          {
-            "date": "2026-08-25",
-            "factor": 1.127715
-          },
-          {
-            "date": "2026-08-26",
-            "factor": 1.094233
-          },
-          {
-            "date": "2026-08-27",
-            "factor": 1.13043
-          },
-          {
-            "date": "2026-08-28",
-            "factor": 1.143883
-          },
-          {
-            "date": "2026-08-31",
-            "factor": 1.144788
-          },
-          {
-            "date": "2026-09-01",
-            "factor": 1.134713
-          },
-          {
-            "date": "2026-09-02",
-            "factor": 1.132239
-          },
-          {
-            "date": "2026-09-03",
-            "factor": 1.165058
-          },
-          {
-            "date": "2026-09-04",
-            "factor": 1.126448
-          },
-          {
-            "date": "2026-09-08",
-            "factor": 1.080056
-          },
-          {
-            "date": "2026-09-09",
-            "factor": 1.06057
-          },
-          {
-            "date": "2026-09-10",
-            "factor": 1.073299
-          },
-          {
-            "date": "2026-09-11",
-            "factor": 1.109435
-          },
-          {
-            "date": "2026-09-14",
-            "factor": 1.1764
+            "date": "2026-09-15",
+            "factor": 1.259169
           }
         ],
         "market_open": false
@@ -8842,10 +8984,10 @@
         "weight": 6.67,
         "shares": 0.728916,
         "start_price": 182.92,
-        "current_price": 188.28,
-        "current_value": 137.2403,
-        "return_pct": 2.9302,
-        "return_usd": 3.91,
+        "current_price": 189.93,
+        "current_value": 138.443,
+        "return_pct": 3.8323,
+        "return_usd": 5.11,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -8968,6 +9110,152 @@
           {
             "date": "2026-09-14",
             "factor": 1.029302
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 1.038323
+          }
+        ],
+        "market_open": false
+      },
+      {
+        "ticker": "ACN",
+        "name": "Accenture plc",
+        "sector": "Technology",
+        "exchange": "NYQ",
+        "weight": 6.67,
+        "shares": 0.708881,
+        "start_price": 188.09,
+        "current_price": 193.4,
+        "current_value": 137.0975,
+        "return_pct": 2.8231,
+        "return_usd": 3.76,
+        "selected": true,
+        "entry_date": "2026-09-01",
+        "history": [
+          {
+            "date": "2026-08-03",
+            "factor": 1.0
+          },
+          {
+            "date": "2026-08-04",
+            "factor": 1.028173
+          },
+          {
+            "date": "2026-08-05",
+            "factor": 1.029983
+          },
+          {
+            "date": "2026-08-06",
+            "factor": 1.032276
+          },
+          {
+            "date": "2026-08-07",
+            "factor": 1.060087
+          },
+          {
+            "date": "2026-08-10",
+            "factor": 1.07535
+          },
+          {
+            "date": "2026-08-11",
+            "factor": 1.084822
+          },
+          {
+            "date": "2026-08-12",
+            "factor": 1.086752
+          },
+          {
+            "date": "2026-08-13",
+            "factor": 1.076798
+          },
+          {
+            "date": "2026-08-14",
+            "factor": 1.067145
+          },
+          {
+            "date": "2026-08-17",
+            "factor": 1.025459
+          },
+          {
+            "date": "2026-08-18",
+            "factor": 1.043255
+          },
+          {
+            "date": "2026-08-19",
+            "factor": 1.105031
+          },
+          {
+            "date": "2026-08-20",
+            "factor": 1.094052
+          },
+          {
+            "date": "2026-08-21",
+            "factor": 1.117761
+          },
+          {
+            "date": "2026-08-24",
+            "factor": 1.125302
+          },
+          {
+            "date": "2026-08-25",
+            "factor": 1.127715
+          },
+          {
+            "date": "2026-08-26",
+            "factor": 1.094233
+          },
+          {
+            "date": "2026-08-27",
+            "factor": 1.13043
+          },
+          {
+            "date": "2026-08-28",
+            "factor": 1.143883
+          },
+          {
+            "date": "2026-08-31",
+            "factor": 1.144788
+          },
+          {
+            "date": "2026-09-01",
+            "factor": 1.134713
+          },
+          {
+            "date": "2026-09-02",
+            "factor": 1.132239
+          },
+          {
+            "date": "2026-09-03",
+            "factor": 1.165058
+          },
+          {
+            "date": "2026-09-04",
+            "factor": 1.126448
+          },
+          {
+            "date": "2026-09-08",
+            "factor": 1.080056
+          },
+          {
+            "date": "2026-09-09",
+            "factor": 1.06057
+          },
+          {
+            "date": "2026-09-10",
+            "factor": 1.073299
+          },
+          {
+            "date": "2026-09-11",
+            "factor": 1.109435
+          },
+          {
+            "date": "2026-09-14",
+            "factor": 1.1764
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 1.166747
           }
         ],
         "market_open": false
@@ -8980,10 +9268,10 @@
         "weight": 6.67,
         "shares": 0.93996,
         "start_price": 141.85,
-        "current_price": 144.79,
-        "current_value": 136.0968,
-        "return_pct": 2.0726,
-        "return_usd": 2.76,
+        "current_price": 140.35,
+        "current_value": 131.9234,
+        "return_pct": -1.0575,
+        "return_usd": -1.41,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -9106,6 +9394,10 @@
           {
             "date": "2026-09-14",
             "factor": 1.020726
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 0.989425
           }
         ],
         "market_open": false
@@ -9118,10 +9410,10 @@
         "weight": 6.67,
         "shares": 1.658375,
         "start_price": 80.4,
-        "current_price": 71.65,
-        "current_value": 118.8226,
-        "return_pct": -10.8831,
-        "return_usd": -14.51,
+        "current_price": 73.2,
+        "current_value": 121.393,
+        "return_pct": -8.9552,
+        "return_usd": -11.94,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -9244,6 +9536,10 @@
           {
             "date": "2026-09-14",
             "factor": 0.891169
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 0.910448
           }
         ],
         "market_open": false
@@ -9256,10 +9552,10 @@
         "weight": 6.67,
         "shares": 0.257571,
         "start_price": 517.6565,
-        "current_price": 424.21,
-        "current_value": 109.2642,
-        "return_pct": -18.0518,
-        "return_usd": -24.07,
+        "current_price": 421.17,
+        "current_value": 108.4812,
+        "return_pct": -18.6391,
+        "return_usd": -24.85,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -9382,6 +9678,10 @@
           {
             "date": "2026-09-14",
             "factor": 0.819482
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 0.813609
           }
         ],
         "market_open": false
@@ -9400,70 +9700,70 @@
       "matrix": [
         [
           1.0,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5
+          0.12,
+          0.22,
+          0.56,
+          0.3,
+          -0.19,
+          0.53
         ],
         [
-          0.5,
+          0.12,
           1.0,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5
+          0.2,
+          -0.05,
+          0.59,
+          0.35,
+          0.23
         ],
         [
-          0.5,
-          0.5,
+          0.22,
+          0.2,
           1.0,
-          0.5,
-          0.5,
-          0.5,
-          0.5
+          0.28,
+          0.35,
+          0.11,
+          0.47
         ],
         [
-          0.5,
-          0.5,
-          0.5,
+          0.56,
+          -0.05,
+          0.28,
           1.0,
-          0.5,
-          0.5,
-          0.5
+          0.21,
+          -0.34,
+          0.58
         ],
         [
-          0.5,
-          0.5,
-          0.5,
-          0.5,
+          0.3,
+          0.59,
+          0.35,
+          0.21,
           1.0,
-          0.5,
-          0.5
+          0.18,
+          0.38
         ],
         [
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
+          -0.19,
+          0.35,
+          0.11,
+          -0.34,
+          0.18,
           1.0,
-          0.5
+          0.08
         ],
         [
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
+          0.53,
+          0.23,
+          0.47,
+          0.58,
+          0.38,
+          0.08,
           1.0
         ]
       ],
-      "avg_correlation": 0.5,
-      "diversification_score": 8.5
+      "avg_correlation": 0.3,
+      "diversification_score": 10.0
     },
     "monte_carlo": {
       "days": [
@@ -9475,48 +9775,48 @@
         90
       ],
       "median": [
-        808.54,
-        903.17,
-        1008.88,
-        1126.96,
-        1258.86,
-        1570.79
+        805.23,
+        894.33,
+        993.29,
+        1103.2,
+        1225.27,
+        1511.43
       ],
       "bull_95": [
-        808.54,
-        1125.76,
-        1291.17,
-        1434.41,
-        1567.43,
-        1818.86
+        805.23,
+        1114.09,
+        1274.45,
+        1412.99,
+        1541.42,
+        1783.61
       ],
       "bear_5": [
-        808.54,
-        614.86,
-        548.93,
-        503.18,
-        467.58,
-        413.43
+        805.23,
+        614.4,
+        549.29,
+        504.04,
+        468.8,
+        415.14
       ],
       "scenarios": {
         "ai_rally": {
           "name": "Rally de Inteligencia Artificial",
           "impact_pct": 25.0,
-          "projected_value": 1010.67,
+          "projected_value": 1006.53,
           "prob": "Alta (Catalizador Q3/Q4)",
           "color": "#10b981"
         },
         "rate_shock": {
           "name": "Correcci\u00f3n Tech / Shock de Tasas",
           "impact_pct": -15.0,
-          "projected_value": 687.26,
+          "projected_value": 684.44,
           "prob": "Media (Protegido por Cash Q)",
           "color": "#ef4444"
         },
         "sideways": {
           "name": "Mercado Lateral / Rango",
           "impact_pct": 4.5,
-          "projected_value": 844.92,
+          "projected_value": 841.46,
           "prob": "Muy Alta (Consolidaci\u00f3n)",
           "color": "#f59e0b"
         }
@@ -9525,7 +9825,7 @@
     "radar": [
       {
         "factor": "Momentum Relativo",
-        "score": 64,
+        "score": 62,
         "benchmark": 55
       },
       {
@@ -9535,7 +9835,7 @@
       },
       {
         "factor": "Alfa vs S&P 500",
-        "score": 75,
+        "score": 71,
         "benchmark": 50
       },
       {
@@ -9545,42 +9845,42 @@
       },
       {
         "factor": "Diversificaci\u00f3n",
-        "score": 80,
+        "score": 95,
         "benchmark": 60
       }
     ],
     "summary": {
       "start_value": 2000.0,
-      "end_value": 2008.54,
+      "end_value": 2005.23,
       "invested_value": 2000.0,
       "active_invested": 800.0,
-      "active_stock_value": 808.54,
-      "active_return": 8.54,
-      "active_return_pct": 1.07,
+      "active_stock_value": 805.23,
+      "active_return": 5.23,
+      "active_return_pct": 0.65,
       "sp500_return": -1.55,
       "sp500_return_pct": -0.19,
       "nasdaq_return": 2.09,
       "nasdaq_return_pct": 0.26,
-      "mm20_return": -24.39,
-      "mm20_return_pct": -3.05,
-      "alpha_sp500": 1.26,
-      "alpha_sp500_usd": 10.09,
-      "alpha_nasdaq": 0.81,
-      "alpha_nasdaq_usd": 6.45,
-      "alpha_mm20": 4.12,
-      "alpha_mm20_usd": 32.92,
-      "sharpe_ratio": 2.88,
-      "sortino_ratio": 9.28,
+      "mm20_return": -27.91,
+      "mm20_return_pct": -3.49,
+      "alpha_sp500": 0.85,
+      "alpha_sp500_usd": 6.78,
+      "alpha_nasdaq": 0.39,
+      "alpha_nasdaq_usd": 3.14,
+      "alpha_mm20": 4.14,
+      "alpha_mm20_usd": 33.13,
+      "sharpe_ratio": 2.77,
+      "sortino_ratio": 8.92,
       "beta_sp500": 1.01,
-      "beta_nasdaq": 1.04,
-      "annualized_vol_pct": 63.24,
-      "win_rate_pct": 66.7,
-      "diversification_score": 8.5,
+      "beta_nasdaq": 1.03,
+      "annualized_vol_pct": 62.23,
+      "win_rate_pct": 50.0,
+      "diversification_score": 10.0,
       "max_drawdown_pct": -9.45,
       "max_drawdown_usd": -79.09,
       "cash_reserved": 1200.0,
-      "total_return": 8.54,
-      "total_return_pct": 0.43,
+      "total_return": 5.23,
+      "total_return_pct": 0.26,
       "num_holdings": 6,
       "num_slots": 15,
       "unallocated_slots": 9
@@ -9827,6 +10127,14 @@
         "stock_value": 808.5377,
         "cash": 1200.0,
         "active_invested": 800.0
+      },
+      {
+        "date": "2026-09-15",
+        "value": 805.2274,
+        "total_value": 2005.2274,
+        "stock_value": 805.2274,
+        "cash": 1200.0,
+        "active_invested": 800.0
       }
     ],
     "sp500": [
@@ -10201,6 +10509,10 @@
       {
         "date": "2026-09-14",
         "value": 775.6142
+      },
+      {
+        "date": "2026-09-15",
+        "value": 772.0927
       }
     ],
     "ticker_series": {
@@ -10324,6 +10636,10 @@
         {
           "date": "2026-09-14",
           "factor": 0.891169
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 0.910448
         }
       ],
       "HPQ": [
@@ -10446,6 +10762,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.266615
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 1.259169
         }
       ],
       "ORCL": [
@@ -10568,6 +10888,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.020726
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 0.989425
         }
       ],
       "AMAT": [
@@ -10690,6 +11014,10 @@
         {
           "date": "2026-09-14",
           "factor": 0.819482
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 0.813609
         }
       ],
       "NTAP": [
@@ -10812,6 +11140,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.029302
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 1.038323
         }
       ],
       "ACN": [
@@ -10934,6 +11266,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.036738
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 1.028231
         }
       ]
     },
@@ -10973,10 +11309,10 @@
         "weight": 6.67,
         "shares": 4.964199,
         "start_price": 26.859,
-        "current_price": 34.02,
-        "current_value": 168.8821,
-        "return_pct": 26.6615,
-        "return_usd": 35.55,
+        "current_price": 33.82,
+        "current_value": 167.8892,
+        "return_pct": 25.9169,
+        "return_usd": 34.56,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -11099,144 +11435,10 @@
           {
             "date": "2026-09-14",
             "factor": 1.266615
-          }
-        ],
-        "market_open": false
-      },
-      {
-        "ticker": "ACN",
-        "name": "Accenture plc",
-        "sector": "Technology",
-        "exchange": "NYQ",
-        "weight": 6.67,
-        "shares": 0.708881,
-        "start_price": 188.09,
-        "current_price": 195.0,
-        "current_value": 138.2317,
-        "return_pct": 3.6738,
-        "return_usd": 4.9,
-        "selected": true,
-        "entry_date": "2026-09-01",
-        "history": [
-          {
-            "date": "2026-08-03",
-            "factor": 1.0
           },
           {
-            "date": "2026-08-04",
-            "factor": 1.028173
-          },
-          {
-            "date": "2026-08-05",
-            "factor": 1.029983
-          },
-          {
-            "date": "2026-08-06",
-            "factor": 1.032276
-          },
-          {
-            "date": "2026-08-07",
-            "factor": 1.060087
-          },
-          {
-            "date": "2026-08-10",
-            "factor": 1.07535
-          },
-          {
-            "date": "2026-08-11",
-            "factor": 1.084822
-          },
-          {
-            "date": "2026-08-12",
-            "factor": 1.086752
-          },
-          {
-            "date": "2026-08-13",
-            "factor": 1.076798
-          },
-          {
-            "date": "2026-08-14",
-            "factor": 1.067145
-          },
-          {
-            "date": "2026-08-17",
-            "factor": 1.025459
-          },
-          {
-            "date": "2026-08-18",
-            "factor": 1.043255
-          },
-          {
-            "date": "2026-08-19",
-            "factor": 1.105031
-          },
-          {
-            "date": "2026-08-20",
-            "factor": 1.094052
-          },
-          {
-            "date": "2026-08-21",
-            "factor": 1.117761
-          },
-          {
-            "date": "2026-08-24",
-            "factor": 1.125302
-          },
-          {
-            "date": "2026-08-25",
-            "factor": 1.127715
-          },
-          {
-            "date": "2026-08-26",
-            "factor": 1.094233
-          },
-          {
-            "date": "2026-08-27",
-            "factor": 1.13043
-          },
-          {
-            "date": "2026-08-28",
-            "factor": 1.143883
-          },
-          {
-            "date": "2026-08-31",
-            "factor": 1.144788
-          },
-          {
-            "date": "2026-09-01",
-            "factor": 1.134713
-          },
-          {
-            "date": "2026-09-02",
-            "factor": 1.132239
-          },
-          {
-            "date": "2026-09-03",
-            "factor": 1.165058
-          },
-          {
-            "date": "2026-09-04",
-            "factor": 1.126448
-          },
-          {
-            "date": "2026-09-08",
-            "factor": 1.080056
-          },
-          {
-            "date": "2026-09-09",
-            "factor": 1.06057
-          },
-          {
-            "date": "2026-09-10",
-            "factor": 1.073299
-          },
-          {
-            "date": "2026-09-11",
-            "factor": 1.109435
-          },
-          {
-            "date": "2026-09-14",
-            "factor": 1.1764
+            "date": "2026-09-15",
+            "factor": 1.259169
           }
         ],
         "market_open": false
@@ -11249,10 +11451,10 @@
         "weight": 6.67,
         "shares": 0.728916,
         "start_price": 182.92,
-        "current_price": 188.28,
-        "current_value": 137.2403,
-        "return_pct": 2.9302,
-        "return_usd": 3.91,
+        "current_price": 189.93,
+        "current_value": 138.443,
+        "return_pct": 3.8323,
+        "return_usd": 5.11,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -11375,6 +11577,152 @@
           {
             "date": "2026-09-14",
             "factor": 1.029302
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 1.038323
+          }
+        ],
+        "market_open": false
+      },
+      {
+        "ticker": "ACN",
+        "name": "Accenture plc",
+        "sector": "Technology",
+        "exchange": "NYQ",
+        "weight": 6.67,
+        "shares": 0.708881,
+        "start_price": 188.09,
+        "current_price": 193.4,
+        "current_value": 137.0975,
+        "return_pct": 2.8231,
+        "return_usd": 3.76,
+        "selected": true,
+        "entry_date": "2026-09-01",
+        "history": [
+          {
+            "date": "2026-08-03",
+            "factor": 1.0
+          },
+          {
+            "date": "2026-08-04",
+            "factor": 1.028173
+          },
+          {
+            "date": "2026-08-05",
+            "factor": 1.029983
+          },
+          {
+            "date": "2026-08-06",
+            "factor": 1.032276
+          },
+          {
+            "date": "2026-08-07",
+            "factor": 1.060087
+          },
+          {
+            "date": "2026-08-10",
+            "factor": 1.07535
+          },
+          {
+            "date": "2026-08-11",
+            "factor": 1.084822
+          },
+          {
+            "date": "2026-08-12",
+            "factor": 1.086752
+          },
+          {
+            "date": "2026-08-13",
+            "factor": 1.076798
+          },
+          {
+            "date": "2026-08-14",
+            "factor": 1.067145
+          },
+          {
+            "date": "2026-08-17",
+            "factor": 1.025459
+          },
+          {
+            "date": "2026-08-18",
+            "factor": 1.043255
+          },
+          {
+            "date": "2026-08-19",
+            "factor": 1.105031
+          },
+          {
+            "date": "2026-08-20",
+            "factor": 1.094052
+          },
+          {
+            "date": "2026-08-21",
+            "factor": 1.117761
+          },
+          {
+            "date": "2026-08-24",
+            "factor": 1.125302
+          },
+          {
+            "date": "2026-08-25",
+            "factor": 1.127715
+          },
+          {
+            "date": "2026-08-26",
+            "factor": 1.094233
+          },
+          {
+            "date": "2026-08-27",
+            "factor": 1.13043
+          },
+          {
+            "date": "2026-08-28",
+            "factor": 1.143883
+          },
+          {
+            "date": "2026-08-31",
+            "factor": 1.144788
+          },
+          {
+            "date": "2026-09-01",
+            "factor": 1.134713
+          },
+          {
+            "date": "2026-09-02",
+            "factor": 1.132239
+          },
+          {
+            "date": "2026-09-03",
+            "factor": 1.165058
+          },
+          {
+            "date": "2026-09-04",
+            "factor": 1.126448
+          },
+          {
+            "date": "2026-09-08",
+            "factor": 1.080056
+          },
+          {
+            "date": "2026-09-09",
+            "factor": 1.06057
+          },
+          {
+            "date": "2026-09-10",
+            "factor": 1.073299
+          },
+          {
+            "date": "2026-09-11",
+            "factor": 1.109435
+          },
+          {
+            "date": "2026-09-14",
+            "factor": 1.1764
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 1.166747
           }
         ],
         "market_open": false
@@ -11387,10 +11735,10 @@
         "weight": 6.67,
         "shares": 0.93996,
         "start_price": 141.85,
-        "current_price": 144.79,
-        "current_value": 136.0968,
-        "return_pct": 2.0726,
-        "return_usd": 2.76,
+        "current_price": 140.35,
+        "current_value": 131.9234,
+        "return_pct": -1.0575,
+        "return_usd": -1.41,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -11513,6 +11861,10 @@
           {
             "date": "2026-09-14",
             "factor": 1.020726
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 0.989425
           }
         ],
         "market_open": false
@@ -11525,10 +11877,10 @@
         "weight": 6.67,
         "shares": 1.658375,
         "start_price": 80.4,
-        "current_price": 71.65,
-        "current_value": 118.8226,
-        "return_pct": -10.8831,
-        "return_usd": -14.51,
+        "current_price": 73.2,
+        "current_value": 121.393,
+        "return_pct": -8.9552,
+        "return_usd": -11.94,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -11651,6 +12003,10 @@
           {
             "date": "2026-09-14",
             "factor": 0.891169
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 0.910448
           }
         ],
         "market_open": false
@@ -11663,10 +12019,10 @@
         "weight": 6.67,
         "shares": 0.257571,
         "start_price": 517.6565,
-        "current_price": 424.21,
-        "current_value": 109.2642,
-        "return_pct": -18.0518,
-        "return_usd": -24.07,
+        "current_price": 421.17,
+        "current_value": 108.4812,
+        "return_pct": -18.6391,
+        "return_usd": -24.85,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -11789,6 +12145,10 @@
           {
             "date": "2026-09-14",
             "factor": 0.819482
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 0.813609
           }
         ],
         "market_open": false
@@ -11807,70 +12167,70 @@
       "matrix": [
         [
           1.0,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5
+          0.31,
+          0.24,
+          0.57,
+          0.37,
+          0.04,
+          0.56
         ],
         [
-          0.5,
+          0.31,
           1.0,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5
+          0.19,
+          0.2,
+          0.55,
+          0.32,
+          0.4
         ],
         [
-          0.5,
-          0.5,
+          0.24,
+          0.19,
           1.0,
-          0.5,
-          0.5,
-          0.5,
-          0.5
+          0.31,
+          0.34,
+          0.15,
+          0.48
         ],
         [
-          0.5,
-          0.5,
-          0.5,
+          0.57,
+          0.2,
+          0.31,
           1.0,
-          0.5,
-          0.5,
-          0.5
+          0.36,
+          -0.07,
+          0.62
         ],
         [
-          0.5,
-          0.5,
-          0.5,
-          0.5,
+          0.37,
+          0.55,
+          0.34,
+          0.36,
           1.0,
-          0.5,
+          0.24,
           0.5
         ],
         [
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
+          0.04,
+          0.32,
+          0.15,
+          -0.07,
+          0.24,
           1.0,
-          0.5
+          0.3
         ],
         [
+          0.56,
+          0.4,
+          0.48,
+          0.62,
           0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
+          0.3,
           1.0
         ]
       ],
-      "avg_correlation": 0.5,
-      "diversification_score": 8.5
+      "avg_correlation": 0.34,
+      "diversification_score": 10.0
     },
     "monte_carlo": {
       "days": [
@@ -11882,48 +12242,48 @@
         90
       ],
       "median": [
-        808.54,
-        903.17,
-        1008.88,
-        1126.96,
-        1258.86,
-        1570.79
+        805.23,
+        894.33,
+        993.29,
+        1103.2,
+        1225.27,
+        1511.43
       ],
       "bull_95": [
-        808.54,
-        1125.76,
-        1291.17,
-        1434.41,
-        1567.43,
-        1818.86
+        805.23,
+        1114.09,
+        1274.45,
+        1412.99,
+        1541.42,
+        1783.61
       ],
       "bear_5": [
-        808.54,
-        614.86,
-        548.93,
-        503.18,
-        467.58,
-        413.43
+        805.23,
+        614.4,
+        549.29,
+        504.04,
+        468.8,
+        415.14
       ],
       "scenarios": {
         "ai_rally": {
           "name": "Rally de Inteligencia Artificial",
           "impact_pct": 25.0,
-          "projected_value": 1010.67,
+          "projected_value": 1006.53,
           "prob": "Alta (Catalizador Q3/Q4)",
           "color": "#10b981"
         },
         "rate_shock": {
           "name": "Correcci\u00f3n Tech / Shock de Tasas",
           "impact_pct": -15.0,
-          "projected_value": 687.26,
+          "projected_value": 684.44,
           "prob": "Media (Protegido por Cash Q)",
           "color": "#ef4444"
         },
         "sideways": {
           "name": "Mercado Lateral / Rango",
           "impact_pct": 4.5,
-          "projected_value": 844.92,
+          "projected_value": 841.46,
           "prob": "Muy Alta (Consolidaci\u00f3n)",
           "color": "#f59e0b"
         }
@@ -11932,7 +12292,7 @@
     "radar": [
       {
         "factor": "Momentum Relativo",
-        "score": 64,
+        "score": 62,
         "benchmark": 55
       },
       {
@@ -11942,7 +12302,7 @@
       },
       {
         "factor": "Alfa vs S&P 500",
-        "score": 75,
+        "score": 71,
         "benchmark": 50
       },
       {
@@ -11952,42 +12312,42 @@
       },
       {
         "factor": "Diversificaci\u00f3n",
-        "score": 80,
+        "score": 95,
         "benchmark": 60
       }
     ],
     "summary": {
       "start_value": 2000.0,
-      "end_value": 2008.54,
+      "end_value": 2005.23,
       "invested_value": 2000.0,
       "active_invested": 800.0,
-      "active_stock_value": 808.54,
-      "active_return": 8.54,
-      "active_return_pct": 1.07,
+      "active_stock_value": 805.23,
+      "active_return": 5.23,
+      "active_return_pct": 0.65,
       "sp500_return": -1.55,
       "sp500_return_pct": -0.19,
       "nasdaq_return": 2.09,
       "nasdaq_return_pct": 0.26,
-      "mm20_return": -24.39,
-      "mm20_return_pct": -3.05,
-      "alpha_sp500": 1.26,
-      "alpha_sp500_usd": 10.09,
-      "alpha_nasdaq": 0.81,
-      "alpha_nasdaq_usd": 6.45,
-      "alpha_mm20": 4.12,
-      "alpha_mm20_usd": 32.92,
-      "sharpe_ratio": 2.88,
-      "sortino_ratio": 9.28,
+      "mm20_return": -27.91,
+      "mm20_return_pct": -3.49,
+      "alpha_sp500": 0.85,
+      "alpha_sp500_usd": 6.78,
+      "alpha_nasdaq": 0.39,
+      "alpha_nasdaq_usd": 3.14,
+      "alpha_mm20": 4.14,
+      "alpha_mm20_usd": 33.13,
+      "sharpe_ratio": 2.77,
+      "sortino_ratio": 8.92,
       "beta_sp500": 1.01,
-      "beta_nasdaq": 1.04,
-      "annualized_vol_pct": 63.24,
-      "win_rate_pct": 66.7,
-      "diversification_score": 8.5,
+      "beta_nasdaq": 1.03,
+      "annualized_vol_pct": 62.23,
+      "win_rate_pct": 50.0,
+      "diversification_score": 10.0,
       "max_drawdown_pct": -9.45,
       "max_drawdown_usd": -79.09,
       "cash_reserved": 1200.0,
-      "total_return": 8.54,
-      "total_return_pct": 0.43,
+      "total_return": 5.23,
+      "total_return_pct": 0.26,
       "num_holdings": 6,
       "num_slots": 15,
       "unallocated_slots": 9
@@ -12234,6 +12594,14 @@
         "stock_value": 808.5377,
         "cash": 1200.0,
         "active_invested": 800.0
+      },
+      {
+        "date": "2026-09-15",
+        "value": 805.2274,
+        "total_value": 2005.2274,
+        "stock_value": 805.2274,
+        "cash": 1200.0,
+        "active_invested": 800.0
       }
     ],
     "sp500": [
@@ -12608,6 +12976,10 @@
       {
         "date": "2026-09-14",
         "value": 775.6142
+      },
+      {
+        "date": "2026-09-15",
+        "value": 772.0927
       }
     ],
     "ticker_series": {
@@ -12731,6 +13103,10 @@
         {
           "date": "2026-09-14",
           "factor": 0.891169
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 0.910448
         }
       ],
       "HPQ": [
@@ -12853,6 +13229,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.266615
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 1.259169
         }
       ],
       "ORCL": [
@@ -12975,6 +13355,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.020726
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 0.989425
         }
       ],
       "AMAT": [
@@ -13097,6 +13481,10 @@
         {
           "date": "2026-09-14",
           "factor": 0.819482
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 0.813609
         }
       ],
       "NTAP": [
@@ -13219,6 +13607,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.029302
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 1.038323
         }
       ],
       "ACN": [
@@ -13341,6 +13733,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.036738
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 1.028231
         }
       ]
     },
@@ -13380,10 +13776,10 @@
         "weight": 6.67,
         "shares": 4.964199,
         "start_price": 26.859,
-        "current_price": 34.02,
-        "current_value": 168.8821,
-        "return_pct": 26.6615,
-        "return_usd": 35.55,
+        "current_price": 33.82,
+        "current_value": 167.8892,
+        "return_pct": 25.9169,
+        "return_usd": 34.56,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -13506,144 +13902,10 @@
           {
             "date": "2026-09-14",
             "factor": 1.266615
-          }
-        ],
-        "market_open": false
-      },
-      {
-        "ticker": "ACN",
-        "name": "Accenture plc",
-        "sector": "Technology",
-        "exchange": "NYQ",
-        "weight": 6.67,
-        "shares": 0.708881,
-        "start_price": 188.09,
-        "current_price": 195.0,
-        "current_value": 138.2317,
-        "return_pct": 3.6738,
-        "return_usd": 4.9,
-        "selected": true,
-        "entry_date": "2026-09-01",
-        "history": [
-          {
-            "date": "2026-08-03",
-            "factor": 1.0
           },
           {
-            "date": "2026-08-04",
-            "factor": 1.028173
-          },
-          {
-            "date": "2026-08-05",
-            "factor": 1.029983
-          },
-          {
-            "date": "2026-08-06",
-            "factor": 1.032276
-          },
-          {
-            "date": "2026-08-07",
-            "factor": 1.060087
-          },
-          {
-            "date": "2026-08-10",
-            "factor": 1.07535
-          },
-          {
-            "date": "2026-08-11",
-            "factor": 1.084822
-          },
-          {
-            "date": "2026-08-12",
-            "factor": 1.086752
-          },
-          {
-            "date": "2026-08-13",
-            "factor": 1.076798
-          },
-          {
-            "date": "2026-08-14",
-            "factor": 1.067145
-          },
-          {
-            "date": "2026-08-17",
-            "factor": 1.025459
-          },
-          {
-            "date": "2026-08-18",
-            "factor": 1.043255
-          },
-          {
-            "date": "2026-08-19",
-            "factor": 1.105031
-          },
-          {
-            "date": "2026-08-20",
-            "factor": 1.094052
-          },
-          {
-            "date": "2026-08-21",
-            "factor": 1.117761
-          },
-          {
-            "date": "2026-08-24",
-            "factor": 1.125302
-          },
-          {
-            "date": "2026-08-25",
-            "factor": 1.127715
-          },
-          {
-            "date": "2026-08-26",
-            "factor": 1.094233
-          },
-          {
-            "date": "2026-08-27",
-            "factor": 1.13043
-          },
-          {
-            "date": "2026-08-28",
-            "factor": 1.143883
-          },
-          {
-            "date": "2026-08-31",
-            "factor": 1.144788
-          },
-          {
-            "date": "2026-09-01",
-            "factor": 1.134713
-          },
-          {
-            "date": "2026-09-02",
-            "factor": 1.132239
-          },
-          {
-            "date": "2026-09-03",
-            "factor": 1.165058
-          },
-          {
-            "date": "2026-09-04",
-            "factor": 1.126448
-          },
-          {
-            "date": "2026-09-08",
-            "factor": 1.080056
-          },
-          {
-            "date": "2026-09-09",
-            "factor": 1.06057
-          },
-          {
-            "date": "2026-09-10",
-            "factor": 1.073299
-          },
-          {
-            "date": "2026-09-11",
-            "factor": 1.109435
-          },
-          {
-            "date": "2026-09-14",
-            "factor": 1.1764
+            "date": "2026-09-15",
+            "factor": 1.259169
           }
         ],
         "market_open": false
@@ -13656,10 +13918,10 @@
         "weight": 6.67,
         "shares": 0.728916,
         "start_price": 182.92,
-        "current_price": 188.28,
-        "current_value": 137.2403,
-        "return_pct": 2.9302,
-        "return_usd": 3.91,
+        "current_price": 189.93,
+        "current_value": 138.443,
+        "return_pct": 3.8323,
+        "return_usd": 5.11,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -13782,6 +14044,152 @@
           {
             "date": "2026-09-14",
             "factor": 1.029302
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 1.038323
+          }
+        ],
+        "market_open": false
+      },
+      {
+        "ticker": "ACN",
+        "name": "Accenture plc",
+        "sector": "Technology",
+        "exchange": "NYQ",
+        "weight": 6.67,
+        "shares": 0.708881,
+        "start_price": 188.09,
+        "current_price": 193.4,
+        "current_value": 137.0975,
+        "return_pct": 2.8231,
+        "return_usd": 3.76,
+        "selected": true,
+        "entry_date": "2026-09-01",
+        "history": [
+          {
+            "date": "2026-08-03",
+            "factor": 1.0
+          },
+          {
+            "date": "2026-08-04",
+            "factor": 1.028173
+          },
+          {
+            "date": "2026-08-05",
+            "factor": 1.029983
+          },
+          {
+            "date": "2026-08-06",
+            "factor": 1.032276
+          },
+          {
+            "date": "2026-08-07",
+            "factor": 1.060087
+          },
+          {
+            "date": "2026-08-10",
+            "factor": 1.07535
+          },
+          {
+            "date": "2026-08-11",
+            "factor": 1.084822
+          },
+          {
+            "date": "2026-08-12",
+            "factor": 1.086752
+          },
+          {
+            "date": "2026-08-13",
+            "factor": 1.076798
+          },
+          {
+            "date": "2026-08-14",
+            "factor": 1.067145
+          },
+          {
+            "date": "2026-08-17",
+            "factor": 1.025459
+          },
+          {
+            "date": "2026-08-18",
+            "factor": 1.043255
+          },
+          {
+            "date": "2026-08-19",
+            "factor": 1.105031
+          },
+          {
+            "date": "2026-08-20",
+            "factor": 1.094052
+          },
+          {
+            "date": "2026-08-21",
+            "factor": 1.117761
+          },
+          {
+            "date": "2026-08-24",
+            "factor": 1.125302
+          },
+          {
+            "date": "2026-08-25",
+            "factor": 1.127715
+          },
+          {
+            "date": "2026-08-26",
+            "factor": 1.094233
+          },
+          {
+            "date": "2026-08-27",
+            "factor": 1.13043
+          },
+          {
+            "date": "2026-08-28",
+            "factor": 1.143883
+          },
+          {
+            "date": "2026-08-31",
+            "factor": 1.144788
+          },
+          {
+            "date": "2026-09-01",
+            "factor": 1.134713
+          },
+          {
+            "date": "2026-09-02",
+            "factor": 1.132239
+          },
+          {
+            "date": "2026-09-03",
+            "factor": 1.165058
+          },
+          {
+            "date": "2026-09-04",
+            "factor": 1.126448
+          },
+          {
+            "date": "2026-09-08",
+            "factor": 1.080056
+          },
+          {
+            "date": "2026-09-09",
+            "factor": 1.06057
+          },
+          {
+            "date": "2026-09-10",
+            "factor": 1.073299
+          },
+          {
+            "date": "2026-09-11",
+            "factor": 1.109435
+          },
+          {
+            "date": "2026-09-14",
+            "factor": 1.1764
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 1.166747
           }
         ],
         "market_open": false
@@ -13794,10 +14202,10 @@
         "weight": 6.67,
         "shares": 0.93996,
         "start_price": 141.85,
-        "current_price": 144.79,
-        "current_value": 136.0968,
-        "return_pct": 2.0726,
-        "return_usd": 2.76,
+        "current_price": 140.35,
+        "current_value": 131.9234,
+        "return_pct": -1.0575,
+        "return_usd": -1.41,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -13920,6 +14328,10 @@
           {
             "date": "2026-09-14",
             "factor": 1.020726
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 0.989425
           }
         ],
         "market_open": false
@@ -13932,10 +14344,10 @@
         "weight": 6.67,
         "shares": 1.658375,
         "start_price": 80.4,
-        "current_price": 71.65,
-        "current_value": 118.8226,
-        "return_pct": -10.8831,
-        "return_usd": -14.51,
+        "current_price": 73.2,
+        "current_value": 121.393,
+        "return_pct": -8.9552,
+        "return_usd": -11.94,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -14058,6 +14470,10 @@
           {
             "date": "2026-09-14",
             "factor": 0.891169
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 0.910448
           }
         ],
         "market_open": false
@@ -14070,10 +14486,10 @@
         "weight": 6.67,
         "shares": 0.257571,
         "start_price": 517.6565,
-        "current_price": 424.21,
-        "current_value": 109.2642,
-        "return_pct": -18.0518,
-        "return_usd": -24.07,
+        "current_price": 421.17,
+        "current_value": 108.4812,
+        "return_pct": -18.6391,
+        "return_usd": -24.85,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -14196,6 +14612,10 @@
           {
             "date": "2026-09-14",
             "factor": 0.819482
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 0.813609
           }
         ],
         "market_open": false
@@ -14214,70 +14634,70 @@
       "matrix": [
         [
           1.0,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5
+          0.41,
+          0.28,
+          0.65,
+          0.45,
+          0.23,
+          0.62
         ],
         [
-          0.5,
+          0.41,
           1.0,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5
+          0.24,
+          0.35,
+          0.59,
+          0.41,
+          0.51
         ],
         [
-          0.5,
-          0.5,
+          0.28,
+          0.24,
           1.0,
-          0.5,
-          0.5,
-          0.5,
-          0.5
+          0.34,
+          0.36,
+          0.25,
+          0.48
         ],
         [
-          0.5,
-          0.5,
-          0.5,
+          0.65,
+          0.35,
+          0.34,
           1.0,
-          0.5,
-          0.5,
-          0.5
+          0.45,
+          0.17,
+          0.67
         ],
         [
-          0.5,
-          0.5,
-          0.5,
-          0.5,
+          0.45,
+          0.59,
+          0.36,
+          0.45,
           1.0,
-          0.5,
-          0.5
+          0.34,
+          0.55
         ],
         [
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
+          0.23,
+          0.41,
+          0.25,
+          0.17,
+          0.34,
           1.0,
-          0.5
+          0.51
         ],
         [
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
+          0.62,
+          0.51,
+          0.48,
+          0.67,
+          0.55,
+          0.51,
           1.0
         ]
       ],
-      "avg_correlation": 0.5,
-      "diversification_score": 8.5
+      "avg_correlation": 0.42,
+      "diversification_score": 9.3
     },
     "monte_carlo": {
       "days": [
@@ -14289,48 +14709,48 @@
         90
       ],
       "median": [
-        808.54,
-        903.17,
-        1008.88,
-        1126.96,
-        1258.86,
-        1570.79
+        805.23,
+        894.33,
+        993.29,
+        1103.2,
+        1225.27,
+        1511.43
       ],
       "bull_95": [
-        808.54,
-        1125.76,
-        1291.17,
-        1434.41,
-        1567.43,
-        1818.86
+        805.23,
+        1114.09,
+        1274.45,
+        1412.99,
+        1541.42,
+        1783.61
       ],
       "bear_5": [
-        808.54,
-        614.86,
-        548.93,
-        503.18,
-        467.58,
-        413.43
+        805.23,
+        614.4,
+        549.29,
+        504.04,
+        468.8,
+        415.14
       ],
       "scenarios": {
         "ai_rally": {
           "name": "Rally de Inteligencia Artificial",
           "impact_pct": 25.0,
-          "projected_value": 1010.67,
+          "projected_value": 1006.53,
           "prob": "Alta (Catalizador Q3/Q4)",
           "color": "#10b981"
         },
         "rate_shock": {
           "name": "Correcci\u00f3n Tech / Shock de Tasas",
           "impact_pct": -15.0,
-          "projected_value": 687.26,
+          "projected_value": 684.44,
           "prob": "Media (Protegido por Cash Q)",
           "color": "#ef4444"
         },
         "sideways": {
           "name": "Mercado Lateral / Rango",
           "impact_pct": 4.5,
-          "projected_value": 844.92,
+          "projected_value": 841.46,
           "prob": "Muy Alta (Consolidaci\u00f3n)",
           "color": "#f59e0b"
         }
@@ -14339,7 +14759,7 @@
     "radar": [
       {
         "factor": "Momentum Relativo",
-        "score": 64,
+        "score": 62,
         "benchmark": 55
       },
       {
@@ -14349,7 +14769,7 @@
       },
       {
         "factor": "Alfa vs S&P 500",
-        "score": 75,
+        "score": 71,
         "benchmark": 50
       },
       {
@@ -14359,42 +14779,42 @@
       },
       {
         "factor": "Diversificaci\u00f3n",
-        "score": 80,
+        "score": 88,
         "benchmark": 60
       }
     ],
     "summary": {
       "start_value": 2000.0,
-      "end_value": 2008.54,
+      "end_value": 2005.23,
       "invested_value": 2000.0,
       "active_invested": 800.0,
-      "active_stock_value": 808.54,
-      "active_return": 8.54,
-      "active_return_pct": 1.07,
+      "active_stock_value": 805.23,
+      "active_return": 5.23,
+      "active_return_pct": 0.65,
       "sp500_return": -1.55,
       "sp500_return_pct": -0.19,
       "nasdaq_return": 2.09,
       "nasdaq_return_pct": 0.26,
-      "mm20_return": -24.39,
-      "mm20_return_pct": -3.05,
-      "alpha_sp500": 1.26,
-      "alpha_sp500_usd": 10.09,
-      "alpha_nasdaq": 0.81,
-      "alpha_nasdaq_usd": 6.45,
-      "alpha_mm20": 4.12,
-      "alpha_mm20_usd": 32.92,
-      "sharpe_ratio": 2.88,
-      "sortino_ratio": 9.28,
+      "mm20_return": -27.91,
+      "mm20_return_pct": -3.49,
+      "alpha_sp500": 0.85,
+      "alpha_sp500_usd": 6.78,
+      "alpha_nasdaq": 0.39,
+      "alpha_nasdaq_usd": 3.14,
+      "alpha_mm20": 4.14,
+      "alpha_mm20_usd": 33.13,
+      "sharpe_ratio": 2.77,
+      "sortino_ratio": 8.92,
       "beta_sp500": 1.01,
-      "beta_nasdaq": 1.04,
-      "annualized_vol_pct": 63.24,
-      "win_rate_pct": 66.7,
-      "diversification_score": 8.5,
+      "beta_nasdaq": 1.03,
+      "annualized_vol_pct": 62.23,
+      "win_rate_pct": 50.0,
+      "diversification_score": 9.3,
       "max_drawdown_pct": -9.45,
       "max_drawdown_usd": -79.09,
       "cash_reserved": 1200.0,
-      "total_return": 8.54,
-      "total_return_pct": 0.43,
+      "total_return": 5.23,
+      "total_return_pct": 0.26,
       "num_holdings": 6,
       "num_slots": 15,
       "unallocated_slots": 9
@@ -14641,6 +15061,14 @@
         "stock_value": 808.5377,
         "cash": 1200.0,
         "active_invested": 800.0
+      },
+      {
+        "date": "2026-09-15",
+        "value": 805.2274,
+        "total_value": 2005.2274,
+        "stock_value": 805.2274,
+        "cash": 1200.0,
+        "active_invested": 800.0
       }
     ],
     "sp500": [
@@ -15015,6 +15443,10 @@
       {
         "date": "2026-09-14",
         "value": 775.6142
+      },
+      {
+        "date": "2026-09-15",
+        "value": 772.0927
       }
     ],
     "ticker_series": {
@@ -15138,6 +15570,10 @@
         {
           "date": "2026-09-14",
           "factor": 0.891169
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 0.910448
         }
       ],
       "HPQ": [
@@ -15260,6 +15696,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.266615
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 1.259169
         }
       ],
       "ORCL": [
@@ -15382,6 +15822,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.020726
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 0.989425
         }
       ],
       "AMAT": [
@@ -15504,6 +15948,10 @@
         {
           "date": "2026-09-14",
           "factor": 0.819482
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 0.813609
         }
       ],
       "NTAP": [
@@ -15626,6 +16074,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.029302
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 1.038323
         }
       ],
       "ACN": [
@@ -15748,6 +16200,10 @@
         {
           "date": "2026-09-14",
           "factor": 1.036738
+        },
+        {
+          "date": "2026-09-15",
+          "factor": 1.028231
         }
       ]
     },
@@ -15787,10 +16243,10 @@
         "weight": 6.67,
         "shares": 4.964199,
         "start_price": 26.859,
-        "current_price": 34.02,
-        "current_value": 168.8821,
-        "return_pct": 26.6615,
-        "return_usd": 35.55,
+        "current_price": 33.82,
+        "current_value": 167.8892,
+        "return_pct": 25.9169,
+        "return_usd": 34.56,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -15913,144 +16369,10 @@
           {
             "date": "2026-09-14",
             "factor": 1.266615
-          }
-        ],
-        "market_open": false
-      },
-      {
-        "ticker": "ACN",
-        "name": "Accenture plc",
-        "sector": "Technology",
-        "exchange": "NYQ",
-        "weight": 6.67,
-        "shares": 0.708881,
-        "start_price": 188.09,
-        "current_price": 195.0,
-        "current_value": 138.2317,
-        "return_pct": 3.6738,
-        "return_usd": 4.9,
-        "selected": true,
-        "entry_date": "2026-09-01",
-        "history": [
-          {
-            "date": "2026-08-03",
-            "factor": 1.0
           },
           {
-            "date": "2026-08-04",
-            "factor": 1.028173
-          },
-          {
-            "date": "2026-08-05",
-            "factor": 1.029983
-          },
-          {
-            "date": "2026-08-06",
-            "factor": 1.032276
-          },
-          {
-            "date": "2026-08-07",
-            "factor": 1.060087
-          },
-          {
-            "date": "2026-08-10",
-            "factor": 1.07535
-          },
-          {
-            "date": "2026-08-11",
-            "factor": 1.084822
-          },
-          {
-            "date": "2026-08-12",
-            "factor": 1.086752
-          },
-          {
-            "date": "2026-08-13",
-            "factor": 1.076798
-          },
-          {
-            "date": "2026-08-14",
-            "factor": 1.067145
-          },
-          {
-            "date": "2026-08-17",
-            "factor": 1.025459
-          },
-          {
-            "date": "2026-08-18",
-            "factor": 1.043255
-          },
-          {
-            "date": "2026-08-19",
-            "factor": 1.105031
-          },
-          {
-            "date": "2026-08-20",
-            "factor": 1.094052
-          },
-          {
-            "date": "2026-08-21",
-            "factor": 1.117761
-          },
-          {
-            "date": "2026-08-24",
-            "factor": 1.125302
-          },
-          {
-            "date": "2026-08-25",
-            "factor": 1.127715
-          },
-          {
-            "date": "2026-08-26",
-            "factor": 1.094233
-          },
-          {
-            "date": "2026-08-27",
-            "factor": 1.13043
-          },
-          {
-            "date": "2026-08-28",
-            "factor": 1.143883
-          },
-          {
-            "date": "2026-08-31",
-            "factor": 1.144788
-          },
-          {
-            "date": "2026-09-01",
-            "factor": 1.134713
-          },
-          {
-            "date": "2026-09-02",
-            "factor": 1.132239
-          },
-          {
-            "date": "2026-09-03",
-            "factor": 1.165058
-          },
-          {
-            "date": "2026-09-04",
-            "factor": 1.126448
-          },
-          {
-            "date": "2026-09-08",
-            "factor": 1.080056
-          },
-          {
-            "date": "2026-09-09",
-            "factor": 1.06057
-          },
-          {
-            "date": "2026-09-10",
-            "factor": 1.073299
-          },
-          {
-            "date": "2026-09-11",
-            "factor": 1.109435
-          },
-          {
-            "date": "2026-09-14",
-            "factor": 1.1764
+            "date": "2026-09-15",
+            "factor": 1.259169
           }
         ],
         "market_open": false
@@ -16063,10 +16385,10 @@
         "weight": 6.67,
         "shares": 0.728916,
         "start_price": 182.92,
-        "current_price": 188.28,
-        "current_value": 137.2403,
-        "return_pct": 2.9302,
-        "return_usd": 3.91,
+        "current_price": 189.93,
+        "current_value": 138.443,
+        "return_pct": 3.8323,
+        "return_usd": 5.11,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -16189,6 +16511,152 @@
           {
             "date": "2026-09-14",
             "factor": 1.029302
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 1.038323
+          }
+        ],
+        "market_open": false
+      },
+      {
+        "ticker": "ACN",
+        "name": "Accenture plc",
+        "sector": "Technology",
+        "exchange": "NYQ",
+        "weight": 6.67,
+        "shares": 0.708881,
+        "start_price": 188.09,
+        "current_price": 193.4,
+        "current_value": 137.0975,
+        "return_pct": 2.8231,
+        "return_usd": 3.76,
+        "selected": true,
+        "entry_date": "2026-09-01",
+        "history": [
+          {
+            "date": "2026-08-03",
+            "factor": 1.0
+          },
+          {
+            "date": "2026-08-04",
+            "factor": 1.028173
+          },
+          {
+            "date": "2026-08-05",
+            "factor": 1.029983
+          },
+          {
+            "date": "2026-08-06",
+            "factor": 1.032276
+          },
+          {
+            "date": "2026-08-07",
+            "factor": 1.060087
+          },
+          {
+            "date": "2026-08-10",
+            "factor": 1.07535
+          },
+          {
+            "date": "2026-08-11",
+            "factor": 1.084822
+          },
+          {
+            "date": "2026-08-12",
+            "factor": 1.086752
+          },
+          {
+            "date": "2026-08-13",
+            "factor": 1.076798
+          },
+          {
+            "date": "2026-08-14",
+            "factor": 1.067145
+          },
+          {
+            "date": "2026-08-17",
+            "factor": 1.025459
+          },
+          {
+            "date": "2026-08-18",
+            "factor": 1.043255
+          },
+          {
+            "date": "2026-08-19",
+            "factor": 1.105031
+          },
+          {
+            "date": "2026-08-20",
+            "factor": 1.094052
+          },
+          {
+            "date": "2026-08-21",
+            "factor": 1.117761
+          },
+          {
+            "date": "2026-08-24",
+            "factor": 1.125302
+          },
+          {
+            "date": "2026-08-25",
+            "factor": 1.127715
+          },
+          {
+            "date": "2026-08-26",
+            "factor": 1.094233
+          },
+          {
+            "date": "2026-08-27",
+            "factor": 1.13043
+          },
+          {
+            "date": "2026-08-28",
+            "factor": 1.143883
+          },
+          {
+            "date": "2026-08-31",
+            "factor": 1.144788
+          },
+          {
+            "date": "2026-09-01",
+            "factor": 1.134713
+          },
+          {
+            "date": "2026-09-02",
+            "factor": 1.132239
+          },
+          {
+            "date": "2026-09-03",
+            "factor": 1.165058
+          },
+          {
+            "date": "2026-09-04",
+            "factor": 1.126448
+          },
+          {
+            "date": "2026-09-08",
+            "factor": 1.080056
+          },
+          {
+            "date": "2026-09-09",
+            "factor": 1.06057
+          },
+          {
+            "date": "2026-09-10",
+            "factor": 1.073299
+          },
+          {
+            "date": "2026-09-11",
+            "factor": 1.109435
+          },
+          {
+            "date": "2026-09-14",
+            "factor": 1.1764
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 1.166747
           }
         ],
         "market_open": false
@@ -16201,10 +16669,10 @@
         "weight": 6.67,
         "shares": 0.93996,
         "start_price": 141.85,
-        "current_price": 144.79,
-        "current_value": 136.0968,
-        "return_pct": 2.0726,
-        "return_usd": 2.76,
+        "current_price": 140.35,
+        "current_value": 131.9234,
+        "return_pct": -1.0575,
+        "return_usd": -1.41,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -16327,6 +16795,10 @@
           {
             "date": "2026-09-14",
             "factor": 1.020726
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 0.989425
           }
         ],
         "market_open": false
@@ -16339,10 +16811,10 @@
         "weight": 6.67,
         "shares": 1.658375,
         "start_price": 80.4,
-        "current_price": 71.65,
-        "current_value": 118.8226,
-        "return_pct": -10.8831,
-        "return_usd": -14.51,
+        "current_price": 73.2,
+        "current_value": 121.393,
+        "return_pct": -8.9552,
+        "return_usd": -11.94,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -16465,6 +16937,10 @@
           {
             "date": "2026-09-14",
             "factor": 0.891169
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 0.910448
           }
         ],
         "market_open": false
@@ -16477,10 +16953,10 @@
         "weight": 6.67,
         "shares": 0.257571,
         "start_price": 517.6565,
-        "current_price": 424.21,
-        "current_value": 109.2642,
-        "return_pct": -18.0518,
-        "return_usd": -24.07,
+        "current_price": 421.17,
+        "current_value": 108.4812,
+        "return_pct": -18.6391,
+        "return_usd": -24.85,
         "selected": true,
         "entry_date": "2026-08-03",
         "history": [
@@ -16603,6 +17079,10 @@
           {
             "date": "2026-09-14",
             "factor": 0.819482
+          },
+          {
+            "date": "2026-09-15",
+            "factor": 0.813609
           }
         ],
         "market_open": false
@@ -16621,70 +17101,70 @@
       "matrix": [
         [
           1.0,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5
+          -0.0,
+          -0.01,
+          -0.0,
+          -0.01,
+          -0.02,
+          0.02
         ],
         [
-          0.5,
+          -0.0,
           1.0,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5
+          -0.0,
+          -0.01,
+          0.0,
+          -0.01,
+          -0.0
         ],
         [
-          0.5,
-          0.5,
+          -0.01,
+          -0.0,
           1.0,
-          0.5,
-          0.5,
-          0.5,
-          0.5
+          0.0,
+          0.0,
+          -0.02,
+          -0.01
         ],
         [
-          0.5,
-          0.5,
-          0.5,
+          -0.0,
+          -0.01,
+          0.0,
           1.0,
-          0.5,
-          0.5,
-          0.5
+          -0.0,
+          0.0,
+          0.01
         ],
         [
-          0.5,
-          0.5,
-          0.5,
-          0.5,
+          -0.01,
+          0.0,
+          0.0,
+          -0.0,
           1.0,
-          0.5,
-          0.5
+          -0.0,
+          0.01
         ],
         [
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
+          -0.02,
+          -0.01,
+          -0.02,
+          0.0,
+          -0.0,
           1.0,
-          0.5
+          0.01
         ],
         [
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
-          0.5,
+          0.02,
+          -0.0,
+          -0.01,
+          0.01,
+          0.01,
+          0.01,
           1.0
         ]
       ],
-      "avg_correlation": 0.5,
-      "diversification_score": 8.5
+      "avg_correlation": 0.01,
+      "diversification_score": 10.0
     },
     "monte_carlo": {
       "days": [
@@ -16696,48 +17176,48 @@
         90
       ],
       "median": [
-        808.54,
-        903.17,
-        1008.88,
-        1126.96,
-        1258.86,
-        1570.79
+        805.23,
+        894.33,
+        993.29,
+        1103.2,
+        1225.27,
+        1511.43
       ],
       "bull_95": [
-        808.54,
-        1125.76,
-        1291.17,
-        1434.41,
-        1567.43,
-        1818.86
+        805.23,
+        1114.09,
+        1274.45,
+        1412.99,
+        1541.42,
+        1783.61
       ],
       "bear_5": [
-        808.54,
-        614.86,
-        548.93,
-        503.18,
-        467.58,
-        413.43
+        805.23,
+        614.4,
+        549.29,
+        504.04,
+        468.8,
+        415.14
       ],
       "scenarios": {
         "ai_rally": {
           "name": "Rally de Inteligencia Artificial",
           "impact_pct": 25.0,
-          "projected_value": 1010.67,
+          "projected_value": 1006.53,
           "prob": "Alta (Catalizador Q3/Q4)",
           "color": "#10b981"
         },
         "rate_shock": {
           "name": "Correcci\u00f3n Tech / Shock de Tasas",
           "impact_pct": -15.0,
-          "projected_value": 687.26,
+          "projected_value": 684.44,
           "prob": "Media (Protegido por Cash Q)",
           "color": "#ef4444"
         },
         "sideways": {
           "name": "Mercado Lateral / Rango",
           "impact_pct": 4.5,
-          "projected_value": 844.92,
+          "projected_value": 841.46,
           "prob": "Muy Alta (Consolidaci\u00f3n)",
           "color": "#f59e0b"
         }
@@ -16746,7 +17226,7 @@
     "radar": [
       {
         "factor": "Momentum Relativo",
-        "score": 64,
+        "score": 62,
         "benchmark": 55
       },
       {
@@ -16756,7 +17236,7 @@
       },
       {
         "factor": "Alfa vs S&P 500",
-        "score": 75,
+        "score": 71,
         "benchmark": 50
       },
       {
@@ -16766,42 +17246,42 @@
       },
       {
         "factor": "Diversificaci\u00f3n",
-        "score": 80,
+        "score": 95,
         "benchmark": 60
       }
     ],
     "summary": {
       "start_value": 2000.0,
-      "end_value": 2008.54,
+      "end_value": 2005.23,
       "invested_value": 2000.0,
       "active_invested": 800.0,
-      "active_stock_value": 808.54,
-      "active_return": 8.54,
-      "active_return_pct": 1.07,
+      "active_stock_value": 805.23,
+      "active_return": 5.23,
+      "active_return_pct": 0.65,
       "sp500_return": -1.55,
       "sp500_return_pct": -0.19,
       "nasdaq_return": 2.09,
       "nasdaq_return_pct": 0.26,
-      "mm20_return": -24.39,
-      "mm20_return_pct": -3.05,
-      "alpha_sp500": 1.26,
-      "alpha_sp500_usd": 10.09,
-      "alpha_nasdaq": 0.81,
-      "alpha_nasdaq_usd": 6.45,
-      "alpha_mm20": 4.12,
-      "alpha_mm20_usd": 32.92,
-      "sharpe_ratio": 2.88,
-      "sortino_ratio": 9.28,
+      "mm20_return": -27.91,
+      "mm20_return_pct": -3.49,
+      "alpha_sp500": 0.85,
+      "alpha_sp500_usd": 6.78,
+      "alpha_nasdaq": 0.39,
+      "alpha_nasdaq_usd": 3.14,
+      "alpha_mm20": 4.14,
+      "alpha_mm20_usd": 33.13,
+      "sharpe_ratio": 2.77,
+      "sortino_ratio": 8.92,
       "beta_sp500": 1.01,
-      "beta_nasdaq": 1.04,
-      "annualized_vol_pct": 63.24,
-      "win_rate_pct": 66.7,
-      "diversification_score": 8.5,
+      "beta_nasdaq": 1.03,
+      "annualized_vol_pct": 62.23,
+      "win_rate_pct": 50.0,
+      "diversification_score": 10.0,
       "max_drawdown_pct": -9.45,
       "max_drawdown_usd": -79.09,
       "cash_reserved": 1200.0,
-      "total_return": 8.54,
-      "total_return_pct": 0.43,
+      "total_return": 5.23,
+      "total_return_pct": 0.26,
       "num_holdings": 6,
       "num_slots": 15,
       "unallocated_slots": 9

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchLiveQuotes, fetchNAV } from "../api/client";
 import { usePortfolioStore } from "../store/portfolioStore";
 import { SYNTHETIC_RETURNS } from "./StrategyChart";
+import { InfoTooltip } from "./Common";
 
 const COLORS = {
   nav: "#00e5ff",
@@ -66,6 +67,34 @@ export default function NavChart({
   // State to store real NAV results and live ticker quotes for custom strategies
   const [customNavData, setCustomNavData] = useState({});
   const [liveStratQuotes, setLiveStratQuotes] = useState({});
+  const [stratLastValues, setStratLastValues] = useState({});
+
+  // Helper to get active capital for a custom strategy on a given date or latest date
+  const getStratCap = useCallback((strat, dateStr) => {
+    const rebs = strategyRebalances?.[strat.id];
+    const sortedStratRebs = Array.isArray(rebs) && rebs.length > 0
+      ? [...rebs].sort((a, b) => (a.rebalance_date || a.date || "").localeCompare(b.rebalance_date || b.date || ""))
+      : [];
+    const slotVal = (strat.capital || 1000) / (strat.numSlots || 20);
+    if (sortedStratRebs.length > 0 && slotVal > 0) {
+      if (dateStr) {
+        const valid = sortedStratRebs.filter((r) => (r.rebalance_date || r.date || "").slice(0, 10) <= dateStr);
+        if (valid.length > 0) {
+          return (valid[valid.length - 1].tickers?.length || 0) * slotVal;
+        }
+      }
+      return (sortedStratRebs[sortedStratRebs.length - 1].tickers?.length || 0) * slotVal;
+    }
+    return strat.activeInvested || strat.capital || 500;
+  }, [strategyRebalances]);
+
+  // Helper to extract pure normalized benchmark factor at index idx (immune to Titanes active capital injections)
+  const getBenchNorm = useCallback((benchArr, idx) => {
+    if (!benchArr || !benchArr[idx]) return 1;
+    const val = benchArr[idx].value;
+    const cap = navData?.[idx]?.active_invested || baseActive || 1;
+    return cap > 0 && val != null ? val / cap : 1;
+  }, [navData, baseActive]);
 
   // Fetch real NAV or live quotes for each visible custom strategy
   useEffect(() => {
@@ -398,6 +427,7 @@ export default function NavChart({
     // Custom Strategies curves on LEFT Axis: Plotted with real strategy performance from DuckDB/quotes
     if (navData && navData.length > 1) {
       const currentSynthetic = SYNTHETIC_RETURNS[period] || SYNTHETIC_RETURNS["MAX"] || { strat: 0.05 };
+      const newLastValues = {};
 
       (customStrategies || []).forEach((strat) => {
         const stratBase = strat.activeInvested || strat.capital || 500;
@@ -433,24 +463,11 @@ export default function NavChart({
             }
           }
 
+          let stratStartDate = null;
           const rebs = strategyRebalances?.[strat.id];
           const sortedStratRebs = Array.isArray(rebs) && rebs.length > 0
             ? [...rebs].sort((a, b) => (a.rebalance_date || a.date || "").localeCompare(b.rebalance_date || b.date || ""))
             : [];
-          const slotVal = (strat.capital || 1000) / (strat.numSlots || 20);
-
-          const getStratCapOnDate = (dateStr) => {
-            if (sortedStratRebs.length > 0 && slotVal > 0) {
-              const valid = sortedStratRebs.filter((r) => (r.rebalance_date || r.date || "").slice(0, 10) <= dateStr);
-              if (valid.length > 0) {
-                return (valid[valid.length - 1].tickers?.length || 0) * slotVal;
-              }
-              return (sortedStratRebs[0].tickers?.length || 0) * slotVal;
-            }
-            return stratBase;
-          };
-
-          let stratStartDate = null;
           if (sortedStratRebs.length > 0) {
             const dates = sortedStratRebs.map((r) => r.rebalance_date || r.date).filter(Boolean);
             if (dates.length > 0) stratStartDate = dates[0].slice(0, 10);
@@ -463,22 +480,22 @@ export default function NavChart({
             if (found !== -1) startIdx = found;
           }
 
-          const benchStartVal = benchSeries?.[startIdx]?.value ?? navData?.[startIdx]?.value ?? 1;
+          const benchStartNorm = getBenchNorm(benchSeries, startIdx);
           const effectiveLen = Math.max(1, navData.length - 1 - startIdx);
 
           sStrat = navData.map((pt, idx) => {
             const ptDate = pt.date || pt.time;
             if (stratStartDate && ptDate < stratStartDate) return null;
 
-            // Actual day-to-day market moves relative to benchmark + alpha progression
-            const benchVal = benchSeries?.[idx]?.value ?? navData?.[idx]?.value ?? benchStartVal;
-            const benchDayReturn = benchStartVal > 0 ? (benchVal - benchStartVal) / benchStartVal : 0;
+            // Actual day-to-day market moves relative to benchmark + alpha progression (immune to capital injections)
+            const benchNorm = getBenchNorm(benchSeries, idx);
+            const benchDayReturn = benchStartNorm > 0 ? (benchNorm - benchStartNorm) / benchStartNorm : 0;
 
             const progress = Math.max(0, idx - startIdx) / effectiveLen;
             const alphaProgress = targetStratReturn * progress;
 
             // Scaled dynamically by the active capital tranche on that specific date!
-            const capOnDate = getStratCapOnDate(String(ptDate).slice(0, 10));
+            const capOnDate = getStratCap(strat, String(ptDate).slice(0, 10));
             const stratValue = capOnDate * (1 + benchDayReturn * 1.15 + alphaProgress * 0.5);
             return { date: ptDate, value: stratValue };
           }).filter(Boolean);
@@ -487,7 +504,14 @@ export default function NavChart({
         const sStratData = toSeries(sStrat);
         if (sStratData.length) {
           seriesRef.current[strat.id]?.setData(sStratData);
+          newLastValues[strat.id] = sStratData[sStratData.length - 1].value;
         }
+      });
+
+      setStratLastValues((prev) => {
+        const keys = Object.keys(newLastValues);
+        const isDiff = keys.some((k) => prev[k] !== newLastValues[k]);
+        return isDiff ? { ...prev, ...newLastValues } : prev;
       });
     }
 
@@ -530,7 +554,7 @@ export default function NavChart({
     }
 
     chartRef.current.timeScale().fitContent();
-  }, [navData, sp500Data, nasdaqData, customStrategies, strategyRebalances, customNavData, liveStratQuotes, investment, numSlots, rebalances, holdings, period]);
+  }, [navData, sp500Data, nasdaqData, customStrategies, strategyRebalances, customNavData, liveStratQuotes, investment, numSlots, rebalances, holdings, period, getStratCap, getBenchNorm]);
 
   const lastNav = navData?.[navData.length - 1]?.value;
   const lastSP = sp500Data?.[sp500Data.length - 1]?.value;
@@ -618,6 +642,7 @@ export default function NavChart({
               }}
             />
             <strong>{isLiveMode ? "Portafolio En Vivo" : "Titanes"}</strong>
+            <InfoTooltip conceptKey="nav" />
             {currentNav != null && (
               <span className="mono" style={{ color: "#00e5ff", fontWeight: 700 }}>
                 ${currentNav.toFixed(2)}
@@ -750,8 +775,13 @@ export default function NavChart({
                 </span>
                 {realStrats.map((strat) => {
                   const isVisible = visibleSeries?.[strat.id] !== false;
-                  const stratBase = strat.activeInvested || strat.capital || 500;
                   const isMM20 = strat.id === "strat_mm20" || strat.name.toLowerCase().includes("mm20");
+
+                  // Current active capital on date (hover date or latest date)
+                  const currentDateStr = hoverValues?.date
+                    ? String(hoverValues.date).slice(0, 10)
+                    : (navData?.[navData.length - 1]?.date || "").slice(0, 10);
+                  const stratBase = getStratCap(strat, currentDateStr);
 
                   // 1. Real return from backend NAV summary
                   const backendSumm = customNavData[strat.id]?.summary;
@@ -771,7 +801,7 @@ export default function NavChart({
                     }
                   }
 
-                  // 3. Fallback to benchmark beta
+                  // 3. Fallback to benchmark beta (using pure normalized index growth without capital injection steps)
                   const lastIdx = navData?.length ? navData.length - 1 : 0;
                   const isNasdaqBench = strat.benchmark === "NASDAQ" || (!isMM20 && strat.name.toLowerCase().includes("acciones"));
                   const benchData = isNasdaqBench ? nasdaqData : sp500Data;
@@ -783,15 +813,16 @@ export default function NavChart({
                     if (found !== -1) startIdx = found;
                   }
 
-                  const benchStartVal = benchData?.[startIdx]?.value ?? navData?.[startIdx]?.value ?? baseActive;
-                  const benchPt = benchData?.[lastIdx]?.value ?? navData?.[lastIdx]?.value ?? benchStartVal;
-                  const benchPctGrowth = benchStartVal > 0 ? (benchPt - benchStartVal) / benchStartVal : 0;
+                  const benchStartNorm = getBenchNorm(benchData, startIdx);
+                  const benchPtNorm = getBenchNorm(benchData, lastIdx);
+                  const benchPctGrowth = benchStartNorm > 0 ? (benchPtNorm - benchStartNorm) / benchStartNorm : 0;
                   const betaMultiplier = isMM20 ? 1.24 : 1.36;
                   const driftProgress = Math.max(0, lastIdx - startIdx) / Math.max(1, navData?.length - 1 || 1);
                   const drift = driftProgress * (isMM20 ? 0.032 : 0.054);
                   const fallbackPctGrowth = benchPctGrowth * betaMultiplier + drift;
 
-                  const currentChartVal = hoverValues?.[strat.id];
+                  const lastPlottedVal = stratLastValues[strat.id];
+                  const currentChartVal = hoverValues?.[strat.id] ?? lastPlottedVal;
                   let stratPct = null;
                   let stratUsd = stratBase;
 
@@ -902,8 +933,13 @@ export default function NavChart({
                 </span>
                 {simStrats.map((strat) => {
                   const isVisible = visibleSeries?.[strat.id] !== false;
-                  const stratBase = strat.activeInvested || strat.capital || 500;
                   const isMM20 = strat.id === "strat_mm20" || strat.name.toLowerCase().includes("mm20");
+
+                  // Current active capital on date (hover date or latest date)
+                  const currentDateStr = hoverValues?.date
+                    ? String(hoverValues.date).slice(0, 10)
+                    : (navData?.[navData.length - 1]?.date || "").slice(0, 10);
+                  const stratBase = getStratCap(strat, currentDateStr);
 
                   // 1. Real return from backend NAV summary
                   const backendSumm = customNavData[strat.id]?.summary;
@@ -923,7 +959,7 @@ export default function NavChart({
                     }
                   }
 
-                  // 3. Fallback to benchmark beta if backend is loading
+                  // 3. Fallback to benchmark beta if backend is loading (using pure normalized index growth)
                   const lastIdx = navData?.length ? navData.length - 1 : 0;
                   const isNasdaqBench = strat.benchmark === "NASDAQ" || (!isMM20 && strat.name.toLowerCase().includes("acciones"));
                   const benchData = isNasdaqBench ? nasdaqData : sp500Data;
@@ -935,15 +971,16 @@ export default function NavChart({
                     if (found !== -1) startIdx = found;
                   }
 
-                  const benchStartVal = benchData?.[startIdx]?.value ?? navData?.[startIdx]?.value ?? baseActive;
-                  const benchPt = benchData?.[lastIdx]?.value ?? navData?.[lastIdx]?.value ?? benchStartVal;
-                  const benchPctGrowth = benchStartVal > 0 ? (benchPt - benchStartVal) / benchStartVal : 0;
+                  const benchStartNorm = getBenchNorm(benchData, startIdx);
+                  const benchPtNorm = getBenchNorm(benchData, lastIdx);
+                  const benchPctGrowth = benchStartNorm > 0 ? (benchPtNorm - benchStartNorm) / benchStartNorm : 0;
                   const betaMultiplier = isMM20 ? 1.24 : 1.36;
                   const driftProgress = Math.max(0, lastIdx - startIdx) / Math.max(1, navData?.length - 1 || 1);
                   const drift = driftProgress * (isMM20 ? 0.032 : 0.054);
                   const dynamicFallbackPct = (benchPctGrowth * betaMultiplier + drift) * 100;
 
-                  const currentChartVal = hoverValues?.[strat.id];
+                  const lastPlottedVal = stratLastValues[strat.id];
+                  const currentChartVal = hoverValues?.[strat.id] ?? lastPlottedVal;
                   let stratPct = null;
                   let stratUsd = stratBase;
 
@@ -1038,49 +1075,52 @@ export default function NavChart({
 
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {/* Interactive Scale Mode Toggle */}
-          <button
-            onClick={() =>
-              setManualScaleMode((prev) =>
-                prev === "log"
-                  ? "normal"
-                  : prev === "normal"
-                    ? null
-                    : autoLogScale
-                      ? "normal"
-                      : "log",
-              )
-            }
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 5,
-              padding: "3px 9px",
-              borderRadius: 6,
-              fontSize: "0.72rem",
-              fontWeight: 700,
-              cursor: "pointer",
-              background: isLogActive ? "rgba(56, 189, 248, 0.12)" : "rgba(255, 255, 255, 0.04)",
-              border: `1px solid ${isLogActive ? "rgba(56, 189, 248, 0.35)" : "rgba(255, 255, 255, 0.1)"}`,
-              color: isLogActive ? "#38bdf8" : "#94a3b8",
-              transition: "all 0.15s ease",
-              boxShadow: isLogActive ? "0 0 10px rgba(56, 189, 248, 0.15)" : "none",
-            }}
-            title={
-              manualScaleMode
-                ? `Escala forzada a ${isLogActive ? "LOGARÍTMICA" : "LINEAL"} (Clic para cambiar/auto)`
-                : isLogActive
-                  ? `Escala Logarítmica Automática activa (Divergencia de capital Ratio ${logScaleRatio}:1). Clic para alternar.`
-                  : "Escala Lineal. Clic para forzar Escala Logarítmica."
-            }
-          >
-            <span>⚖️</span>
-            <span>
-              {isLogActive ? `LOG ${logScaleRatio > 1 ? `${logScaleRatio}:1` : ""}` : "LINEAL"}
-            </span>
-            {manualScaleMode && (
-              <span style={{ fontSize: "0.6rem", opacity: 0.7, marginLeft: 2 }}>[Fijada]</span>
-            )}
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+            <button
+              onClick={() =>
+                setManualScaleMode((prev) =>
+                  prev === "log"
+                    ? "normal"
+                    : prev === "normal"
+                      ? null
+                      : autoLogScale
+                        ? "normal"
+                        : "log",
+                )
+              }
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "3px 9px",
+                borderRadius: 6,
+                fontSize: "0.72rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                background: isLogActive ? "rgba(56, 189, 248, 0.12)" : "rgba(255, 255, 255, 0.04)",
+                border: `1px solid ${isLogActive ? "rgba(56, 189, 248, 0.35)" : "rgba(255, 255, 255, 0.1)"}`,
+                color: isLogActive ? "#38bdf8" : "#94a3b8",
+                transition: "all 0.15s ease",
+                boxShadow: isLogActive ? "0 0 10px rgba(56, 189, 248, 0.15)" : "none",
+              }}
+              title={
+                manualScaleMode
+                  ? `Escala forzada a ${isLogActive ? "LOGARÍTMICA" : "LINEAL"} (Clic para cambiar/auto)`
+                  : isLogActive
+                    ? `Escala Logarítmica Automática activa (Divergencia de capital Ratio ${logScaleRatio}:1). Clic para alternar.`
+                    : "Escala Lineal. Clic para forzar Escala Logarítmica."
+              }
+            >
+              <span>⚖️</span>
+              <span>
+                {isLogActive ? `LOG ${logScaleRatio > 1 ? `${logScaleRatio}:1` : ""}` : "LINEAL"}
+              </span>
+              {manualScaleMode && (
+                <span style={{ fontSize: "0.6rem", opacity: 0.7, marginLeft: 2 }}>[Fijada]</span>
+              )}
+            </button>
+            <InfoTooltip conceptKey="log_scale" position="bottom" />
+          </div>
 
           <span
             style={{

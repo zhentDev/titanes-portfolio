@@ -1,3 +1,5 @@
+import { InfoTooltip } from "./Common";
+
 export default function QuantitativeCard({ summary }) {
   if (!summary) return null;
 
@@ -91,9 +93,13 @@ export default function QuantitativeCard({ summary }) {
               color: "var(--text-muted)",
               textTransform: "uppercase",
               letterSpacing: "0.05em",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
             }}
           >
-            Sharpe Ratio
+            <span>Sharpe Ratio</span>
+            <InfoTooltip conceptKey="sharpe_ratio" />
           </div>
           <div
             className="mono"
@@ -126,9 +132,13 @@ export default function QuantitativeCard({ summary }) {
               color: "var(--text-muted)",
               textTransform: "uppercase",
               letterSpacing: "0.05em",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
             }}
           >
-            Sortino Ratio
+            <span>Sortino Ratio</span>
+            <InfoTooltip conceptKey="sortino_ratio" />
           </div>
           <div
             className="mono"
@@ -156,9 +166,13 @@ export default function QuantitativeCard({ summary }) {
               color: "var(--text-muted)",
               textTransform: "uppercase",
               letterSpacing: "0.05em",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
             }}
           >
-            Beta vs S&P 500 (β)
+            <span>Beta vs S&P 500 (β)</span>
+            <InfoTooltip conceptKey="beta_sp500" />
           </div>
           <div
             className="mono"
@@ -191,9 +205,13 @@ export default function QuantitativeCard({ summary }) {
               color: "var(--text-muted)",
               textTransform: "uppercase",
               letterSpacing: "0.05em",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
             }}
           >
-            Beta vs NASDAQ (β)
+            <span>Beta vs NASDAQ (β)</span>
+            <InfoTooltip conceptKey="beta_sp500" />
           </div>
           <div
             className="mono"
@@ -226,9 +244,13 @@ export default function QuantitativeCard({ summary }) {
               color: "var(--text-muted)",
               textTransform: "uppercase",
               letterSpacing: "0.05em",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
             }}
           >
-            Volatilidad (σ)
+            <span>Volatilidad (σ)</span>
+            <InfoTooltip conceptKey="annualized_vol" />
           </div>
           <div
             className="mono"
@@ -256,9 +278,13 @@ export default function QuantitativeCard({ summary }) {
               color: "var(--text-muted)",
               textTransform: "uppercase",
               letterSpacing: "0.05em",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
             }}
           >
-            Tasa de Acierto
+            <span>Tasa de Acierto</span>
+            <InfoTooltip conceptKey="win_rate" />
           </div>
           <div
             className="mono"

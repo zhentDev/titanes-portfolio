@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { InfoTooltip } from "./Common";
 
 export default function MonteCarloCard({ monteCarlo, activeInvested }) {
   if (!monteCarlo) return null;
@@ -52,6 +53,7 @@ export default function MonteCarloCard({ monteCarlo, activeInvested }) {
             >
               90 Días
             </span>
+            <InfoTooltip conceptKey="monte_carlo" />
           </h3>
           <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
             Cono de probabilidad estadística al 95% de confianza sobre capital activo
