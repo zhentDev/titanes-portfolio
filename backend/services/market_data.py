@@ -494,7 +494,7 @@ def is_ticker_market_open(ticker: str, exchange: str | None = None) -> bool:
             time_dec = now.hour + now.minute / 60.0
             return 8.0 <= time_dec <= 16.5
 
-        elif any(t_clean.endswith(sfx) for sfx in [".PA", ".DE", ".AS", ".MI", ".MC"]) or ex_clean in ["EURONEXT", "XETRA", "PAR", "GER"]:
+        elif any(t_clean.endswith(sfx) for sfx in [".PA", ".DE", ".AS", ".MI", ".MC", ".F"]) or ex_clean in ["EURONEXT", "XETRA", "PAR", "GER", "FRA"]:
             tz = zoneinfo.ZoneInfo("Europe/Paris")
             now = datetime.now(tz)
             if now.weekday() >= 5:

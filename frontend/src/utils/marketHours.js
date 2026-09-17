@@ -101,6 +101,7 @@ export function detectExchangeKey(ticker = "", exchange = "") {
   }
   if (
     t.endsWith(".DE") ||
+    t.endsWith(".F") ||
     t.endsWith(".PA") ||
     t.endsWith(".AS") ||
     t.endsWith(".MC") ||
