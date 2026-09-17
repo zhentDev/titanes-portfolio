@@ -44,8 +44,9 @@ async function safeFetch(url, options = {}, retries = 1, delayMs = 300) {
 
 async function fetchWithFallback(endpoint, staticFile, options = {}) {
   try {
+    const timeout = options.timeoutMs || TIMEOUT_MS;
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    const timer = setTimeout(() => controller.abort(), timeout);
     const res = await safeFetch(
       `${BASE}${endpoint}`,
       { ...options, signal: controller.signal },
@@ -94,7 +95,14 @@ export async function fetchNAV({
   }
 
   const staticFile = strategyId === "historical" || !strategyId ? `nav_${period}.json` : null;
-  let data = await fetchWithFallback(`/nav?${params}`, staticFile);
+  let data;
+  try {
+    data = await fetchWithFallback(`/nav?${params}`, staticFile, { timeoutMs: 15000 });
+  } catch (err) {
+    // If backend is unreachable and it's a custom strategy, try returning null rather than hard crashing
+    console.warn(`fetchNAV could not fetch data for strategy ${strategyId}:`, err);
+    return null;
+  }
 
   // If running on static data and selectedTickers is provided, do client-side what-if simulation
   if (selectedTickers && data?.holdings) {

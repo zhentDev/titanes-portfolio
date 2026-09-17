@@ -126,6 +126,21 @@ export default function DynamicStrategyView({
           setStrategyRebalances(strategy.id, data);
           const latestTickers = data[data.length - 1].tickers || [];
           setFormTickers([...latestTickers]);
+          // Immediately request fresh NAV for this strategy with loaded rebalances
+          fetchNAV({
+            period,
+            investment: simulatedCapital,
+            numSlots,
+            strategyId: strategy.id,
+          })
+            .then((nData) => {
+              if (isMounted && nData) {
+                setNavData(nData);
+                setIsNavLoading(false);
+                setLastRefreshedAt(new Date());
+              }
+            })
+            .catch(() => {});
         } else {
           // Backend is empty for this strategy. If we have local rebalances with tickers, sync them!
           const localRebs = rebalances.filter((r) => Array.isArray(r.tickers) && r.tickers.length > 0);
@@ -331,10 +346,8 @@ export default function DynamicStrategyView({
     };
   }, [strategy?.id, period, simulatedCapital, numSlots, activeTickers.join(",")]);
 
-  // Compute real market returns instead of hardcoded 12.00%
+  // Compute real market returns instead of hardcoded percentages
   const currentReturns = useMemo(() => {
-    const baseSynthetic = SYNTHETIC_RETURNS[period] || SYNTHETIC_RETURNS["MAX"];
-
     let realStratReturn = null;
     let realSpReturn = null;
     let realNasdaqReturn = null;
@@ -371,11 +384,13 @@ export default function DynamicStrategyView({
     const isMidCap = strategy?.benchmark === "S&P MidCap 400" || strategy?.id === "strat_mm20";
     const benchmarkSpReturn = isMidCap ? (realMm20Return ?? realSpReturn) : realSpReturn;
 
+    const baseSynthetic = SYNTHETIC_RETURNS[period] || SYNTHETIC_RETURNS["MAX"];
+
     return {
-      sp: benchmarkSpReturn !== null ? benchmarkSpReturn : baseSynthetic.sp,
-      nasdaq: realNasdaqReturn !== null ? realNasdaqReturn : baseSynthetic.nasdaq,
-      mm20: realMm20Return !== null ? realMm20Return : (baseSynthetic.sp),
-      strat: realStratReturn !== null ? realStratReturn : baseSynthetic.strat,
+      sp: benchmarkSpReturn !== null ? benchmarkSpReturn : 0.0,
+      nasdaq: realNasdaqReturn !== null ? realNasdaqReturn : 0.0,
+      mm20: realMm20Return !== null ? realMm20Return : 0.0,
+      strat: realStratReturn !== null ? realStratReturn : 0.0,
       days: baseSynthetic.days,
       points: baseSynthetic.points,
       isReal: realStratReturn !== null,

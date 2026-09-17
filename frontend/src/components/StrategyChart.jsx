@@ -9,16 +9,15 @@ const COLORS = {
 };
 
 export const SYNTHETIC_RETURNS = {
-  "1D": { sp: 0.001, nasdaq: 0.002, strat: 0.003, days: 1, points: 7 },
-  "1W": { sp: 0.005, nasdaq: 0.008, strat: 0.015, days: 7, points: 7 },
-  "1M": { sp: 0.02, nasdaq: 0.03, strat: 0.05, days: 30, points: 30 },
-  "3M": { sp: 0.05, nasdaq: 0.08, strat: 0.12, days: 90, points: 45 },
-  "6M": { sp: 0.08, nasdaq: 0.12, strat: 0.2, days: 180, points: 60 },
-  "1Y": { sp: 0.143, nasdaq: 0.162, strat: 0.278, days: 365, points: 90 },
-  "3Y": { sp: 0.45, nasdaq: 0.55, strat: 1.1, days: 1095, points: 120 },
-  "5Y": { sp: 0.85, nasdaq: 1.1, strat: 2.5, days: 1825, points: 150 },
-  // MAX en estrategias individuales representa el periodo activo máximo disponible (3M por defecto en el estado actual)
-  MAX: { sp: 0.05, nasdaq: 0.08, strat: 0.12, days: 90, points: 45 },
+  "1D": { sp: 0.0, nasdaq: 0.0, strat: 0.0, days: 1, points: 7 },
+  "1W": { sp: 0.0, nasdaq: 0.0, strat: 0.0, days: 7, points: 7 },
+  "1M": { sp: 0.0, nasdaq: 0.0, strat: 0.0, days: 30, points: 30 },
+  "3M": { sp: 0.0, nasdaq: 0.0, strat: 0.0, days: 90, points: 45 },
+  "6M": { sp: 0.0, nasdaq: 0.0, strat: 0.0, days: 180, points: 60 },
+  "1Y": { sp: 0.0, nasdaq: 0.0, strat: 0.0, days: 365, points: 90 },
+  "3Y": { sp: 0.0, nasdaq: 0.0, strat: 0.0, days: 1095, points: 120 },
+  "5Y": { sp: 0.0, nasdaq: 0.0, strat: 0.0, days: 1825, points: 150 },
+  MAX: { sp: 0.0, nasdaq: 0.0, strat: 0.0, days: 90, points: 45 },
 };
 
 // Generador pseudoaleatorio predecible para que la curva no salte con cada render
