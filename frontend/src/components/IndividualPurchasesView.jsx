@@ -463,6 +463,10 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
       const profitFx = currentValueFx - investedFx;
       const profitPctFx = investedFx > 0 ? (profitFx / investedFx) * 100 : 0;
 
+      // FX-ISOLATED effect: gain/loss purely from currency movement (assumes zero asset change)
+      const fxEffect = invested * (currentFx - historicalFx);
+      const fxEffectPct = historicalFx > 0 ? ((currentFx - historicalFx) / historicalFx) * 100 : 0;
+
       // Real Yield (Inflation)
       let inflationFactor = 1.0;
       let inflationRatePct = 0.0;
@@ -520,6 +524,8 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
         currentValueFx,
         profitFx,
         profitPctFx,
+        fxEffect,
+        fxEffectPct,
         inflationFactor,
         inflationRatePct,
         inflationLoss,
@@ -545,6 +551,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
     let totalInvestedFx = 0;
     let totalCurrentValueFx = 0;
     let totalCurrentValueReal = 0;
+    let totalFxEffect = 0;
 
     lotDataList.forEach((lot) => {
       totalInvested += lot.invested;
@@ -552,6 +559,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
       totalInvestedFx += lot.investedFx;
       totalCurrentValueFx += lot.currentValueFx;
       totalCurrentValueReal += lot.currentValueReal;
+      totalFxEffect += lot.fxEffect || 0;
     });
 
     const netReturn = totalCurrentValue - totalInvested;
@@ -559,6 +567,12 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
 
     const netReturnFx = totalCurrentValueFx - totalInvestedFx;
     const netReturnPctFx = totalInvestedFx > 0 ? (netReturnFx / totalInvestedFx) * 100 : 0;
+
+    // FX effect isolated: purely from currency movement
+    const totalFxEffectPct = totalInvestedFx > 0 ? (totalFxEffect / totalInvestedFx) * 100 : 0;
+    // Asset-only gain in COP = total COP gain minus the FX movement contribution
+    const assetGainInCop = netReturnFx - totalFxEffect;
+    const assetGainInCopPct = totalInvestedFx > 0 ? (assetGainInCop / totalInvestedFx) * 100 : 0;
 
     const totalInflationLoss = totalCurrentValueFx - totalCurrentValueReal;
     const totalInflationLossPct =
@@ -576,6 +590,10 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
       totalCurrentValueFx,
       netReturnFx,
       netReturnPctFx,
+      totalFxEffect,
+      totalFxEffectPct,
+      assetGainInCop,
+      assetGainInCopPct,
       totalInflationLoss,
       totalInflationLossPct,
       totalCurrentValueReal,
@@ -1282,6 +1300,65 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                 </div>
               </div>
             </div>
+
+            {/* FX Effect Isolated Block */}
+            {yieldViewMode !== "USD" && (fxData.current !== 1.0 || Object.keys(fxData.history || {}).length > 0) && (
+              <div
+                style={{
+                  marginTop: 12,
+                  padding: "10px 14px",
+                  background: "rgba(0, 229, 255, 0.04)",
+                  borderRadius: 8,
+                  border: "1px dashed rgba(0, 229, 255, 0.2)",
+                  fontSize: "0.78rem",
+                }}
+              >
+                <div style={{ fontWeight: 700, color: "#00e5ff", marginBottom: 6 }}>
+                  💱 Efecto Cambiario Aislado (USD→{portfolio.localCurrency || "COP"})
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
+                  <span style={{ color: "var(--text-muted)" }}>
+                    Si el dólar no hubiera movido, tu ganancia en COP sería:
+                  </span>
+                  <span
+                    className="mono"
+                    style={{
+                      fontWeight: 700,
+                      color: summary.assetGainInCop >= 0 ? "#4ade80" : "#f87171",
+                    }}
+                  >
+                    {summary.assetGainInCop >= 0 ? "+" : ""}
+                    {summary.assetGainInCop.toFixed(2)} ({summary.assetGainInCop >= 0 ? "+" : ""}
+                    {summary.assetGainInCopPct.toFixed(2)}%)
+                  </span>
+                  <span style={{ color: "var(--text-muted)" }}>+</span>
+                  <span style={{ color: "#00e5ff", fontWeight: 600 }}>Movimiento divisa:</span>
+                  <span
+                    className="mono"
+                    style={{
+                      fontWeight: 700,
+                      color: summary.totalFxEffect >= 0 ? "#4ade80" : "#f87171",
+                    }}
+                  >
+                    {summary.totalFxEffect >= 0 ? "+" : ""}
+                    {summary.totalFxEffect.toFixed(2)} ({summary.totalFxEffect >= 0 ? "+" : ""}
+                    {summary.totalFxEffectPct.toFixed(2)}%)
+                  </span>
+                  <span style={{ color: "var(--text-muted)" }}>= Ganancia total COP</span>
+                  <span
+                    className="mono"
+                    style={{
+                      fontWeight: 800,
+                      color: summary.netReturnFx >= 0 ? "#4ade80" : "#f87171",
+                    }}
+                  >
+                    {summary.netReturnFx >= 0 ? "+" : ""}
+                    {summary.netReturnFx.toFixed(2)} ({summary.netReturnFx >= 0 ? "+" : ""}
+                    {summary.netReturnPctFx.toFixed(2)}%)
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Explicit Deduction Equation Bar */}
             <div
