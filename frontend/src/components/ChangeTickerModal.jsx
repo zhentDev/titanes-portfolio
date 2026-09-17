@@ -124,7 +124,8 @@ export default function ChangeTickerModal({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: 16,
+        padding: "16px 12px",
+        overflow: "hidden",
       }}
       onClick={onClose}
     >
@@ -132,43 +133,45 @@ export default function ChangeTickerModal({
         className="card fade-up"
         style={{
           width: "100%",
-          maxWidth: 580,
-          maxHeight: "90vh",
+          maxWidth: 620,
+          maxHeight: "calc(100vh - 40px)",
           display: "flex",
           flexDirection: "column",
-          padding: 24,
+          padding: 0,
           background: "#0f172a",
           border: "1px solid rgba(255, 255, 255, 0.12)",
-          borderRadius: 12,
-          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.6)",
+          borderRadius: 14,
+          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.75)",
+          overflow: "hidden",
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Header */}
+        {/* Modal Header - Fixed at top */}
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: 16,
+            padding: "16px 20px 12px 20px",
             borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-            paddingBottom: 12,
+            background: "rgba(15, 23, 42, 0.95)",
+            flexShrink: 0,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: "1.3rem" }}>🔄</span>
+            <span style={{ fontSize: "1.2rem" }}>🔄</span>
             <div>
               <h3
                 style={{
                   margin: 0,
-                  fontSize: "1.15rem",
+                  fontSize: "1.1rem",
                   fontWeight: 700,
                   color: "#f8fafc",
                 }}
               >
                 Cambiar Acción o ETF
               </h3>
-              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
                 Reemplazar ticker conservando fechas, montos y compras
               </div>
             </div>
@@ -187,6 +190,18 @@ export default function ChangeTickerModal({
             ✕
           </button>
         </div>
+
+        {/* Scrollable Modal Body */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "16px 20px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
+          }}
+        >
 
         {/* Comparison Box */}
         <div
@@ -598,45 +613,56 @@ export default function ChangeTickerModal({
         {/* Warning / Details Notice */}
         <div
           style={{
-            fontSize: "0.75rem",
+            fontSize: "0.74rem",
             color: "#94a3b8",
             background: "rgba(234, 179, 8, 0.08)",
             border: "1px solid rgba(234, 179, 8, 0.2)",
             borderRadius: 6,
             padding: "8px 12px",
-            marginBottom: 16,
           }}
         >
           💡 <strong>Nota:</strong> Al confirmar, todos los <strong>{group.lots.length} lotes</strong> de compra mantendrán sus fechas, montos invertidos y número de acciones. El sistema consultará automáticamente el nuevo precio y horarios de mercado para {selectedAsset ? selectedAsset.ticker : "el nuevo activo"}.
         </div>
+      </div>
 
-        {/* Modal Actions */}
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={onClose}
-            disabled={isSubmitting}
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={handleSave}
-            disabled={!selectedAsset || isSubmitting}
-            style={{
-              background: selectedAsset ? "#00e5ff" : undefined,
-              color: selectedAsset ? "#0f172a" : undefined,
-              fontWeight: 700,
-            }}
-          >
-            {isSubmitting
-              ? "Actualizando..."
-              : `Confirmar cambio a ${selectedAsset ? selectedAsset.ticker : "..."}`}
-          </button>
-        </div>
+      {/* Modal Actions - Always visible sticky footer */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          alignItems: "center",
+          gap: 10,
+          padding: "12px 20px",
+          background: "rgba(15, 23, 42, 0.98)",
+          borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+          flexShrink: 0,
+        }}
+      >
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={onClose}
+          disabled={isSubmitting}
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={handleSave}
+          disabled={!selectedAsset || isSubmitting}
+          style={{
+            background: selectedAsset ? "#00e5ff" : undefined,
+            color: selectedAsset ? "#0f172a" : undefined,
+            fontWeight: 700,
+          }}
+        >
+          {isSubmitting
+            ? "Actualizando..."
+            : `Confirmar cambio a ${selectedAsset ? selectedAsset.ticker : "..."}`}
+        </button>
       </div>
     </div>
+  </div>
   );
 }

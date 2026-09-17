@@ -13,7 +13,7 @@ import {
 import { usePortfolioStore } from "../store/portfolioStore";
 import { analyzeInvestmentPlan } from "../utils/investmentPlanAnalyzer";
 import { toastConfirm, toastPrompt } from "../utils/toastAlerts";
-import { getBrokerEquivalenceInfo } from "../utils/marketHours";
+import { getBrokerEquivalenceInfo, MARKET_REGIONS, translateBrokerTicker } from "../utils/marketHours";
 import { MarketScheduleBadge } from "./Common";
 import ChangeTickerModal from "./ChangeTickerModal";
 import InflationExplorerModal from "./InflationExplorerModal";
@@ -175,6 +175,11 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
   const [searchError, setSearchError] = useState("");
   const [selectedMeta, setSelectedMeta] = useState(null);
   const [searchResults, setSearchResults] = useState([]);
+  const [searchRegion, setSearchRegion] = useState("ALL");
+
+  const purchaseTranslationInfo = useMemo(() => {
+    return translateBrokerTicker(ticker);
+  }, [ticker]);
 
   // Visibility state
   const [visibleSeries, setVisibleSeries] = useState({
@@ -2093,6 +2098,105 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                   </div>
                 )}
 
+                {/* Broker Suffix Auto-translation Suggestion in Purchase Form */}
+                {purchaseTranslationInfo.suggestions.length > 0 && (
+                  <div
+                    style={{
+                      marginTop: 8,
+                      padding: "6px 8px",
+                      background: "rgba(56, 189, 248, 0.08)",
+                      border: "1px solid rgba(56, 189, 248, 0.25)",
+                      borderRadius: 6,
+                      fontSize: "0.72rem",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      flexWrap: "wrap",
+                      gap: 6,
+                    }}
+                  >
+                    <span style={{ color: "#38bdf8" }}>💡 En Yahoo:</span>
+                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                      {purchaseTranslationInfo.suggestions.map((sug) => (
+                        <button
+                          key={sug.ticker}
+                          type="button"
+                          onClick={() => {
+                            setTicker(sug.ticker);
+                            searchTickersMultiple(sug.ticker)
+                              .then((res) => {
+                                if (res.results && res.results.length > 0) {
+                                  setSearchResults(res.results);
+                                }
+                              })
+                              .catch(() => {});
+                          }}
+                          style={{
+                            background: "rgba(56, 189, 248, 0.2)",
+                            border: "1px solid #38bdf8",
+                            color: "#f0f9ff",
+                            padding: "1px 6px",
+                            borderRadius: 4,
+                            fontSize: "0.7rem",
+                            cursor: "pointer",
+                            fontWeight: 600,
+                          }}
+                          title={sug.note}
+                        >
+                          {sug.ticker}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Market Location Filters */}
+                {searchResults.length > 0 && !selectedMeta && (
+                  <div style={{ marginTop: 10 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: 6,
+                      }}
+                    >
+                      <span style={{ fontSize: "0.72rem", color: "var(--text-secondary)", fontWeight: 600 }}>
+                        Filtrar por Mercado / Ubicación:
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                      {MARKET_REGIONS.map((reg) => {
+                        const isActive = searchRegion === reg.id;
+                        return (
+                          <button
+                            key={reg.id}
+                            type="button"
+                            onClick={() => setSearchRegion(reg.id)}
+                            title={reg.hint}
+                            style={{
+                              background: isActive ? "rgba(0, 229, 255, 0.2)" : "rgba(255, 255, 255, 0.04)",
+                              border: isActive ? "1px solid #00e5ff" : "1px solid rgba(255, 255, 255, 0.08)",
+                              color: isActive ? "#00e5ff" : "var(--text-secondary)",
+                              padding: "2px 7px",
+                              borderRadius: "12px",
+                              fontSize: "0.68rem",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 3,
+                              fontWeight: isActive ? 600 : 400,
+                              transition: "all 0.15s ease",
+                            }}
+                          >
+                            <span>{reg.icon}</span> {reg.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {searchResults.length > 0 && !selectedMeta && (
                   <div
                     style={{
@@ -2104,7 +2208,31 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                       overflowY: "auto",
                     }}
                   >
-                    {searchResults.map((r, idx) => (
+                    {(() => {
+                      const filteredResults = searchResults.filter((r) => {
+                        if (searchRegion === "ALL") return true;
+                        const eq = getBrokerEquivalenceInfo(r.ticker, r.exchange);
+                        return eq.region === searchRegion;
+                      });
+
+                      if (filteredResults.length === 0) {
+                        return (
+                          <div style={{ textAlign: "center", padding: 16, color: "var(--text-muted)", fontSize: "0.75rem" }}>
+                            No hay resultados bajo el filtro seleccionado.
+                            <br />
+                            <button
+                              type="button"
+                              className="btn btn-xs btn-ghost"
+                              style={{ marginTop: 6, color: "#00e5ff" }}
+                              onClick={() => setSearchRegion("ALL")}
+                            >
+                              Ver todos ({searchResults.length})
+                            </button>
+                          </div>
+                        );
+                      }
+
+                      return filteredResults.map((r, idx) => (
                       <div
                         key={idx}
                         onClick={() => {
@@ -2237,9 +2365,10 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                           );
                         })()}
                       </div>
-                    ))}
-                  </div>
-                )}
+                    ));
+                  })()}
+                </div>
+              )}
 
                 {selectedMeta && (
                   <div
