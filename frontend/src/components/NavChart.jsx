@@ -4,6 +4,8 @@ import { fetchLiveQuotes, fetchNAV } from "../api/client";
 import { usePortfolioStore } from "../store/portfolioStore";
 import { SYNTHETIC_RETURNS } from "./StrategyChart";
 import { InfoTooltip } from "./Common";
+import { useTheme } from "../context/ThemeContext";
+import { getChartColors, applyChartTheme } from "../utils/chartTheme";
 
 const COLORS = {
   nav: "#00e5ff",
@@ -38,6 +40,8 @@ export default function NavChart({
   const [manualScaleMode, setManualScaleMode] = useState(null); // null = auto, 'log' = force log, 'normal' = force normal
 
   const { visibleSeries, toggleSeries, customStrategies, strategyRebalances } = usePortfolioStore();
+  const { theme } = useTheme();
+  const chartColors = getChartColors(theme);
 
   const baseActive = navData?.[0]?.value ?? investment;
 
@@ -161,19 +165,19 @@ export default function NavChart({
       leftPriceScale: {
         visible: hasVisibleStrategies,
         mode: mode,
-        borderColor: "rgba(255,255,255,0.08)",
-        textColor: "#10b981",
+        borderColor: chartColors.borderColor,
+        textColor: chartColors.leftScaleText,
         autoScale: true,
       },
       rightPriceScale: {
         visible: true,
         mode: mode,
-        borderColor: "rgba(255,255,255,0.08)",
-        textColor: "#00e5ff",
+        borderColor: chartColors.borderColor,
+        textColor: chartColors.rightScaleText,
         autoScale: true,
       },
     });
-  }, [isLogActive, customStrategies, visibleSeries]);
+  }, [isLogActive, customStrategies, visibleSeries, chartColors]);
 
   const initChart = useCallback(() => {
     if (!containerRef.current) return;
@@ -187,17 +191,17 @@ export default function NavChart({
     chartRef.current = createChart(containerRef.current, {
       layout: {
         background: { type: ColorType.Solid, color: "transparent" },
-        textColor: "#94a3b8",
+        textColor: chartColors.textColor,
         fontFamily: "'JetBrains Mono', monospace",
         fontSize: 11,
       },
       grid: {
-        vertLines: { color: "rgba(255,255,255,0.04)" },
-        horzLines: { color: "rgba(255,255,255,0.04)" },
+        vertLines: { color: chartColors.gridColor },
+        horzLines: { color: chartColors.gridColor },
       },
       crosshair: {
-        vertLine: { color: "rgba(0,229,255,0.4)", width: 1, style: LineStyle.Dashed },
-        horzLine: { color: "rgba(0,229,255,0.4)", width: 1, style: LineStyle.Dashed },
+        vertLine: { color: chartColors.crosshairColor, width: 1, style: LineStyle.Dashed },
+        horzLine: { color: chartColors.crosshairColor, width: 1, style: LineStyle.Dashed },
       },
       localization: {
         locale: "es-CO",
@@ -217,19 +221,19 @@ export default function NavChart({
       leftPriceScale: {
         visible: hasVisibleStrategies,
         mode: initialMode,
-        borderColor: "rgba(255,255,255,0.08)",
-        textColor: "#10b981",
+        borderColor: chartColors.borderColor,
+        textColor: chartColors.leftScaleText,
         autoScale: true,
       },
       rightPriceScale: {
         visible: true,
         mode: initialMode,
-        borderColor: "rgba(255,255,255,0.08)",
-        textColor: "#00e5ff",
+        borderColor: chartColors.borderColor,
+        textColor: chartColors.rightScaleText,
         autoScale: true,
       },
       timeScale: {
-        borderColor: "rgba(255,255,255,0.08)",
+        borderColor: chartColors.borderColor,
         barSpacing: 8,
         fixLeftEdge: true,
         fixRightEdge: true,
@@ -354,7 +358,7 @@ export default function NavChart({
     ro.observe(containerRef.current);
 
     return () => ro.disconnect();
-  }, [isLiveMode, customStrategies]);
+  }, [isLiveMode, customStrategies, chartColors]);
 
   // Init chart once on component mount
   useEffect(() => {
@@ -366,6 +370,13 @@ export default function NavChart({
       seriesRef.current = {};
     };
   }, [initChart]);
+
+  // Apply theme updates to an already-mounted chart instance
+  useEffect(() => {
+    if (chartRef.current) {
+      applyChartTheme(chartRef.current, theme);
+    }
+  }, [theme]);
 
   // Helper to convert array to Lightweight Charts format
   const toSeries = (arr) =>

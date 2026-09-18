@@ -58,47 +58,49 @@
 /* ── Tokens: Modo Diurno (Light Mode) ───────────────── */
 [data-theme="light"] {
   /* Background layers */
-  --bg-base: #f8fafc;
+  --bg-base: #f0f4f8;
   --bg-surface: #ffffff;
   --bg-card: #ffffff;
   --bg-card-hover: #f1f5f9;
-  --bg-overlay: rgba(255, 255, 255, 0.92);
+  --bg-overlay: rgba(255, 255, 255, 0.94);
 
   /* Portfolio accent */
   --accent-primary: #0284c7;
   --accent-primary-d: #0369a1;
-  --accent-glow: rgba(2, 132, 199, 0.15);
+  --accent-glow: rgba(2, 132, 199, 0.12);
 
   /* Benchmark colors */
-  --sp500-color: #d97706;
-  --nasdaq-color: #9333ea;
+  --sp500-color: #b45309;
+  --nasdaq-color: #7c3aed;
 
   /* Semantic */
   --gain: #059669;
   --loss: #dc2626;
-  --gain-bg: rgba(5, 150, 105, 0.1);
-  --loss-bg: rgba(220, 38, 38, 0.1);
+  --gain-bg: rgba(5, 150, 105, 0.10);
+  --loss-bg: rgba(220, 38, 38, 0.10);
   --neutral: #64748b;
 
   /* Text */
   --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #94a3b8;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
   --text-accent: #0284c7;
 
   /* Borders */
-  --border: rgba(0, 0, 0, 0.08);
+  --border: rgba(0, 0, 0, 0.10);
   --border-accent: rgba(2, 132, 199, 0.35);
 
   /* Shadows */
-  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.06);
-  --shadow-glow: 0 0 30px rgba(2, 132, 199, 0.08);
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.08);
+  --shadow-glow: 0 0 20px rgba(2, 132, 199, 0.08);
 }
 
 [data-theme="light"] body::before {
-  background-image: linear-gradient(rgba(2, 132, 199, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(2, 132, 199, 0.03) 1px, transparent 1px);
+  background-image: linear-gradient(rgba(2, 132, 199, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(2, 132, 199, 0.025) 1px, transparent 1px);
 }
+
+/* ── Light Mode: Element Overrides ─────────────────── */
 
 [data-theme="light"] input,
 [data-theme="light"] select,
@@ -108,9 +110,174 @@
   border-color: rgba(0, 0, 0, 0.15) !important;
 }
 
-[data-theme="light"] input::placeholder {
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder {
   color: #94a3b8 !important;
 }
+
+[data-theme="light"] input:focus,
+[data-theme="light"] select:focus,
+[data-theme="light"] textarea:focus {
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+  border-color: #0284c7 !important;
+}
+
+/* Cards in light mode */
+[data-theme="light"] .card:hover {
+  border-color: rgba(2, 132, 199, 0.18);
+  box-shadow: var(--shadow-card);
+}
+
+/* Button overrides */
+[data-theme="light"] .btn-primary {
+  background: #0284c7;
+  color: #ffffff;
+}
+[data-theme="light"] .btn-primary:hover {
+  background: #0369a1;
+  box-shadow: 0 0 16px rgba(2, 132, 199, 0.25);
+}
+[data-theme="light"] .btn-ghost {
+  background: transparent;
+  color: #334155;
+  border-color: rgba(0, 0, 0, 0.12);
+}
+[data-theme="light"] .btn-ghost:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: rgba(2, 132, 199, 0.3);
+}
+
+/* Mode Toggle (dark/light pill selectors) */
+[data-theme="light"] .mode-toggle {
+  background: #e2e8f0;
+  border-color: rgba(0, 0, 0, 0.10);
+}
+[data-theme="light"] .mode-toggle button {
+  color: #475569;
+}
+[data-theme="light"] .mode-toggle button.active {
+  background: #0284c7;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(2, 132, 199, 0.25);
+}
+
+/* Period selector */
+[data-theme="light"] .period-selector {
+  background: #e2e8f0;
+  border-color: rgba(0, 0, 0, 0.10);
+}
+[data-theme="light"] .period-btn {
+  color: #64748b;
+}
+[data-theme="light"] .period-btn.active {
+  background: #ffffff;
+  color: #0284c7;
+}
+[data-theme="light"] .period-btn:hover:not(.active) {
+  color: #334155;
+}
+
+/* Badges */
+[data-theme="light"] .badge.gain {
+  background: rgba(5, 150, 105, 0.12);
+  color: #059669;
+}
+[data-theme="light"] .badge.loss {
+  background: rgba(220, 38, 38, 0.10);
+  color: #dc2626;
+}
+
+/* Scrollbar */
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* Nav pills / dropdown buttons (common inline-styled in App.jsx) */
+[data-theme="light"] .nav-pill-btn,
+[data-theme="light"] .nav-dropdown-btn,
+[data-theme="light"] .nav-action-btn {
+  color: #334155;
+  background: rgba(0, 0, 0, 0.04);
+}
+[data-theme="light"] .nav-pill-btn:hover,
+[data-theme="light"] .nav-dropdown-btn:hover,
+[data-theme="light"] .nav-action-btn:hover {
+  background: rgba(2, 132, 199, 0.08);
+  color: #0284c7;
+}
+
+/* Tables */
+[data-theme="light"] table,
+[data-theme="light"] th,
+[data-theme="light"] td {
+  color: #0f172a;
+  border-color: rgba(0, 0, 0, 0.07);
+}
+[data-theme="light"] tr:hover td {
+  background: rgba(2, 132, 199, 0.04);
+}
+
+/* Spinner (uses accent color automatically via --accent-primary var) */
+[data-theme="light"] .spinner {
+  border-color: rgba(0, 0, 0, 0.10);
+  border-top-color: #0284c7;
+}
+
+/* Market dot */
+[data-theme="light"] .market-dot.open {
+  box-shadow: 0 0 6px #059669;
+}
+
+/* ── Light Mode: Fixed Income & Deep Component Overrides ── */
+
+/* Entity cards in FixedIncomeHub use rgba(15,23,42,.65) inline backgrounds — 
+   Override via color-scheme aware CSS properties */
+[data-theme="light"] [style*="rgba(15, 23, 42"] {
+  background-color: rgba(248, 250, 252, 0.95) !important;
+  color: #0f172a !important;
+}
+[data-theme="light"] [style*="rgba(0, 0, 0, 0."] {
+  background-color: rgba(241, 245, 249, 0.80) !important;
+}
+
+/* General: any inline dark backgrounds → light in light mode */
+[data-theme="light"] [style*="#080c18"],
+[data-theme="light"] [style*="#0d1226"],
+[data-theme="light"] [style*="#111829"],
+[data-theme="light"] [style*="#0f172a"] {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* Any inline white/light text on dark backgrounds → dark text in light mode */
+[data-theme="light"] [style*="color: \"#f1f5f9\""],
+[data-theme="light"] [style*="color: \"#e2e8f0\""],
+[data-theme="light"] [style*="color: #f1f5f9"],
+[data-theme="light"] [style*="color: #e2e8f0"],
+[data-theme="light"] [style*="color: #f8fafc"] {
+  color: #0f172a !important;
+}
+
+/* Muted secondary text */
+[data-theme="light"] [style*="color: #94a3b8"],
+[data-theme="light"] [style*="color: \"#94a3b8\""] {
+  color: #475569 !important;
+}
+
+/* Table rows with dark border in light mode */
+[data-theme="light"] [style*="borderBottom: \"1px solid rgba(255, 255, 255"] {
+  border-bottom-color: rgba(0, 0, 0, 0.07) !important;
+}
+
+/* Modal/overlay backgrounds */
+[data-theme="light"] [style*="background: \"rgba(0, 0, 0, 0."] {
+  background: rgba(0, 0, 0, 0.3) !important;
+}
+
 
 /* ── Reset & Base ──────────────────────────────────── */
 *,

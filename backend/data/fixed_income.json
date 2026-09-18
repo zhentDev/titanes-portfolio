@@ -167,7 +167,7 @@
       "name": "Impresora",
       "type": "pocket",
       "currency": "COP",
-      "balance": 36435.0,
+      "balance": 236483.88222876663,
       "interestRateEA": 9.0,
       "isTaxExemptGMF": true,
       "rateHistory": [
@@ -177,6 +177,23 @@
         }
       ],
       "createdAt": "2026-09-17T03:47:35.068Z"
+    },
+    {
+      "id": "acc_1789760692910",
+      "entityId": "ent_1789616750396",
+      "name": "Fondo de emergencia",
+      "type": "pocket",
+      "currency": "COP",
+      "balance": 800000,
+      "interestRateEA": 9,
+      "isTaxExemptGMF": true,
+      "rateHistory": [
+        {
+          "date": "2026-09-18",
+          "rateEA": 9
+        }
+      ],
+      "createdAt": "2026-09-18T19:44:52.910Z"
     }
   ],
   "cdts": [
@@ -445,6 +462,26 @@
     }
   ],
   "transactions": [
+    {
+      "id": "tx_1789760705657_b2g14e",
+      "accountId": "acc_1789760692910",
+      "date": "2026-09-18",
+      "description": "Aporte a Fondo de emergencia",
+      "amount": 800000,
+      "currency": "COP",
+      "type": "credit",
+      "createdAt": "2026-09-18T19:45:05.657Z"
+    },
+    {
+      "id": "tx_1789760191621_3jujqx",
+      "accountId": "acc_1789616855068",
+      "date": "2026-09-18",
+      "description": "Pago Paula",
+      "amount": 236436,
+      "currency": "COP",
+      "type": "credit",
+      "createdAt": "2026-09-18T19:36:31.621Z"
+    },
     {
       "id": "tx_1789616115479_z45hni",
       "accountId": "acc_viaje",

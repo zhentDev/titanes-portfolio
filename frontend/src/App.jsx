@@ -23,6 +23,7 @@ import { useAuthStore } from "./store/authStore";
 import { usePortfolioStore } from "./store/portfolioStore";
 import { exportPortfolioCSV } from "./utils/exportReport";
 import { toastPrompt } from "./utils/toastAlerts";
+import { useTheme } from "./context/ThemeContext";
 import "./App.css";
 
 const PERIODS = ["1W", "1M", "3M", "6M", "1Y", "3Y", "5Y", "MAX"];
@@ -68,19 +69,8 @@ export default function App() {
   const [showBreakdownCard, setShowBreakdownCard] = useState(false);
   const [showQuantIntelligence, setShowQuantIntelligence] = useState(false);
 
-  // Theme state (dark / light)
-  const [theme, setTheme] = useState(() => {
-    return (typeof window !== "undefined" && localStorage.getItem("titanes_theme")) || "dark";
-  });
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("titanes_theme", theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
-  };
+  // Theme — managed globally by ThemeProvider in main.jsx
+  const { theme, toggleTheme } = useTheme();
 
   // Auth state & User Dropdown
   const { user, openAuthModal, logout, fetchMe } = useAuthStore();

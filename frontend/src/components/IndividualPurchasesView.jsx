@@ -1,4 +1,6 @@
 import { ColorType, LineStyle, createChart } from "lightweight-charts";
+import { useTheme } from "../context/ThemeContext";
+import { getChartColors, applyChartTheme } from "../utils/chartTheme";
 import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import {
@@ -35,6 +37,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
     togglePortfolioPlan,
     updatePortfolioSettings,
   } = usePortfolioStore();
+
+  const { theme } = useTheme();
+  const chartColors = getChartColors(theme);
 
   const status = batchUpdateStatus?.[portfolioId] || {};
   const isBatchUpdating = status.isUpdating || false;

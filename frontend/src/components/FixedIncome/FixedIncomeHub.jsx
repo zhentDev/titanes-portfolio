@@ -678,38 +678,7 @@ export default function FixedIncomeHub() {
 
   const currSymbol = preferredCurrency === "COP" ? "COP $" : "USD $";
 
-  // ── Smart Dynamic Layout for Entities (Dominant Master + Stack) ─────────
-  const { isDominantLayout, dominantEntity, stackedEntities } = useMemo(() => {
-    if (activeEntities.length <= 2) {
-      return { isDominantLayout: false, dominantEntity: null, stackedEntities: [] };
-    }
 
-    const scores = activeEntities.map((ent) => {
-      const entAccounts = accounts.filter((a) => a.entityId === ent.id);
-      const entCDTs = cdts.filter((c) => c.entityId === ent.id);
-      const activeCDTs = entCDTs.filter((c) => c.status !== "matured");
-      const maturedCDTs = entCDTs.filter((c) => c.status === "matured");
-      const score = entAccounts.length * 4 + activeCDTs.length * 3 + maturedCDTs.length * 1.5;
-      return { ent, score };
-    });
-
-    scores.sort((a, b) => b.score - a.score);
-    const highest = scores[0];
-    const secondHighest = scores[1];
-
-    // Trigger dominant master layout when highest entity has score >= 8 and is at least 1.7x the second
-    const isDominant = highest && secondHighest && highest.score >= 8 && highest.score >= secondHighest.score * 1.7;
-
-    if (isDominant) {
-      return {
-        isDominantLayout: true,
-        dominantEntity: highest.ent,
-        stackedEntities: scores.slice(1).map((s) => s.ent),
-      };
-    }
-
-    return { isDominantLayout: false, dominantEntity: null, stackedEntities: [] };
-  }, [activeEntities, accounts, cdts]);
 
   return (
     <div className="fade-up" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -1538,11 +1507,11 @@ export default function FixedIncomeHub() {
             <div
               key={entity.id}
               style={{
-                background: "rgba(15, 23, 42, 0.65)",
+                background: "var(--bg-card)",
                 borderRadius: 14,
                 border: `1px solid ${entity.color}33`,
                 overflow: "hidden",
-                boxShadow: "0 4px 20px rgba(0, 0, 0, 0.25)",
+                boxShadow: "var(--shadow-card)",
               }}
             >
               {/* Entity Card Header */}
@@ -3015,40 +2984,17 @@ export default function FixedIncomeHub() {
           );
         };
 
-        if (isDominantLayout) {
-          return (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 480px), 1fr))",
-                gap: 20,
-                alignItems: "start",
-              }}
-            >
-              {/* Left Column: Dominant Entity (e.g. Nu Colombia) */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                {renderEntityCard(dominantEntity)}
-              </div>
-
-              {/* Right Column: Continuous Vertical Stack (Finandina, MejorCDT, Plenti) */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                {stackedEntities.map((ent) => renderEntityCard(ent))}
-              </div>
-            </div>
-          );
-        }
-
-        return (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 480px), 1fr))",
-              gap: 20,
-            }}
-          >
-            {activeEntities.map((entity) => renderEntityCard(entity))}
-          </div>
-        );
+        {/* ── Dynamic Masonry Grid: cards flow automatically by content height ── */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 460px), 1fr))",
+            gap: 20,
+            alignItems: "start",
+          }}
+        >
+          {activeEntities.map((entity) => renderEntityCard(entity))}
+        </div>
       })()}
           </>
         )}

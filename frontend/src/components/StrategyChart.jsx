@@ -1,6 +1,8 @@
 import { ColorType, LineStyle, createChart } from "lightweight-charts";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePortfolioStore } from "../store/portfolioStore";
+import { useTheme } from "../context/ThemeContext";
+import { getChartColors, applyChartTheme } from "../utils/chartTheme";
 
 const COLORS = {
   sp500: "#f59e0b",
@@ -291,6 +293,9 @@ export default function StrategyChart({
   const seriesRef = useRef({});
   const [hoverValues, setHoverValues] = useState(null);
 
+  const { theme } = useTheme();
+  const chartColors = getChartColors(theme);
+
   const { period: storePeriod } = usePortfolioStore();
   const period = periodProp ?? storePeriod;
 
@@ -333,23 +338,23 @@ export default function StrategyChart({
     chartRef.current = createChart(containerRef.current, {
       layout: {
         background: { type: ColorType.Solid, color: "transparent" },
-        textColor: "#64748b",
+        textColor: chartColors.textColor,
         fontFamily: "'Inter', -apple-system, sans-serif",
       },
       grid: {
-        vertLines: { color: "rgba(255, 255, 255, 0.03)" },
-        horzLines: { color: "rgba(255, 255, 255, 0.03)" },
+        vertLines: { color: chartColors.gridColor },
+        horzLines: { color: chartColors.gridColor },
       },
       crosshair: {
-        vertLine: { color: "rgba(255, 255, 255, 0.2)", width: 1, style: LineStyle.Dashed },
-        horzLine: { color: "rgba(255, 255, 255, 0.2)", width: 1, style: LineStyle.Dashed },
+        vertLine: { color: chartColors.crosshairColor, width: 1, style: LineStyle.Dashed },
+        horzLine: { color: chartColors.crosshairColor, width: 1, style: LineStyle.Dashed },
       },
       rightPriceScale: {
-        borderColor: "rgba(255, 255, 255, 0.06)",
+        borderColor: chartColors.borderColor,
         scaleMargins: { top: 0.1, bottom: 0.1 },
       },
       timeScale: {
-        borderColor: "rgba(255, 255, 255, 0.06)",
+        borderColor: chartColors.borderColor,
         timeVisible: false,
       },
       handleScroll: true,
@@ -421,7 +426,7 @@ export default function StrategyChart({
     return () => {
       window.removeEventListener("resize", handleResize);
     };
-  }, [strategy?.color, strategy?.benchmark, strategy?.name]);
+  }, [strategy?.color, strategy?.benchmark, strategy?.name, theme, chartColors]);
 
   useEffect(() => {
     const cleanup = initChart();
@@ -431,6 +436,13 @@ export default function StrategyChart({
       chartRef.current = null;
     };
   }, [initChart]);
+
+  // Apply theme changes to existing chart instance without full re-creation
+  useEffect(() => {
+    if (chartRef.current) {
+      applyChartTheme(chartRef.current, theme);
+    }
+  }, [theme]);
 
   useEffect(() => {
     if (!chartRef.current || !chartData) return;

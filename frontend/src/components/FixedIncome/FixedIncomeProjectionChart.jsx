@@ -1,10 +1,15 @@
 import { ColorType, LineStyle, PriceScaleMode, createChart } from "lightweight-charts";
 import { memo, useEffect, useRef, useState } from "react";
+import { useTheme } from "../../context/ThemeContext";
+import { getChartColors, applyChartTheme } from "../../utils/chartTheme";
 
 function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "NOMINAL" }) {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
   const seriesRef = useRef({});
+
+  const { theme } = useTheme();
+  const chartColors = getChartColors(theme);
 
   // Individual series visibility state
   const [visibleSeries, setVisibleSeries] = useState({
@@ -65,33 +70,33 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
     chartRef.current = createChart(containerRef.current, {
       layout: {
         background: { type: ColorType.Solid, color: "transparent" },
-        textColor: "#94a3b8",
+        textColor: chartColors.textColor,
         fontFamily: "'JetBrains Mono', monospace",
         fontSize: 11,
       },
       grid: {
-        vertLines: { color: "rgba(255,255,255,0.04)" },
-        horzLines: { color: "rgba(255,255,255,0.04)" },
+        vertLines: { color: chartColors.gridColor },
+        horzLines: { color: chartColors.gridColor },
       },
       crosshair: {
-        vertLine: { color: "rgba(16,185,129,0.4)", width: 1, style: LineStyle.Dashed },
-        horzLine: { color: "rgba(16,185,129,0.4)", width: 1, style: LineStyle.Dashed },
+        vertLine: { color: chartColors.crosshairColor, width: 1, style: LineStyle.Dashed },
+        horzLine: { color: chartColors.crosshairColor, width: 1, style: LineStyle.Dashed },
       },
       leftPriceScale: {
         visible: true,
-        borderColor: "rgba(255,255,255,0.08)",
-        textColor: "#c084fc",
+        borderColor: chartColors.borderColor,
+        textColor: chartColors.purpleScaleText,
         autoScale: true,
       },
       rightPriceScale: {
         visible: true,
-        borderColor: "rgba(255,255,255,0.08)",
-        textColor: "#10b981",
+        borderColor: chartColors.borderColor,
+        textColor: chartColors.leftScaleText,
         autoScale: true,
         mode: isLogScale ? PriceScaleMode.Logarithmic : PriceScaleMode.Normal,
       },
       timeScale: {
-        borderColor: "rgba(255,255,255,0.08)",
+        borderColor: chartColors.borderColor,
         barSpacing: 10,
         fixLeftEdge: true,
         fixRightEdge: true,
@@ -198,7 +203,14 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
       ro.disconnect();
       chart.remove();
     };
-  }, []);
+  }, [theme]);
+
+  // Apply theme changes to existing chart instance without full re-creation
+  useEffect(() => {
+    if (chartRef.current) {
+      applyChartTheme(chartRef.current, theme);
+    }
+  }, [theme]);
 
   // Update Logarithmic / Normal Mode
   useEffect(() => {
