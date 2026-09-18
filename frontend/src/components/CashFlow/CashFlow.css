@@ -880,3 +880,23 @@
   color: #475569;
 }
 
+[data-theme="light"] .cashflow-rule-tabs {
+  background: #f1f5f9;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .cashflow-rule-tab-btn {
+  color: #64748b;
+}
+
+[data-theme="light"] .cashflow-rule-tab-btn:hover {
+  color: #0f172a;
+}
+
+[data-theme="light"] .cashflow-rule-tab-btn.active {
+  background: #ffffff;
+  color: #0284c7;
+  border: 1px solid rgba(2, 132, 199, 0.35);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+

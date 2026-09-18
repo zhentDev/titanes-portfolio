@@ -1035,10 +1035,10 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
             <div
               style={{
                 display: "flex",
-                background: "rgba(0,0,0,0.3)",
+                background: theme === "light" ? "#f1f5f9" : "rgba(0,0,0,0.3)",
                 borderRadius: 20,
                 padding: 4,
-                border: "1px solid rgba(255,255,255,0.1)",
+                border: theme === "light" ? "1px solid rgba(0,0,0,0.08)" : "1px solid rgba(255,255,255,0.1)",
               }}
             >
               <button
@@ -1047,8 +1047,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                   padding: "6px 16px",
                   borderRadius: 16,
                   border: "none",
-                  background: yieldViewMode === "USD" ? "rgba(255,255,255,0.1)" : "transparent",
-                  color: yieldViewMode === "USD" ? "#fff" : "var(--text-muted)",
+                  background: yieldViewMode === "USD" ? (theme === "light" ? "#ffffff" : "rgba(255,255,255,0.1)") : "transparent",
+                  color: yieldViewMode === "USD" ? (theme === "light" ? "#0284c7" : "#fff") : (theme === "light" ? "#64748b" : "var(--text-muted)"),
+                  boxShadow: yieldViewMode === "USD" && theme === "light" ? "0 2px 6px rgba(0,0,0,0.08)" : "none",
                   fontSize: "0.8rem",
                   fontWeight: yieldViewMode === "USD" ? 700 : 400,
                   cursor: "pointer",
@@ -1074,8 +1075,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                   padding: "6px 16px",
                   borderRadius: 16,
                   border: "none",
-                  background: yieldViewMode === "FX" ? "rgba(0, 229, 255, 0.15)" : "transparent",
-                  color: yieldViewMode === "FX" ? "#00e5ff" : "var(--text-muted)",
+                  background: yieldViewMode === "FX" ? (theme === "light" ? "#ffffff" : "rgba(0, 229, 255, 0.15)") : "transparent",
+                  color: yieldViewMode === "FX" ? (theme === "light" ? "#0284c7" : "#00e5ff") : (theme === "light" ? "#64748b" : "var(--text-muted)"),
+                  boxShadow: yieldViewMode === "FX" && theme === "light" ? "0 2px 6px rgba(0,0,0,0.08)" : "none",
                   fontSize: "0.8rem",
                   fontWeight: yieldViewMode === "FX" ? 700 : 400,
                   cursor: "pointer",
@@ -1097,8 +1099,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                   padding: "6px 16px",
                   borderRadius: 16,
                   border: "none",
-                  background: yieldViewMode === "REAL" ? "rgba(245, 158, 11, 0.15)" : "transparent",
-                  color: yieldViewMode === "REAL" ? "#f59e0b" : "var(--text-muted)",
+                  background: yieldViewMode === "REAL" ? (theme === "light" ? "#ffffff" : "rgba(245, 158, 11, 0.15)") : "transparent",
+                  color: yieldViewMode === "REAL" ? (theme === "light" ? "#d97706" : "#f59e0b") : (theme === "light" ? "#64748b" : "var(--text-muted)"),
+                  boxShadow: yieldViewMode === "REAL" && theme === "light" ? "0 2px 6px rgba(0,0,0,0.08)" : "none",
                   fontSize: "0.8rem",
                   fontWeight: yieldViewMode === "REAL" ? 700 : 400,
                   cursor: "pointer",
@@ -1120,7 +1123,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
             <div
               style={{
                 padding: 16,
-                background: "rgba(255,255,255,0.02)",
+                background: theme === "light" ? "var(--bg-card)" : "rgba(255,255,255,0.02)",
                 borderRadius: "var(--radius)",
                 border: "1px solid var(--border)",
               }}
@@ -1134,7 +1137,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
               </div>
               <div
                 className="mono"
-                style={{ fontSize: "1.4rem", fontWeight: 800, color: "#f1f5f9" }}
+                style={{ fontSize: "1.4rem", fontWeight: 800, color: "var(--text-primary)" }}
               >
                 $
                 {yieldViewMode === "USD"
@@ -1145,7 +1148,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
             <div
               style={{
                 padding: 16,
-                background: "rgba(255,255,255,0.02)",
+                background: theme === "light" ? "var(--bg-card)" : "rgba(255,255,255,0.02)",
                 borderRadius: "var(--radius)",
                 border: "1px solid var(--border)",
               }}
@@ -1158,7 +1161,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                 style={{
                   fontSize: "1.4rem",
                   fontWeight: 800,
-                  color: yieldViewMode === "REAL" ? "#f59e0b" : "#00e5ff",
+                  color: yieldViewMode === "REAL"
+                    ? (theme === "light" ? "#d97706" : "#f59e0b")
+                    : (theme === "light" ? "#0284c7" : "#00e5ff"),
                 }}
               >
                 $
@@ -1183,9 +1188,15 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                     ? summary.netReturnPctFx
                     : summary.netReturnPctReal;
               const isPositive = netReturn >= 0;
-              const color = isPositive ? "#4ade80" : "#f87171";
-              const bgColor = isPositive ? "rgba(34, 197, 94, 0.05)" : "rgba(239, 68, 68, 0.05)";
-              const borderColor = isPositive ? "rgba(34, 197, 94, 0.2)" : "rgba(239, 68, 68, 0.2)";
+              const color = isPositive
+                ? (theme === "light" ? "#16a34a" : "#4ade80")
+                : (theme === "light" ? "#dc2626" : "#f87171");
+              const bgColor = isPositive
+                ? (theme === "light" ? "rgba(22, 163, 74, 0.08)" : "rgba(34, 197, 94, 0.05)")
+                : (theme === "light" ? "rgba(220, 38, 38, 0.08)" : "rgba(239, 68, 68, 0.05)");
+              const borderColor = isPositive
+                ? (theme === "light" ? "rgba(22, 163, 74, 0.25)" : "rgba(34, 197, 94, 0.2)")
+                : (theme === "light" ? "rgba(220, 38, 38, 0.25)" : "rgba(239, 68, 68, 0.2)");
 
               return (
                 <div
@@ -2105,7 +2116,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                     borderRadius: "4px",
                     border: "1px solid var(--border)",
                     background: "var(--bg-card)",
-                    color: "#fff",
+                    color: "var(--text-primary)",
                   }}
                 />
               </div>
@@ -2133,7 +2144,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                     borderRadius: "4px",
                     border: "1px solid var(--border)",
                     background: "var(--bg-card)",
-                    color: "#fff",
+                    color: "var(--text-primary)",
                   }}
                 />
               </div>
@@ -2228,7 +2239,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                       borderRadius: "4px",
                       border: "1px solid var(--border)",
                       background: "var(--bg-surface)",
-                      color: "#fff",
+                      color: "var(--text-primary)",
                       fontSize: "0.8rem",
                       textTransform: "uppercase",
                     }}
@@ -2551,7 +2562,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                           style={{
                             fontSize: "0.95rem",
                             fontWeight: 500,
-                            color: "#fff",
+                            color: "var(--text-primary)",
                             marginTop: "2px",
                           }}
                         >
@@ -2559,7 +2570,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                         </div>
                       </div>
                       <div style={{ textAlign: "right" }}>
-                        <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "#fff" }}>
+                        <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--text-primary)" }}>
                           ${selectedMeta.price}
                         </div>
                       </div>
@@ -2676,7 +2687,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                     borderRadius: "4px",
                     border: "1px solid var(--border)",
                     background: "var(--bg-surface)",
-                    color: "#fff",
+                    color: "var(--text-primary)",
                     fontSize: "0.8rem",
                   }}
                 />
@@ -2689,7 +2700,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                 <div
                   style={{
                     padding: "0.75rem",
-                    background: "rgba(255,255,255,0.05)",
+                    background: "var(--bg-surface)",
+                    border: "1px solid var(--border)",
+                    color: "var(--text-primary)",
                     borderRadius: "var(--radius)",
                     fontSize: "1.1rem",
                     fontWeight: 600,
@@ -2775,7 +2788,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
           {/* PURCHASES LIST */}
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700 }}>
+              <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "var(--text-primary)" }}>
                 Tus Lotes Agrupados
               </h3>
               {lotDataList.length > 0 && (
@@ -2783,9 +2796,13 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                   <button
                     className="btn btn-sm"
                     style={{
-                      background: isBatchUpdating ? "var(--bg-surface)" : "rgba(0, 229, 255, 0.1)",
-                      color: "#00e5ff",
-                      border: "1px solid rgba(0, 229, 255, 0.2)",
+                      background: isBatchUpdating
+                        ? "var(--bg-surface)"
+                        : theme === "light"
+                          ? "rgba(2, 132, 199, 0.1)"
+                          : "rgba(0, 229, 255, 0.1)",
+                      color: theme === "light" ? "#0284c7" : "#00e5ff",
+                      border: theme === "light" ? "1px solid rgba(2, 132, 199, 0.3)" : "1px solid rgba(0, 229, 255, 0.2)",
                     }}
                     onClick={handleBatchRecalculate}
                     disabled={isBatchUpdating}
@@ -2840,8 +2857,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                         className="card"
                         style={{
                           padding: "16px",
-                          background: "rgba(255,255,255,0.03)",
+                          background: theme === "light" ? "var(--bg-card)" : "rgba(255,255,255,0.03)",
                           borderRadius: "var(--radius)",
+                          border: "1px solid var(--border)",
                           borderLeft: `4px solid ${group.isPositive ? "#22c55e" : "#ef4444"}`,
                           display: "flex",
                           justifyContent: "space-between",
@@ -2851,10 +2869,12 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                         }}
                         onClick={() => toggleExpand(group.ticker)}
                         onMouseEnter={(e) =>
-                          (e.currentTarget.style.background = "rgba(255,255,255,0.06)")
+                          (e.currentTarget.style.background =
+                            theme === "light" ? "var(--bg-surface)" : "rgba(255,255,255,0.06)")
                         }
                         onMouseLeave={(e) =>
-                          (e.currentTarget.style.background = "rgba(255,255,255,0.03)")
+                          (e.currentTarget.style.background =
+                            theme === "light" ? "var(--bg-card)" : "rgba(255,255,255,0.03)")
                         }
                       >
                         <div>
@@ -2866,15 +2886,15 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                               marginBottom: 4,
                             }}
                           >
-                            <strong style={{ fontSize: "1.1rem", color: "#f1f5f9" }}>
+                            <strong style={{ fontSize: "1.1rem", color: "var(--text-primary)" }}>
                               {group.ticker}
                             </strong>
                             <button
                               onClick={(e) => handleEditParentTicker(group, e)}
                               style={{
-                                background: "rgba(0, 229, 255, 0.08)",
-                                border: "1px solid rgba(0, 229, 255, 0.25)",
-                                color: "#00e5ff",
+                                background: theme === "light" ? "rgba(2, 132, 199, 0.08)" : "rgba(0, 229, 255, 0.08)",
+                                border: theme === "light" ? "1px solid rgba(2, 132, 199, 0.3)" : "1px solid rgba(0, 229, 255, 0.25)",
+                                color: theme === "light" ? "#0284c7" : "#00e5ff",
                                 cursor: "pointer",
                                 padding: "2px 7px",
                                 borderRadius: "6px",
@@ -2887,12 +2907,12 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                               }}
                               title="Cambiar Acción o ETF a todos los lotes de esta posición"
                               onMouseEnter={(e) => {
-                                e.currentTarget.style.background = "rgba(0, 229, 255, 0.2)";
-                                e.currentTarget.style.borderColor = "#00e5ff";
+                                e.currentTarget.style.background = theme === "light" ? "rgba(2, 132, 199, 0.18)" : "rgba(0, 229, 255, 0.2)";
+                                e.currentTarget.style.borderColor = theme === "light" ? "#0284c7" : "#00e5ff";
                               }}
                               onMouseLeave={(e) => {
-                                e.currentTarget.style.background = "rgba(0, 229, 255, 0.08)";
-                                e.currentTarget.style.borderColor = "rgba(0, 229, 255, 0.25)";
+                                e.currentTarget.style.background = theme === "light" ? "rgba(2, 132, 199, 0.08)" : "rgba(0, 229, 255, 0.08)";
+                                e.currentTarget.style.borderColor = theme === "light" ? "rgba(2, 132, 199, 0.3)" : "rgba(0, 229, 255, 0.25)";
                               }}
                             >
                               <span>🔄</span> Cambiar activo
@@ -2900,7 +2920,8 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                             <span
                               style={{
                                 fontSize: "0.7rem",
-                                background: "rgba(255,255,255,0.05)",
+                                background: "var(--bg-surface)",
+                                border: "1px solid var(--border)",
                                 padding: "2px 6px",
                                 borderRadius: 4,
                                 color: "var(--text-secondary)",
@@ -2913,7 +2934,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                             const lq = liveQuotes[group.ticker];
                             return (
                               <>
-                                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                                <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
                                   {lq?.name || group.name}
                                 </div>
                                 {lq && (lq.exchange || lq.quoteType || lq.currency) && (
@@ -2929,10 +2950,12 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                                       <span
                                         style={{
                                           padding: "2px 8px",
-                                          background: "rgba(255,255,255,0.05)",
+                                          background: "var(--bg-surface)",
+                                          border: "1px solid var(--border)",
                                           borderRadius: "12px",
                                           fontSize: "0.65rem",
                                           fontWeight: 500,
+                                          color: "var(--text-secondary)",
                                         }}
                                       >
                                         🏛️ {lq.exchange}
@@ -2942,10 +2965,12 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                                       <span
                                         style={{
                                           padding: "2px 8px",
-                                          background: "rgba(255,255,255,0.05)",
+                                          background: "var(--bg-surface)",
+                                          border: "1px solid var(--border)",
                                           borderRadius: "12px",
                                           fontSize: "0.65rem",
                                           fontWeight: 500,
+                                          color: "var(--text-secondary)",
                                         }}
                                       >
                                         📊 {lq.quoteType}
@@ -2957,16 +2982,18 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                                           padding: "2px 8px",
                                           background:
                                             lq.currency !== (portfolio.assetCurrency || "USD")
-                                              ? "rgba(239, 68, 68, 0.2)"
-                                              : "rgba(255,255,255,0.05)",
+                                              ? (theme === "light" ? "rgba(239, 68, 68, 0.1)" : "rgba(239, 68, 68, 0.2)")
+                                              : "var(--bg-surface)",
                                           border:
                                             lq.currency !== (portfolio.assetCurrency || "USD")
                                               ? "1px solid rgba(239, 68, 68, 0.4)"
-                                              : "none",
+                                              : "1px solid var(--border)",
                                           borderRadius: "12px",
                                           fontSize: "0.65rem",
                                           fontWeight: lq.currency !== (portfolio.assetCurrency || "USD") ? 700 : 500,
-                                          color: lq.currency !== (portfolio.assetCurrency || "USD") ? "#fca5a5" : "inherit",
+                                          color: lq.currency !== (portfolio.assetCurrency || "USD")
+                                            ? (theme === "light" ? "#dc2626" : "#fca5a5")
+                                            : "var(--text-secondary)",
                                         }}
                                         title={
                                           lq.currency !== (portfolio.assetCurrency || "USD")
@@ -3000,7 +3027,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                             <div style={{ color: "var(--text-secondary)", fontSize: "0.7rem" }}>
                               Total Invertido
                             </div>
-                            <div className="mono" style={{ fontWeight: 700 }}>
+                            <div className="mono" style={{ fontWeight: 700, color: "var(--text-primary)" }}>
                               $
                               {yieldViewMode === "USD"
                                 ? group.totalInvested.toFixed(2)
@@ -3018,7 +3045,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                               className="mono"
                               style={{
                                 fontWeight: 700,
-                                color: yieldViewMode === "REAL" ? "#f59e0b" : "#00e5ff",
+                                color: yieldViewMode === "REAL"
+                                  ? (theme === "light" ? "#d97706" : "#f59e0b")
+                                  : (theme === "light" ? "#0284c7" : "#00e5ff"),
                               }}
                             >
                               $
@@ -3057,9 +3086,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                                   style={{
                                     color: isPositive
                                       ? yieldViewMode === "REAL"
-                                        ? "#f59e0b"
-                                        : "#4ade80"
-                                      : "#f87171",
+                                        ? (theme === "light" ? "#d97706" : "#f59e0b")
+                                        : (theme === "light" ? "#16a34a" : "#4ade80")
+                                      : (theme === "light" ? "#dc2626" : "#f87171"),
                                     fontWeight: 700,
                                     fontSize: "0.9rem",
                                   }}
@@ -3103,9 +3132,10 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                               key={p.id}
                               style={{
                                 padding: "12px 16px",
-                                background: "rgba(0,0,0,0.2)",
+                                background: theme === "light" ? "var(--bg-surface)" : "rgba(0,0,0,0.2)",
                                 borderRadius: "var(--radius)",
-                                borderLeft: `2px solid ${p.isPositive ? "#22c55e" : "#ef4444"}`,
+                                border: "1px solid var(--border)",
+                                borderLeft: `3px solid ${p.isPositive ? "#22c55e" : "#ef4444"}`,
                                 display: "flex",
                                 justifyContent: "space-between",
                                 alignItems: "center",
@@ -3123,10 +3153,11 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                                   <span
                                     style={{
                                       fontSize: "0.8rem",
-                                      background: "rgba(255,255,255,0.05)",
+                                      background: theme === "light" ? "var(--bg-card)" : "rgba(255,255,255,0.05)",
+                                      border: "1px solid var(--border)",
                                       padding: "2px 6px",
                                       borderRadius: 4,
-                                      color: "#e2e8f0",
+                                      color: "var(--text-primary)",
                                       display: "inline-flex",
                                       alignItems: "center",
                                       gap: 4,
@@ -3134,7 +3165,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                                   >
                                     <span>📅 {p.date}</span>
                                     {p.purchaseTime && (
-                                      <span style={{ color: "#00e5ff", fontWeight: 600 }}>
+                                      <span style={{ color: theme === "light" ? "#0284c7" : "#00e5ff", fontWeight: 600 }}>
                                         🕒 {p.purchaseTime}
                                       </span>
                                     )}
@@ -3146,7 +3177,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                                 <div style={{ display: "flex", gap: 16, fontSize: "0.75rem" }}>
                                   <div>
                                     <div style={{ color: "var(--text-secondary)" }}>Invertido</div>
-                                    <div className="mono" style={{ fontWeight: 700 }}>
+                                    <div className="mono" style={{ fontWeight: 700, color: "var(--text-primary)" }}>
                                       $
                                       {yieldViewMode === "USD"
                                         ? p.invested.toFixed(2)
@@ -3171,7 +3202,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                                       className="mono"
                                       style={{
                                         fontWeight: 700,
-                                        color: yieldViewMode === "REAL" ? "#f59e0b" : "#00e5ff",
+                                        color: yieldViewMode === "REAL"
+                                          ? (theme === "light" ? "#d97706" : "#f59e0b")
+                                          : (theme === "light" ? "#0284c7" : "#00e5ff"),
                                       }}
                                     >
                                       $
@@ -3218,9 +3251,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                                         style={{
                                           color: isPositive
                                             ? yieldViewMode === "REAL"
-                                              ? "#f59e0b"
-                                              : "#4ade80"
-                                            : "#f87171",
+                                              ? (theme === "light" ? "#d97706" : "#f59e0b")
+                                              : (theme === "light" ? "#16a34a" : "#4ade80")
+                                            : (theme === "light" ? "#dc2626" : "#f87171"),
                                           fontWeight: 700,
                                           fontSize: "0.8rem",
                                         }}
