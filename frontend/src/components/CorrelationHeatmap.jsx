@@ -76,7 +76,7 @@ export default function CorrelationHeatmap({ correlations }) {
                 </td>
                 {row.map((val, j) => {
                   const isDiag = i === j;
-                  const bg = isDiag ? "rgba(255,255,255,0.06)" : getCellColor(val);
+                  const bg = isDiag ? "var(--border)" : getCellColor(val);
                   return (
                     <td
                       key={tickers[j]}
@@ -84,8 +84,8 @@ export default function CorrelationHeatmap({ correlations }) {
                         padding: "8px 10px",
                         textAlign: "center",
                         background: bg,
-                        color: isDiag ? "var(--text-muted)" : "#f1f5f9",
-                        fontWeight: 600,
+                        color: isDiag ? "var(--text-muted)" : "var(--text-primary)",
+                        fontWeight: 700,
                         fontFamily: "'JetBrains Mono', monospace",
                         borderRadius: "4px",
                         transition: "transform 0.15s ease",

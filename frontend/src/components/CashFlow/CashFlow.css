@@ -785,6 +785,15 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
 }
 
+[data-theme="light"] .cashflow-slider-box {
+  background: #f8fafc;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .cashflow-slider-value {
+  color: #0f172a;
+}
+
 [data-theme="light"] .cashflow-pillar-card {
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.08);
