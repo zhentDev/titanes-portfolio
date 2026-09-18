@@ -105,10 +105,10 @@ export default function CashFlowRuleSelector({
         }}
       >
         <div>
-          <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800, color: "#f8fafc", display: "flex", alignItems: "center", gap: 10 }}>
+          <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 10 }}>
             <span>⚙️</span> Modelo de Asignación & Cupos por Estrategia
           </h3>
-          <p style={{ margin: "4px 0 0 0", fontSize: "0.82rem", color: "#94a3b8" }}>
+          <p style={{ margin: "4px 0 0 0", fontSize: "0.82rem", color: "var(--text-muted)" }}>
             Adapta los porcentajes para calcular cuánto cupo te queda disponible para gastar o ahorrar según tu estrategia.
           </p>
         </div>
@@ -142,7 +142,7 @@ export default function CashFlowRuleSelector({
       {/* Preset Quick Chips */}
       {allocationModel === "50_30_20" && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", paddingTop: 2 }}>
-          <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#64748b" }}>
+          <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-muted)" }}>
             Atajos Recomendados:
           </span>
 
@@ -154,9 +154,9 @@ export default function CashFlowRuleSelector({
               borderRadius: "10px",
               fontSize: "0.76rem",
               fontWeight: !isMatchingStandardPreset ? 700 : 500,
-              background: !isMatchingStandardPreset ? "rgba(0, 229, 255, 0.22)" : "rgba(255, 255, 255, 0.04)",
-              border: !isMatchingStandardPreset ? "1px solid #00e5ff" : "1px solid rgba(255, 255, 255, 0.08)",
-              color: !isMatchingStandardPreset ? "#00e5ff" : "#94a3b8",
+              background: !isMatchingStandardPreset ? "rgba(0, 229, 255, 0.22)" : "var(--bg-card)",
+              border: !isMatchingStandardPreset ? "1px solid #00e5ff" : "1px solid var(--border)",
+              color: !isMatchingStandardPreset ? "#00e5ff" : "var(--text-muted)",
               cursor: "pointer",
               transition: "all 0.15s ease",
               boxShadow: !isMatchingStandardPreset ? "0 0 12px rgba(0, 229, 255, 0.25)" : "none",
@@ -180,9 +180,9 @@ export default function CashFlowRuleSelector({
                   borderRadius: "10px",
                   fontSize: "0.76rem",
                   fontWeight: isSelected ? 700 : 500,
-                  background: isSelected ? "rgba(0, 229, 255, 0.18)" : "rgba(255, 255, 255, 0.04)",
-                  border: isSelected ? "1px solid #00e5ff" : "1px solid rgba(255, 255, 255, 0.08)",
-                  color: isSelected ? "#00e5ff" : "#94a3b8",
+                  background: isSelected ? "rgba(0, 229, 255, 0.18)" : "var(--bg-card)",
+                  border: isSelected ? "1px solid #00e5ff" : "1px solid var(--border)",
+                  color: isSelected ? "#00e5ff" : "var(--text-muted)",
                   cursor: "pointer",
                   transition: "all 0.15s ease",
                 }}
@@ -197,8 +197,8 @@ export default function CashFlowRuleSelector({
       {/* Global Capacity Runway Callout Banner */}
       <div
         style={{
-          background: "linear-gradient(135deg, rgba(13, 18, 38, 0.9) 0%, rgba(20, 28, 52, 0.8) 100%)",
-          border: "1px solid rgba(0, 229, 255, 0.25)",
+          background: "var(--bg-surface)",
+          border: "1px solid var(--border)",
           borderRadius: "14px",
           padding: "12px 18px",
           display: "flex",
@@ -206,22 +206,23 @@ export default function CashFlowRuleSelector({
           alignItems: "center",
           flexWrap: "wrap",
           gap: 12,
+          boxShadow: "var(--shadow-card)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: "1.4rem" }}>🎯</span>
           <div>
-            <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#f8fafc" }}>
+            <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-primary)" }}>
               Margen Global Disponible para Gastar este Mes
             </div>
-            <div style={{ fontSize: "0.74rem", color: "#94a3b8" }}>
+            <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
               Tope Total de Gastos ({customRatios.needs + customRatios.wants}%): {formatMoney(totalTargetSpending, currency)} • Planeado: {formatMoney(totalNeeds + totalWants, currency)}
             </div>
           </div>
         </div>
 
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>Cupo Libre sin Romper tu Regla</div>
+          <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Cupo Libre sin Romper tu Regla</div>
           <div
             style={{
               fontFamily: "JetBrains Mono, monospace",
@@ -256,15 +257,15 @@ export default function CashFlowRuleSelector({
             onChange={(val) => handleRatioChange("needs", val)}
           />
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 6, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 6, borderTop: "1px solid var(--border)", paddingTop: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem" }}>
-              <span style={{ color: "#94a3b8" }}>Tope Estrategia ({customRatios.needs}%):</span>
-              <strong style={{ color: "#f8fafc", fontFamily: "JetBrains Mono, monospace" }}>{formatMoney(targetNeedsAmt, currency)}</strong>
+              <span style={{ color: "var(--text-muted)" }}>Tope Estrategia ({customRatios.needs}%):</span>
+              <strong style={{ color: "var(--text-primary)", fontFamily: "JetBrains Mono, monospace" }}>{formatMoney(targetNeedsAmt, currency)}</strong>
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem" }}>
-              <span style={{ color: "#94a3b8" }}>Presupuestado en Sobres:</span>
-              <span style={{ color: totalNeeds > targetNeedsAmt ? "#f43f5e" : "#f1f5f9", fontWeight: 700, fontFamily: "JetBrains Mono, monospace" }}>
+              <span style={{ color: "var(--text-muted)" }}>Presupuestado en Sobres:</span>
+              <span style={{ color: totalNeeds > targetNeedsAmt ? "#f43f5e" : "var(--text-primary)", fontWeight: 700, fontFamily: "JetBrains Mono, monospace" }}>
                 {formatMoney(totalNeeds, currency)} ({totalInflow > 0 ? ((totalNeeds / totalInflow) * 100).toFixed(0) : 0}%)
               </span>
             </div>
@@ -312,15 +313,15 @@ export default function CashFlowRuleSelector({
             onChange={(val) => handleRatioChange("wants", val)}
           />
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 6, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 6, borderTop: "1px solid var(--border)", paddingTop: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem" }}>
-              <span style={{ color: "#94a3b8" }}>Tope Estrategia ({customRatios.wants}%):</span>
-              <strong style={{ color: "#f8fafc", fontFamily: "JetBrains Mono, monospace" }}>{formatMoney(targetWantsAmt, currency)}</strong>
+              <span style={{ color: "var(--text-muted)" }}>Tope Estrategia ({customRatios.wants}%):</span>
+              <strong style={{ color: "var(--text-primary)", fontFamily: "JetBrains Mono, monospace" }}>{formatMoney(targetWantsAmt, currency)}</strong>
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem" }}>
-              <span style={{ color: "#94a3b8" }}>Presupuestado en Sobres:</span>
-              <span style={{ color: totalWants > targetWantsAmt ? "#f43f5e" : "#f1f5f9", fontWeight: 700, fontFamily: "JetBrains Mono, monospace" }}>
+              <span style={{ color: "var(--text-muted)" }}>Presupuestado en Sobres:</span>
+              <span style={{ color: totalWants > targetWantsAmt ? "#f43f5e" : "var(--text-primary)", fontWeight: 700, fontFamily: "JetBrains Mono, monospace" }}>
                 {formatMoney(totalWants, currency)} ({totalInflow > 0 ? ((totalWants / totalInflow) * 100).toFixed(0) : 0}%)
               </span>
             </div>
@@ -368,14 +369,14 @@ export default function CashFlowRuleSelector({
             onChange={(val) => handleRatioChange("savings", val)}
           />
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 6, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 6, borderTop: "1px solid var(--border)", paddingTop: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem" }}>
-              <span style={{ color: "#94a3b8" }}>Meta Estrategia ({customRatios.savings}%):</span>
-              <strong style={{ color: "#f8fafc", fontFamily: "JetBrains Mono, monospace" }}>{formatMoney(targetWealthAmt, currency)}</strong>
+              <span style={{ color: "var(--text-muted)" }}>Meta Estrategia ({customRatios.savings}%):</span>
+              <strong style={{ color: "var(--text-primary)", fontFamily: "JetBrains Mono, monospace" }}>{formatMoney(targetWealthAmt, currency)}</strong>
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem" }}>
-              <span style={{ color: "#94a3b8" }}>Aporte Asignado:</span>
+              <span style={{ color: "var(--text-muted)" }}>Aporte Asignado:</span>
               <span style={{ color: totalWealth >= targetWealthAmt ? "#10b981" : "#f59e0b", fontWeight: 700, fontFamily: "JetBrains Mono, monospace" }}>
                 {formatMoney(totalWealth, currency)} ({totalInflow > 0 ? ((totalWealth / totalInflow) * 100).toFixed(0) : 0}%)
               </span>

@@ -672,6 +672,53 @@
   margin-top: 8px;
 }
 
+/* ── Emergency Runway Gauge & Badge ────────────────────────────────── */
+.cashflow-emergency-gauge {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+
+.cashflow-runway-badge-circle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 90px;
+  height: 90px;
+  border-radius: 18px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  padding: 8px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.cashflow-runway-number {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.cashflow-runway-unit {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.cashflow-emergency-details {
+  flex: 1 1 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════
    LIGHT MODE DESIGN OVERRIDES ([data-theme="light"])
    ═══════════════════════════════════════════════════════════════════════ */

@@ -775,3 +775,66 @@ input[type="number"] {
     transform: translateY(0);
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   LIGHT MODE CONTROLS OVERRIDES ([data-theme="light"])
+   ═══════════════════════════════════════════════════════════════════════ */
+[data-theme="light"] .glass-modal-overlay {
+  background: rgba(15, 23, 42, 0.45);
+}
+
+[data-theme="light"] .glass-modal-panel {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  color: #0f172a;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.2), 0 0 20px rgba(2, 132, 199, 0.08);
+}
+
+[data-theme="light"] .glass-modal-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+[data-theme="light"] .glass-modal-close-btn {
+  background: #f1f5f9;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: #64748b;
+}
+
+[data-theme="light"] .glass-modal-close-btn:hover {
+  background: rgba(244, 63, 94, 0.12);
+  color: #f43f5e;
+  border-color: rgba(244, 63, 94, 0.3);
+}
+
+[data-theme="light"] .currency-input-container {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .currency-input-container:hover {
+  border-color: rgba(0, 0, 0, 0.25);
+  background: #ffffff;
+}
+
+[data-theme="light"] .currency-input-container:focus-within {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+  background: #ffffff;
+}
+
+[data-theme="light"] .currency-native-input {
+  color: #0f172a;
+}
+
+[data-theme="light"] .currency-prefix-badge {
+  color: #0284c7;
+  border-right-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .hourglass-track {
+  background: #e2e8f0;
+}
+

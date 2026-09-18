@@ -117,13 +117,13 @@ export default function PillarBreakdownCard({
               alignItems: "center",
               fontSize: "0.74rem",
               marginTop: 6,
-              background: "rgba(13, 18, 38, 0.6)",
+              background: "var(--bg-surface)",
               padding: "4px 10px",
               borderRadius: "8px",
-              border: "1px solid rgba(255, 255, 255, 0.05)",
+              border: "1px solid var(--border)",
             }}
           >
-            <span style={{ color: "#94a3b8" }}>Tope Estrategia: <strong>{formatMoney(targetStrategyAmt, currency)}</strong></span>
+            <span style={{ color: "var(--text-muted)" }}>Tope Estrategia: <strong>{formatMoney(targetStrategyAmt, currency)}</strong></span>
             {type === "wealth" ? (
               <span style={{ color: strategyQuotaDiff <= 0 ? "#10b981" : "#fbbf24", fontWeight: 700 }}>
                 {strategyQuotaDiff <= 0 ? `🔥 Superávit: +${formatMoney(Math.abs(strategyQuotaDiff), currency)}` : `Faltan: ${formatMoney(strategyQuotaDiff, currency)}`}
@@ -192,8 +192,8 @@ export default function PillarBreakdownCard({
               <div
                 key={item.id}
                 style={{
-                  background: isOverBudget ? "rgba(244, 63, 94, 0.1)" : "rgba(13, 18, 38, 0.7)",
-                  border: isOverBudget ? "1px solid rgba(244, 63, 94, 0.4)" : "1px solid rgba(255, 255, 255, 0.06)",
+                  background: isOverBudget ? "rgba(244, 63, 94, 0.1)" : "var(--bg-card)",
+                  border: isOverBudget ? "1px solid rgba(244, 63, 94, 0.4)" : "1px solid var(--border)",
                   borderRadius: "14px",
                   padding: "14px 18px",
                   display: "flex",
@@ -278,10 +278,10 @@ export default function PillarBreakdownCard({
 
                   <div className="cashflow-item-right">
                     <div style={{ textAlign: "right" }}>
-                      <div className="cashflow-item-amount" style={{ color: isZero ? "#64748b" : "#f8fafc" }}>
+                      <div className="cashflow-item-amount" style={{ color: isZero ? "var(--text-muted)" : "var(--text-primary)" }}>
                         {formatMoney(itemAmt, currency)}
                       </div>
-                      <div style={{ fontSize: "0.72rem", color: "#64748b" }}>
+                      <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
                         {isZero ? "($0 / Inactivo)" : `${itemPctOfPillar}% del pilar`}
                       </div>
                     </div>
@@ -459,7 +459,7 @@ export default function PillarBreakdownCard({
                                     justifyContent: "space-between",
                                     alignItems: "center",
                                     fontSize: "0.75rem",
-                                    color: "#f8fafc",
+                                    color: "var(--text-primary)",
                                     background: isLoan
                                       ? isSettled
                                         ? "rgba(16, 185, 129, 0.08)"
@@ -494,7 +494,7 @@ export default function PillarBreakdownCard({
                                         </span>
                                       )}
                                     </div>
-                                    <div style={{ color: "#64748b", fontSize: "0.7rem", marginTop: 2 }}>
+                                    <div style={{ color: "var(--text-muted)", fontSize: "0.7rem", marginTop: 2 }}>
                                       {tx.date || "Fecha"} • {tx.paymentSource?.targetName || "Nómina"}
                                       {isLoan && personalCost > 0 && (
                                         <span style={{ color: "#38bdf8", marginLeft: 6 }}>
@@ -510,7 +510,7 @@ export default function PillarBreakdownCard({
                                   </div>
 
                                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                    <strong style={{ fontFamily: "JetBrains Mono, monospace", color: isLoan && !isSettled ? "#f59e0b" : "#f8fafc" }}>
+                                    <strong style={{ fontFamily: "JetBrains Mono, monospace", color: isLoan && !isSettled ? "#f59e0b" : "var(--text-primary)" }}>
                                       {formatMoney(tx.amount, currency)}
                                     </strong>
 

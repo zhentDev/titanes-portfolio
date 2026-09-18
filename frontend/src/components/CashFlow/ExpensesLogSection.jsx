@@ -104,10 +104,10 @@ export default function ExpensesLogSection({
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 14 }}>
         <div>
-          <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800, color: "#f8fafc", display: "flex", alignItems: "center", gap: 10 }}>
+          <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 10 }}>
             <span>📋</span> Historial de Gastos Reales, Ahorro & Abonos ({activePeriod})
           </h3>
-          <p style={{ margin: "4px 0 0 0", fontSize: "0.82rem", color: "#94a3b8" }}>
+          <p style={{ margin: "4px 0 0 0", fontSize: "0.82rem", color: "var(--text-muted)" }}>
             Transacciones de nómina: gastos de vida, transferencias a CDTs/cajitas y abonos de deuda de tarjetas.
           </p>
         </div>
@@ -115,7 +115,7 @@ export default function ExpensesLogSection({
         <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
           <div style={{ display: "flex", gap: 16 }}>
             <div style={{ textAlign: "right" }}>
-              <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Total Gastado Real</span>
+              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block" }}>Total Gastado Real</span>
               <strong style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.15rem", color: "#f43f5e" }}>
                 {formatMoney(totalSpentInPeriod, currency)}
               </strong>
@@ -132,7 +132,7 @@ export default function ExpensesLogSection({
 
             {totalSavedInPeriod > 0 && (
               <div style={{ textAlign: "right" }}>
-                <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Aporte a CDTs / Ahorro</span>
+                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block" }}>Aporte a CDTs / Ahorro</span>
                 <strong style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.15rem", color: "#38bdf8" }}>
                   {formatMoney(totalSavedInPeriod, currency)}
                 </strong>
@@ -141,7 +141,7 @@ export default function ExpensesLogSection({
 
             {totalPaidToCards > 0 && (
               <div style={{ textAlign: "right" }}>
-                <span style={{ fontSize: "0.72rem", color: "#94a3b8", display: "block" }}>Abonos a Tarjetas</span>
+                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block" }}>Abonos a Tarjetas</span>
                 <strong style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.15rem", color: "#10b981" }}>
                   {formatMoney(totalPaidToCards, currency)}
                 </strong>
@@ -201,9 +201,9 @@ export default function ExpensesLogSection({
             style={{
               padding: "6px 12px",
               borderRadius: "8px",
-              border: filterSource === f.id ? "1px solid #00e5ff" : "1px solid rgba(255,255,255,0.06)",
-              background: filterSource === f.id ? "rgba(0, 229, 255, 0.15)" : "rgba(13, 18, 38, 0.6)",
-              color: filterSource === f.id ? "#00e5ff" : "#94a3b8",
+              border: filterSource === f.id ? "1px solid var(--text-accent)" : "1px solid var(--border)",
+              background: filterSource === f.id ? "rgba(2, 132, 199, 0.15)" : "var(--bg-surface)",
+              color: filterSource === f.id ? "var(--text-accent)" : "var(--text-muted)",
               fontSize: "0.78rem",
               fontWeight: filterSource === f.id ? 700 : 500,
               cursor: "pointer",
@@ -244,7 +244,7 @@ export default function ExpensesLogSection({
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: "1rem" }}>💵</span>
-                      <strong style={{ fontSize: "0.9rem", color: "#f8fafc" }}>
+                      <strong style={{ fontSize: "0.9rem", color: "var(--text-primary)" }}>
                         {item.cardName} • {item.description || "Abono a deuda / pago factura"}
                       </strong>
                       <span
@@ -262,7 +262,7 @@ export default function ExpensesLogSection({
                       </span>
                     </div>
 
-                    <div style={{ fontSize: "0.74rem", color: "#64748b", marginTop: 3, display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: 3, display: "flex", alignItems: "center", gap: 6 }}>
                       <span>{item.date || "Fecha no especificada"}</span>
                       <span>•</span>
                       <span style={{ color: "#38bdf8", fontWeight: 600 }}>
@@ -282,7 +282,7 @@ export default function ExpensesLogSection({
                         style={{
                           background: "transparent",
                           border: "none",
-                          color: "#64748b",
+                          color: "var(--text-muted)",
                           cursor: "pointer",
                           padding: "4px",
                           fontSize: "0.85rem",
@@ -315,7 +315,7 @@ export default function ExpensesLogSection({
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: "1rem" }}>💎</span>
-                      <strong style={{ fontSize: "0.9rem", color: "#f8fafc" }}>
+                      <strong style={{ fontSize: "0.9rem", color: "var(--text-primary)" }}>
                         {item.description}
                       </strong>
                       <span
@@ -333,7 +333,7 @@ export default function ExpensesLogSection({
                       </span>
                     </div>
 
-                    <div style={{ fontSize: "0.74rem", color: "#64748b", marginTop: 3, display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: 3, display: "flex", alignItems: "center", gap: 6 }}>
                       <span>{item.date || "Fecha no especificada"}</span>
                       <span>•</span>
                       <span style={{ color: "#c084fc", fontWeight: 600 }}>
@@ -391,12 +391,12 @@ export default function ExpensesLogSection({
                     ? isSettled
                       ? "rgba(16, 185, 129, 0.06)"
                       : "rgba(245, 158, 11, 0.08)"
-                    : "rgba(13, 18, 38, 0.65)",
+                    : "var(--bg-card)",
                   border: isLoan
                     ? isSettled
                       ? "1px solid rgba(16, 185, 129, 0.35)"
                       : "1px solid rgba(245, 158, 11, 0.4)"
-                    : "1px solid rgba(255, 255, 255, 0.06)",
+                    : "1px solid var(--border)",
                   borderRadius: "12px",
                   padding: "12px 16px",
                   transition: "all 0.15s ease",
@@ -404,17 +404,17 @@ export default function ExpensesLogSection({
               >
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <strong style={{ fontSize: "0.9rem", color: "#f8fafc" }}>
+                    <strong style={{ fontSize: "0.9rem", color: "var(--text-primary)" }}>
                       {item.description}
                     </strong>
 
                     <span
                       style={{
-                        background: "rgba(255,255,255,0.06)",
+                        background: "rgba(128, 128, 128, 0.1)",
                         padding: "2px 8px",
                         borderRadius: "6px",
                         fontSize: "0.72rem",
-                        color: "#94a3b8",
+                        color: "var(--text-muted)",
                       }}
                     >
                       {item.budgetItemName}
@@ -522,7 +522,7 @@ export default function ExpensesLogSection({
                     </button>
                   )}
 
-                  <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.05rem", fontWeight: 800, color: isLoan && !isSettled ? "#f59e0b" : "#f8fafc" }}>
+                  <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.05rem", fontWeight: 800, color: isLoan && !isSettled ? "#f59e0b" : "var(--text-primary)" }}>
                     {formatMoney(item.amount, currency)}
                   </span>
 

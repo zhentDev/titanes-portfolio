@@ -38,17 +38,17 @@ export default function EmergencyFundCard({
     <div className="cashflow-emergency-card">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <div>
-          <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "#f8fafc", display: "flex", alignItems: "center", gap: 8 }}>
+          <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 8 }}>
             <span>🛡️</span> Radar de Pista de Emergencia (Runway & Liquidez)
           </h3>
-          <p style={{ margin: "4px 0 0 0", fontSize: "0.8rem", color: "#94a3b8" }}>
+          <p style={{ margin: "4px 0 0 0", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
             Protege tu patrimonio de contingencias sin tocar tus inversiones en Renta Variable.
           </p>
         </div>
 
         {/* Target Months Selector Chips */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(13, 18, 38, 0.7)", padding: 4, borderRadius: 12, border: "1px solid rgba(255, 255, 255, 0.06)" }}>
-          <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#64748b", paddingLeft: 6 }}>Meta:</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--bg-surface)", padding: 4, borderRadius: 12, border: "1px solid var(--border)" }}>
+          <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-muted)", paddingLeft: 6 }}>Meta:</span>
           {[3, 6, 9, 12].map((m) => (
             <button
               key={m}
@@ -60,8 +60,8 @@ export default function EmergencyFundCard({
                 border: "none",
                 fontSize: "0.75rem",
                 fontWeight: targetMonths === m ? 700 : 500,
-                background: targetMonths === m ? "rgba(56, 189, 248, 0.2)" : "transparent",
-                color: targetMonths === m ? "#38bdf8" : "#94a3b8",
+                background: targetMonths === m ? "rgba(2, 132, 199, 0.15)" : "transparent",
+                color: targetMonths === m ? "var(--text-accent)" : "var(--text-muted)",
                 cursor: "pointer",
                 transition: "all 0.15s ease",
               }}
@@ -82,7 +82,7 @@ export default function EmergencyFundCard({
         {/* Breakdown Details & Progress */}
         <div className="cashflow-emergency-details">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#f1f5f9" }}>
+            <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--text-primary)" }}>
               Progreso hacia el Blindaje ({targetMonths} Meses de Gastos Fijos)
             </span>
             <span className={`cashflow-kpi-badge ${status.badge}`}>
@@ -91,7 +91,7 @@ export default function EmergencyFundCard({
           </div>
 
           {/* Progress Bar */}
-          <div style={{ width: "100%", height: 10, background: "rgba(255, 255, 255, 0.08)", borderRadius: 8, overflow: "hidden", position: "relative" }}>
+          <div style={{ width: "100%", height: 10, background: "var(--border)", borderRadius: 8, overflow: "hidden", position: "relative" }}>
             <div
               style={{
                 width: `${progressPct}%`,
@@ -107,26 +107,26 @@ export default function EmergencyFundCard({
           {/* Key Metrics Strip */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 12, marginTop: 6 }}>
             <div>
-              <div style={{ fontSize: "0.72rem", color: "#64748b" }}>Saldo Actual Reservado</div>
-              <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.95rem", fontWeight: 700, color: "#38bdf8" }}>
+              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Saldo Actual Reservado</div>
+              <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.95rem", fontWeight: 700, color: "#0284c7" }}>
                 {formatMoney(currentBalance, currency)}
               </div>
             </div>
             <div>
-              <div style={{ fontSize: "0.72rem", color: "#64748b" }}>Meta ({targetMonths} Meses Fijos)</div>
-              <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.95rem", fontWeight: 700, color: "#f8fafc" }}>
+              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Meta ({targetMonths} Meses Fijos)</div>
+              <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.95rem", fontWeight: 700, color: "var(--text-primary)" }}>
                 {formatMoney(targetRequired, currency)}
               </div>
             </div>
             <div>
-              <div style={{ fontSize: "0.72rem", color: "#64748b" }}>Brecha Faltante</div>
+              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Brecha Faltante</div>
               <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.95rem", fontWeight: 700, color: remainingGap > 0 ? "#f59e0b" : "#10b981" }}>
                 {remainingGap > 0 ? formatMoney(remainingGap, currency) : "✅ Completado"}
               </div>
             </div>
             <div>
-              <div style={{ fontSize: "0.72rem", color: "#64748b" }}>Tiempo Estimado</div>
-              <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.95rem", fontWeight: 700, color: "#cbd5e1" }}>
+              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Tiempo Estimado</div>
+              <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.95rem", fontWeight: 700, color: "var(--text-secondary)" }}>
                 {remainingGap === 0
                   ? "Meta Alcanzada 🎉"
                   : monthsToGoal
