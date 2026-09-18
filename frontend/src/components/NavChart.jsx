@@ -605,11 +605,10 @@ export default function NavChart({
       style={{
         padding: "16px 20px",
         marginBottom: "18px",
-        border: "1px solid rgba(255,255,255,0.08)",
-        background: "linear-gradient(180deg, rgba(15, 23, 42, 0.6) 0%, rgba(10, 15, 29, 0.8) 100%)",
-        backdropFilter: "blur(12px)",
+        border: "1px solid var(--border)",
+        background: "var(--bg-card)",
         borderRadius: "var(--radius)",
-        boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.37)",
+        boxShadow: "var(--shadow-card)",
       }}
     >
       {/* ── Interactive Chart Legend Bar ─── */}
@@ -622,7 +621,7 @@ export default function NavChart({
           gap: 10,
           marginBottom: "14px",
           paddingBottom: "12px",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          borderBottom: "1px solid var(--border)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -633,12 +632,12 @@ export default function NavChart({
               display: "flex",
               alignItems: "center",
               gap: 6,
-              background: visibleSeries?.nav ? "rgba(0, 229, 255, 0.08)" : "rgba(255,255,255,0.02)",
-              border: `1px solid ${visibleSeries?.nav ? "rgba(0, 229, 255, 0.3)" : "#334155"}`,
+              background: visibleSeries?.nav ? "rgba(0, 229, 255, 0.12)" : "rgba(0, 0, 0, 0.04)",
+              border: `1px solid ${visibleSeries?.nav ? "var(--accent-primary)" : "var(--border)"}`,
               padding: "4px 10px",
               borderRadius: 6,
               cursor: "pointer",
-              color: visibleSeries?.nav ? "#f1f5f9" : "#94a3b8",
+              color: visibleSeries?.nav ? "var(--text-primary)" : "var(--text-muted)",
               fontSize: "0.75rem",
               transition: "all 0.15s ease",
             }}
@@ -656,7 +655,7 @@ export default function NavChart({
             <strong>{isLiveMode ? "Portafolio En Vivo" : "Titanes"}</strong>
             <InfoTooltip conceptKey="nav" />
             {currentNav != null && (
-              <span className="mono" style={{ color: "#00e5ff", fontWeight: 700 }}>
+              <span className="mono" style={{ color: "var(--accent-primary)", fontWeight: 700 }}>
                 ${currentNav.toFixed(2)}
               </span>
             )}
@@ -676,13 +675,13 @@ export default function NavChart({
               alignItems: "center",
               gap: 6,
               background: visibleSeries?.sp500
-                ? "rgba(245, 158, 11, 0.08)"
-                : "rgba(255,255,255,0.02)",
-              border: `1px solid ${visibleSeries?.sp500 ? "rgba(245, 158, 11, 0.3)" : "#334155"}`,
+                ? "rgba(245, 158, 11, 0.12)"
+                : "rgba(0, 0, 0, 0.04)",
+              border: `1px solid ${visibleSeries?.sp500 ? "rgba(245, 158, 11, 0.4)" : "var(--border)"}`,
               padding: "4px 10px",
               borderRadius: 6,
               cursor: "pointer",
-              color: visibleSeries?.sp500 ? "#f1f5f9" : "#94a3b8",
+              color: visibleSeries?.sp500 ? "var(--text-primary)" : "var(--text-muted)",
               fontSize: "0.75rem",
               transition: "all 0.15s ease",
             }}
@@ -719,13 +718,13 @@ export default function NavChart({
               alignItems: "center",
               gap: 6,
               background: visibleSeries?.nasdaq
-                ? "rgba(168, 85, 247, 0.08)"
-                : "rgba(255,255,255,0.02)",
-              border: `1px solid ${visibleSeries?.nasdaq ? "rgba(168, 85, 247, 0.3)" : "#334155"}`,
+                ? "rgba(168, 85, 247, 0.12)"
+                : "rgba(0, 0, 0, 0.04)",
+              border: `1px solid ${visibleSeries?.nasdaq ? "rgba(168, 85, 247, 0.4)" : "var(--border)"}`,
               padding: "4px 10px",
               borderRadius: 6,
               cursor: "pointer",
-              color: visibleSeries?.nasdaq ? "#f1f5f9" : "#94a3b8",
+              color: visibleSeries?.nasdaq ? "var(--text-primary)" : "var(--text-muted)",
               fontSize: "0.75rem",
               transition: "all 0.15s ease",
             }}

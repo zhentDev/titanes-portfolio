@@ -1512,6 +1512,9 @@ export default function FixedIncomeHub() {
                 border: `1px solid ${entity.color}33`,
                 overflow: "hidden",
                 boxShadow: "var(--shadow-card)",
+                breakInside: "avoid",
+                WebkitColumnBreakInside: "avoid",
+                marginBottom: 20,
               }}
             >
               {/* Entity Card Header */}
@@ -2984,13 +2987,11 @@ export default function FixedIncomeHub() {
           );
         };
 
-        {/* ── Dynamic Masonry Grid: cards flow automatically by content height ── */}
+        {/* ── Dynamic Multi-Column Masonry: cards flow and balance automatically by content height ── */}
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 460px), 1fr))",
-            gap: 20,
-            alignItems: "start",
+            columns: "2 460px",
+            columnGap: 20,
           }}
         >
           {activeEntities.map((entity) => renderEntityCard(entity))}
