@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { useTheme } from "../../context/ThemeContext";
 import { formatCashFlowMoneyWithCode } from "../../utils/cashFlowFormatters";
 import "./CashFlow.css";
 
@@ -17,6 +18,8 @@ export default function CashFlowSankey({
   customRatios = { needs: 50, wants: 30, savings: 20 },
   onEditNode,
 }) {
+  const { theme } = useTheme();
+  const isLight = theme === "light";
   const formatAmount = (val, cur = currency) => formatCashFlowMoneyWithCode(val, cur, fxRate);
   const [hoveredItem, setHoveredItem] = useState(null);
   const [isExpanded, setIsExpanded] = useState(true);
@@ -61,7 +64,7 @@ export default function CashFlowSankey({
         id: "pillar_wealth",
         name: "🔵 Ahorro & Inversión",
         amount: totalWealth,
-        color: "#38bdf8",
+        color: isLight ? "#0284c7" : "#38bdf8",
       },
       {
         id: "pillar_needs",
@@ -82,7 +85,7 @@ export default function CashFlowSankey({
         id: "pillar_fcf",
         name: "⚪ Flujo Libre",
         amount: freeCashFlow,
-        color: "#10b981",
+        color: isLight ? "#059669" : "#10b981",
       });
     }
 
@@ -95,7 +98,7 @@ export default function CashFlowSankey({
         amount: Number(w.monthlyContribution) || 0,
         pillarId: "pillar_wealth",
         pillarType: "wealth",
-        color: "#38bdf8",
+        color: isLight ? "#0284c7" : "#38bdf8",
       })),
       ...needs.map((n) => ({
         ...n,
@@ -142,7 +145,9 @@ export default function CashFlowSankey({
         y,
         width: nodeWidth,
         height: nodeH,
-        color: item.isPassive ? "#00e5ff" : "#10b981",
+        color: item.isPassive
+          ? (isLight ? "#0284c7" : "#00e5ff")
+          : (isLight ? "#059669" : "#10b981"),
       };
     });
 
@@ -159,7 +164,7 @@ export default function CashFlowSankey({
       y: paddingY + (usableH - hubH) / 2,
       width: nodeWidth + 15,
       height: hubH,
-      color: "#00e5ff",
+      color: isLight ? "#0284c7" : "#00e5ff",
     };
 
     // ── Position Column 2 Nodes (Pillars) ──
@@ -282,7 +287,7 @@ export default function CashFlowSankey({
       W,
       H,
     };
-  }, [inflows, needs, wants, wealth, totalInflow, totalNeeds, totalWants, totalWealth, freeCashFlow]);
+  }, [inflows, needs, wants, wealth, totalInflow, totalNeeds, totalWants, totalWealth, freeCashFlow, isLight]);
 
   return (
     <div className="cashflow-sankey-section">
@@ -319,15 +324,15 @@ export default function CashFlowSankey({
         {isExpanded && (
           <div className="cashflow-sankey-legend" style={{ marginTop: 10 }}>
             <div className="cashflow-legend-item">
-              <span className="cashflow-legend-dot" style={{ background: "#10b981" }} />
+              <span className="cashflow-legend-dot" style={{ background: isLight ? "#059669" : "#10b981" }} />
               <span>Ingresos Activos</span>
             </div>
             <div className="cashflow-legend-item">
-              <span className="cashflow-legend-dot" style={{ background: "#00e5ff" }} />
+              <span className="cashflow-legend-dot" style={{ background: isLight ? "#0284c7" : "#00e5ff" }} />
               <span>Rendimientos Pasivos</span>
             </div>
             <div className="cashflow-legend-item">
-              <span className="cashflow-legend-dot" style={{ background: "#38bdf8" }} />
+              <span className="cashflow-legend-dot" style={{ background: isLight ? "#0284c7" : "#38bdf8" }} />
               <span>Ahorro & Inversión ({customRatios.savings}%)</span>
             </div>
             <div className="cashflow-legend-item">
@@ -345,7 +350,7 @@ export default function CashFlowSankey({
       {/* Responsive SVG Canvas */}
       {isExpanded && (
         <>
-          <div className="cashflow-sankey-svg-wrapper">
+        <div className="cashflow-sankey-svg-wrapper" style={{ position: "relative", overflowX: "auto" }}>
         <svg
           viewBox={`0 0 ${layout.W} ${layout.H}`}
           style={{ width: "100%", height: "auto", display: "block" }}
@@ -361,8 +366,8 @@ export default function CashFlowSankey({
                 x2="100%"
                 y2="0%"
               >
-                <stop offset="0%" stopColor={link.colorStart} stopOpacity="0.85" />
-                <stop offset="100%" stopColor={link.colorEnd} stopOpacity="0.85" />
+                <stop offset="0%" stopColor={link.colorStart} stopOpacity={isLight ? "0.65" : "0.85"} />
+                <stop offset="100%" stopColor={link.colorEnd} stopOpacity={isLight ? "0.65" : "0.85"} />
               </linearGradient>
             ))}
 
@@ -400,7 +405,7 @@ export default function CashFlowSankey({
                     fill="none"
                     stroke={`url(#${link.gradId})`}
                     strokeWidth={isHovered ? link.strokeWidth * 1.3 + 2 : link.strokeWidth}
-                    strokeOpacity={isHovered ? 1.0 : 0.75}
+                    strokeOpacity={isHovered ? 1.0 : isLight ? 0.85 : 0.75}
                     style={{
                       transition: "all 0.25s ease",
                       cursor: "pointer",
@@ -445,12 +450,18 @@ export default function CashFlowSankey({
                     height={node.height}
                     rx={12}
                     ry={12}
-                    fill="rgba(17, 24, 41, 0.95)"
+                    fill={isLight ? "#ffffff" : "rgba(17, 24, 41, 0.95)"}
                     stroke={node.color}
                     strokeWidth={isHovered ? 2.5 : 1.3}
-                    strokeOpacity={isHovered ? 1.0 : 0.8}
+                    strokeOpacity={isHovered ? 1.0 : isLight ? 0.9 : 0.8}
                     style={{
-                      filter: isHovered ? "drop-shadow(0 0 14px rgba(0, 229, 255, 0.45))" : "none",
+                      filter: isHovered
+                        ? isLight
+                          ? "drop-shadow(0 4px 14px rgba(2, 132, 199, 0.25))"
+                          : "drop-shadow(0 0 14px rgba(0, 229, 255, 0.45))"
+                        : isLight
+                        ? "drop-shadow(0 2px 8px rgba(0, 0, 0, 0.06))"
+                        : "none",
                       transition: "all 0.2s ease",
                     }}
                   />
@@ -469,9 +480,9 @@ export default function CashFlowSankey({
                   <text
                     x={14}
                     y={node.height === 54 ? 22 : 30}
-                    fill="#f8fafc"
+                    fill={isLight ? "#0f172a" : "#f8fafc"}
                     fontSize={node.col === 1 ? 14 : 12.5}
-                    fontWeight={700}
+                    fontWeight={600}
                     fontFamily="Inter, sans-serif"
                   >
                     {node.icon ? `${node.icon} ` : ""}
@@ -484,7 +495,7 @@ export default function CashFlowSankey({
                     y={node.height === 54 ? 40 : 54}
                     fill={node.color}
                     fontSize={node.col === 1 ? 14 : 12}
-                    fontWeight={800}
+                    fontWeight={700}
                     fontFamily="JetBrains Mono, monospace"
                   >
                     {formatAmount(node.amount, currency)}
@@ -522,37 +533,37 @@ export default function CashFlowSankey({
             position: "absolute",
             bottom: "20px",
             right: "28px",
-            background: "rgba(13, 18, 38, 0.95)",
-            border: "1px solid rgba(0, 229, 255, 0.4)",
+            background: "var(--bg-card)",
+            border: "1px solid var(--border-accent)",
             borderRadius: "12px",
             padding: "10px 16px",
-            boxShadow: "0 8px 24px rgba(0, 0, 0, 0.6), 0 0 16px rgba(0, 229, 255, 0.2)",
+            boxShadow: "var(--shadow-card)",
             pointerEvents: "none",
             backdropFilter: "blur(12px)",
             animation: "fadeIn 0.15s ease",
           }}
         >
-          <div style={{ fontSize: "0.78rem", color: "#94a3b8" }}>Flujo Seleccionado:</div>
-          <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#f8fafc" }}>
+          <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>Flujo Seleccionado:</div>
+          <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--text-primary)" }}>
             {hoveredItem.name}
           </div>
           <div
             style={{
               fontSize: "1.05rem",
-              fontWeight: 800,
-              color: "#00e5ff",
+              fontWeight: 700,
+              color: isLight ? "#0284c7" : "#00e5ff",
               fontFamily: "JetBrains Mono, monospace",
               marginTop: "2px",
             }}
           >
             {formatAmount(hoveredItem.amount, currency)}{" "}
-            <span style={{ fontSize: "0.8rem", color: "#38bdf8" }}>
+            <span style={{ fontSize: "0.8rem", color: isLight ? "#0369a1" : "#38bdf8" }}>
               ({hoveredItem.pct || "0"}% del ingreso)
             </span>
-            </div>
           </div>
-        )}
-        </>
+        </div>
+      )}
+      </>
       )}
     </div>
   );

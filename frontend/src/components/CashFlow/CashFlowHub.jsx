@@ -587,12 +587,13 @@ export default function CashFlowHub() {
       {/* ── 5. Real Liquid Cash & Funds Availability Card (COLLAPSIBLE) ──────────── */}
       <div
         style={{
-          background: "rgba(15, 23, 42, 0.4)",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
+          background: "var(--bg-card)",
+          border: "1px solid var(--border)",
           borderRadius: 14,
           padding: showLiquidity ? "16px" : "12px 18px",
           transition: "all 0.2s ease",
           marginTop: 14,
+          boxShadow: "var(--shadow-card)",
         }}
       >
         <div
@@ -609,13 +610,13 @@ export default function CashFlowHub() {
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <span>💧</span>
-            <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "#f1f5f9" }}>
+            <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--text-primary)" }}>
               Disponibilidad Real de Plata Líquida & Fondos
             </span>
             <span
               style={{
                 fontSize: "0.7rem",
-                color: "#d8b4fe",
+                color: "#a855f7",
                 background: "rgba(130, 10, 209, 0.15)",
                 padding: "2px 8px",
                 borderRadius: 12,
@@ -632,8 +633,8 @@ export default function CashFlowHub() {
               setShowLiquidity(!showLiquidity);
             }}
             style={{
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.12)",
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border)",
               borderRadius: 6,
               padding: "4px 10px",
               color: "var(--text-muted)",
@@ -674,12 +675,13 @@ export default function CashFlowHub() {
       {/* ── 6. Dynamic Rule & Strategy Selector (COLLAPSIBLE) ────────────────────── */}
       <div
         style={{
-          background: "rgba(15, 23, 42, 0.4)",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
+          background: "var(--bg-card)",
+          border: "1px solid var(--border)",
           borderRadius: 14,
           padding: showRules ? "16px" : "12px 18px",
           transition: "all 0.2s ease",
           marginTop: 14,
+          boxShadow: "var(--shadow-card)",
         }}
       >
         <div
@@ -696,17 +698,17 @@ export default function CashFlowHub() {
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <span>⚙️</span>
-            <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "#f1f5f9" }}>
+            <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--text-primary)" }}>
               Distribución Estratégica del Flujo & Reglas
             </span>
             <span
               style={{
                 fontSize: "0.7rem",
-                color: "#38bdf8",
-                background: "rgba(56, 189, 248, 0.12)",
+                color: "#0284c7",
+                background: "rgba(2, 132, 199, 0.12)",
                 padding: "2px 8px",
                 borderRadius: 12,
-                border: "1px solid rgba(56, 189, 248, 0.25)",
+                border: "1px solid rgba(2, 132, 199, 0.25)",
               }}
             >
               Ratio: {customRatios.needs}% Fijos • {customRatios.wants}% Gustos • {customRatios.savings}% Ahorro
@@ -719,8 +721,8 @@ export default function CashFlowHub() {
               setShowRules(!showRules);
             }}
             style={{
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.12)",
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border)",
               borderRadius: 6,
               padding: "4px 10px",
               color: "var(--text-muted)",
@@ -752,12 +754,13 @@ export default function CashFlowHub() {
       {/* ── 7. Emergency Fund Runway Tracker (COLLAPSIBLE) ───────────────────────── */}
       <div
         style={{
-          background: "rgba(15, 23, 42, 0.4)",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
+          background: "var(--bg-card)",
+          border: "1px solid var(--border)",
           borderRadius: 14,
           padding: showEmergency ? "16px" : "12px 18px",
           transition: "all 0.2s ease",
           marginTop: 14,
+          boxShadow: "var(--shadow-card)",
         }}
       >
         <div
@@ -774,7 +777,7 @@ export default function CashFlowHub() {
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <span>🛡️</span>
-            <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "#f1f5f9" }}>
+            <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--text-primary)" }}>
               Fondo de Emergencia & Pista de Aterrizaje (Runway)
             </span>
             <span
@@ -797,8 +800,8 @@ export default function CashFlowHub() {
               setShowEmergency(!showEmergency);
             }}
             style={{
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.12)",
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border)",
               borderRadius: 6,
               padding: "4px 10px",
               color: "var(--text-muted)",
@@ -826,12 +829,13 @@ export default function CashFlowHub() {
       {/* ── 8. 4 Pillars Structured Breakdown Grid (Topes Presupuestados vs Gastado) (COLLAPSIBLE) ── */}
       <div
         style={{
-          background: "rgba(15, 23, 42, 0.4)",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
+          background: "var(--bg-card)",
+          border: "1px solid var(--border)",
           borderRadius: 14,
           padding: showPillars ? "16px" : "12px 18px",
           transition: "all 0.2s ease",
           marginTop: 14,
+          boxShadow: "var(--shadow-card)",
         }}
       >
         <div
@@ -848,7 +852,7 @@ export default function CashFlowHub() {
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <span>🏛️</span>
-            <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "#f1f5f9" }}>
+            <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--text-primary)" }}>
               Presupuesto Estructurado por Pilares (Ingresos, Gastos Fijos, Estilo de Vida, Ahorro)
             </span>
             <span
@@ -871,8 +875,8 @@ export default function CashFlowHub() {
               setShowPillars(!showPillars);
             }}
             style={{
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.12)",
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border)",
               borderRadius: 6,
               padding: "4px 10px",
               color: "var(--text-muted)",
@@ -983,12 +987,13 @@ export default function CashFlowHub() {
       {/* ── 9. Expenses Log & Executed Transactions Section (COLLAPSIBLE) ────────── */}
       <div
         style={{
-          background: "rgba(15, 23, 42, 0.4)",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
+          background: "var(--bg-card)",
+          border: "1px solid var(--border)",
           borderRadius: 14,
           padding: showExpenses ? "16px" : "12px 18px",
           transition: "all 0.2s ease",
           marginTop: 14,
+          boxShadow: "var(--shadow-card)",
         }}
       >
         <div
@@ -1005,7 +1010,7 @@ export default function CashFlowHub() {
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <span>📋</span>
-            <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "#f1f5f9" }}>
+            <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--text-primary)" }}>
               Historial de Gastos Reales, Ahorro & Abonos ({activePeriod})
             </span>
             <span
@@ -1028,8 +1033,8 @@ export default function CashFlowHub() {
               setShowExpenses(!showExpenses);
             }}
             style={{
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.12)",
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border)",
               borderRadius: 6,
               padding: "4px 10px",
               color: "var(--text-muted)",
@@ -1073,12 +1078,13 @@ export default function CashFlowHub() {
       {/* ── 10. Credit Cards & Installments Management Section (COLLAPSIBLE) ──────── */}
       <div
         style={{
-          background: "rgba(15, 23, 42, 0.4)",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
+          background: "var(--bg-card)",
+          border: "1px solid var(--border)",
           borderRadius: 14,
           padding: showCreditCards ? "16px" : "12px 18px",
           transition: "all 0.2s ease",
           marginTop: 14,
+          boxShadow: "var(--shadow-card)",
         }}
       >
         <div
@@ -1095,7 +1101,7 @@ export default function CashFlowHub() {
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <span>💳</span>
-            <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "#f1f5f9" }}>
+            <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--text-primary)" }}>
               Tarjetas de Crédito & Financiación Inteligente (MSI / Cuotas)
             </span>
             <span
@@ -1118,8 +1124,8 @@ export default function CashFlowHub() {
               setShowCreditCards(!showCreditCards);
             }}
             style={{
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.12)",
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border)",
               borderRadius: 6,
               padding: "4px 10px",
               color: "var(--text-muted)",

@@ -154,7 +154,7 @@ export default function RealCashLiquidityCard({
           alignItems: "center",
           flexWrap: "wrap",
           gap: 16,
-          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+          borderBottom: "1px solid var(--border)",
           paddingBottom: 16,
           marginBottom: 20,
         }}
@@ -174,8 +174,8 @@ export default function RealCashLiquidityCard({
                 style={{
                   margin: 0,
                   fontSize: "1.1rem",
-                  fontWeight: 800,
-                  color: "#f8fafc",
+                  fontWeight: 700,
+                  color: "var(--text-primary)",
                 }}
               >
                 Disponibilidad Real de Plata Líquida & Fondos
@@ -186,9 +186,9 @@ export default function RealCashLiquidityCard({
                   fontWeight: 700,
                   padding: "2px 8px",
                   borderRadius: "8px",
-                  background: "rgba(130, 10, 209, 0.2)",
-                  color: "#d8b4fe",
-                  border: "1px solid rgba(130, 10, 209, 0.35)",
+                  background: "rgba(130, 10, 209, 0.15)",
+                  color: "#a855f7",
+                  border: "1px solid rgba(130, 10, 209, 0.3)",
                 }}
               >
                 🗓️ Pago Día {payrollAccount.payDay || 25} • Fondeo Mes Entrante
@@ -197,7 +197,7 @@ export default function RealCashLiquidityCard({
             <span
               style={{
                 fontSize: "0.8rem",
-                color: "#94a3b8",
+                color: "var(--text-secondary)",
                 display: "block",
                 marginTop: 3,
               }}
@@ -211,8 +211,8 @@ export default function RealCashLiquidityCard({
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <div
             style={{
-              background: "rgba(13, 18, 38, 0.85)",
-              border: "1px solid rgba(255, 255, 255, 0.1)",
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border)",
               borderRadius: "12px",
               padding: "3px",
               display: "inline-flex",
@@ -227,7 +227,7 @@ export default function RealCashLiquidityCard({
                   viewMode === "real_today"
                     ? "linear-gradient(135deg, #10b981 0%, #059669 100%)"
                     : "transparent",
-                color: viewMode === "real_today" ? "#ffffff" : "#94a3b8",
+                color: viewMode === "real_today" ? "#ffffff" : "var(--text-muted)",
                 border: "none",
                 borderRadius: "8px",
                 padding: "6px 12px",
@@ -247,7 +247,7 @@ export default function RealCashLiquidityCard({
                   viewMode === "projected_month"
                     ? "linear-gradient(135deg, #820ad1 0%, #6366f1 100%)"
                     : "transparent",
-                color: viewMode === "projected_month" ? "#ffffff" : "#94a3b8",
+                color: viewMode === "projected_month" ? "#ffffff" : "var(--text-muted)",
                 border: "none",
                 borderRadius: "8px",
                 padding: "6px 12px",
@@ -266,10 +266,10 @@ export default function RealCashLiquidityCard({
               type="button"
               onClick={onOpenPayrollModal}
               style={{
-                background: "rgba(130, 10, 209, 0.18)",
-                border: "1px solid rgba(130, 10, 209, 0.45)",
+                background: "rgba(130, 10, 209, 0.12)",
+                border: "1px solid rgba(130, 10, 209, 0.35)",
                 borderRadius: "12px",
-                color: "#d8b4fe",
+                color: "#9333ea",
                 padding: "8px 14px",
                 fontSize: "0.8rem",
                 fontWeight: 700,
@@ -299,7 +299,7 @@ export default function RealCashLiquidityCard({
         {/* 1. Real Available Cash in Payroll */}
         <div
           style={{
-            background: "rgba(13, 18, 38, 0.75)",
+            background: "var(--bg-surface)",
             borderRadius: "16px",
             padding: "18px 20px",
             border:
@@ -328,7 +328,7 @@ export default function RealCashLiquidityCard({
               <span
                 style={{
                   fontSize: "0.78rem",
-                  color: "#94a3b8",
+                  color: "var(--text-secondary)",
                   fontWeight: 600,
                   display: "flex",
                   alignItems: "center",
@@ -363,14 +363,14 @@ export default function RealCashLiquidityCard({
               style={{
                 fontFamily: "JetBrains Mono, monospace",
                 fontSize: "1.6rem",
-                fontWeight: 800,
+                fontWeight: 700,
                 color:
                   viewMode === "real_today"
                     ? realCashInPayroll >= 0
                       ? "#10b981"
                       : "#f43f5e"
                     : projectedSurplus >= 0
-                    ? "#38bdf8"
+                    ? "#0284c7"
                     : "#f43f5e",
               }}
             >
@@ -383,9 +383,9 @@ export default function RealCashLiquidityCard({
           <div
             style={{
               fontSize: "0.72rem",
-              color: "#94a3b8",
+              color: "var(--text-secondary)",
               marginTop: 10,
-              borderTop: "1px solid rgba(255,255,255,0.06)",
+              borderTop: "1px solid var(--border)",
               paddingTop: 8,
               display: "flex",
               flexDirection: "column",
@@ -396,7 +396,7 @@ export default function RealCashLiquidityCard({
               <>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span>Ingresos Nómina:</span>
-                  <strong style={{ color: "#f8fafc" }}>
+                  <strong style={{ color: "var(--text-primary)" }}>
                     +{formatMoney(netSalaryAmount, currency)}
                   </strong>
                 </div>
@@ -406,7 +406,7 @@ export default function RealCashLiquidityCard({
                     -{formatMoney(totalExecutedPayrollOutflow, currency)}
                   </span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", color: "#64748b", marginTop: 2 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)", marginTop: 2 }}>
                   <span>Compromisos por salir:</span>
                   <span>-{formatMoney(totalPendingPayrollCommitments, currency)}</span>
                 </div>
@@ -427,7 +427,7 @@ export default function RealCashLiquidityCard({
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span>Aportes Ahorro por Transferir:</span>
-                  <span style={{ color: "#38bdf8" }}>
+                  <span style={{ color: "#0284c7" }}>
                     -{formatMoney(pendingSavingsFromPayroll, currency)}
                   </span>
                 </div>
@@ -439,10 +439,10 @@ export default function RealCashLiquidityCard({
         {/* 2. Balance in High-Yield Savings Accounts (Cajitas) */}
         <div
           style={{
-            background: "rgba(13, 18, 38, 0.75)",
+            background: "var(--bg-surface)",
             borderRadius: "16px",
             padding: "18px 20px",
-            border: "1px solid rgba(0, 229, 255, 0.25)",
+            border: "1px solid rgba(2, 132, 199, 0.35)",
             display: "flex",
             flexDirection: "column",
             justifyContent: "space-between",
@@ -461,7 +461,7 @@ export default function RealCashLiquidityCard({
               <span
                 style={{
                   fontSize: "0.78rem",
-                  color: "#94a3b8",
+                  color: "var(--text-secondary)",
                   fontWeight: 600,
                   display: "flex",
                   alignItems: "center",
@@ -474,9 +474,9 @@ export default function RealCashLiquidityCard({
               <span
                 style={{
                   fontSize: "0.72rem",
-                  color: "#00e5ff",
+                  color: "#0284c7",
                   fontWeight: 700,
-                  background: "rgba(0, 229, 255, 0.12)",
+                  background: "rgba(2, 132, 199, 0.12)",
                   padding: "2px 8px",
                   borderRadius: "8px",
                 }}
@@ -489,8 +489,8 @@ export default function RealCashLiquidityCard({
               style={{
                 fontFamily: "JetBrains Mono, monospace",
                 fontSize: "1.6rem",
-                fontWeight: 800,
-                color: "#00e5ff",
+                fontWeight: 700,
+                color: "#0284c7",
               }}
             >
               {formatMoney(totalPocketsBalance, currency)}
@@ -500,9 +500,9 @@ export default function RealCashLiquidityCard({
           <div
             style={{
               fontSize: "0.72rem",
-              color: "#94a3b8",
+              color: "var(--text-secondary)",
               marginTop: 10,
-              borderTop: "1px solid rgba(255,255,255,0.06)",
+              borderTop: "1px solid var(--border)",
               paddingTop: 8,
               display: "flex",
               flexDirection: "column",
@@ -515,7 +515,7 @@ export default function RealCashLiquidityCard({
                 +{formatMoney(inflows.find((i) => i.category === "passive_fixed")?.amount || 16706, currency)}
               </strong>
             </div>
-            <div style={{ color: "#64748b" }}>
+            <div style={{ color: "var(--text-muted)" }}>
               Total disponible en cuentas Nu (Cajitas) / CDTs
             </div>
           </div>
@@ -524,10 +524,10 @@ export default function RealCashLiquidityCard({
         {/* 3. Total Credit Card Debt / Used Limit */}
         <div
           style={{
-            background: "rgba(13, 18, 38, 0.75)",
+            background: "var(--bg-surface)",
             borderRadius: "16px",
             padding: "18px 20px",
-            border: "1px solid rgba(244, 63, 94, 0.25)",
+            border: "1px solid rgba(244, 63, 94, 0.3)",
             display: "flex",
             flexDirection: "column",
             justifyContent: "space-between",
@@ -546,7 +546,7 @@ export default function RealCashLiquidityCard({
               <span
                 style={{
                   fontSize: "0.78rem",
-                  color: "#94a3b8",
+                  color: "var(--text-secondary)",
                   fontWeight: 600,
                   display: "flex",
                   alignItems: "center",
@@ -574,7 +574,7 @@ export default function RealCashLiquidityCard({
               style={{
                 fontFamily: "JetBrains Mono, monospace",
                 fontSize: "1.6rem",
-                fontWeight: 800,
+                fontWeight: 700,
                 color: totalCreditUsed > 0 ? "#f43f5e" : "#10b981",
               }}
             >
@@ -585,9 +585,9 @@ export default function RealCashLiquidityCard({
           <div
             style={{
               fontSize: "0.72rem",
-              color: "#94a3b8",
+              color: "var(--text-secondary)",
               marginTop: 10,
-              borderTop: "1px solid rgba(255,255,255,0.06)",
+              borderTop: "1px solid var(--border)",
               paddingTop: 8,
               display: "flex",
               flexDirection: "column",
@@ -595,12 +595,12 @@ export default function RealCashLiquidityCard({
             }}
           >
             {totalLoansReceivable > 0 ? (
-              <div style={{ display: "flex", justifyContent: "space-between", color: "#fcd34d" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", color: "#f59e0b" }}>
                 <span>🤝 Por cobrar a terceros:</span>
                 <strong>{formatMoney(totalLoansReceivable, currency)}</strong>
               </div>
             ) : (
-              <div style={{ color: "#64748b" }}>
+              <div style={{ color: "var(--text-muted)" }}>
                 Deuda total acumulada en todas tus tarjetas
               </div>
             )}
@@ -630,10 +630,10 @@ export default function RealCashLiquidityCard({
         {/* 4. Total Available Free Credit Limit */}
         <div
           style={{
-            background: "rgba(13, 18, 38, 0.75)",
+            background: "var(--bg-surface)",
             borderRadius: "16px",
             padding: "18px 20px",
-            border: "1px solid rgba(168, 85, 247, 0.25)",
+            border: "1px solid rgba(16, 185, 129, 0.35)",
             display: "flex",
             flexDirection: "column",
             justifyContent: "space-between",
@@ -652,7 +652,7 @@ export default function RealCashLiquidityCard({
               <span
                 style={{
                   fontSize: "0.78rem",
-                  color: "#94a3b8",
+                  color: "var(--text-secondary)",
                   fontWeight: 600,
                   display: "flex",
                   alignItems: "center",
@@ -680,7 +680,7 @@ export default function RealCashLiquidityCard({
               style={{
                 fontFamily: "JetBrains Mono, monospace",
                 fontSize: "1.6rem",
-                fontWeight: 800,
+                fontWeight: 700,
                 color: "#10b981",
               }}
             >
@@ -691,9 +691,9 @@ export default function RealCashLiquidityCard({
           <div
             style={{
               fontSize: "0.72rem",
-              color: "#94a3b8",
+              color: "var(--text-secondary)",
               marginTop: 10,
-              borderTop: "1px solid rgba(255,255,255,0.06)",
+              borderTop: "1px solid var(--border)",
               paddingTop: 8,
               display: "flex",
               flexDirection: "column",
@@ -702,11 +702,11 @@ export default function RealCashLiquidityCard({
           >
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span>Cupo total otorgado:</span>
-              <strong style={{ color: "#f8fafc" }}>
+              <strong style={{ color: "var(--text-primary)" }}>
                 {formatMoney(totalCreditLimit, currency)}
               </strong>
             </div>
-            <div style={{ color: "#64748b" }}>
+            <div style={{ color: "var(--text-muted)" }}>
               Capacidad disponible de crédito no utilizado
             </div>
           </div>
