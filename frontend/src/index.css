@@ -55,6 +55,63 @@
   --duration: 200ms;
 }
 
+/* ── Tokens: Modo Diurno (Light Mode) ───────────────── */
+[data-theme="light"] {
+  /* Background layers */
+  --bg-base: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f5f9;
+  --bg-overlay: rgba(255, 255, 255, 0.92);
+
+  /* Portfolio accent */
+  --accent-primary: #0284c7;
+  --accent-primary-d: #0369a1;
+  --accent-glow: rgba(2, 132, 199, 0.15);
+
+  /* Benchmark colors */
+  --sp500-color: #d97706;
+  --nasdaq-color: #9333ea;
+
+  /* Semantic */
+  --gain: #059669;
+  --loss: #dc2626;
+  --gain-bg: rgba(5, 150, 105, 0.1);
+  --loss-bg: rgba(220, 38, 38, 0.1);
+  --neutral: #64748b;
+
+  /* Text */
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --text-accent: #0284c7;
+
+  /* Borders */
+  --border: rgba(0, 0, 0, 0.08);
+  --border-accent: rgba(2, 132, 199, 0.35);
+
+  /* Shadows */
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.06);
+  --shadow-glow: 0 0 30px rgba(2, 132, 199, 0.08);
+}
+
+[data-theme="light"] body::before {
+  background-image: linear-gradient(rgba(2, 132, 199, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(2, 132, 199, 0.03) 1px, transparent 1px);
+}
+
+[data-theme="light"] input,
+[data-theme="light"] select,
+[data-theme="light"] textarea {
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+[data-theme="light"] input::placeholder {
+  color: #94a3b8 !important;
+}
+
 /* ── Reset & Base ──────────────────────────────────── */
 *,
 *::before,

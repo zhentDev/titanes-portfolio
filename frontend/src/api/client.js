@@ -21,11 +21,24 @@ function getStaticDataPath(file) {
   return `${cleanBase}data/${file}`;
 }
 
+export function getAuthHeaders() {
+  const token = typeof window !== "undefined" ? localStorage.getItem("titanes_auth_token") : null;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 // Resilient fetch helper with automatic retry for initial startup / hot-reloads
 async function safeFetch(url, options = {}, retries = 1, delayMs = 300) {
+  const mergedHeaders = {
+    ...getAuthHeaders(),
+    ...(options.headers || {}),
+  };
+  const finalOptions = {
+    ...options,
+    headers: mergedHeaders,
+  };
   for (let i = 0; i <= retries; i++) {
     try {
-      const res = await fetch(url, options);
+      const res = await fetch(url, finalOptions);
       if (res.ok) return res;
       if (res.status >= 500 && i < retries) {
         await new Promise((r) => setTimeout(r, delayMs));
@@ -602,5 +615,50 @@ export async function deleteWealthItemApi(id) {
   });
   if (!res.ok) throw new Error("Error al eliminar asignación de ahorro/inversión");
   return res.json();
+}
+
+// ── AUTH API ENDPOINTS ─────────────────────────────────────────────────────────
+
+export async function loginApi(email, password) {
+  const res = await fetch(`${BASE}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Error al iniciar sesión");
+  return data;
+}
+
+export async function registerApi(email, password, name) {
+  const res = await fetch(`${BASE}/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password, name }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Error al registrarse");
+  return data;
+}
+
+export async function oauthLoginApi(idToken, profile = {}) {
+  const res = await fetch(`${BASE}/auth/oauth`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id_token: idToken, ...profile }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Error en autenticación OAuth");
+  return data;
+}
+
+export async function fetchMeApi() {
+  try {
+    const res = await safeFetch(`${BASE}/auth/me`);
+    if (!res || !res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
 }
 

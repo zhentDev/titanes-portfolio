@@ -18,6 +18,8 @@ import RebalanceManager from "./components/RebalanceManager";
 import RebalanceTimer from "./components/RebalanceTimer";
 import SectorAllocation from "./components/SectorAllocation";
 import { InfoTooltip } from "./components/Common";
+import AuthModal from "./components/AuthModal";
+import { useAuthStore } from "./store/authStore";
 import { usePortfolioStore } from "./store/portfolioStore";
 import { exportPortfolioCSV } from "./utils/exportReport";
 import { toastPrompt } from "./utils/toastAlerts";
@@ -66,6 +68,29 @@ export default function App() {
   const [showBreakdownCard, setShowBreakdownCard] = useState(false);
   const [showQuantIntelligence, setShowQuantIntelligence] = useState(false);
 
+  // Theme state (dark / light)
+  const [theme, setTheme] = useState(() => {
+    return (typeof window !== "undefined" && localStorage.getItem("titanes_theme")) || "dark";
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("titanes_theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  };
+
+  // Auth state & User Dropdown
+  const { user, openAuthModal, logout, fetchMe } = useAuthStore();
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const userDropdownRef = useRef(null);
+
+  useEffect(() => {
+    fetchMe();
+  }, [fetchMe]);
+
   // Navigation Dropdown States & Outside Click Handlers
   const [stratOpen, setStratOpen] = useState(false);
   const [purchasesOpen, setPurchasesOpen] = useState(false);
@@ -79,6 +104,9 @@ export default function App() {
       }
       if (purchasesDropdownRef.current && !purchasesDropdownRef.current.contains(e.target)) {
         setPurchasesOpen(false);
+      }
+      if (userDropdownRef.current && !userDropdownRef.current.contains(e.target)) {
+        setUserDropdownOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -584,6 +612,140 @@ export default function App() {
               <span>Exportar CSV</span>
             </button>
           )}
+
+          {/* 6. Selector Modo Diurno / Nocturno */}
+          <button
+            type="button"
+            className="nav-action-btn"
+            onClick={toggleTheme}
+            title={theme === "dark" ? "Cambiar a Modo Diurno" : "Cambiar a Modo Nocturno"}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              cursor: "pointer",
+              fontWeight: 600,
+              fontSize: "0.85rem",
+            }}
+          >
+            <span>{theme === "dark" ? "☀️" : "🌙"}</span>
+            <span>{theme === "dark" ? "Diurno" : "Nocturno"}</span>
+          </button>
+
+          {/* 7. Cuenta de Usuario & Login */}
+          <div className="nav-dropdown" ref={userDropdownRef} style={{ position: "relative" }}>
+            {user ? (
+              <button
+                type="button"
+                className="nav-dropdown-btn"
+                onClick={() => setUserDropdownOpen((prev) => !prev)}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  border: "1px solid var(--border-accent)",
+                  background: "var(--bg-card)",
+                  color: "var(--text-primary)",
+                  padding: "6px 12px",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                }}
+              >
+                <div
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: "50%",
+                    background: user.provider === "google" ? "#4285F4" : "var(--accent-primary)",
+                    color: "#080c18",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: 700,
+                    fontSize: "0.75rem",
+                    overflow: "hidden",
+                  }}
+                >
+                  {user.avatar_url ? (
+                    <img src={user.avatar_url} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    (user.name || user.email || "U").charAt(0).toUpperCase()
+                  )}
+                </div>
+                <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>{user.name || user.email.split("@")[0]}</span>
+                <span style={{ fontSize: "0.65rem", marginLeft: 2 }}>{userDropdownOpen ? "▲" : "▼"}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="nav-action-btn"
+                onClick={() => openAuthModal("login")}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  background: "rgba(0, 229, 255, 0.1)",
+                  border: "1px solid var(--border-accent)",
+                  color: "var(--text-accent)",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  padding: "6px 14px",
+                  borderRadius: 8,
+                }}
+              >
+                <span>🔑</span>
+                <span>Acceder</span>
+              </button>
+            )}
+
+            {user && userDropdownOpen && (
+              <div
+                className="nav-dropdown-menu fade-up"
+                style={{
+                  position: "absolute",
+                  right: 0,
+                  top: "100%",
+                  marginTop: 6,
+                  minWidth: 200,
+                  zIndex: 1000,
+                  background: "var(--bg-surface)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                  boxShadow: "var(--shadow-card)",
+                  padding: 8,
+                }}
+              >
+                <div style={{ padding: "8px 12px", borderBottom: "1px solid var(--border)", marginBottom: 6 }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "var(--text-primary)" }}>{user.name || "Usuario"}</div>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{user.email}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    logout();
+                    setUserDropdownOpen(false);
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    textAlign: "left",
+                    background: "none",
+                    border: "none",
+                    color: "var(--loss)",
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                    borderRadius: 4,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <span>🚪</span>
+                  <span>Cerrar sesión</span>
+                </button>
+              </div>
+            )}
+          </div>
         </nav>
       </header>
 
@@ -1880,6 +2042,9 @@ export default function App() {
         onClose={() => setShowMainInflationExplorer(false)}
         inflationData={mainColInflationData}
       />
+
+      {/* ── Modal de Autenticación (Login / Registro / OAuth2) ── */}
+      <AuthModal />
 
       {/* ── Footer ──────────────────────────────────────── */}
       <footer className="app-footer">

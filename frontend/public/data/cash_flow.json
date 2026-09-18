@@ -19,29 +19,29 @@
       "isPassive": false,
       "frequency": "monthly",
       "icon": "💼",
-      "createdAt": "2026-09-03T13:59:47.680Z"
+      "createdAt": "2026-09-17T20:04:18.016Z"
     },
     {
       "id": "in_fixed_yield",
-      "name": "Rendimientos Cajitas Nu & CDTs",
+      "name": "Ingreso por Renta Fija",
       "category": "passive_fixed",
-      "amount": 17423.0,
+      "amount": 16816.0,
       "currency": "COP",
       "isPassive": true,
       "frequency": "monthly",
       "icon": "⚡",
-      "createdAt": "2026-09-03T13:59:47.680Z"
+      "createdAt": "2026-09-17T20:04:18.016Z"
     },
     {
       "id": "in_stock_div",
-      "name": "Dividendos Titanes Tech ETF",
+      "name": "Ingreso por Renta Variable",
       "category": "passive_equity",
-      "amount": 10450.0,
+      "amount": 51173.0,
       "currency": "COP",
       "isPassive": true,
       "frequency": "monthly",
       "icon": "📈",
-      "createdAt": "2026-09-03T13:59:47.680Z"
+      "createdAt": "2026-09-17T20:04:18.016Z"
     }
   ],
   "needs": [
@@ -53,7 +53,7 @@
       "currency": "COP",
       "dueDate": null,
       "icon": "🏠",
-      "createdAt": "2026-09-03T13:59:47.680Z"
+      "createdAt": "2026-09-17T20:04:18.016Z"
     },
     {
       "id": "need_utilities",
@@ -63,7 +63,7 @@
       "currency": "COP",
       "dueDate": null,
       "icon": "💡",
-      "createdAt": "2026-09-03T13:59:47.680Z"
+      "createdAt": "2026-09-17T20:04:18.016Z"
     },
     {
       "id": "need_groceries",
@@ -73,7 +73,7 @@
       "currency": "COP",
       "dueDate": null,
       "icon": "🛒",
-      "createdAt": "2026-09-03T13:59:47.680Z"
+      "createdAt": "2026-09-17T20:04:18.016Z"
     },
     {
       "id": "need_health_transport",
@@ -83,7 +83,7 @@
       "currency": "COP",
       "dueDate": null,
       "icon": "🏥",
-      "createdAt": "2026-09-03T13:59:47.680Z"
+      "createdAt": "2026-09-17T20:04:18.016Z"
     }
   ],
   "wants": [
@@ -94,7 +94,7 @@
       "amount": 350000.0,
       "currency": "COP",
       "icon": "🍷",
-      "createdAt": "2026-09-03T13:59:47.680Z"
+      "createdAt": "2026-09-17T20:04:18.016Z"
     },
     {
       "id": "want_subs",
@@ -103,7 +103,7 @@
       "amount": 150000.0,
       "currency": "COP",
       "icon": "🍿",
-      "createdAt": "2026-09-03T13:59:47.680Z"
+      "createdAt": "2026-09-17T20:04:18.016Z"
     },
     {
       "id": "want_leisure",
@@ -112,7 +112,7 @@
       "amount": 200000.0,
       "currency": "COP",
       "icon": "🎮",
-      "createdAt": "2026-09-03T13:59:47.680Z"
+      "createdAt": "2026-09-17T20:04:18.016Z"
     }
   ],
   "wealth": [
@@ -122,23 +122,23 @@
       "category": "emergency_fund",
       "targetAmount": 15000000.0,
       "monthlyContribution": 500000.0,
-      "currentBalance": 3085671.0,
+      "currentBalance": 3013773.0,
       "currency": "COP",
       "linkedModule": "fixed_income",
       "icon": "🛡️",
-      "createdAt": "2026-09-03T13:59:47.680Z"
+      "createdAt": "2026-09-17T20:04:18.016Z"
     },
     {
       "id": "wealth_tech_etf",
-      "name": "Aporte Titanes Tech ETF (15 Acciones)",
+      "name": "Portafolio Renta Variable (Al día / Tiempo Real)",
       "category": "equity_investment",
       "targetAmount": 30000000.0,
       "monthlyContribution": 500000.0,
-      "currentBalance": 6269980.0,
+      "currentBalance": 30861913.0,
       "currency": "COP",
       "linkedModule": "variable_income",
       "icon": "🚀",
-      "createdAt": "2026-09-03T13:59:47.680Z"
+      "createdAt": "2026-09-17T20:04:18.016Z"
     },
     {
       "id": "wealth_high_yield",
@@ -146,11 +146,11 @@
       "category": "fixed_savings",
       "targetAmount": 15000000.0,
       "monthlyContribution": 300000.0,
-      "currentBalance": 3085671.0,
+      "currentBalance": 3013773.0,
       "currency": "COP",
       "linkedModule": "fixed_income",
       "icon": "🏦",
-      "createdAt": "2026-09-03T13:59:47.680Z"
+      "createdAt": "2026-09-17T20:04:18.016Z"
     },
     {
       "id": "wealth_travel_goal",
@@ -162,7 +162,7 @@
       "currency": "COP",
       "linkedModule": "custom",
       "icon": "✈️",
-      "createdAt": "2026-09-03T13:59:47.680Z"
+      "createdAt": "2026-09-17T20:04:18.016Z"
     }
   ],
   "expensesLog": [],
@@ -180,7 +180,7 @@
       "rateEA": 24.5,
       "currency": "COP",
       "cardType": "Gold / Platinum",
-      "createdAt": "2026-09-03T13:59:47.680Z"
+      "createdAt": "2026-09-17T20:04:18.016Z"
     },
     {
       "id": "cc_rappi",
@@ -195,7 +195,7 @@
       "rateEA": 24,
       "currency": "COP",
       "cardType": "Cashback / MSI",
-      "createdAt": "2026-09-03T13:59:47.680Z"
+      "createdAt": "2026-09-17T20:04:18.016Z"
     }
   ],
   "creditCardPayments": [],

@@ -12,8 +12,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, List, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
+
+from services.auth import get_optional_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -42,12 +44,43 @@ DEFAULT_CASH_FLOW_DATA = {
 }
 
 
-def load_cash_flow_db() -> dict[str, Any]:
-    if not DATA_FILE.exists():
-        save_cash_flow_db(DEFAULT_CASH_FLOW_DATA)
+def get_user_cash_flow_file(user_id: Optional[str] = None) -> Path:
+    if not user_id:
+        return DATA_FILE
+    user_dir = DATA_DIR / "users"
+    user_dir.mkdir(parents=True, exist_ok=True)
+    return user_dir / f"{user_id}_cash_flow.json"
+
+
+def load_cash_flow_db(user_id: Optional[str] = None) -> dict[str, Any]:
+    target_file = get_user_cash_flow_file(user_id)
+
+    # Seed user data from existing legacy data if new user file
+    if user_id and not target_file.exists():
+        if DATA_FILE.exists():
+            try:
+                with open(DATA_FILE, "r", encoding="utf-8") as sf:
+                    seed_data = json.load(sf)
+                save_cash_flow_db(seed_data, user_id)
+                return seed_data
+            except Exception:
+                pass
+        elif BACKUP_FILE.exists():
+            try:
+                with open(BACKUP_FILE, "r", encoding="utf-8") as bf:
+                    seed_data = json.load(bf)
+                save_cash_flow_db(seed_data, user_id)
+                return seed_data
+            except Exception:
+                pass
+        save_cash_flow_db(DEFAULT_CASH_FLOW_DATA, user_id)
+        return DEFAULT_CASH_FLOW_DATA.copy()
+
+    if not target_file.exists():
+        save_cash_flow_db(DEFAULT_CASH_FLOW_DATA, user_id)
         return DEFAULT_CASH_FLOW_DATA.copy()
     try:
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
+        with open(target_file, "r", encoding="utf-8") as f:
             data = json.load(f)
             # Ensure critical keys exist
             for k, v in DEFAULT_CASH_FLOW_DATA.items():
@@ -55,42 +88,27 @@ def load_cash_flow_db() -> dict[str, Any]:
                     data[k] = v
             return data
     except Exception as e:
-        logger.error(f"[CashFlow] Failed reading data file {DATA_FILE}: {e}")
-        if BACKUP_FILE.exists():
-            try:
-                with open(BACKUP_FILE, "r", encoding="utf-8") as bf:
-                    return json.load(bf)
-            except Exception:
-                pass
+        logger.error(f"[CashFlow] Failed reading data file {target_file}: {e}")
         return DEFAULT_CASH_FLOW_DATA.copy()
 
 
-def save_cash_flow_db(data: dict[str, Any]) -> None:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    temp_file = DATA_FILE.with_suffix(".tmp")
+def save_cash_flow_db(data: dict[str, Any], user_id: Optional[str] = None) -> None:
+    target_file = get_user_cash_flow_file(user_id)
+    target_file.parent.mkdir(parents=True, exist_ok=True)
+    temp_file = target_file.with_suffix(".tmp")
     try:
-        # Keep a rotating backup before overwriting
-        if DATA_FILE.exists():
-            try:
-                with open(DATA_FILE, "r", encoding="utf-8") as curr_f:
-                    curr_content = curr_f.read()
-                    if curr_content.strip():
-                        with open(BACKUP_FILE, "w", encoding="utf-8") as bk_f:
-                            bk_f.write(curr_content)
-            except Exception as bk_err:
-                logger.warning(f"[CashFlow] Backup creation warning: {bk_err}")
-
         with open(temp_file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
-        temp_file.replace(DATA_FILE)
+        temp_file.replace(target_file)
 
-        # Mirror to frontend/public/data/cash_flow.json for offline/static resilience
-        try:
-            PUBLIC_DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
-            with open(PUBLIC_DATA_FILE, "w", encoding="utf-8") as pf:
-                json.dump(data, pf, indent=2, ensure_ascii=False)
-        except Exception as pub_err:
-            logger.warning(f"[CashFlow] Public static sync warning: {pub_err}")
+        # Mirror legacy file if global
+        if not user_id:
+            try:
+                PUBLIC_DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
+                with open(PUBLIC_DATA_FILE, "w", encoding="utf-8") as pf:
+                    json.dump(data, pf, indent=2, ensure_ascii=False)
+            except Exception:
+                pass
 
     except Exception as e:
         logger.error(f"[CashFlow] Failed writing data file: {e}")
@@ -99,90 +117,85 @@ def save_cash_flow_db(data: dict[str, Any]) -> None:
         raise HTTPException(status_code=500, detail="Database write failure")
 
 
-# ── Pydantic Schemas ─────────────────────────────────────
-
-class CustomRatiosSchema(BaseModel):
-    needs: float = 35.0
-    wants: float = 30.0
-    savings: float = 35.0
-
+# --- Pydantic Data Models ---
 
 class InflowItem(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
     name: str
-    category: str = "salary"  # salary, freelance, business, passive_fixed, passive_equity, other
     amount: float
-    currency: str = "COP"
-    isPassive: bool = False
     frequency: str = "monthly"
-    icon: Optional[str] = "💼"
-    createdAt: Optional[str] = None
+    isPassive: bool = False
+    createdAt: str | None = None
 
 
 class NeedExpenseItem(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
     name: str
-    category: str = "housing"  # housing, utilities, groceries, health_transport, debt, other
     amount: float
-    currency: str = "COP"
-    dueDate: Optional[str] = None
-    icon: Optional[str] = "🏠"
-    createdAt: Optional[str] = None
+    category: str = "general"
+    isEssential: bool = True
+    dueDate: int | None = None
+    createdAt: str | None = None
 
 
 class WantExpenseItem(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
     name: str
-    category: str = "dining"  # dining, subscriptions, leisure, shopping, travel, other
-    amount: float
-    currency: str = "COP"
-    icon: Optional[str] = "🍷"
-    createdAt: Optional[str] = None
+    budgetedAmount: float
+    actualSpent: float = 0.0
+    category: str = "lifestyle"
+    createdAt: str | None = None
 
 
 class WealthItem(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
     name: str
-    category: str = "emergency_fund"  # emergency_fund, equity_investment, fixed_savings, medium_term_goal, other
-    targetAmount: Optional[float] = 0.0
-    monthlyContribution: float = 0.0
-    currentBalance: Optional[float] = 0.0
-    currency: str = "COP"
-    linkedModule: Optional[str] = "custom"  # fixed_income, variable_income, custom
-    icon: Optional[str] = "🛡️"
-    createdAt: Optional[str] = None
+    targetAmount: float
+    actualContributed: float = 0.0
+    targetType: str = "investment"
+    createdAt: str | None = None
+
+
+class CustomRatiosModel(BaseModel):
+    needs: float = 50.0
+    wants: float = 30.0
+    savings: float = 20.0
 
 
 class CashFlowSyncPayload(BaseModel):
-    activePeriod: Optional[str] = "2026-08"
-    currency: Optional[str] = "COP"
-    allocationModel: Optional[str] = "50_30_20"
-    customRatios: Optional[CustomRatiosSchema] = None
-    emergencyFundTargetMonths: Optional[int] = 6
-    inflows: Optional[List[InflowItem]] = None
-    needs: Optional[List[NeedExpenseItem]] = None
-    wants: Optional[List[WantExpenseItem]] = None
-    wealth: Optional[List[WealthItem]] = None
-    payrollAccount: Optional[dict[str, Any]] = None
-    creditCards: Optional[List[dict[str, Any]]] = None
-    creditPurchases: Optional[List[dict[str, Any]]] = None
-    expensesLog: Optional[List[dict[str, Any]]] = None
-    creditCardPayments: Optional[List[dict[str, Any]]] = None
-    periodsData: Optional[dict[str, Any]] = None
+    activePeriod: str | None = None
+    currency: str | None = None
+    allocationModel: str | None = None
+    customRatios: CustomRatiosModel | None = None
+    emergencyFundTargetMonths: int | None = None
+    inflows: list[InflowItem] | None = None
+    needs: list[NeedExpenseItem] | None = None
+    wants: list[WantExpenseItem] | None = None
+    wealth: list[WealthItem] | None = None
+    payrollAccount: dict | None = None
+    creditCards: list[dict] | None = None
+    creditPurchases: list[dict] | None = None
+    expensesLog: list[dict] | None = None
+    creditCardPayments: list[dict] | None = None
+    periodsData: dict | None = None
 
 
-# ── REST API Endpoints ───────────────────────────────────
+# --- REST API Endpoints ---
 
 @router.get("/cash-flow")
-def get_cash_flow_state():
+def get_cash_flow_state(request: Request):
     """Retrieve full cash flow, income inflows, budget allocations, credit cards and wealth building targets."""
-    return load_cash_flow_db()
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    return load_cash_flow_db(user_id)
 
 
 @router.post("/cash-flow/sync")
-def sync_cash_flow_state(payload: CashFlowSyncPayload):
+def sync_cash_flow_state(payload: CashFlowSyncPayload, request: Request):
     """Synchronize full cash flow state from client to backend DuckDB / JSON storage."""
-    db = load_cash_flow_db()
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    db = load_cash_flow_db(user_id)
 
     if payload.activePeriod is not None:
         db["activePeriod"] = payload.activePeriod
@@ -215,14 +228,16 @@ def sync_cash_flow_state(payload: CashFlowSyncPayload):
     if payload.periodsData is not None:
         db["periodsData"] = payload.periodsData
 
-    save_cash_flow_db(db)
+    save_cash_flow_db(db, user_id)
     return {"status": "ok", "message": "Cash flow synchronized successfully", "data": db}
 
 
 @router.post("/cash-flow/inflow")
-def create_inflow(item: InflowItem):
+def create_inflow(item: InflowItem, request: Request):
     """Add a new income stream."""
-    db = load_cash_flow_db()
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    db = load_cash_flow_db(user_id)
     data_dict = item.model_dump()
     if not data_dict.get("id"):
         data_dict["id"] = f"in_{uuid.uuid4().hex[:8]}"
@@ -230,23 +245,27 @@ def create_inflow(item: InflowItem):
         data_dict["createdAt"] = datetime.utcnow().isoformat() + "Z"
 
     db["inflows"].append(data_dict)
-    save_cash_flow_db(db)
+    save_cash_flow_db(db, user_id)
     return data_dict
 
 
 @router.delete("/cash-flow/inflow/{inflow_id}")
-def delete_inflow(inflow_id: str):
+def delete_inflow(inflow_id: str, request: Request):
     """Delete an income stream."""
-    db = load_cash_flow_db()
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    db = load_cash_flow_db(user_id)
     db["inflows"] = [x for x in db.get("inflows", []) if x.get("id") != inflow_id]
-    save_cash_flow_db(db)
+    save_cash_flow_db(db, user_id)
     return {"status": "ok", "deletedId": inflow_id}
 
 
 @router.post("/cash-flow/need")
-def create_need_expense(item: NeedExpenseItem):
+def create_need_expense(item: NeedExpenseItem, request: Request):
     """Add or update an essential fixed expense."""
-    db = load_cash_flow_db()
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    db = load_cash_flow_db(user_id)
     data_dict = item.model_dump()
     if not data_dict.get("id"):
         data_dict["id"] = f"need_{uuid.uuid4().hex[:8]}"
@@ -254,23 +273,27 @@ def create_need_expense(item: NeedExpenseItem):
         data_dict["createdAt"] = datetime.utcnow().isoformat() + "Z"
 
     db["needs"].append(data_dict)
-    save_cash_flow_db(db)
+    save_cash_flow_db(db, user_id)
     return data_dict
 
 
 @router.delete("/cash-flow/need/{need_id}")
-def delete_need_expense(need_id: str):
+def delete_need_expense(need_id: str, request: Request):
     """Delete an essential fixed expense."""
-    db = load_cash_flow_db()
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    db = load_cash_flow_db(user_id)
     db["needs"] = [x for x in db.get("needs", []) if x.get("id") != need_id]
-    save_cash_flow_db(db)
+    save_cash_flow_db(db, user_id)
     return {"status": "ok", "deletedId": need_id}
 
 
 @router.post("/cash-flow/want")
-def create_want_expense(item: WantExpenseItem):
+def create_want_expense(item: WantExpenseItem, request: Request):
     """Add or update a variable lifestyle expense."""
-    db = load_cash_flow_db()
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    db = load_cash_flow_db(user_id)
     data_dict = item.model_dump()
     if not data_dict.get("id"):
         data_dict["id"] = f"want_{uuid.uuid4().hex[:8]}"
@@ -278,23 +301,27 @@ def create_want_expense(item: WantExpenseItem):
         data_dict["createdAt"] = datetime.utcnow().isoformat() + "Z"
 
     db["wants"].append(data_dict)
-    save_cash_flow_db(db)
+    save_cash_flow_db(db, user_id)
     return data_dict
 
 
 @router.delete("/cash-flow/want/{want_id}")
-def delete_want_expense(want_id: str):
+def delete_want_expense(want_id: str, request: Request):
     """Delete a variable lifestyle expense."""
-    db = load_cash_flow_db()
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    db = load_cash_flow_db(user_id)
     db["wants"] = [x for x in db.get("wants", []) if x.get("id") != want_id]
-    save_cash_flow_db(db)
+    save_cash_flow_db(db, user_id)
     return {"status": "ok", "deletedId": want_id}
 
 
 @router.post("/cash-flow/wealth")
-def create_wealth_item(item: WealthItem):
+def create_wealth_item(item: WealthItem, request: Request):
     """Add or update a wealth / savings / investment allocation."""
-    db = load_cash_flow_db()
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    db = load_cash_flow_db(user_id)
     data_dict = item.model_dump()
     if not data_dict.get("id"):
         data_dict["id"] = f"wealth_{uuid.uuid4().hex[:8]}"
@@ -302,14 +329,16 @@ def create_wealth_item(item: WealthItem):
         data_dict["createdAt"] = datetime.utcnow().isoformat() + "Z"
 
     db["wealth"].append(data_dict)
-    save_cash_flow_db(db)
+    save_cash_flow_db(db, user_id)
     return data_dict
 
 
 @router.delete("/cash-flow/wealth/{wealth_id}")
-def delete_wealth_item(wealth_id: str):
+def delete_wealth_item(wealth_id: str, request: Request):
     """Delete a wealth / savings / investment allocation."""
-    db = load_cash_flow_db()
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    db = load_cash_flow_db(user_id)
     db["wealth"] = [x for x in db.get("wealth", []) if x.get("id") != wealth_id]
-    save_cash_flow_db(db)
+    save_cash_flow_db(db, user_id)
     return {"status": "ok", "deletedId": wealth_id}

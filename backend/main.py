@@ -23,6 +23,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from routers.auth import router as auth_router
 from routers.cash_flow import router as cash_flow_router
 from routers.fixed_income import router as fixed_income_router
 from routers.nav import router as nav_router
@@ -43,6 +44,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+from services.auth import current_user_id_var, get_optional_current_user
+
+
+@app.middleware("http")
+async def auth_context_middleware(request: Request, call_next):
+    user = get_optional_current_user(request)
+    token = current_user_id_var.set(user["sub"] if user else None)
+    try:
+        response = await call_next(request)
+        return response
+    finally:
+        current_user_id_var.reset(token)
 
 
 @app.exception_handler(Exception)
@@ -99,6 +113,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
+app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 app.include_router(nav_router, prefix="/api")
 app.include_router(prices_router, prefix="/api")
 app.include_router(rebalance_router, prefix="/api")

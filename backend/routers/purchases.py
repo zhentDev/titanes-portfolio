@@ -1,8 +1,9 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from pydantic import BaseModel
 from typing import List, Optional
 from services.db import get_connection
 from services.market_data import get_fx_data, get_colombia_cpi_history
+from services.auth import get_optional_current_user
 import json
 
 router = APIRouter()
@@ -46,14 +47,35 @@ class SyncPayload(BaseModel):
 
 
 @router.get("/purchases/portfolios")
-def get_all_purchases_data():
+def get_all_purchases_data(request: Request):
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+
     with get_connection() as con:
-        portfolios = con.execute(
-            "SELECT id, name, is_plan, plan_config, asset_currency, local_currency, annual_inflation_rate, use_auto_col_inflation FROM purchase_portfolios"
-        ).fetchall()
-        lots = con.execute(
-            "SELECT id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price, purchase_time FROM individual_purchases"
-        ).fetchall()
+        if user_id:
+            portfolios = con.execute(
+                """
+                SELECT id, name, is_plan, plan_config, asset_currency, local_currency, annual_inflation_rate, use_auto_col_inflation 
+                FROM purchase_portfolios 
+                WHERE user_id = ? OR user_id IS NULL
+                """,
+                [user_id],
+            ).fetchall()
+            lots = con.execute(
+                """
+                SELECT id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price, purchase_time 
+                FROM individual_purchases 
+                WHERE user_id = ? OR user_id IS NULL
+                """,
+                [user_id],
+            ).fetchall()
+        else:
+            portfolios = con.execute(
+                "SELECT id, name, is_plan, plan_config, asset_currency, local_currency, annual_inflation_rate, use_auto_col_inflation FROM purchase_portfolios"
+            ).fetchall()
+            lots = con.execute(
+                "SELECT id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price, purchase_time FROM individual_purchases"
+            ).fetchall()
 
         return {
             "purchasePortfolios": [
@@ -86,13 +108,16 @@ def get_all_purchases_data():
 
 
 @router.post("/purchases/portfolios")
-def create_portfolio(item: PortfolioItem):
+def create_portfolio(item: PortfolioItem, request: Request):
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+
     with get_connection() as con:
         config_str = json.dumps(item.planConfig) if item.planConfig else None
         con.execute(
             """
-            INSERT INTO purchase_portfolios (id, name, is_plan, plan_config, asset_currency, local_currency, annual_inflation_rate, use_auto_col_inflation) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?) 
+            INSERT INTO purchase_portfolios (id, name, is_plan, plan_config, asset_currency, local_currency, annual_inflation_rate, use_auto_col_inflation, user_id) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) 
             ON CONFLICT (id) DO UPDATE SET 
             name=EXCLUDED.name, 
             is_plan=EXCLUDED.is_plan, 
@@ -100,7 +125,8 @@ def create_portfolio(item: PortfolioItem):
             asset_currency=EXCLUDED.asset_currency,
             local_currency=EXCLUDED.local_currency,
             annual_inflation_rate=EXCLUDED.annual_inflation_rate,
-            use_auto_col_inflation=EXCLUDED.use_auto_col_inflation
+            use_auto_col_inflation=EXCLUDED.use_auto_col_inflation,
+            user_id=COALESCE(EXCLUDED.user_id, purchase_portfolios.user_id)
             """,
             [
                 item.id,
@@ -111,6 +137,7 @@ def create_portfolio(item: PortfolioItem):
                 item.localCurrency,
                 item.inflationRate,
                 item.useAutoColInflation,
+                user_id,
             ],
         )
     return {"success": True}
@@ -164,13 +191,16 @@ def delete_portfolio(portfolio_id: str):
 
 
 @router.post("/purchases/lots")
-def create_lot(lot: PurchaseLot):
+def create_lot(lot: PurchaseLot, request: Request):
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+
     with get_connection() as con:
         con.execute(
             """
             INSERT INTO individual_purchases 
-            (id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price, purchase_time) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price, purchase_time, user_id) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (id) DO UPDATE SET 
                 portfolio_id=EXCLUDED.portfolio_id,
                 ticker=EXCLUDED.ticker,
@@ -178,7 +208,8 @@ def create_lot(lot: PurchaseLot):
                 purchase_price=EXCLUDED.purchase_price,
                 shares=EXCLUDED.shares,
                 manual_current_price=EXCLUDED.manual_current_price,
-                purchase_time=EXCLUDED.purchase_time
+                purchase_time=EXCLUDED.purchase_time,
+                user_id=COALESCE(EXCLUDED.user_id, individual_purchases.user_id)
             """,
             [
                 lot.id,
@@ -189,13 +220,17 @@ def create_lot(lot: PurchaseLot):
                 lot.shares,
                 lot.manualCurrentPrice,
                 lot.purchaseTime,
+                user_id,
             ],
         )
     return {"success": True}
 
 
 @router.put("/purchases/lots")
-def update_lots(lots: List[PurchaseLot]):
+def update_lots(lots: List[PurchaseLot], request: Request):
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+
     with get_connection() as con:
         for lot in lots:
             con.execute(
@@ -226,20 +261,22 @@ def delete_lot(lot_id: str):
 
 
 @router.post("/purchases/sync")
-def sync_migration(payload: SyncPayload):
-    # This is for migrating local storage to DuckDB seamlessly
+def sync_migration(payload: SyncPayload, request: Request):
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+
     with get_connection() as con:
         for p in payload.purchasePortfolios:
             con.execute(
-                "INSERT INTO purchase_portfolios (id, name) VALUES (?, ?) ON CONFLICT (id) DO NOTHING",
-                [p.id, p.name],
+                "INSERT INTO purchase_portfolios (id, name, user_id) VALUES (?, ?, ?) ON CONFLICT (id) DO NOTHING",
+                [p.id, p.name, user_id],
             )
         for lot in payload.individualPurchases:
             con.execute(
                 """
                 INSERT INTO individual_purchases 
-                (id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price, purchase_time) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price, purchase_time, user_id) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (id) DO NOTHING
                 """,
                 [
@@ -251,6 +288,7 @@ def sync_migration(payload: SyncPayload):
                     lot.shares,
                     lot.manualCurrentPrice,
                     lot.purchaseTime,
+                    user_id,
                 ],
             )
     return {

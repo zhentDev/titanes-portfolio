@@ -137,23 +137,53 @@ DEFAULT_FIXED_INCOME_DATA = {
 }
 
 
-def load_fixed_income_db() -> dict[str, Any]:
-    """Load JSON database with failover to default initial state."""
+from services.auth import get_current_user_id
+
+
+def get_user_fixed_income_file(user_id: str | None = None) -> Path:
+    uid = user_id or get_current_user_id()
+    if not uid:
+        return DATA_FILE
+    user_dir = DATA_DIR / "users"
+    user_dir.mkdir(parents=True, exist_ok=True)
+    return user_dir / f"{uid}_fixed_income.json"
+
+
+def load_fixed_income_db(user_id: str | None = None) -> dict[str, Any]:
+    """Load JSON database with failover to default initial state and user isolation."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    if not DATA_FILE.exists():
-        save_fixed_income_db(DEFAULT_FIXED_INCOME_DATA)
-        return DEFAULT_FIXED_INCOME_DATA
+    target_file = get_user_fixed_income_file(user_id)
+    uid = user_id or get_current_user_id()
+
+    # Seed user file from existing legacy data if user file doesn't exist yet
+    if uid and not target_file.exists():
+        if DATA_FILE.exists():
+            try:
+                with open(DATA_FILE, encoding="utf-8") as sf:
+                    seed_data = json.load(sf)
+                save_fixed_income_db(seed_data, uid)
+                return seed_data
+            except Exception:
+                pass
+        save_fixed_income_db(DEFAULT_FIXED_INCOME_DATA, uid)
+        return DEFAULT_FIXED_INCOME_DATA.copy()
+
+    if not target_file.exists():
+        save_fixed_income_db(DEFAULT_FIXED_INCOME_DATA, uid)
+        return DEFAULT_FIXED_INCOME_DATA.copy()
     try:
-        with open(DATA_FILE, encoding="utf-8") as f:
+        with open(target_file, encoding="utf-8") as f:
             return json.load(f)
     except Exception:
-        return DEFAULT_FIXED_INCOME_DATA
+        return DEFAULT_FIXED_INCOME_DATA.copy()
 
 
-def save_fixed_income_db(data: dict[str, Any]) -> None:
-    """Save data safely to JSON file."""
+def save_fixed_income_db(data: dict[str, Any], user_id: str | None = None) -> None:
+    """Save data safely to JSON file for designated user or global fallback."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
+    target_file = get_user_fixed_income_file(user_id)
+    target_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(target_file, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 
