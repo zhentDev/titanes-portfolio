@@ -100,16 +100,7 @@ export default function ExpensesLogSection({
   const totalPaidToCards = periodPayments.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
 
   return (
-    <div
-      style={{
-        background: "rgba(17, 24, 41, 0.8)",
-        border: "1px solid rgba(255, 255, 255, 0.08)",
-        borderRadius: "20px",
-        padding: "24px 28px",
-        backdropFilter: "blur(16px)",
-        boxShadow: "0 10px 32px rgba(0, 0, 0, 0.35)",
-      }}
-    >
+    <div className="cashflow-expenses-section">
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 14 }}>
         <div>

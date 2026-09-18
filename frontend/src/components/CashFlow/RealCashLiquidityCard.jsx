@@ -145,16 +145,7 @@ export default function RealCashLiquidityCard({
   }, 0);
 
   return (
-    <div
-      style={{
-        background: "rgba(17, 24, 41, 0.8)",
-        border: "1px solid rgba(0, 229, 255, 0.2)",
-        borderRadius: "20px",
-        padding: "24px 28px",
-        backdropFilter: "blur(16px)",
-        boxShadow: "0 10px 32px rgba(0, 0, 0, 0.35)",
-      }}
-    >
+    <div className="cashflow-liquidity-card">
       {/* Header with Payroll Entity Selector & View Mode Switcher */}
       <div
         style={{

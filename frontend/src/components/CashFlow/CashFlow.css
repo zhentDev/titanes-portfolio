@@ -657,3 +657,170 @@
   gap: 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
+
+/* ── Base Dark Theme Rules for Additional Sections ─────────────────── */
+.cashflow-emergency-card,
+.cashflow-credit-section,
+.cashflow-liquidity-card,
+.cashflow-expenses-section {
+  background: rgba(17, 24, 41, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 24px 28px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.35);
+  margin-top: 8px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   LIGHT MODE DESIGN OVERRIDES ([data-theme="light"])
+   ═══════════════════════════════════════════════════════════════════════ */
+
+[data-theme="light"] .cashflow-title {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+[data-theme="light"] .cashflow-subtitle {
+  color: #475569;
+}
+
+[data-theme="light"] .cashflow-sub-toolbar {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .cashflow-period-navigator {
+  background: #f8fafc;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  color: #0f172a;
+}
+
+[data-theme="light"] .cashflow-currency-toggle {
+  background: #f1f5f9;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .cashflow-kpi-card {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .cashflow-kpi-label {
+  color: #64748b;
+}
+
+[data-theme="light"] .cashflow-kpi-value {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+[data-theme="light"] .cashflow-sankey-section {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .cashflow-sankey-title {
+  color: #0f172a;
+}
+
+[data-theme="light"] .cashflow-sankey-svg-wrapper {
+  background: #f8fafc;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .cashflow-rule-card {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .cashflow-pillar-card {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .cashflow-pillar-title {
+  color: #0f172a;
+}
+
+[data-theme="light"] .cashflow-pillar-total {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+[data-theme="light"] .cashflow-item-row {
+  background: #f8fafc;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .cashflow-item-row:hover {
+  background: #f1f5f9;
+}
+
+[data-theme="light"] .cashflow-item-name {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+[data-theme="light"] .cashflow-item-sub {
+  color: #64748b;
+}
+
+[data-theme="light"] .cashflow-item-amount {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+[data-theme="light"] .cashflow-add-btn {
+  background: #f8fafc;
+  border: 1px dashed rgba(0, 0, 0, 0.15);
+  color: #475569;
+}
+
+[data-theme="light"] .cashflow-add-btn:hover {
+  background: #f1f5f9;
+  border-color: rgba(0, 0, 0, 0.25);
+  color: #0f172a;
+}
+
+[data-theme="light"] .cashflow-emergency-card,
+[data-theme="light"] .cashflow-credit-section,
+[data-theme="light"] .cashflow-liquidity-card,
+[data-theme="light"] .cashflow-expenses-section {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .cashflow-action-btn.secondary {
+  background: #f1f5f9;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  color: #0f172a;
+}
+
+[data-theme="light"] .cashflow-action-btn.secondary:hover {
+  background: #e2e8f0;
+}
+
+[data-theme="light"] .cashflow-modal-content {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: #0f172a;
+}
+
+[data-theme="light"] .cashflow-input,
+[data-theme="light"] .cashflow-select {
+  background: #f8fafc;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  color: #0f172a;
+}
+
+[data-theme="light"] .cashflow-legend-item {
+  color: #475569;
+}
+

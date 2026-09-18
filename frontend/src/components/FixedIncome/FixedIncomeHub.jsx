@@ -63,7 +63,7 @@ export default function FixedIncomeHub() {
   const [migrateFrom, setMigrateFrom] = useState(null); // entityId being migrated
   const [expandedAccountIds, setExpandedAccountIds] = useState(new Set());
   const [expandedMaturedEntities, setExpandedMaturedEntities] = useState(new Set());
-  const [collapsedEntityIds, setCollapsedEntityIds] = useState(new Set());
+  const [expandedEntityIds, setExpandedEntityIds] = useState(new Set());
   const [movementFilterType, setMovementFilterType] = useState({});
   const [movementSearch, setMovementSearch] = useState({});
   const [movementYear, setMovementYear] = useState({});
@@ -157,7 +157,7 @@ export default function FixedIncomeHub() {
   };
 
   const toggleEntityCollapse = (entId) => {
-    setCollapsedEntityIds((prev) => {
+    setExpandedEntityIds((prev) => {
       const next = new Set(prev);
       if (next.has(entId)) next.delete(entId);
       else next.add(entId);
@@ -1475,7 +1475,7 @@ export default function FixedIncomeHub() {
       {(() => {
         const renderEntityCard = (entity) => {
           if (!entity) return null;
-          const isEntityCollapsed = collapsedEntityIds.has(entity.id);
+          const isEntityCollapsed = !expandedEntityIds.has(entity.id);
           const entityAccounts = accounts.filter((a) => a.entityId === entity.id);
           const entityCDTs = cdts.filter((c) => c.entityId === entity.id);
           const activeEntityCDTs = entityCDTs.filter((c) => c.status !== "matured");
@@ -1809,13 +1809,13 @@ export default function FixedIncomeHub() {
                           </button>
 
                           <div>
-                            <div style={{ fontWeight: 700, color: "#f1f5f9", fontSize: "0.88rem" }}>
+                            <div style={{ fontWeight: 600, color: "var(--text-primary)", fontSize: "0.88rem" }}>
                               {acc.name}
                             </div>
-                            <div style={{ fontSize: "0.72rem", color: "#94a3b8", marginTop: 2, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                            <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginTop: 2, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                               <span>
                                 {acc.type === "crypto" ? "Tasa Staking:" : "Tasa actual:"}{" "}
-                                <span style={{ color: "#10b981", fontWeight: 700 }}>
+                                <span style={{ color: "#10b981", fontWeight: 600 }}>
                                   {Number(
                                     (acc.type === "crypto" || acc.interestRateEA)
                                       ? (acc.interestRateEA || historicalRates?.entities?.[acc.entityId]?.savings_rates?.slice(-1)[0]?.rateEA || 8.00)
@@ -1844,29 +1844,29 @@ export default function FixedIncomeHub() {
 
                         {/* 3 Core Values: Aportes Netos, Rendimientos, Saldo Total */}
                         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(0,0,0,0.25)", padding: "4px 8px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.05)" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--bg-surface)", padding: "4px 8px", borderRadius: 8, border: "1px solid var(--border)" }}>
                             {/* 1. Ingresado Neto Líquido */}
                             <div style={{ textAlign: "right" }} title="Capital neto depositado líquido en la cajita">
-                              <span style={{ color: "#94a3b8", fontSize: "0.6rem", display: "block" }}>📥 Aportado Neto</span>
-                              <span className="mono" style={{ color: "#cbd5e1", fontWeight: 600, fontSize: "0.78rem" }}>
+                              <span style={{ color: "var(--text-muted)", fontSize: "0.6rem", display: "block" }}>📥 Aportado Neto</span>
+                              <span className="mono" style={{ color: "var(--text-secondary)", fontWeight: 600, fontSize: "0.78rem" }}>
                                 ${yieldData.liquidNetCapital.toLocaleString("en-US", { maximumFractionDigits: 2 })}
                               </span>
                             </div>
 
                             {/* 2. Rendimientos Líquidos */}
                             <div style={{ textAlign: "right" }} title="Rendimientos diarios ganados en la cajita">
-                              <span style={{ color: "#94a3b8", fontSize: "0.6rem", display: "block" }}>📈 Rentabilidad</span>
-                              <span className="mono" style={{ color: "#10b981", fontWeight: 700, fontSize: "0.78rem" }}>
+                              <span style={{ color: "var(--text-muted)", fontSize: "0.6rem", display: "block" }}>📈 Rentabilidad</span>
+                              <span className="mono" style={{ color: "#10b981", fontWeight: 600, fontSize: "0.78rem" }}>
                                 +${yieldData.liquidEarnedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })}
                               </span>
                             </div>
 
                             {/* 3. Saldo Total Líquido */}
-                            <div style={{ textAlign: "right", paddingLeft: 8, borderLeft: "1px solid rgba(255,255,255,0.12)" }} title="Saldo líquido actual en la cajita">
-                              <span style={{ color: "#38bdf8", fontSize: "0.6rem", display: "block", fontWeight: 700 }}>💰 Saldo Líquido</span>
-                              <span className="mono" style={{ color: "#f8fafc", fontWeight: 800, fontSize: "0.92rem" }}>
+                            <div style={{ textAlign: "right", paddingLeft: 8, borderLeft: "1px solid var(--border)" }} title="Saldo líquido actual en la cajita">
+                              <span style={{ color: "#0284c7", fontSize: "0.6rem", display: "block", fontWeight: 600 }}>💰 Saldo Líquido</span>
+                              <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: "0.92rem" }}>
                                 ${yieldData.liquidTotalBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })}{" "}
-                                <span style={{ fontSize: "0.65rem", color: "#94a3b8" }}>{acc.currency}</span>
+                                <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>{acc.currency}</span>
                               </span>
                             </div>
                           </div>
@@ -2519,13 +2519,13 @@ export default function FixedIncomeHub() {
                           width: "100%",
                           borderCollapse: "collapse",
                           fontSize: "0.7rem",
-                          color: "#94a3b8",
+                          color: "var(--text-secondary)",
                         }}
                       >
                         <thead>
                           <tr
                             style={{
-                              borderBottom: "1px solid rgba(255,255,255,0.06)",
+                              borderBottom: "1px solid var(--border)",
                               textAlign: "left",
                             }}
                           >
@@ -2574,19 +2574,19 @@ export default function FixedIncomeHub() {
                               return (
                                 <tr
                                   key={`cdt_${cdt.id}_row_${idx}`}
-                                  style={{ borderBottom: "1px solid rgba(255,255,255,0.02)" }}
+                                  style={{ borderBottom: "1px solid var(--border)" }}
                                 >
                                   <td
                                     style={{
                                       padding: "6px 2px",
-                                      color: "#e2e8f0",
+                                      color: "var(--text-primary)",
                                       fontWeight: 500,
                                     }}
                                   >
                                     <div style={{ fontWeight: 600 }}>
                                       {cdt.category || cdt.name.replace(/\s*\$\s*[\d\.,]+/i, "")}
                                     </div>
-                                    <div style={{ fontSize: "0.62rem", color: "#64748b" }}>
+                                    <div style={{ fontSize: "0.62rem", color: "var(--text-muted)" }}>
                                       {cdt.startDate} ➔ {cdt.maturityDate || cdt.startDate}
                                     </div>
                                   </td>
@@ -2594,7 +2594,7 @@ export default function FixedIncomeHub() {
                                     style={{
                                       padding: "6px 2px",
                                       textAlign: "center",
-                                      color: "#e2e8f0",
+                                      color: "var(--text-secondary)",
                                     }}
                                   >
                                     {cdt.termDays || 180}d
@@ -2633,7 +2633,7 @@ export default function FixedIncomeHub() {
                                       padding: "6px 2px",
                                       textAlign: "right",
                                       fontFamily: "JetBrains Mono",
-                                      color: "#f1f5f9",
+                                      color: "var(--text-primary)",
                                       fontWeight: 600,
                                     }}
                                   >
