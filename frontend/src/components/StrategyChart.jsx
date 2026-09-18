@@ -294,7 +294,7 @@ export default function StrategyChart({
   const [hoverValues, setHoverValues] = useState(null);
 
   const { theme } = useTheme();
-  const chartColors = getChartColors(theme);
+  const chartColors = useMemo(() => getChartColors(theme), [theme]);
 
   const { period: storePeriod } = usePortfolioStore();
   const period = periodProp ?? storePeriod;
@@ -371,7 +371,7 @@ export default function StrategyChart({
     });
 
     seriesRef.current.sp500 = chartRef.current.addLineSeries({
-      color: COLORS.sp500,
+      color: chartColors.sp500,
       lineWidth: 1.5,
       priceLineVisible: false,
       lastValueVisible: false,
@@ -379,7 +379,7 @@ export default function StrategyChart({
     });
 
     seriesRef.current.nasdaq = chartRef.current.addLineSeries({
-      color: COLORS.nasdaq,
+      color: chartColors.nasdaq,
       lineWidth: 1.5,
       priceLineVisible: false,
       lastValueVisible: false,
@@ -395,7 +395,7 @@ export default function StrategyChart({
     });
 
     chartRef.current.subscribeCrosshairMove((param) => {
-      if (!param || !param.time || !param.seriesData) {
+      if (!param.time || !param.seriesData) {
         setHoverValues(null);
         return;
       }
@@ -426,7 +426,7 @@ export default function StrategyChart({
     return () => {
       window.removeEventListener("resize", handleResize);
     };
-  }, [strategy?.color, strategy?.benchmark, strategy?.name, theme, chartColors]);
+  }, [strategy?.color, strategy?.benchmark, strategy?.name]);
 
   useEffect(() => {
     const cleanup = initChart();
@@ -440,7 +440,7 @@ export default function StrategyChart({
   // Apply theme changes to existing chart instance without full re-creation
   useEffect(() => {
     if (chartRef.current) {
-      applyChartTheme(chartRef.current, theme);
+      applyChartTheme(chartRef.current, theme, seriesRef.current);
     }
   }, [theme]);
 

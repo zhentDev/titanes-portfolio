@@ -1352,7 +1352,7 @@ export default function FixedIncomeHub() {
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span>📈</span>
-            <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "#f1f5f9" }}>
+            <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "var(--text-primary)" }}>
               Gráfico de Crecimiento Histórico & Curva de Proyección
             </span>
           </div>
@@ -1363,8 +1363,8 @@ export default function FixedIncomeHub() {
               setShowFixedIncomeChart(!showFixedIncomeChart);
             }}
             style={{
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.12)",
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border)",
               borderRadius: 6,
               padding: "4px 10px",
               color: "var(--text-muted)",
@@ -1388,8 +1388,8 @@ export default function FixedIncomeHub() {
       {/* ── ENTITIES & ACCOUNTS SECTION (COLLAPSIBLE) ───────── */}
       <div
         style={{
-          background: "rgba(15, 23, 42, 0.4)",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
+          background: "var(--bg-card)",
+          border: "1px solid var(--border)",
           borderRadius: 14,
           padding: showEntitiesSection ? "16px" : "12px 18px",
           transition: "all 0.2s ease",
@@ -1409,7 +1409,7 @@ export default function FixedIncomeHub() {
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <span>🏦</span>
-            <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#f1f5f9", fontWeight: 700 }}>
+            <h4 style={{ margin: 0, fontSize: "0.95rem", color: "var(--text-primary)", fontWeight: 700 }}>
               Entidades y Cuentas Activas ({activeEntities.length})
             </h4>
             <span
@@ -1455,8 +1455,8 @@ export default function FixedIncomeHub() {
                 setShowEntitiesSection(!showEntitiesSection);
               }}
               style={{
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.12)",
+                background: "var(--bg-surface)",
+                border: "1px solid var(--border)",
                 borderRadius: 6,
                 padding: "4px 10px",
                 color: "var(--text-muted)",
@@ -1552,10 +1552,10 @@ export default function FixedIncomeHub() {
                     />
                   </div>
                   <div>
-                    <div style={{ fontWeight: 800, color: "#f8fafc", fontSize: "1.05rem" }}>
+                    <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "1.05rem" }}>
                       {entity.name} <span style={{ fontSize: "0.8rem" }}>{entity.country}</span>
                     </div>
-                    <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
+                    <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)" }}>
                       {entityAccounts.length} cajita(s) / cuenta(s) • {entityCDTs.length} CDT(s)
                     </div>
                   </div>
@@ -2987,15 +2987,16 @@ export default function FixedIncomeHub() {
           );
         };
 
-        {/* ── Dynamic Multi-Column Masonry: cards flow and balance automatically by content height ── */}
-        <div
-          style={{
-            columns: "2 460px",
-            columnGap: 20,
-          }}
-        >
-          {activeEntities.map((entity) => renderEntityCard(entity))}
-        </div>
+        return (
+          <div
+            style={{
+              columns: "2 460px",
+              columnGap: 20,
+            }}
+          >
+            {activeEntities.map((entity) => renderEntityCard(entity))}
+          </div>
+        );
       })()}
           </>
         )}

@@ -39,7 +39,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
   } = usePortfolioStore();
 
   const { theme } = useTheme();
-  const chartColors = getChartColors(theme);
+  const chartColors = useMemo(() => getChartColors(theme), [theme]);
 
   const status = batchUpdateStatus?.[portfolioId] || {};
   const isBatchUpdating = status.isUpdating || false;
@@ -761,28 +761,28 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
     chartInstanceRef.current = chart;
 
     seriesRefs.current.invested = chart.addLineSeries({
-      color: "#f59e0b",
+      color: chartColors.capital,
       lineWidth: 2,
       lineStyle: LineStyle.Dashed,
       visible: visibleSeries.invested,
     });
 
     seriesRefs.current.value = chart.addAreaSeries({
-      lineColor: "#00e5ff",
-      topColor: "rgba(0, 229, 255, 0.25)",
-      bottomColor: "rgba(0, 229, 255, 0.0)",
+      lineColor: chartColors.nav,
+      topColor: chartColors.navAreaTop,
+      bottomColor: chartColors.navAreaBottom,
       lineWidth: 2,
       visible: visibleSeries.valor,
     });
 
     seriesRefs.current.sp500 = chart.addLineSeries({
-      color: "#ec4899", // pink
+      color: chartColors.sp500,
       lineWidth: 2,
       visible: visibleSeries.sp500,
     });
 
     seriesRefs.current.nasdaq = chart.addLineSeries({
-      color: "#8b5cf6", // purple
+      color: chartColors.nasdaq,
       lineWidth: 2,
       visible: visibleSeries.nasdaq,
     });
@@ -899,11 +899,16 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
         chartInstanceRef.current = null;
       }
     };
-  }, [lotDataList, indicesHistory, theme]);
+  }, [lotDataList, indicesHistory]);
 
   useEffect(() => {
     if (chartInstanceRef.current) {
-      applyChartTheme(chartInstanceRef.current, theme);
+      applyChartTheme(chartInstanceRef.current, theme, {
+        nav: seriesRefs.current.value,
+        capital: seriesRefs.current.invested,
+        sp500: seriesRefs.current.sp500,
+        nasdaq: seriesRefs.current.nasdaq,
+      });
     }
   }, [theme]);
 

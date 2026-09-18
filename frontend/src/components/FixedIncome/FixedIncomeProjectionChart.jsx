@@ -110,9 +110,9 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
 
     // Projected Balance — Emerald Area
     seriesRef.current.balance = chart.addAreaSeries({
-      lineColor: "#10b981",
-      topColor: "rgba(16, 185, 129, 0.25)",
-      bottomColor: "rgba(16, 185, 129, 0.0)",
+      lineColor: chartColors.balance,
+      topColor: chartColors.balanceAreaTop,
+      bottomColor: chartColors.balanceAreaBottom,
       lineWidth: 2,
       priceLineVisible: false,
       lastValueVisible: false, // Clean: no invasive badges covering the lines
@@ -124,7 +124,7 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
 
     // Base Capital Invertido — Amber Line
     seriesRef.current.capital = chart.addLineSeries({
-      color: "#f59e0b",
+      color: chartColors.capital,
       lineWidth: 2,
       priceLineVisible: false,
       lastValueVisible: false,
@@ -134,9 +134,9 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
       },
     });
 
-    // Ganancia Neta Acumulada — Cyan Line
+    // Ganancia Neta Acumulada — Cyan/Blue Line
     seriesRef.current.earnings = chart.addLineSeries({
-      color: "#00e5ff",
+      color: chartColors.earnings,
       lineWidth: 2,
       priceLineVisible: false,
       lastValueVisible: false,
@@ -148,7 +148,7 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
 
     // Rentabilidad Ponderada E.A. — Purple Line on Left Axis
     seriesRef.current.rate = chart.addLineSeries({
-      color: "#c084fc",
+      color: chartColors.rate,
       lineWidth: 2,
       priceScaleId: "left",
       priceLineVisible: false,
@@ -179,16 +179,16 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
         const m = String(dObj.getUTCMonth() + 1).padStart(2, "0");
         const d = String(dObj.getUTCDate()).padStart(2, "0");
         dateStr = `${y}-${m}-${d}`;
-      } else if (typeof param.time === "string") {
-        dateStr = param.time;
+      } else if (param.time) {
+        dateStr = String(param.time).slice(0, 10);
       }
 
       setHoverData({
         date: dateStr,
-        projectedValue: balVal,
-        baseCapital: capVal,
-        earnings: earnVal,
-        rate: rateVal,
+        projectedValue: balVal != null ? balVal : null,
+        baseCapital: capVal != null ? capVal : null,
+        earnings: earnVal != null ? earnVal : null,
+        rate: rateVal != null ? rateVal : null,
       });
     });
 
@@ -203,12 +203,12 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
       ro.disconnect();
       chart.remove();
     };
-  }, [theme]);
+  }, []);
 
   // Apply theme changes to existing chart instance without full re-creation
   useEffect(() => {
     if (chartRef.current) {
-      applyChartTheme(chartRef.current, theme);
+      applyChartTheme(chartRef.current, theme, seriesRef.current);
     }
   }, [theme]);
 
@@ -294,11 +294,11 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
         position: "relative",
         width: "100%",
         height: 380,
-        background: "rgba(15, 23, 42, 0.55)",
+        background: "var(--bg-card)",
         borderRadius: 14,
-        border: "1px solid rgba(255,255,255,0.08)",
+        border: "1px solid var(--border)",
         padding: "14px 18px",
-        boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+        boxShadow: "var(--shadow-card)",
       }}
     >
       {/* ── TOP CONTROLS & FILTER BAR ────────────────────────── */}
@@ -316,7 +316,7 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981", boxShadow: "0 0 8px #10b981" }} />
-            <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#f8fafc" }}>
+            <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-primary)" }}>
               Historial de Crecimiento & Rentabilidad Real
             </span>
           </div>
@@ -537,47 +537,47 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
           gap: 10,
           alignItems: "center",
           padding: "6px 14px",
-          background: "rgba(0, 0, 0, 0.35)",
+          background: "var(--bg-surface)",
           borderRadius: 8,
-          border: "1px solid rgba(255, 255, 255, 0.06)",
+          border: "1px solid var(--border)",
           marginBottom: 8,
           fontSize: "0.72rem",
           fontFamily: "'JetBrains Mono', monospace",
         }}
       >
-        <div style={{ color: "#94a3b8", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 4 }}>
+        <div style={{ color: "var(--text-muted)", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 4 }}>
           <span>📅</span>
-          <span style={{ color: "#f8fafc", fontWeight: 700 }}>{currentDisplay.date || "Hoy"}</span>
+          <span style={{ color: "var(--text-primary)", fontWeight: 700 }}>{currentDisplay.date || "Hoy"}</span>
         </div>
 
-        <div style={{ color: "#10b981", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap", opacity: visibleSeries.balance ? 1 : 0.25 }}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10b981", flexShrink: 0 }} />
-          <span style={{ color: "#94a3b8", fontSize: "0.68rem" }}>Saldo:</span>
-          <span style={{ fontWeight: 700, color: "#f8fafc" }}>
+        <div style={{ color: chartColors.balance, display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap", opacity: visibleSeries.balance ? 1 : 0.25 }}>
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: chartColors.balance, flexShrink: 0 }} />
+          <span style={{ color: "var(--text-muted)", fontSize: "0.68rem" }}>Saldo:</span>
+          <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>
             {fmtMoney(currentDisplay.projectedValue)}
           </span>
         </div>
 
-        <div style={{ color: "#f59e0b", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap", opacity: visibleSeries.capital ? 1 : 0.25 }}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#f59e0b", flexShrink: 0 }} />
-          <span style={{ color: "#94a3b8", fontSize: "0.68rem" }}>Capital:</span>
-          <span style={{ fontWeight: 700, color: "#f8fafc" }}>
+        <div style={{ color: chartColors.capital, display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap", opacity: visibleSeries.capital ? 1 : 0.25 }}>
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: chartColors.capital, flexShrink: 0 }} />
+          <span style={{ color: "var(--text-muted)", fontSize: "0.68rem" }}>Capital:</span>
+          <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>
             {fmtMoney(currentDisplay.baseCapital)}
           </span>
         </div>
 
-        <div style={{ color: "#00e5ff", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap", opacity: visibleSeries.earnings ? 1 : 0.25 }}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#00e5ff", flexShrink: 0 }} />
-          <span style={{ color: "#94a3b8", fontSize: "0.68rem" }}>Ganancia:</span>
-          <span style={{ fontWeight: 700, color: "#00e5ff" }}>
+        <div style={{ color: chartColors.earnings, display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap", opacity: visibleSeries.earnings ? 1 : 0.25 }}>
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: chartColors.earnings, flexShrink: 0 }} />
+          <span style={{ color: "var(--text-muted)", fontSize: "0.68rem" }}>Ganancia:</span>
+          <span style={{ fontWeight: 700, color: chartColors.earnings }}>
             +{fmtMoney(currentDisplay.earnings)}
           </span>
         </div>
 
-        <div style={{ color: "#c084fc", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap", opacity: visibleSeries.rate ? 1 : 0.25 }}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#c084fc", flexShrink: 0 }} />
-          <span style={{ color: "#94a3b8", fontSize: "0.68rem" }}>Tasa Ponderada:</span>
-          <span style={{ fontWeight: 700, color: "#c084fc" }}>
+        <div style={{ color: chartColors.rate, display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap", opacity: visibleSeries.rate ? 1 : 0.25 }}>
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: chartColors.rate, flexShrink: 0 }} />
+          <span style={{ color: "var(--text-muted)", fontSize: "0.68rem" }}>Tasa Ponderada:</span>
+          <span style={{ fontWeight: 700, color: chartColors.rate }}>
             {currentDisplay.rate ? `${Number(currentDisplay.rate).toFixed(2)}%` : "--"}
           </span>
         </div>

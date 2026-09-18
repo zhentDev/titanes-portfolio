@@ -1,49 +1,61 @@
 /**
  * chartTheme.js
- * Returns chart color tokens for lightweight-charts based on the active theme.
+ * High-contrast color tokens and dynamic in-place updater for lightweight-charts.
  */
 export function getChartColors(theme) {
   if (theme === "light") {
     return {
-      background: "transparent",
-      textColor: "#475569",
-      gridColor: "rgba(0,0,0,0.05)",
-      borderColor: "rgba(0,0,0,0.10)",
-      crosshairColor: "rgba(2,132,199,0.5)",
-      upColor: "#059669",
-      downColor: "#dc2626",
-      lineColor: "#0284c7",
-      areaTopColor: "rgba(2,132,199,0.20)",
-      areaBottomColor: "rgba(2,132,199,0.01)",
-      volumeUpColor: "rgba(5,150,105,0.4)",
-      volumeDownColor: "rgba(220,38,38,0.4)",
+      textColor: "#334155",
+      gridColor: "rgba(0, 0, 0, 0.06)",
+      borderColor: "rgba(0, 0, 0, 0.12)",
+      crosshairColor: "rgba(2, 132, 199, 0.6)",
+      // Primary series curves (high contrast on white)
+      nav: "#0284c7",
+      navAreaTop: "rgba(2, 132, 199, 0.20)",
+      navAreaBottom: "rgba(2, 132, 199, 0.00)",
+      sp500: "#b45309",
+      nasdaq: "#7c3aed",
+      // Fixed income curves
+      balance: "#059669",
+      balanceAreaTop: "rgba(5, 150, 105, 0.22)",
+      balanceAreaBottom: "rgba(5, 150, 105, 0.00)",
+      capital: "#d97706",
+      earnings: "#0284c7",
+      rate: "#7c3aed",
+      // Scale axis labels
       leftScaleText: "#059669",
       rightScaleText: "#0284c7",
-      purpleScaleText: "#9333ea",
+      purpleScaleText: "#7c3aed",
     };
   }
+
+  // Dark (default)
   return {
-    background: "transparent",
     textColor: "#94a3b8",
-    gridColor: "rgba(255,255,255,0.04)",
-    borderColor: "rgba(255,255,255,0.08)",
-    crosshairColor: "rgba(0,229,255,0.4)",
-    upColor: "#10b981",
-    downColor: "#ef4444",
-    lineColor: "#00e5ff",
-    areaTopColor: "rgba(0,229,255,0.20)",
-    areaBottomColor: "rgba(0,229,255,0.02)",
-    volumeUpColor: "rgba(16,185,129,0.4)",
-    volumeDownColor: "rgba(239,68,68,0.4)",
+    gridColor: "rgba(255, 255, 255, 0.04)",
+    borderColor: "rgba(255, 255, 255, 0.08)",
+    crosshairColor: "rgba(0, 229, 255, 0.4)",
+    nav: "#00e5ff",
+    navAreaTop: "rgba(0, 229, 255, 0.22)",
+    navAreaBottom: "rgba(0, 229, 255, 0.00)",
+    sp500: "#f59e0b",
+    nasdaq: "#a855f7",
+    balance: "#10b981",
+    balanceAreaTop: "rgba(16, 185, 129, 0.25)",
+    balanceAreaBottom: "rgba(16, 185, 129, 0.00)",
+    capital: "#f59e0b",
+    earnings: "#00e5ff",
+    rate: "#c084fc",
     leftScaleText: "#10b981",
     rightScaleText: "#00e5ff",
     purpleScaleText: "#c084fc",
   };
 }
 
-export function applyChartTheme(chart, theme) {
+export function applyChartTheme(chart, theme, seriesMap = {}) {
   if (!chart) return;
   const c = getChartColors(theme);
+
   chart.applyOptions({
     layout: { textColor: c.textColor },
     grid: {
@@ -58,4 +70,35 @@ export function applyChartTheme(chart, theme) {
     rightPriceScale: { borderColor: c.borderColor, textColor: c.rightScaleText },
     timeScale: { borderColor: c.borderColor },
   });
+
+  // Dynamically update curve line colors in-place without removing series
+  if (seriesMap.nav?.applyOptions) {
+    seriesMap.nav.applyOptions({
+      lineColor: c.nav,
+      topColor: c.navAreaTop,
+      bottomColor: c.navAreaBottom,
+    });
+  }
+  if (seriesMap.sp500?.applyOptions) {
+    seriesMap.sp500.applyOptions({ color: c.sp500 });
+  }
+  if (seriesMap.nasdaq?.applyOptions) {
+    seriesMap.nasdaq.applyOptions({ color: c.nasdaq });
+  }
+  if (seriesMap.balance?.applyOptions) {
+    seriesMap.balance.applyOptions({
+      lineColor: c.balance,
+      topColor: c.balanceAreaTop,
+      bottomColor: c.balanceAreaBottom,
+    });
+  }
+  if (seriesMap.capital?.applyOptions) {
+    seriesMap.capital.applyOptions({ color: c.capital });
+  }
+  if (seriesMap.earnings?.applyOptions) {
+    seriesMap.earnings.applyOptions({ color: c.earnings });
+  }
+  if (seriesMap.rate?.applyOptions) {
+    seriesMap.rate.applyOptions({ color: c.rate });
+  }
 }

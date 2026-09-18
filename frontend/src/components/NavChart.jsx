@@ -38,10 +38,11 @@ export default function NavChart({
   const seriesRef = useRef({});
   const [hoverValues, setHoverValues] = useState(null);
   const [manualScaleMode, setManualScaleMode] = useState(null); // null = auto, 'log' = force log, 'normal' = force normal
+  const [chartReady, setChartReady] = useState(0);
 
   const { visibleSeries, toggleSeries, customStrategies, strategyRebalances } = usePortfolioStore();
   const { theme } = useTheme();
-  const chartColors = getChartColors(theme);
+  const chartColors = useMemo(() => getChartColors(theme), [theme]);
 
   const baseActive = navData?.[0]?.value ?? investment;
 
@@ -258,11 +259,11 @@ export default function NavChart({
 
     const chart = chartRef.current;
 
-    // Portfolio NAV — glowing cyan area (Right Axis)
+    // Portfolio NAV — area (Right Axis)
     seriesRef.current.nav = chart.addAreaSeries({
-      lineColor: COLORS.nav,
-      topColor: "rgba(0, 229, 255, 0.22)",
-      bottomColor: "rgba(0, 229, 255, 0.0)",
+      lineColor: chartColors.nav,
+      topColor: chartColors.navAreaTop,
+      bottomColor: chartColors.navAreaBottom,
       lineWidth: 2,
       priceLineVisible: false,
       lastValueVisible: true,
@@ -273,7 +274,7 @@ export default function NavChart({
 
     // S&P 500 — amber line (Right Axis)
     seriesRef.current.sp500 = chart.addLineSeries({
-      color: COLORS.sp500,
+      color: chartColors.sp500,
       lineWidth: 2,
       lineStyle: LineStyle.Dashed,
       priceLineVisible: false,
@@ -285,7 +286,7 @@ export default function NavChart({
 
     // NASDAQ — purple line (Right Axis)
     seriesRef.current.nasdaq = chart.addLineSeries({
-      color: COLORS.nasdaq,
+      color: chartColors.nasdaq,
       lineWidth: 2,
       lineStyle: LineStyle.Dotted,
       priceLineVisible: false,
@@ -323,18 +324,23 @@ export default function NavChart({
       priceScaleId: "right",
     });
 
-    // Crosshair move handler to update legend values live
     chart.subscribeCrosshairMove((param) => {
       if (!param.time || !param.seriesData) {
         setHoverValues(null);
         return;
       }
-      const navVal = param.seriesData.get(seriesRef.current.nav)?.value;
-      const spVal = param.seriesData.get(seriesRef.current.sp500)?.value;
-      const nsdVal = param.seriesData.get(seriesRef.current.nasdaq)?.value;
+
+      const navVal = seriesRef.current.nav
+        ? param.seriesData.get(seriesRef.current.nav)?.value
+        : null;
+      const spVal = seriesRef.current.sp500
+        ? param.seriesData.get(seriesRef.current.sp500)?.value
+        : null;
+      const nsdVal = seriesRef.current.nasdaq
+        ? param.seriesData.get(seriesRef.current.nasdaq)?.value
+        : null;
 
       const newHover = {
-        date: param.time,
         nav: navVal != null ? navVal : null,
         sp500: spVal != null ? spVal : null,
         nasdaq: nsdVal != null ? nsdVal : null,
@@ -357,8 +363,10 @@ export default function NavChart({
     });
     ro.observe(containerRef.current);
 
+    setChartReady((prev) => prev + 1);
+
     return () => ro.disconnect();
-  }, [isLiveMode, customStrategies, chartColors]);
+  }, [isLiveMode, customStrategies]);
 
   // Init chart once on component mount
   useEffect(() => {
@@ -371,10 +379,10 @@ export default function NavChart({
     };
   }, [initChart]);
 
-  // Apply theme updates to an already-mounted chart instance
+  // Apply theme updates to an already-mounted chart instance (including curve colors)
   useEffect(() => {
     if (chartRef.current) {
-      applyChartTheme(chartRef.current, theme);
+      applyChartTheme(chartRef.current, theme, seriesRef.current);
     }
   }, [theme]);
 
@@ -566,7 +574,7 @@ export default function NavChart({
     }
 
     chartRef.current.timeScale().fitContent();
-  }, [navData, sp500Data, nasdaqData, customStrategies, strategyRebalances, customNavData, liveStratQuotes, investment, numSlots, rebalances, holdings, period, getStratCap, getBenchNorm]);
+  }, [navData, sp500Data, nasdaqData, customStrategies, strategyRebalances, customNavData, liveStratQuotes, investment, numSlots, rebalances, holdings, period, getStratCap, getBenchNorm, chartReady]);
 
   const lastNav = navData?.[navData.length - 1]?.value;
   const lastSP = sp500Data?.[sp500Data.length - 1]?.value;
@@ -648,14 +656,14 @@ export default function NavChart({
                 width: 8,
                 height: 8,
                 borderRadius: "50%",
-                background: COLORS.nav,
+                background: chartColors.nav,
                 opacity: visibleSeries?.nav ? 1 : 0.3,
               }}
             />
             <strong>{isLiveMode ? "Portafolio En Vivo" : "Titanes"}</strong>
             <InfoTooltip conceptKey="nav" />
             {currentNav != null && (
-              <span className="mono" style={{ color: "var(--accent-primary)", fontWeight: 700 }}>
+              <span className="mono" style={{ color: chartColors.nav, fontWeight: 700 }}>
                 ${currentNav.toFixed(2)}
               </span>
             )}
@@ -692,13 +700,13 @@ export default function NavChart({
                 width: 8,
                 height: 8,
                 borderRadius: "50%",
-                background: COLORS.sp500,
+                background: chartColors.sp500,
                 opacity: visibleSeries?.sp500 ? 1 : 0.3,
               }}
             />
             <strong>S&P 500</strong>
             {currentSP != null && (
-              <span className="mono" style={{ color: "#f59e0b", fontWeight: 700 }}>
+              <span className="mono" style={{ color: chartColors.sp500, fontWeight: 700 }}>
                 ${currentSP.toFixed(2)}
               </span>
             )}
@@ -735,13 +743,13 @@ export default function NavChart({
                 width: 8,
                 height: 8,
                 borderRadius: "50%",
-                background: COLORS.nasdaq,
+                background: chartColors.nasdaq,
                 opacity: visibleSeries?.nasdaq ? 1 : 0.3,
               }}
             />
             <strong>NASDAQ</strong>
             {currentNasdaq != null && (
-              <span className="mono" style={{ color: "#c084fc", fontWeight: 700 }}>
+              <span className="mono" style={{ color: chartColors.nasdaq, fontWeight: 700 }}>
                 ${currentNasdaq.toFixed(2)}
               </span>
             )}
