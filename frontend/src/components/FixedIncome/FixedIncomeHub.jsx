@@ -53,7 +53,8 @@ export default function FixedIncomeHub() {
   const [selectedEntityView, setSelectedEntityView] = useState("all"); // 'all' | entityId
   const [futureYears, setFutureYears] = useState(0); // 0 to 10 years future simulation
   const [showSimulator, setShowSimulator] = useState(false); // Collapsible simulator
-  const [showFixedIncomeChart, setShowFixedIncomeChart] = useState(false); // Collapsible chart
+  const [showFixedIncomeChart, setShowFixedIncomeChart] = useState(true); // Default OPEN as main visual
+  const [showEntitiesSection, setShowEntitiesSection] = useState(false); // Default COLLAPSED
   const [selectedModalEntityId, setSelectedModalEntityId] = useState(null); // Pre-select entity in modal
   const [fxRate, setFxRate] = useState(4150); // USD-COP fallback
   const [colInflationRate, setColInflationRate] = useState(5.16); // YoY IPC fallback
@@ -62,6 +63,7 @@ export default function FixedIncomeHub() {
   const [migrateFrom, setMigrateFrom] = useState(null); // entityId being migrated
   const [expandedAccountIds, setExpandedAccountIds] = useState(new Set());
   const [expandedMaturedEntities, setExpandedMaturedEntities] = useState(new Set());
+  const [collapsedEntityIds, setCollapsedEntityIds] = useState(new Set());
   const [movementFilterType, setMovementFilterType] = useState({});
   const [movementSearch, setMovementSearch] = useState({});
   const [movementYear, setMovementYear] = useState({});
@@ -147,6 +149,15 @@ export default function FixedIncomeHub() {
 
   const toggleMaturedExpand = (entId) => {
     setExpandedMaturedEntities((prev) => {
+      const next = new Set(prev);
+      if (next.has(entId)) next.delete(entId);
+      else next.add(entId);
+      return next;
+    });
+  };
+
+  const toggleEntityCollapse = (entId) => {
+    setCollapsedEntityIds((prev) => {
       const next = new Set(prev);
       if (next.has(entId)) next.delete(entId);
       else next.add(entId);
@@ -1405,38 +1416,97 @@ export default function FixedIncomeHub() {
         )}
       </div>
 
-      {/* ── ENTITIES & ACCOUNTS GRID HEADER ──────────────── */}
+      {/* ── ENTITIES & ACCOUNTS SECTION (COLLAPSIBLE) ───────── */}
       <div
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          margin: "8px 0 -6px 0",
+          background: "rgba(15, 23, 42, 0.4)",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+          borderRadius: 14,
+          padding: showEntitiesSection ? "16px" : "12px 18px",
+          transition: "all 0.2s ease",
         }}
       >
-        <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#f1f5f9", fontWeight: 700 }}>
-          🏦 Entidades y Cuentas Activas ({activeEntities.length})
-        </h4>
-        <button
-          onClick={() => setShowAllEntities(!showAllEntities)}
+        <div
           style={{
-            background: "transparent",
-            border: "1px solid rgba(255,255,255,0.12)",
-            color: "#94a3b8",
-            borderRadius: 6,
-            padding: "4px 10px",
-            fontSize: "0.72rem",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
             cursor: "pointer",
+            flexWrap: "wrap",
+            gap: 10,
+            marginBottom: showEntitiesSection ? 16 : 0,
           }}
+          onClick={() => setShowEntitiesSection(!showEntitiesSection)}
         >
-          {showAllEntities ? "Ver solo entidades con saldo" : "Ver catálogo completo de entidades"}
-        </button>
-      </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span>🏦</span>
+            <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#f1f5f9", fontWeight: 700 }}>
+              Entidades y Cuentas Activas ({activeEntities.length})
+            </h4>
+            <span
+              style={{
+                fontSize: "0.7rem",
+                color: "#10b981",
+                background: "rgba(16, 185, 129, 0.1)",
+                padding: "2px 8px",
+                borderRadius: 12,
+                border: "1px solid rgba(16, 185, 129, 0.2)",
+              }}
+            >
+              {accounts.length} cuenta(s) • {cdts.filter((c) => c.status !== "matured").length} CDT(s) activo(s)
+            </span>
+          </div>
 
-      {/* ── ENTITIES & ACCOUNTS CONTAINER (ADAPTIVE SMART MASONRY) ── */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {showEntitiesSection && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowAllEntities(!showAllEntities);
+                }}
+                style={{
+                  background: "transparent",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  color: "#94a3b8",
+                  borderRadius: 6,
+                  padding: "4px 10px",
+                  fontSize: "0.72rem",
+                  cursor: "pointer",
+                }}
+              >
+                {showAllEntities ? "Ver solo entidades con saldo" : "Ver catálogo completo de entidades"}
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowEntitiesSection(!showEntitiesSection);
+              }}
+              style={{
+                background: "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: 6,
+                padding: "4px 10px",
+                color: "var(--text-muted)",
+                fontSize: "0.74rem",
+                cursor: "pointer",
+              }}
+            >
+              {showEntitiesSection ? "▲ Ocultar Entidades" : "▼ Desplegar Entidades"}
+            </button>
+          </div>
+        </div>
+
+        {showEntitiesSection && (
+          <>
+            {/* ── ENTITIES & ACCOUNTS CONTAINER (ADAPTIVE SMART MASONRY) ── */}
       {(() => {
         const renderEntityCard = (entity) => {
           if (!entity) return null;
+          const isEntityCollapsed = collapsedEntityIds.has(entity.id);
           const entityAccounts = accounts.filter((a) => a.entityId === entity.id);
           const entityCDTs = cdts.filter((c) => c.entityId === entity.id);
           const activeEntityCDTs = entityCDTs.filter((c) => c.status !== "matured");
@@ -1617,6 +1687,23 @@ export default function FixedIncomeHub() {
                       🔄 Migrar
                     </button>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => toggleEntityCollapse(entity.id)}
+                    style={{
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      borderRadius: 6,
+                      color: "var(--text-muted)",
+                      cursor: "pointer",
+                      fontSize: "0.7rem",
+                      padding: "3px 8px",
+                      fontWeight: 600,
+                    }}
+                    title={isEntityCollapsed ? "Desplegar entidad" : "Ocultar entidad"}
+                  >
+                    {isEntityCollapsed ? "▼ Desplegar" : "▲ Ocultar"}
+                  </button>
                 </div>
 
                 {/* Migration Target Selector */}
@@ -1673,9 +1760,10 @@ export default function FixedIncomeHub() {
               </div>
 
               {/* Accounts & Pockets List */}
-              <div
-                style={{ padding: "14px 18px", display: "flex", flexDirection: "column", gap: 10 }}
-              >
+              {!isEntityCollapsed && (
+                <div
+                  style={{ padding: "14px 18px", display: "flex", flexDirection: "column", gap: 10 }}
+                >
                 {entityAccounts.map((acc) => {
                   const isExpanded = expandedAccountIds.has(acc.id);
                   const accTx = transactions
@@ -2922,6 +3010,7 @@ export default function FixedIncomeHub() {
                   </div>
                 )}
               </div>
+            )}
             </div>
           );
         };
@@ -2961,6 +3050,9 @@ export default function FixedIncomeHub() {
           </div>
         );
       })()}
+          </>
+        )}
+      </div>
 
       {/* ── MODAL DE CREACIÓN / EDICIÓN ──────────────────── */}
       <FixedIncomeModal
