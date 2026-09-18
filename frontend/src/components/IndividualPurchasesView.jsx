@@ -13,7 +13,7 @@ import {
 import { usePortfolioStore } from "../store/portfolioStore";
 import { analyzeInvestmentPlan } from "../utils/investmentPlanAnalyzer";
 import { toastConfirm, toastPrompt } from "../utils/toastAlerts";
-import { getBrokerEquivalenceInfo, MARKET_REGIONS, translateBrokerTicker } from "../utils/marketHours";
+import { getBrokerEquivalenceInfo, getMarketOpenTime, MARKET_REGIONS, translateBrokerTicker } from "../utils/marketHours";
 import { MarketScheduleBadge } from "./Common";
 import ChangeTickerModal from "./ChangeTickerModal";
 import InflationExplorerModal from "./InflationExplorerModal";
@@ -143,6 +143,25 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
   const currentPurchases = useMemo(() => {
     return individualPurchases.filter((p) => p.portfolioId === portfolioId);
   }, [individualPurchases, portfolioId]);
+
+  // Auto-asignar hora oficial de apertura de mercado a posiciones abiertas que no cuenten con hora registrada
+  const processedNoTimeIdsRef = useRef(new Set());
+  useEffect(() => {
+    if (!currentPurchases || currentPurchases.length === 0) return;
+    const purchasesWithoutTime = currentPurchases.filter(
+      (p) =>
+        (!p.purchaseTime || typeof p.purchaseTime !== "string" || !p.purchaseTime.trim()) &&
+        !processedNoTimeIdsRef.current.has(p.id)
+    );
+    if (purchasesWithoutTime.length > 0) {
+      purchasesWithoutTime.forEach((p) => processedNoTimeIdsRef.current.add(p.id));
+      const updates = purchasesWithoutTime.map((p) => ({
+        ...p,
+        purchaseTime: getMarketOpenTime(p.ticker, p.exchange),
+      }));
+      updateMultiplePurchases(updates);
+    }
+  }, [currentPurchases, updateMultiplePurchases]);
 
   const cashReserve = useMemo(() => {
     if (!planAnalysis || !planAnalysis.avgAmount || !currentPurchases.length) return 0;
@@ -363,13 +382,15 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
     const inv = Number(investedAmount);
     const prc = Number(price);
     const calculatedShares = inv / prc;
+    const defaultOpenTime = getMarketOpenTime(selectedMeta.ticker, selectedMeta.exchange);
+    const finalPurchaseTime = purchaseTime.trim() || defaultOpenTime;
 
     const newPurchase = {
       id: Date.now().toString(),
       ticker: selectedMeta.ticker,
       name: selectedMeta.name,
       date,
-      purchaseTime: purchaseTime.trim() || undefined,
+      purchaseTime: finalPurchaseTime,
       investedAmount: inv,
       shares: calculatedShares,
       purchasePrice: prc,
@@ -393,11 +414,14 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
       return;
     }
 
+    const defaultOpenTime = getMarketOpenTime(editTicker, editingPurchase.exchange);
+    const finalPurchaseTime = editPurchaseTime.trim() || defaultOpenTime;
+
     const updated = {
       ...editingPurchase,
       ticker: editTicker.trim().toUpperCase(),
       date: editDate,
-      purchaseTime: editPurchaseTime.trim() || undefined,
+      purchaseTime: finalPurchaseTime,
       investedAmount: inv,
       purchasePrice: prc,
       shares: inv / prc,
@@ -418,11 +442,13 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
     try {
       for (const p of purchases) {
         const id = `buy_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+        const openTime = p.purchaseTime || getMarketOpenTime(p.ticker);
         await addPurchase({
           id,
           portfolioId,
           ticker: p.ticker,
           date: p.date,
+          purchaseTime: openTime,
           purchasePrice: p.purchasePrice,
           shares: p.shares,
           manualCurrentPrice: 0,
@@ -515,6 +541,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
 
       return {
         ...p,
+        purchaseTime: p.purchaseTime || getMarketOpenTime(p.ticker, p.exchange),
         name: liveQuote?.name || p.name,
         invested,
         currentPrice,
@@ -2346,6 +2373,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                           setTicker(r.ticker);
                           setSelectedMeta(r);
                           setPrice(r.price > 0 ? r.price : 100);
+                          if (!purchaseTime) {
+                            setPurchaseTime(getMarketOpenTime(r.ticker, r.exchange));
+                          }
                           setSearchResults([]);
                         }}
                         style={{
@@ -2675,7 +2705,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                         cursor: "pointer",
                         textDecoration: "underline",
                       }}
-                      onClick={() => setPurchaseTime(selectedMeta?.ticker?.endsWith(".HK") ? "09:30" : selectedMeta?.ticker?.endsWith(".L") ? "08:00" : "09:30")}
+                      onClick={() => setPurchaseTime(getMarketOpenTime(selectedMeta?.ticker, selectedMeta?.exchange))}
                       title="Fijar primera hora / apertura de mercado"
                     >
                       🔔 Apertura mercado
@@ -3212,7 +3242,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                                     setEditInvested(p.investedAmount || p.invested);
                                     setEditPrice(p.purchasePrice);
                                     setEditDate(p.date);
-                                    setEditPurchaseTime(p.purchaseTime || "");
+                                    setEditPurchaseTime(p.purchaseTime || getMarketOpenTime(p.ticker, p.exchange));
                                   }}
                                   title="Editar"
                                 >
@@ -3329,7 +3359,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                         }}
                         onClick={() =>
                           setEditPurchaseTime(
-                            editTicker?.endsWith(".HK") ? "09:30" : editTicker?.endsWith(".L") ? "08:00" : "09:30"
+                            getMarketOpenTime(editTicker, editingPurchase?.exchange)
                           )
                         }
                         title="Fijar primera hora / apertura de mercado"

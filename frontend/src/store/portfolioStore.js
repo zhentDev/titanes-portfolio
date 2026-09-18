@@ -21,6 +21,7 @@ import {
   updatePortfolioSettingsApi,
   updatePurchaseLots,
 } from "../api/client";
+import { getMarketOpenTime } from "../utils/marketHours";
 
 const DEFAULT_TICKERS = [
   "AMD",
@@ -274,13 +275,15 @@ export const usePortfolioStore = create(
             },
           }));
           try {
-            const res = await fetchHistoricalPrice(p.ticker, p.date);
+            const timeToQuery = p.purchaseTime || getMarketOpenTime(p.ticker, p.exchange);
+            const res = await fetchHistoricalPrice(p.ticker, p.date, timeToQuery);
             if (res && res.price) {
               const newPrice = res.price;
               const invested = p.investedAmount ?? p.shares * p.purchasePrice;
               get().updateMultiplePurchases([
                 {
                   ...p,
+                  purchaseTime: timeToQuery,
                   purchasePrice: newPrice,
                   shares: invested / newPrice,
                   manualCurrentPrice: null,

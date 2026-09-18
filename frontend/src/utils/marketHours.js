@@ -122,6 +122,34 @@ export function detectExchangeKey(ticker = "", exchange = "") {
 }
 
 /**
+ * Retorna la hora oficial de apertura de mercado en formato HH:MM según el exchange del ticker.
+ *  - LSE (.L): 08:00
+ *  - XETRA / Fráncfort (.DE, .F, .PA, etc.): 09:00
+ *  - HKG (.HK): 09:30
+ *  - BVC (.CL): 09:30
+ *  - CRYPTO (-USD): 00:00
+ *  - US (NYSE / NASDAQ, default): 09:30
+ */
+export function getMarketOpenTime(ticker = "", exchange = "") {
+  const key = detectExchangeKey(ticker, exchange);
+  switch (key) {
+    case "LSE":
+      return "08:00";
+    case "XETRA":
+      return "09:00";
+    case "HKG":
+      return "09:30";
+    case "BVC":
+      return "09:30";
+    case "CRYPTO":
+      return "00:00";
+    case "US":
+    default:
+      return "09:30";
+  }
+}
+
+/**
  * Retorna la información completa de horario y estado en vivo para un ticker o exchange.
  */
 export function getMarketSchedule(ticker = "", exchange = "") {
