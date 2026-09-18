@@ -733,21 +733,21 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
     const chart = createChart(chartContainerRef.current, {
       layout: {
         background: { type: ColorType.Solid, color: "transparent" },
-        textColor: "#94a3b8",
+        textColor: chartColors.textColor,
         fontFamily: "'JetBrains Mono', monospace",
         fontSize: 11,
       },
       grid: {
-        vertLines: { color: "rgba(255,255,255,0.04)" },
-        horzLines: { color: "rgba(255,255,255,0.04)" },
+        vertLines: { color: chartColors.gridColor },
+        horzLines: { color: chartColors.gridColor },
       },
       timeScale: {
-        borderColor: "rgba(255,255,255,0.08)",
+        borderColor: chartColors.borderColor,
         timeVisible: true,
       },
       rightPriceScale: {
-        borderColor: "rgba(255,255,255,0.08)",
-        textColor: "#94a3b8",
+        borderColor: chartColors.borderColor,
+        textColor: chartColors.textColor,
         autoScale: true,
       },
       handleScroll: { mouseWheel: true, pressedMouseMove: true },
@@ -899,7 +899,13 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
         chartInstanceRef.current = null;
       }
     };
-  }, [lotDataList, indicesHistory]);
+  }, [lotDataList, indicesHistory, theme]);
+
+  useEffect(() => {
+    if (chartInstanceRef.current) {
+      applyChartTheme(chartInstanceRef.current, theme);
+    }
+  }, [theme]);
 
   const hasIndexData = indicesHistory && Object.keys(indicesHistory).length > 0;
 
