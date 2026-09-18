@@ -95,6 +95,12 @@ export default function CashFlowHub() {
   const [expenseToEdit, setExpenseToEdit] = useState(null);
   const [expenseToSettle, setExpenseToSettle] = useState(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [showLiquidity, setShowLiquidity] = useState(false);
+  const [showRules, setShowRules] = useState(false);
+  const [showEmergency, setShowEmergency] = useState(false);
+  const [showPillars, setShowPillars] = useState(false);
+  const [showExpenses, setShowExpenses] = useState(false);
+  const [showCreditCards, setShowCreditCards] = useState(false);
 
   // Fetch Live TRM USD/COP on mount
   useEffect(() => {
@@ -566,46 +572,7 @@ export default function CashFlowHub() {
         </div>
       </div>
 
-      {/* ── 4. Real Liquid Cash & Funds Availability Card ──────────── */}
-      <RealCashLiquidityCard
-        payrollAccount={payrollAccount}
-        totalInflow={totalInflow}
-        inflows={periodInflows}
-        needs={periodNeeds}
-        wants={periodWants}
-        wealth={periodWealth}
-        creditCards={creditCards}
-        creditPurchases={creditPurchases}
-        creditCardPayments={creditCardPayments}
-        expensesLog={periodExpenses}
-        fixedIncomeAccounts={fixedAccounts}
-        activePeriod={activePeriod}
-        currency={currency}
-        fxRate={fxRate}
-        onOpenPayrollModal={() => setPayrollEntityModalOpen(true)}
-        onOpenExpenseModal={() => {
-          setExpenseToEdit(null);
-          setExpenseModalOpen(true);
-        }}
-        onOpenPaymentModal={() => setPaymentModalOpen(true)}
-      />
-
-      {/* ── 5. Dynamic Rule & Strategy Selector ────────────────────── */}
-      <CashFlowRuleSelector
-        allocationModel={allocationModel}
-        onSelectModel={setAllocationModel}
-        customRatios={customRatios}
-        onUpdateRatios={setCustomRatios}
-        totalInflow={totalInflow}
-        totalNeeds={totalNeeds}
-        totalWants={totalWants}
-        totalWealth={totalWealth}
-        expensesLog={periodExpenses}
-        currency={currency}
-        fxRate={fxRate}
-      />
-
-      {/* ── 6. Native SVG Sankey / Cash Waterfall Flow Chart ───────── */}
+      {/* ── 4. Native SVG Sankey / Cash Waterfall Flow Chart (HERO SUMMARY) ── */}
       <CashFlowSankey
         inflows={periodInflows}
         needs={periodNeeds}
@@ -617,153 +584,574 @@ export default function CashFlowHub() {
         onEditNode={(item, type) => handleOpenEditModal(item, type)}
       />
 
-      {/* ── 7. Emergency Fund Runway Tracker ───────────────────────── */}
-      <EmergencyFundCard
-        emergencyItem={emergencyItem}
-        totalNeeds={totalNeeds}
-        targetMonths={emergencyFundTargetMonths}
-        onSelectTargetMonths={setEmergencyFundTargetMonths}
-        currency={currency}
-        fxRate={fxRate}
-        onEditEmergency={() => handleOpenAddModal("wealth")}
-      />
-
-      {/* ── 8. 4 Pillars Structured Breakdown Grid (Topes Presupuestados vs Gastado) ── */}
-      <div className="cashflow-pillars-grid">
-        {/* Pillar 1: Inflows */}
-        <PillarBreakdownCard
-          type="inflow"
-          title="Ingresos Totales (Inflows)"
-          icon="🟢"
-          items={periodInflows}
-          expensesLog={periodExpenses}
-          totalInflow={totalInflow}
-          currency={currency}
-          fxRate={fxRate}
-          onAddItem={handleOpenAddModal}
-          onEditItem={handleOpenEditModal}
-          onDeleteItem={(id) => handleDeleteItem(id, "inflow")}
-        />
-
-        {/* Pillar 2: Needs */}
-        <PillarBreakdownCard
-          type="needs"
-          title="Gastos Fijos Planeados (Needs)"
-          icon="🔴"
-          items={periodNeeds}
-          expensesLog={periodExpenses}
-          totalInflow={totalInflow}
-          targetRatio={customRatios.needs}
-          currency={currency}
-          fxRate={fxRate}
-          onAddItem={handleOpenAddModal}
-          onEditItem={handleOpenEditModal}
-          onDeleteItem={(id) => handleDeleteItem(id, "needs")}
-          onDeleteTransaction={deleteExpenseTransaction}
-          onEditTransaction={(tx) => {
-            setExpenseToEdit(tx);
-            setExpenseModalOpen(true);
+      {/* ── 5. Real Liquid Cash & Funds Availability Card (COLLAPSIBLE) ──────────── */}
+      <div
+        style={{
+          background: "rgba(15, 23, 42, 0.4)",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+          borderRadius: 14,
+          padding: showLiquidity ? "16px" : "12px 18px",
+          transition: "all 0.2s ease",
+          marginTop: 14,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            cursor: "pointer",
+            flexWrap: "wrap",
+            gap: 10,
+            marginBottom: showLiquidity ? 14 : 0,
           }}
-          onSettleTransaction={(tx) => setExpenseToSettle(tx)}
-        />
+          onClick={() => setShowLiquidity(!showLiquidity)}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span>💧</span>
+            <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "#f1f5f9" }}>
+              Disponibilidad Real de Plata Líquida & Fondos
+            </span>
+            <span
+              style={{
+                fontSize: "0.7rem",
+                color: "#d8b4fe",
+                background: "rgba(130, 10, 209, 0.15)",
+                padding: "2px 8px",
+                borderRadius: 12,
+                border: "1px solid rgba(130, 10, 209, 0.3)",
+              }}
+            >
+              {payrollAccount?.name || "Cuenta Principal"}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowLiquidity(!showLiquidity);
+            }}
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: 6,
+              padding: "4px 10px",
+              color: "var(--text-muted)",
+              fontSize: "0.74rem",
+              cursor: "pointer",
+            }}
+          >
+            {showLiquidity ? "▲ Ocultar Disponibilidad" : "▼ Desplegar Disponibilidad"}
+          </button>
+        </div>
 
-        {/* Pillar 3: Wants */}
-        <PillarBreakdownCard
-          type="wants"
-          title="Estilo de Vida Presupuestado (Wants)"
-          icon="🟣"
-          items={periodWants}
-          expensesLog={periodExpenses}
-          totalInflow={totalInflow}
-          targetRatio={customRatios.wants}
-          currency={currency}
-          fxRate={fxRate}
-          onAddItem={handleOpenAddModal}
-          onEditItem={handleOpenEditModal}
-          onDeleteItem={(id) => handleDeleteItem(id, "wants")}
-          onDeleteTransaction={deleteExpenseTransaction}
-          onEditTransaction={(tx) => {
-            setExpenseToEdit(tx);
-            setExpenseModalOpen(true);
-          }}
-          onSettleTransaction={(tx) => setExpenseToSettle(tx)}
-        />
-
-        {/* Pillar 4: Wealth */}
-        <PillarBreakdownCard
-          type="wealth"
-          title="Ahorro & Inversión Planeado (Wealth)"
-          icon="🔵"
-          items={periodWealth}
-          expensesLog={periodExpenses}
-          totalInflow={totalInflow}
-          targetRatio={customRatios.savings}
-          currency={currency}
-          fxRate={fxRate}
-          onAddItem={handleOpenAddModal}
-          onEditItem={handleOpenEditModal}
-          onDeleteItem={(id) => handleDeleteItem(id, "wealth")}
-          onDeleteTransaction={deleteExpenseTransaction}
-          onEditTransaction={(tx) => {
-            setExpenseToEdit(tx);
-            setExpenseModalOpen(true);
-          }}
-          onOpenAddExpenseModal={(item) => {
-            setExpenseToEdit({
-              budgetItemId: item.id,
-              budgetItemName: item.name,
-              budgetItemType: "wealth",
-              amount: item.monthlyContribution || item.amount || 0,
-              description: `Aporte a ${item.name}`,
-              paymentSource: item.paymentSource || { type: "payroll", targetName: payrollAccount.name },
-            });
-            setExpenseModalOpen(true);
-          }}
-        />
+        {showLiquidity && (
+          <RealCashLiquidityCard
+            payrollAccount={payrollAccount}
+            totalInflow={totalInflow}
+            inflows={periodInflows}
+            needs={periodNeeds}
+            wants={periodWants}
+            wealth={periodWealth}
+            creditCards={creditCards}
+            creditPurchases={creditPurchases}
+            creditCardPayments={creditCardPayments}
+            expensesLog={periodExpenses}
+            fixedIncomeAccounts={fixedAccounts}
+            activePeriod={activePeriod}
+            currency={currency}
+            fxRate={fxRate}
+            onOpenPayrollModal={() => setPayrollEntityModalOpen(true)}
+            onOpenExpenseModal={() => {
+              setExpenseToEdit(null);
+              setExpenseModalOpen(true);
+            }}
+            onOpenPaymentModal={() => setPaymentModalOpen(true)}
+          />
+        )}
       </div>
 
-      {/* ── 9. Expenses Log & Executed Transactions Section ────────── */}
-      <ExpensesLogSection
-        expensesLog={expensesLog}
-        creditCardPayments={creditCardPayments}
-        activePeriod={activePeriod}
-        currency={currency}
-        fxRate={fxRate}
-        payrollAccount={payrollAccount}
-        creditCards={creditCards}
-        fixedIncomeAccounts={fixedAccounts}
-        onOpenExpenseModal={() => {
-          setExpenseToEdit(null);
-          setExpenseModalOpen(true);
+      {/* ── 6. Dynamic Rule & Strategy Selector (COLLAPSIBLE) ────────────────────── */}
+      <div
+        style={{
+          background: "rgba(15, 23, 42, 0.4)",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+          borderRadius: 14,
+          padding: showRules ? "16px" : "12px 18px",
+          transition: "all 0.2s ease",
+          marginTop: 14,
         }}
-        onEditTransaction={(tx) => {
-          setExpenseToEdit(tx);
-          setExpenseModalOpen(true);
-        }}
-        onOpenPaymentModal={() => setPaymentModalOpen(true)}
-        onDeleteTransaction={deleteExpenseTransaction}
-        onDeletePayment={deleteCreditCardPayment}
-        onConfirmSettlement={settleLoanTransaction}
-        onToggleExpenseLoan={toggleExpenseLoan}
-      />
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            cursor: "pointer",
+            flexWrap: "wrap",
+            gap: 10,
+            marginBottom: showRules ? 14 : 0,
+          }}
+          onClick={() => setShowRules(!showRules)}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span>⚙️</span>
+            <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "#f1f5f9" }}>
+              Distribución Estratégica del Flujo & Reglas
+            </span>
+            <span
+              style={{
+                fontSize: "0.7rem",
+                color: "#38bdf8",
+                background: "rgba(56, 189, 248, 0.12)",
+                padding: "2px 8px",
+                borderRadius: 12,
+                border: "1px solid rgba(56, 189, 248, 0.25)",
+              }}
+            >
+              Ratio: {customRatios.needs}% Fijos • {customRatios.wants}% Gustos • {customRatios.savings}% Ahorro
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowRules(!showRules);
+            }}
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: 6,
+              padding: "4px 10px",
+              color: "var(--text-muted)",
+              fontSize: "0.74rem",
+              cursor: "pointer",
+            }}
+          >
+            {showRules ? "▲ Ocultar Estrategia" : "▼ Desplegar Estrategia"}
+          </button>
+        </div>
 
-      {/* ── 10. Credit Cards & Installments Management Section ──────── */}
-      <CreditCardsSection
-        creditCards={creditCards}
-        creditPurchases={creditPurchases}
-        creditCardPayments={creditCardPayments}
-        netSalary={netSalary}
-        activePeriod={activePeriod}
-        currency={currency}
-        fxRate={fxRate}
-        onOpenCreditPurchaseModal={() => setCreditPurchaseModalOpen(true)}
-        onOpenNewCardModal={handleOpenNewCardModal}
-        onOpenEditCardModal={handleOpenEditCardModal}
-        onOpenPaymentModal={() => setPaymentModalOpen(true)}
-        onDeletePurchase={deleteCreditPurchase}
-        onDeleteCard={deleteCreditCard}
-        onDeletePayment={deleteCreditCardPayment}
-      />
+        {showRules && (
+          <CashFlowRuleSelector
+            allocationModel={allocationModel}
+            onSelectModel={setAllocationModel}
+            customRatios={customRatios}
+            onUpdateRatios={setCustomRatios}
+            totalInflow={totalInflow}
+            totalNeeds={totalNeeds}
+            totalWants={totalWants}
+            totalWealth={totalWealth}
+            expensesLog={periodExpenses}
+            currency={currency}
+            fxRate={fxRate}
+          />
+        )}
+      </div>
+
+      {/* ── 7. Emergency Fund Runway Tracker (COLLAPSIBLE) ───────────────────────── */}
+      <div
+        style={{
+          background: "rgba(15, 23, 42, 0.4)",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+          borderRadius: 14,
+          padding: showEmergency ? "16px" : "12px 18px",
+          transition: "all 0.2s ease",
+          marginTop: 14,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            cursor: "pointer",
+            flexWrap: "wrap",
+            gap: 10,
+            marginBottom: showEmergency ? 14 : 0,
+          }}
+          onClick={() => setShowEmergency(!showEmergency)}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span>🛡️</span>
+            <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "#f1f5f9" }}>
+              Fondo de Emergencia & Pista de Aterrizaje (Runway)
+            </span>
+            <span
+              style={{
+                fontSize: "0.7rem",
+                color: "#10b981",
+                background: "rgba(16, 185, 129, 0.12)",
+                padding: "2px 8px",
+                borderRadius: 12,
+                border: "1px solid rgba(16, 185, 129, 0.25)",
+              }}
+            >
+              Meta: {emergencyFundTargetMonths} meses
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowEmergency(!showEmergency);
+            }}
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: 6,
+              padding: "4px 10px",
+              color: "var(--text-muted)",
+              fontSize: "0.74rem",
+              cursor: "pointer",
+            }}
+          >
+            {showEmergency ? "▲ Ocultar Fondo Emergencia" : "▼ Desplegar Fondo Emergencia"}
+          </button>
+        </div>
+
+        {showEmergency && (
+          <EmergencyFundCard
+            emergencyItem={emergencyItem}
+            totalNeeds={totalNeeds}
+            targetMonths={emergencyFundTargetMonths}
+            onSelectTargetMonths={setEmergencyFundTargetMonths}
+            currency={currency}
+            fxRate={fxRate}
+            onEditEmergency={() => handleOpenAddModal("wealth")}
+          />
+        )}
+      </div>
+
+      {/* ── 8. 4 Pillars Structured Breakdown Grid (Topes Presupuestados vs Gastado) (COLLAPSIBLE) ── */}
+      <div
+        style={{
+          background: "rgba(15, 23, 42, 0.4)",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+          borderRadius: 14,
+          padding: showPillars ? "16px" : "12px 18px",
+          transition: "all 0.2s ease",
+          marginTop: 14,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            cursor: "pointer",
+            flexWrap: "wrap",
+            gap: 10,
+            marginBottom: showPillars ? 14 : 0,
+          }}
+          onClick={() => setShowPillars(!showPillars)}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span>🏛️</span>
+            <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "#f1f5f9" }}>
+              Presupuesto Estructurado por Pilares (Ingresos, Gastos Fijos, Estilo de Vida, Ahorro)
+            </span>
+            <span
+              style={{
+                fontSize: "0.7rem",
+                color: "#a855f7",
+                background: "rgba(168, 85, 247, 0.12)",
+                padding: "2px 8px",
+                borderRadius: 12,
+                border: "1px solid rgba(168, 85, 247, 0.25)",
+              }}
+            >
+              Asignado: {formatMoney(totalAllocated, currency)} ({totalInflow > 0 ? Math.round((totalAllocated / totalInflow) * 100) : 0}%)
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowPillars(!showPillars);
+            }}
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: 6,
+              padding: "4px 10px",
+              color: "var(--text-muted)",
+              fontSize: "0.74rem",
+              cursor: "pointer",
+            }}
+          >
+            {showPillars ? "▲ Ocultar Pilares" : "▼ Desplegar Pilares"}
+          </button>
+        </div>
+
+        {showPillars && (
+          <div className="cashflow-pillars-grid" style={{ marginTop: 14 }}>
+            {/* Pillar 1: Inflows */}
+            <PillarBreakdownCard
+              type="inflow"
+              title="Ingresos Totales (Inflows)"
+              icon="🟢"
+              items={periodInflows}
+              expensesLog={periodExpenses}
+              totalInflow={totalInflow}
+              currency={currency}
+              fxRate={fxRate}
+              onAddItem={handleOpenAddModal}
+              onEditItem={handleOpenEditModal}
+              onDeleteItem={(id) => handleDeleteItem(id, "inflow")}
+            />
+
+            {/* Pillar 2: Needs */}
+            <PillarBreakdownCard
+              type="needs"
+              title="Gastos Fijos Planeados (Needs)"
+              icon="🔴"
+              items={periodNeeds}
+              expensesLog={periodExpenses}
+              totalInflow={totalInflow}
+              targetRatio={customRatios.needs}
+              currency={currency}
+              fxRate={fxRate}
+              onAddItem={handleOpenAddModal}
+              onEditItem={handleOpenEditModal}
+              onDeleteItem={(id) => handleDeleteItem(id, "needs")}
+              onDeleteTransaction={deleteExpenseTransaction}
+              onEditTransaction={(tx) => {
+                setExpenseToEdit(tx);
+                setExpenseModalOpen(true);
+              }}
+              onSettleTransaction={(tx) => setExpenseToSettle(tx)}
+            />
+
+            {/* Pillar 3: Wants */}
+            <PillarBreakdownCard
+              type="wants"
+              title="Estilo de Vida Presupuestado (Wants)"
+              icon="🟣"
+              items={periodWants}
+              expensesLog={periodExpenses}
+              totalInflow={totalInflow}
+              targetRatio={customRatios.wants}
+              currency={currency}
+              fxRate={fxRate}
+              onAddItem={handleOpenAddModal}
+              onEditItem={handleOpenEditModal}
+              onDeleteItem={(id) => handleDeleteItem(id, "wants")}
+              onDeleteTransaction={deleteExpenseTransaction}
+              onEditTransaction={(tx) => {
+                setExpenseToEdit(tx);
+                setExpenseModalOpen(true);
+              }}
+              onSettleTransaction={(tx) => setExpenseToSettle(tx)}
+            />
+
+            {/* Pillar 4: Wealth */}
+            <PillarBreakdownCard
+              type="wealth"
+              title="Ahorro & Inversión Planeado (Wealth)"
+              icon="🔵"
+              items={periodWealth}
+              expensesLog={periodExpenses}
+              totalInflow={totalInflow}
+              targetRatio={customRatios.savings}
+              currency={currency}
+              fxRate={fxRate}
+              onAddItem={handleOpenAddModal}
+              onEditItem={handleOpenEditModal}
+              onDeleteItem={(id) => handleDeleteItem(id, "wealth")}
+              onDeleteTransaction={deleteExpenseTransaction}
+              onEditTransaction={(tx) => {
+                setExpenseToEdit(tx);
+                setExpenseModalOpen(true);
+              }}
+              onOpenAddExpenseModal={(item) => {
+                setExpenseToEdit({
+                  budgetItemId: item.id,
+                  budgetItemName: item.name,
+                  budgetItemType: "wealth",
+                  amount: item.monthlyContribution || item.amount || 0,
+                  description: `Aporte a ${item.name}`,
+                  paymentSource: item.paymentSource || { type: "payroll", targetName: payrollAccount.name },
+                });
+                setExpenseModalOpen(true);
+              }}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* ── 9. Expenses Log & Executed Transactions Section (COLLAPSIBLE) ────────── */}
+      <div
+        style={{
+          background: "rgba(15, 23, 42, 0.4)",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+          borderRadius: 14,
+          padding: showExpenses ? "16px" : "12px 18px",
+          transition: "all 0.2s ease",
+          marginTop: 14,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            cursor: "pointer",
+            flexWrap: "wrap",
+            gap: 10,
+            marginBottom: showExpenses ? 14 : 0,
+          }}
+          onClick={() => setShowExpenses(!showExpenses)}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span>📋</span>
+            <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "#f1f5f9" }}>
+              Historial de Gastos Reales, Ahorro & Abonos ({activePeriod})
+            </span>
+            <span
+              style={{
+                fontSize: "0.7rem",
+                color: "#f43f5e",
+                background: "rgba(244, 63, 94, 0.12)",
+                padding: "2px 8px",
+                borderRadius: 12,
+                border: "1px solid rgba(244, 63, 94, 0.25)",
+              }}
+            >
+              {(expensesLog || []).filter(tx => !tx.period || tx.period === activePeriod).length} movimientos
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowExpenses(!showExpenses);
+            }}
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: 6,
+              padding: "4px 10px",
+              color: "var(--text-muted)",
+              fontSize: "0.74rem",
+              cursor: "pointer",
+            }}
+          >
+            {showExpenses ? "▲ Ocultar Gastos" : "▼ Desplegar Gastos"}
+          </button>
+        </div>
+
+        {showExpenses && (
+          <div style={{ marginTop: 14 }}>
+            <ExpensesLogSection
+              expensesLog={expensesLog}
+              creditCardPayments={creditCardPayments}
+              activePeriod={activePeriod}
+              currency={currency}
+              fxRate={fxRate}
+              payrollAccount={payrollAccount}
+              creditCards={creditCards}
+              fixedIncomeAccounts={fixedAccounts}
+              onOpenExpenseModal={() => {
+                setExpenseToEdit(null);
+                setExpenseModalOpen(true);
+              }}
+              onEditTransaction={(tx) => {
+                setExpenseToEdit(tx);
+                setExpenseModalOpen(true);
+              }}
+              onOpenPaymentModal={() => setPaymentModalOpen(true)}
+              onDeleteTransaction={deleteExpenseTransaction}
+              onDeletePayment={deleteCreditCardPayment}
+              onConfirmSettlement={settleLoanTransaction}
+              onToggleExpenseLoan={toggleExpenseLoan}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* ── 10. Credit Cards & Installments Management Section (COLLAPSIBLE) ──────── */}
+      <div
+        style={{
+          background: "rgba(15, 23, 42, 0.4)",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+          borderRadius: 14,
+          padding: showCreditCards ? "16px" : "12px 18px",
+          transition: "all 0.2s ease",
+          marginTop: 14,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            cursor: "pointer",
+            flexWrap: "wrap",
+            gap: 10,
+            marginBottom: showCreditCards ? 14 : 0,
+          }}
+          onClick={() => setShowCreditCards(!showCreditCards)}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span>💳</span>
+            <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "#f1f5f9" }}>
+              Tarjetas de Crédito & Financiación Inteligente (MSI / Cuotas)
+            </span>
+            <span
+              style={{
+                fontSize: "0.7rem",
+                color: "#10b981",
+                background: "rgba(16, 185, 129, 0.12)",
+                padding: "2px 8px",
+                borderRadius: 12,
+                border: "1px solid rgba(16, 185, 129, 0.25)",
+              }}
+            >
+              {creditCards.length} tarjeta(s) registrada(s)
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowCreditCards(!showCreditCards);
+            }}
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: 6,
+              padding: "4px 10px",
+              color: "var(--text-muted)",
+              fontSize: "0.74rem",
+              cursor: "pointer",
+            }}
+          >
+            {showCreditCards ? "▲ Ocultar Tarjetas" : "▼ Desplegar Tarjetas"}
+          </button>
+        </div>
+
+        {showCreditCards && (
+          <div style={{ marginTop: 14 }}>
+            <CreditCardsSection
+              creditCards={creditCards}
+              creditPurchases={creditPurchases}
+              creditCardPayments={creditCardPayments}
+              netSalary={netSalary}
+              activePeriod={activePeriod}
+              currency={currency}
+              fxRate={fxRate}
+              onOpenCreditPurchaseModal={() => setCreditPurchaseModalOpen(true)}
+              onOpenNewCardModal={handleOpenNewCardModal}
+              onOpenEditCardModal={handleOpenEditCardModal}
+              onOpenPaymentModal={() => setPaymentModalOpen(true)}
+              onDeletePurchase={deleteCreditPurchase}
+              onDeleteCard={deleteCreditCard}
+              onDeletePayment={deleteCreditCardPayment}
+            />
+          </div>
+        )}
+      </div>
 
       {/* ── 11. Interactive Allocation Modal ───────────────────────── */}
       <CashFlowAllocationModal

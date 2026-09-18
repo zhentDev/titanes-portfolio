@@ -19,7 +19,7 @@ export default function CashFlowSankey({
 }) {
   const formatAmount = (val, cur = currency) => formatCashFlowMoneyWithCode(val, cur, fxRate);
   const [hoveredItem, setHoveredItem] = useState(null);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
 
   // ── 1. Calculate Aggregate Financial Values ──────────
   const totalInflow = useMemo(() => {
