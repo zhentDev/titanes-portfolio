@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchColInflationHistory } from "../api/client";
+import { useTheme } from "../context/ThemeContext";
 
 export default function InflationExplorerModal({ isOpen, onClose, inflationData }) {
+  const { theme } = useTheme();
+  const isLight = theme === "light";
+
   const [filterYear, setFilterYear] = useState("ALL");
   const [searchTerm, setSearchTerm] = useState("");
   const [internalData, setInternalData] = useState(null);
@@ -52,46 +56,54 @@ export default function InflationExplorerModal({ isOpen, onClose, inflationData 
         left: 0,
         right: 0,
         bottom: 0,
-        background: "rgba(0,0,0,0.85)",
+        background: isLight ? "rgba(15, 23, 42, 0.45)" : "rgba(0,0,0,0.85)",
+        backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         zIndex: 1100,
         padding: 20,
       }}
+      onClick={onClose}
     >
       <div
         className="card fade-up"
+        onClick={(e) => e.stopPropagation()}
         style={{
           width: "100%",
           maxWidth: 680,
           maxHeight: "90vh",
           display: "flex",
           flexDirection: "column",
-          background: "#131b2e",
-          border: "1px solid rgba(255,255,255,0.12)",
+          background: isLight ? "#ffffff" : "#131b2e",
+          border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255,255,255,0.12)"}`,
           borderRadius: 16,
           padding: 0,
           overflow: "hidden",
-          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.7)",
+          boxShadow: isLight
+            ? "0 20px 45px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06)"
+            : "0 25px 50px -12px rgba(0, 0, 0, 0.7)",
         }}
       >
         {/* Header */}
         <div
           style={{
             padding: "20px 24px",
-            borderBottom: "1px solid rgba(255,255,255,0.08)",
+            borderBottom: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255,255,255,0.08)"}`,
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            background: isLight ? "#f8fafc" : "transparent",
           }}
         >
           <div>
             <h3
               style={{
                 margin: 0,
-                color: "#f1f5f9",
+                color: isLight ? "#0f172a" : "#f1f5f9",
                 fontSize: "1.2rem",
+                fontWeight: 800,
                 display: "flex",
                 alignItems: "center",
                 gap: 8,
@@ -99,16 +111,16 @@ export default function InflationExplorerModal({ isOpen, onClose, inflationData 
             >
               🇨🇴 Historial de Inflación e IPC de Colombia
             </h3>
-            <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+            <span style={{ fontSize: "0.78rem", color: isLight ? "#64748b" : "var(--text-muted)" }}>
               Fuente oficial: DANE / Reserva Federal (FRED Series: COLCPALTT01IXOBM)
             </span>
           </div>
           <button
             onClick={onClose}
             style={{
-              background: "rgba(255,255,255,0.06)",
+              background: isLight ? "rgba(0, 0, 0, 0.06)" : "rgba(255,255,255,0.06)",
               border: "none",
-              color: "#94a3b8",
+              color: isLight ? "#475569" : "#94a3b8",
               borderRadius: "50%",
               width: 32,
               height: 32,
@@ -116,6 +128,8 @@ export default function InflationExplorerModal({ isOpen, onClose, inflationData 
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              fontSize: "0.95rem",
+              fontWeight: 700,
             }}
           >
             ✕
@@ -129,51 +143,62 @@ export default function InflationExplorerModal({ isOpen, onClose, inflationData 
             gridTemplateColumns: "repeat(3, 1fr)",
             gap: 12,
             padding: "16px 24px",
-            background: "rgba(0,0,0,0.25)",
-            borderBottom: "1px solid rgba(255,255,255,0.06)",
+            background: isLight ? "#f1f5f9" : "rgba(0,0,0,0.25)",
+            borderBottom: `1px solid ${isLight ? "rgba(0, 0, 0, 0.06)" : "rgba(255,255,255,0.06)"}`,
           }}
         >
+          {/* Card 1: Inflación Interanual */}
           <div
             style={{
               padding: "12px 16px",
-              background: "rgba(255,255,255,0.03)",
+              background: isLight ? "#ffffff" : "rgba(255,255,255,0.03)",
               borderRadius: 10,
-              border: "1px solid rgba(255,255,255,0.05)",
+              border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255,255,255,0.05)"}`,
+              boxShadow: isLight ? "0 1px 3px rgba(0,0,0,0.04)" : "none",
             }}
           >
             <div
               style={{
                 fontSize: "0.72rem",
-                color: "var(--text-muted)",
+                color: isLight ? "#64748b" : "var(--text-muted)",
                 textTransform: "uppercase",
+                fontWeight: 600,
               }}
             >
               Inflación Interanual (12M)
             </div>
             <div
               className="mono"
-              style={{ fontSize: "1.35rem", fontWeight: 800, color: "#f59e0b", marginTop: 4 }}
+              style={{
+                fontSize: "1.35rem",
+                fontWeight: 800,
+                color: isLight ? "#d97706" : "#f59e0b",
+                marginTop: 4,
+              }}
             >
               {latest.yoy != null ? `${latest.yoy}%` : "N/A"}
             </div>
-            <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
+            <div style={{ fontSize: "0.7rem", color: isLight ? "#64748b" : "var(--text-muted)", marginTop: 2 }}>
               Tasa Anualizada Último Mes
             </div>
           </div>
 
+          {/* Card 2: Variación Mensual */}
           <div
             style={{
               padding: "12px 16px",
-              background: "rgba(255,255,255,0.03)",
+              background: isLight ? "#ffffff" : "rgba(255,255,255,0.03)",
               borderRadius: 10,
-              border: "1px solid rgba(255,255,255,0.05)",
+              border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255,255,255,0.05)"}`,
+              boxShadow: isLight ? "0 1px 3px rgba(0,0,0,0.04)" : "none",
             }}
           >
             <div
               style={{
                 fontSize: "0.72rem",
-                color: "var(--text-muted)",
+                color: isLight ? "#64748b" : "var(--text-muted)",
                 textTransform: "uppercase",
+                fontWeight: 600,
               }}
             >
               Variación Mensual (MoM)
@@ -183,41 +208,49 @@ export default function InflationExplorerModal({ isOpen, onClose, inflationData 
               style={{
                 fontSize: "1.35rem",
                 fontWeight: 800,
-                color: (latest.mom ?? 0) >= 0 ? "#38bdf8" : "#4ade80",
+                color: (latest.mom ?? 0) >= 0 ? (isLight ? "#0284c7" : "#38bdf8") : (isLight ? "#059669" : "#4ade80"),
                 marginTop: 4,
               }}
             >
               {latest.mom != null ? `${latest.mom > 0 ? "+" : ""}${latest.mom}%` : "N/A"}
             </div>
-            <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
+            <div style={{ fontSize: "0.7rem", color: isLight ? "#64748b" : "var(--text-muted)", marginTop: 2 }}>
               Mes contra mes anterior
             </div>
           </div>
 
+          {/* Card 3: Último Índice IPC */}
           <div
             style={{
               padding: "12px 16px",
-              background: "rgba(255,255,255,0.03)",
+              background: isLight ? "#ffffff" : "rgba(255,255,255,0.03)",
               borderRadius: 10,
-              border: "1px solid rgba(255,255,255,0.05)",
+              border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255,255,255,0.05)"}`,
+              boxShadow: isLight ? "0 1px 3px rgba(0,0,0,0.04)" : "none",
             }}
           >
             <div
               style={{
                 fontSize: "0.72rem",
-                color: "var(--text-muted)",
+                color: isLight ? "#64748b" : "var(--text-muted)",
                 textTransform: "uppercase",
+                fontWeight: 600,
               }}
             >
               Último Índice IPC
             </div>
             <div
               className="mono"
-              style={{ fontSize: "1.35rem", fontWeight: 800, color: "#f1f5f9", marginTop: 4 }}
+              style={{
+                fontSize: "1.35rem",
+                fontWeight: 800,
+                color: isLight ? "#0f172a" : "#f1f5f9",
+                marginTop: 4,
+              }}
             >
               {latest.cpi != null ? Number(latest.cpi).toFixed(2) : "N/A"}
             </div>
-            <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
+            <div style={{ fontSize: "0.7rem", color: isLight ? "#64748b" : "var(--text-muted)", marginTop: 2 }}>
               Período: {latest.date || "Reciente"}
             </div>
           </div>
@@ -230,16 +263,27 @@ export default function InflationExplorerModal({ isOpen, onClose, inflationData 
             display: "flex",
             gap: 12,
             alignItems: "center",
-            borderBottom: "1px solid rgba(255,255,255,0.06)",
+            borderBottom: `1px solid ${isLight ? "rgba(0, 0, 0, 0.06)" : "rgba(255,255,255,0.06)"}`,
+            background: isLight ? "#fafbfc" : "transparent",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>Filtrar Año:</span>
+            <span style={{ fontSize: "0.8rem", color: isLight ? "#334155" : "var(--text-secondary)", fontWeight: 600 }}>
+              Filtrar Año:
+            </span>
             <select
               value={filterYear}
               onChange={(e) => setFilterYear(e.target.value)}
               className="input"
-              style={{ padding: "4px 10px", fontSize: "0.82rem", height: 32 }}
+              style={{
+                padding: "4px 10px",
+                fontSize: "0.82rem",
+                height: 32,
+                background: isLight ? "#ffffff" : "var(--bg-surface)",
+                color: isLight ? "#0f172a" : "var(--text-primary)",
+                border: `1px solid ${isLight ? "rgba(0,0,0,0.15)" : "var(--border)"}`,
+                borderRadius: 6,
+              }}
             >
               {years.map((y) => (
                 <option key={y} value={y}>
@@ -255,10 +299,19 @@ export default function InflationExplorerModal({ isOpen, onClose, inflationData 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="input"
-            style={{ flex: 1, padding: "4px 12px", fontSize: "0.82rem", height: 32 }}
+            style={{
+              flex: 1,
+              padding: "4px 12px",
+              fontSize: "0.82rem",
+              height: 32,
+              background: isLight ? "#ffffff" : "var(--bg-surface)",
+              color: isLight ? "#0f172a" : "var(--text-primary)",
+              border: `1px solid ${isLight ? "rgba(0,0,0,0.15)" : "var(--border)"}`,
+              borderRadius: 6,
+            }}
           />
 
-          <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+          <span style={{ fontSize: "0.75rem", color: isLight ? "#64748b" : "var(--text-muted)", fontWeight: 500 }}>
             {filteredRates.length} meses listados
           </span>
         </div>
@@ -267,10 +320,10 @@ export default function InflationExplorerModal({ isOpen, onClose, inflationData 
         <div
           style={{
             padding: "10px 24px",
-            background: "rgba(245, 158, 11, 0.05)",
-            borderBottom: "1px solid rgba(245, 158, 11, 0.15)",
+            background: isLight ? "rgba(245, 158, 11, 0.10)" : "rgba(245, 158, 11, 0.05)",
+            borderBottom: `1px solid ${isLight ? "rgba(245, 158, 11, 0.25)" : "rgba(245, 158, 11, 0.15)"}`,
             fontSize: "0.78rem",
-            color: "#fde68a",
+            color: isLight ? "#92400e" : "#fde68a",
             display: "flex",
             alignItems: "center",
             gap: 10,
@@ -281,10 +334,12 @@ export default function InflationExplorerModal({ isOpen, onClose, inflationData 
             <strong>Fórmula de Descuento:</strong>{" "}
             <code
               style={{
-                color: "#fff",
-                background: "rgba(0,0,0,0.3)",
+                color: isLight ? "#0f172a" : "#fff",
+                background: isLight ? "rgba(255,255,255,0.85)" : "rgba(0,0,0,0.3)",
+                border: `1px solid ${isLight ? "rgba(0,0,0,0.1)" : "transparent"}`,
                 padding: "2px 6px",
                 borderRadius: 4,
+                fontWeight: 600,
               }}
             >
               Factor = IPC_Actual ÷ IPC_Compra
@@ -292,10 +347,12 @@ export default function InflationExplorerModal({ isOpen, onClose, inflationData 
             ➔{" "}
             <code
               style={{
-                color: "#fff",
-                background: "rgba(0,0,0,0.3)",
+                color: isLight ? "#0f172a" : "#fff",
+                background: isLight ? "rgba(255,255,255,0.85)" : "rgba(0,0,0,0.3)",
+                border: `1px solid ${isLight ? "rgba(0,0,0,0.1)" : "transparent"}`,
                 padding: "2px 6px",
                 borderRadius: 4,
+                fontWeight: 600,
               }}
             >
               Ganancia Real = (Valor COP ÷ Factor) - Inversión COP
@@ -305,7 +362,15 @@ export default function InflationExplorerModal({ isOpen, onClose, inflationData 
         </div>
 
         {/* Scrollable Table */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "0 24px 16px 24px", minHeight: 260 }}>
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "0 24px 16px 24px",
+            minHeight: 260,
+            background: isLight ? "#ffffff" : "transparent",
+          }}
+        >
           {loading ? (
             <div
               style={{
@@ -315,7 +380,7 @@ export default function InflationExplorerModal({ isOpen, onClose, inflationData 
                 justifyContent: "center",
                 height: 260,
                 gap: 12,
-                color: "var(--text-muted)",
+                color: isLight ? "#64748b" : "var(--text-muted)",
               }}
             >
               <div className="spinner" />
@@ -334,8 +399,10 @@ export default function InflationExplorerModal({ isOpen, onClose, inflationData 
               <thead>
                 <tr
                   style={{
-                    color: "var(--text-muted)",
-                    borderBottom: "1px solid rgba(255,255,255,0.08)",
+                    color: isLight ? "#64748b" : "var(--text-muted)",
+                    borderBottom: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255,255,255,0.08)"}`,
+                    fontSize: "0.75rem",
+                    textTransform: "uppercase",
                   }}
                 >
                   <th style={{ padding: "8px 12px" }}>Período (Mes)</th>
@@ -349,16 +416,32 @@ export default function InflationExplorerModal({ isOpen, onClose, inflationData 
                   <tr
                     key={r.date}
                     style={{
-                      borderBottom: "1px solid rgba(255,255,255,0.03)",
-                      background: idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.01)",
+                      borderBottom: `1px solid ${isLight ? "rgba(0, 0, 0, 0.04)" : "rgba(255,255,255,0.03)"}`,
+                      background:
+                        idx % 2 === 0
+                          ? "transparent"
+                          : isLight
+                            ? "rgba(0, 0, 0, 0.015)"
+                            : "rgba(255,255,255,0.01)",
                     }}
                   >
-                    <td style={{ padding: "8px 12px", fontWeight: 600, color: "#f1f5f9" }}>
+                    <td
+                      style={{
+                        padding: "8px 12px",
+                        fontWeight: 600,
+                        color: isLight ? "#0f172a" : "#f1f5f9",
+                      }}
+                    >
                       📅 {r.date}
                     </td>
                     <td
                       className="mono"
-                      style={{ padding: "8px 12px", textAlign: "right", color: "#94a3b8" }}
+                      style={{
+                        padding: "8px 12px",
+                        textAlign: "right",
+                        color: isLight ? "#475569" : "#94a3b8",
+                        fontWeight: 600,
+                      }}
                     >
                       {r.cpi.toFixed(2)}
                     </td>
@@ -367,7 +450,15 @@ export default function InflationExplorerModal({ isOpen, onClose, inflationData 
                       style={{
                         padding: "8px 12px",
                         textAlign: "right",
-                        color: r.mom >= 0 ? "#38bdf8" : "#4ade80",
+                        fontWeight: 600,
+                        color:
+                          r.mom >= 0
+                            ? isLight
+                              ? "#0284c7"
+                              : "#38bdf8"
+                            : isLight
+                              ? "#059669"
+                              : "#4ade80",
                       }}
                     >
                       {r.mom > 0 ? "+" : ""}
@@ -379,7 +470,14 @@ export default function InflationExplorerModal({ isOpen, onClose, inflationData 
                         padding: "8px 12px",
                         textAlign: "right",
                         fontWeight: 700,
-                        color: r.yoy > 0 ? "#f59e0b" : "#94a3b8",
+                        color:
+                          r.yoy > 0
+                            ? isLight
+                              ? "#d97706"
+                              : "#f59e0b"
+                            : isLight
+                              ? "#475569"
+                              : "#94a3b8",
                       }}
                     >
                       {r.yoy > 0 ? "+" : ""}
@@ -391,7 +489,11 @@ export default function InflationExplorerModal({ isOpen, onClose, inflationData 
                   <tr>
                     <td
                       colSpan={4}
-                      style={{ padding: 24, textAlign: "center", color: "var(--text-muted)" }}
+                      style={{
+                        padding: 24,
+                        textAlign: "center",
+                        color: isLight ? "#64748b" : "var(--text-muted)",
+                      }}
                     >
                       No se encontraron registros para el filtro seleccionado.
                     </td>
@@ -406,21 +508,21 @@ export default function InflationExplorerModal({ isOpen, onClose, inflationData 
         <div
           style={{
             padding: "14px 24px",
-            borderTop: "1px solid rgba(255,255,255,0.08)",
+            borderTop: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255,255,255,0.08)"}`,
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            background: "rgba(0,0,0,0.2)",
+            background: isLight ? "#f8fafc" : "rgba(0,0,0,0.2)",
           }}
         >
-          <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
+          <span style={{ fontSize: "0.74rem", color: isLight ? "#64748b" : "var(--text-muted)" }}>
             💡 Este índice se cruza automáticamente con la fecha de tus lotes para descontar la
             pérdida de poder adquisitivo.
           </span>
           <button
             onClick={onClose}
             className="btn btn-primary"
-            style={{ padding: "6px 18px", fontSize: "0.82rem" }}
+            style={{ padding: "6px 18px", fontSize: "0.82rem", fontWeight: 700 }}
           >
             Cerrar
           </button>

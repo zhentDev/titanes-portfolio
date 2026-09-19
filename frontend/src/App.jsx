@@ -645,32 +645,35 @@ export default function App() {
           {navData && (
             <button
               type="button"
-              className="nav-action-btn"
+              className="nav-action-btn compact"
               onClick={() => exportPortfolioCSV(navData, investment)}
               title="Descargar informe completo del portafolio en formato CSV"
             >
               <span>📥</span>
-              <span>Exportar CSV</span>
+              <span className="btn-text-hide-mobile">CSV</span>
             </button>
           )}
 
-          {/* 6. Selector Modo Diurno / Nocturno */}
+          {/* 6. Selector Modo Diurno / Nocturno (Compacto & Elegante) */}
           <button
             type="button"
-            className="nav-action-btn"
+            className="nav-action-btn theme-toggle-btn"
             onClick={toggleTheme}
-            title={theme === "dark" ? "Cambiar a Modo Diurno" : "Cambiar a Modo Nocturno"}
+            title={theme === "dark" ? "Cambiar a Modo Diurno (☀️)" : "Cambiar a Modo Nocturno (🌙)"}
+            aria-label="Cambiar tema diurno/nocturno"
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: 6,
+              justifyContent: "center",
+              padding: "6px 10px",
               cursor: "pointer",
-              fontWeight: 600,
-              fontSize: "0.85rem",
+              fontWeight: 700,
+              fontSize: "0.95rem",
+              borderRadius: "var(--radius-sm)",
+              minWidth: "36px",
             }}
           >
             <span>{theme === "dark" ? "☀️" : "🌙"}</span>
-            <span>{theme === "dark" ? "Diurno" : "Nocturno"}</span>
           </button>
 
           {/* 7. Cuenta de Usuario & Login */}
@@ -678,8 +681,9 @@ export default function App() {
             {user ? (
               <button
                 type="button"
-                className="nav-dropdown-btn"
+                className="nav-dropdown-btn user-pill-btn"
                 onClick={() => setUserDropdownOpen((prev) => !prev)}
+                title={user.name || user.email}
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
@@ -687,15 +691,16 @@ export default function App() {
                   border: "1px solid var(--border-accent)",
                   background: "var(--bg-card)",
                   color: "var(--text-primary)",
-                  padding: "6px 12px",
+                  padding: "5px 10px",
                   borderRadius: 8,
                   cursor: "pointer",
+                  maxWidth: "180px",
                 }}
               >
                 <div
                   style={{
-                    width: 24,
-                    height: 24,
+                    width: 22,
+                    height: 22,
                     borderRadius: "50%",
                     background: user.provider === "google" ? "#4285F4" : "var(--accent-primary)",
                     color: "#080c18",
@@ -703,8 +708,9 @@ export default function App() {
                     alignItems: "center",
                     justifyContent: "center",
                     fontWeight: 700,
-                    fontSize: "0.75rem",
+                    fontSize: "0.72rem",
                     overflow: "hidden",
+                    flexShrink: 0,
                   }}
                 >
                   {user.avatar_url ? (
@@ -713,8 +719,18 @@ export default function App() {
                     (user.name || user.email || "U").charAt(0).toUpperCase()
                   )}
                 </div>
-                <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>{user.name || user.email.split("@")[0]}</span>
-                <span style={{ fontSize: "0.65rem", marginLeft: 2 }}>{userDropdownOpen ? "▲" : "▼"}</span>
+                <span
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {(user.name ? user.name.split(" ")[0] : user.email.split("@")[0])}
+                </span>
+                <span style={{ fontSize: "0.6rem", marginLeft: 1, opacity: 0.7 }}>{userDropdownOpen ? "▲" : "▼"}</span>
               </button>
             ) : (
               <button
