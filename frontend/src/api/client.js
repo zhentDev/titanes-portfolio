@@ -57,7 +57,7 @@ async function safeFetch(url, options = {}, retries = 1, delayMs = 300) {
 
 // ── Client-Side In-Memory Cache (0ms latency on tab switching) ──
 const API_CACHE = new Map();
-const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes cache
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hora (60 minutos) de caché fija en cliente
 
 export function invalidateApiCache(prefix = "") {
   if (!prefix) {
