@@ -19,6 +19,7 @@ import RebalanceTimer from "./components/RebalanceTimer";
 import SectorAllocation from "./components/SectorAllocation";
 import { InfoTooltip } from "./components/Common";
 import AuthModal from "./components/AuthModal";
+import AuthWall from "./components/AuthWall";
 import { useAuthStore } from "./store/authStore";
 import { usePortfolioStore } from "./store/portfolioStore";
 import { exportPortfolioCSV } from "./utils/exportReport";
@@ -73,7 +74,7 @@ export default function App() {
   const { theme, toggleTheme } = useTheme();
 
   // Auth state & User Dropdown
-  const { user, openAuthModal, logout, fetchMe } = useAuthStore();
+  const { user, isInitialized, openAuthModal, logout, fetchMe } = useAuthStore();
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const userDropdownRef = useRef(null);
 
@@ -155,9 +156,11 @@ export default function App() {
 
   // Only trigger network/DuckDB load on period, investment or rebalance refresh
   useEffect(() => {
-    initFetchPurchases();
-    initFetchCustomStrategies?.();
-  }, [initFetchPurchases, initFetchCustomStrategies]);
+    if (user) {
+      initFetchPurchases();
+      initFetchCustomStrategies?.();
+    }
+  }, [user, initFetchPurchases, initFetchCustomStrategies]);
 
   useEffect(() => {
     setRefreshKey((k) => k + 1);
@@ -365,6 +368,44 @@ export default function App() {
       setPeriod(fallbackPeriod);
     }
   }, [period, periodEnabled, setPeriod]);
+
+  // Si la sesión aún se está verificando, mostrar pantalla de carga suave
+  if (!isInitialized) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "var(--bg-main)",
+          color: "var(--text-primary)",
+        }}
+      >
+        <div className="spinner" style={{ width: 36, height: 36, borderWidth: 3 }} />
+      </div>
+    );
+  }
+
+  // Muro de Privacidad: Si no hay usuario autenticado, bloquear acceso a datos financieros
+  if (!user) {
+    return (
+      <>
+        <Toaster
+          position="bottom-right"
+          toastOptions={{
+            style: {
+              background: "var(--bg-surface)",
+              color: "var(--text-primary)",
+              border: "1px solid var(--border)",
+            },
+          }}
+        />
+        <AuthWall />
+      </>
+    );
+  }
 
   return (
     <div className="app-wrapper">

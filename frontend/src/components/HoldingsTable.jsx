@@ -13,7 +13,7 @@ export default function HoldingsTable({
   const slotValue = investment / numSlots;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", minWidth: 0 }}>
       <div
         style={{
           display: "flex",
@@ -47,8 +47,8 @@ export default function HoldingsTable({
           </div>
         </div>
       </div>
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
+      <div style={{ overflowX: "auto", minWidth: 0, width: "100%" }}>
+        <table style={{ width: "100%", minWidth: "780px", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
           <thead>
             <tr style={{ borderBottom: "1px solid var(--border)" }}>
               {[

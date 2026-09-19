@@ -57,7 +57,7 @@ def get_all_purchases_data(request: Request):
                 """
                 SELECT id, name, is_plan, plan_config, asset_currency, local_currency, annual_inflation_rate, use_auto_col_inflation 
                 FROM purchase_portfolios 
-                WHERE user_id = ? OR user_id IS NULL
+                WHERE user_id = ?
                 """,
                 [user_id],
             ).fetchall()
@@ -65,17 +65,16 @@ def get_all_purchases_data(request: Request):
                 """
                 SELECT id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price, purchase_time 
                 FROM individual_purchases 
-                WHERE user_id = ? OR user_id IS NULL
+                WHERE user_id = ?
                 """,
                 [user_id],
             ).fetchall()
         else:
-            portfolios = con.execute(
-                "SELECT id, name, is_plan, plan_config, asset_currency, local_currency, annual_inflation_rate, use_auto_col_inflation FROM purchase_portfolios"
-            ).fetchall()
-            lots = con.execute(
-                "SELECT id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price, purchase_time FROM individual_purchases"
-            ).fetchall()
+            # Unauthenticated: return empty list to protect private financial data
+            return {
+                "purchasePortfolios": [],
+                "individualPurchases": []
+            }
 
         return {
             "purchasePortfolios": [

@@ -304,11 +304,12 @@ def get_all_rebalances(strategy_id: str = "historical", user_id: Optional[str] =
                 ORDER BY r.rebalance_date ASC
             """, [strategy_id, user_id]).fetchall()
         else:
+            # Unauthenticated: only return system/global baseline rebalances (where user_id IS NULL)
             results = con.execute("""
                 SELECT r.rebalance_date, r.cash_added, list(t.ticker) as tickers
                 FROM rebalances r
                 LEFT JOIN rebalance_tickers t ON r.rebalance_date = t.rebalance_date AND r.strategy_id = t.strategy_id
-                WHERE r.strategy_id = ?
+                WHERE r.strategy_id = ? AND r.user_id IS NULL
                 GROUP BY r.rebalance_date, r.cash_added
                 ORDER BY r.rebalance_date ASC
             """, [strategy_id]).fetchall()
@@ -375,13 +376,15 @@ def get_custom_strategies(user_id: Optional[str] = None) -> list[dict]:
             rows = con.execute("""
                 SELECT id, name, country, num_slots, capital, active_invested, benchmark, color, is_system, is_real_money, created_at
                 FROM custom_strategies
-                WHERE user_id = ? OR user_id IS NULL OR is_system = TRUE
+                WHERE user_id = ? OR (user_id IS NULL AND is_system = TRUE)
                 ORDER BY created_at ASC
             """, [user_id]).fetchall()
         else:
+            # Unauthenticated: only return system/template strategies, NEVER private user strategies
             rows = con.execute("""
                 SELECT id, name, country, num_slots, capital, active_invested, benchmark, color, is_system, is_real_money, created_at
                 FROM custom_strategies
+                WHERE is_system = TRUE
                 ORDER BY created_at ASC
             """).fetchall()
 
