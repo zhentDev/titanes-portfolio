@@ -4,7 +4,8 @@
 
 from datetime import date, timedelta
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
+from services.auth import get_optional_current_user
 from services.db import get_all_rebalances
 from services.market_data import get_historical_prices
 from services.nav_engine import calculate_nav
@@ -26,15 +27,18 @@ _PERIOD_DELTAS = {
 
 @router.get("/nav")
 def nav_endpoint(
+    request: Request,
     period: str = "1Y",
     investment: float = 2000.0,
     num_slots: int = 15,
     selected_tickers: str | None = None,
     strategy_id: str = "historical",
 ):
-    rebalances = get_all_rebalances(strategy_id=strategy_id)
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    rebalances = get_all_rebalances(strategy_id=strategy_id, user_id=user_id)
     if not rebalances:
-        return calculate_nav(None, investment=investment, num_slots=num_slots, strategy_id=strategy_id)
+        return calculate_nav(None, investment=investment, num_slots=num_slots, strategy_id=strategy_id, user_id=user_id)
 
     # Parse selected tickers list
     selected_list = None
@@ -73,6 +77,7 @@ def nav_endpoint(
         num_slots=num_slots,
         selected_tickers=selected_list,
         strategy_id=strategy_id,
+        user_id=user_id,
     )
     return result
 

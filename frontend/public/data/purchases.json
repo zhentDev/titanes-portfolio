@@ -15,7 +15,7 @@
       "name": "Compra frecuente",
       "isPlan": true,
       "planConfig": {
-        "frequencyDays": 13,
+        "frequencyDays": 5,
         "avgAmount": 15,
         "distribution": {
           "SMH": 24.144144144144143,
@@ -50,276 +50,6 @@
     }
   ],
   "individualPurchases": [
-    {
-      "id": "1786189895665",
-      "portfolioId": "hist_default",
-      "ticker": "GDX.L",
-      "date": "2026-03-12",
-      "purchasePrice": 113.22,
-      "shares": 0.1031619855149267,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
-    {
-      "id": "1786189963390",
-      "portfolioId": "hist_default",
-      "ticker": "GDX.L",
-      "date": "2026-03-06",
-      "purchasePrice": 114.85,
-      "shares": 0.04414453635176317,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
-    {
-      "id": "1786190008278",
-      "portfolioId": "hist_default",
-      "ticker": "GDX.L",
-      "date": "2026-03-03",
-      "purchasePrice": 120.5,
-      "shares": 0.1658921161825726,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
-    {
-      "id": "1786190076047",
-      "portfolioId": "hist_default",
-      "ticker": "GDX.L",
-      "date": "2025-10-28",
-      "purchasePrice": 79.27,
-      "shares": 0.12615112905260503,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
-    {
-      "id": "1786190248983",
-      "portfolioId": "hist_default",
-      "ticker": "SMH.L",
-      "date": "2026-04-14",
-      "purchasePrice": 79.27,
-      "shares": 0.12615112905260503,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
-    {
-      "id": "1786190283656",
-      "portfolioId": "hist_default",
-      "ticker": "SMH.L",
-      "date": "2026-01-19",
-      "purchasePrice": 68.91,
-      "shares": 0.07981425047162967,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
-    {
-      "id": "1786190335618",
-      "portfolioId": "hist_default",
-      "ticker": "SMH.L",
-      "date": "2025-10-28",
-      "purchasePrice": 61.9,
-      "shares": 0.24846526655896609,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
-    {
-      "id": "1786190458660",
-      "portfolioId": "hist_default",
-      "ticker": "SMH.L",
-      "date": "2025-10-17",
-      "purchasePrice": 58.02,
-      "shares": 0.1189245087900724,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
-    {
-      "id": "1786190495442",
-      "portfolioId": "hist_default",
-      "ticker": "SMH.L",
-      "date": "2025-08-29",
-      "purchasePrice": 48.58,
-      "shares": 0.32194318649650067,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
-    {
-      "id": "1786190530486",
-      "portfolioId": "hist_default",
-      "ticker": "SMH.L",
-      "date": "2025-06-26",
-      "purchasePrice": 46.735,
-      "shares": 0.17117791804857174,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
-    {
-      "id": "1786190562059",
-      "portfolioId": "hist_default",
-      "ticker": "SMH.L",
-      "date": "2025-06-26",
-      "purchasePrice": 46.735,
-      "shares": 0.17331764202417888,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
-    {
-      "id": "1786190692795",
-      "portfolioId": "hist_default",
-      "ticker": "SMH.L",
-      "date": "2025-10-28",
-      "purchasePrice": 61.9,
-      "shares": 0.13505654281098545,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
-    {
-      "id": "1786190812221",
-      "portfolioId": "hist_default",
-      "ticker": "IPLT.L",
-      "date": "2026-02-25",
-      "purchasePrice": 33.125,
-      "shares": 0.3190943396226415,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
-    {
-      "id": "1786190921873",
-      "portfolioId": "hist_default",
-      "ticker": "IPLT.L",
-      "date": "2026-02-25",
-      "purchasePrice": 33.125,
-      "shares": 0.3190943396226415,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
-    {
-      "id": "1786190981660",
-      "portfolioId": "hist_default",
-      "ticker": "IPLT.L",
-      "date": "2026-01-30",
-      "purchasePrice": 31.5675,
-      "shares": 0.3148808109606399,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
-    {
-      "id": "1786191037460",
-      "portfolioId": "hist_default",
-      "ticker": "IPLT.L",
-      "date": "2026-01-29",
-      "purchasePrice": 37.1,
-      "shares": 2.7929919137466306,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
-    {
-      "id": "1786217423656",
-      "portfolioId": "hist_default",
-      "ticker": "NVDA",
-      "date": "2026-04-27",
-      "purchasePrice": 216.3578,
-      "shares": 0.05079548784467212,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
-    {
-      "id": "1786217574741",
-      "portfolioId": "hist_default",
-      "ticker": "NVDA",
-      "date": "2026-04-14",
-      "purchasePrice": 196.2812,
-      "shares": 0.051354892878176815,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
-    {
-      "id": "1786217632151",
-      "portfolioId": "hist_default",
-      "ticker": "NVDA",
-      "date": "2025-06-26",
-      "purchasePrice": 154.8138,
-      "shares": 0.032232268699560376,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
-    {
-      "id": "1786221248943",
-      "portfolioId": "hist_default",
-      "ticker": "SMH.L",
-      "date": "2026-05-15",
-      "purchasePrice": 101.58,
-      "shares": 0.048040952943492816,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
-    {
-      "id": "1786225864189",
-      "portfolioId": "hist_default",
-      "ticker": "SMH.L",
-      "date": "2026-04-27",
-      "purchasePrice": 88.73,
-      "shares": 0.11270145384875464,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
-    {
-      "id": "1786188217542",
-      "portfolioId": "hist_default",
-      "ticker": "SMH.L",
-      "date": "2026-05-08",
-      "purchasePrice": 101.72,
-      "shares": 0.04905623279591034,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
-    {
-      "id": "1786188271285",
-      "portfolioId": "hist_default",
-      "ticker": "SMH.L",
-      "date": "2026-04-22",
-      "purchasePrice": 83.8,
-      "shares": 0.11933174224343676,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
-    {
-      "id": "1786189821526",
-      "portfolioId": "hist_default",
-      "ticker": "GDX.L",
-      "date": "2026-04-14",
-      "purchasePrice": 113.91,
-      "shares": 0.08778860503906594,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
-    {
-      "id": "1787057974944",
-      "portfolioId": "hist_1787057755550",
-      "ticker": "SPCX",
-      "date": "2026-06-22",
-      "purchasePrice": 154.6,
-      "shares": 0.19404915912031048,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
-    {
-      "id": "1787057999770",
-      "portfolioId": "hist_1787057755550",
-      "ticker": "SPCX",
-      "date": "2026-06-22",
-      "purchasePrice": 154.6,
-      "shares": 0.19404915912031048,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
-    {
-      "id": "1787058034056",
-      "portfolioId": "hist_1787057755550",
-      "ticker": "SPCX",
-      "date": "2026-07-06",
-      "purchasePrice": 160.42,
-      "shares": 0.18700910110958735,
-      "manualCurrentPrice": null,
-      "purchaseTime": null
-    },
     {
       "id": "buy_1787664564067_4400",
       "portfolioId": "hist_1786235531602",
@@ -531,22 +261,42 @@
       "purchaseTime": null
     },
     {
-      "id": "1789055761917",
-      "portfolioId": "hist_1789055694439",
-      "ticker": "0700.HK",
-      "date": "2026-09-10",
-      "purchasePrice": 425.6,
-      "shares": 0.12861842105263155,
+      "id": "1787057974944",
+      "portfolioId": "hist_1787057755550",
+      "ticker": "SPCX",
+      "date": "2026-06-22",
+      "purchasePrice": 154.6,
+      "shares": 0.19404915912031048,
       "manualCurrentPrice": null,
-      "purchaseTime": "02:00"
+      "purchaseTime": "09:30"
+    },
+    {
+      "id": "1787057999770",
+      "portfolioId": "hist_1787057755550",
+      "ticker": "SPCX",
+      "date": "2026-06-22",
+      "purchasePrice": 154.6,
+      "shares": 0.19404915912031048,
+      "manualCurrentPrice": null,
+      "purchaseTime": "09:30"
+    },
+    {
+      "id": "1787058034056",
+      "portfolioId": "hist_1787057755550",
+      "ticker": "SPCX",
+      "date": "2026-07-06",
+      "purchasePrice": 160.42,
+      "shares": 0.18700910110958735,
+      "manualCurrentPrice": null,
+      "purchaseTime": "09:30"
     },
     {
       "id": "1789056288134",
       "portfolioId": "hist_1789055694439",
       "ticker": "CNYA.L",
       "date": "2026-09-10",
-      "purchasePrice": 5.9075,
-      "shares": 5.0782903089293265,
+      "purchasePrice": 5.955,
+      "shares": 5.037783375314861,
       "manualCurrentPrice": null,
       "purchaseTime": "02:00"
     },
@@ -555,8 +305,8 @@
       "portfolioId": "hist_1789055694439",
       "ticker": "CNYA.L",
       "date": "2026-09-10",
-      "purchasePrice": 5.9075,
-      "shares": 3.3855268726195518,
+      "purchasePrice": 5.955,
+      "shares": 3.3585222502099077,
       "manualCurrentPrice": null,
       "purchaseTime": "02:00"
     },
@@ -565,20 +315,280 @@
       "portfolioId": "hist_1789055694439",
       "ticker": "KWEB.L",
       "date": "2026-09-10",
-      "purchasePrice": 18.57,
-      "shares": 2.6925148088314486,
+      "purchasePrice": 18.642,
+      "shares": 2.68211565282695,
       "manualCurrentPrice": null,
       "purchaseTime": "02:00"
     },
     {
       "id": "1789055861454",
       "portfolioId": "hist_1789055694439",
-      "ticker": "1810.HK",
+      "ticker": "3CP.F",
       "date": "2026-09-10",
-      "purchasePrice": 25.92,
-      "shares": 1.4201388888888888,
+      "purchasePrice": 2.8465,
+      "shares": 12.931670472510103,
       "manualCurrentPrice": null,
       "purchaseTime": "00:05"
+    },
+    {
+      "id": "1789055761917",
+      "portfolioId": "hist_1789055694439",
+      "ticker": "NNND.F",
+      "date": "2026-09-10",
+      "purchasePrice": 46.8,
+      "shares": 1.1696581196581197,
+      "manualCurrentPrice": null,
+      "purchaseTime": "02:00"
+    },
+    {
+      "id": "1789737159176",
+      "portfolioId": "hist_1789055694439",
+      "ticker": "EMIM.L",
+      "date": "2026-09-18",
+      "purchasePrice": 4121.3232,
+      "shares": 0.002011489902078051,
+      "manualCurrentPrice": null,
+      "purchaseTime": "02:00"
+    },
+    {
+      "id": "1786189895665",
+      "portfolioId": "hist_default",
+      "ticker": "GDX.L",
+      "date": "2026-03-12",
+      "purchasePrice": 113.22,
+      "shares": 0.1031619855149267,
+      "manualCurrentPrice": null,
+      "purchaseTime": "08:00"
+    },
+    {
+      "id": "1786189963390",
+      "portfolioId": "hist_default",
+      "ticker": "GDX.L",
+      "date": "2026-03-06",
+      "purchasePrice": 114.85,
+      "shares": 0.04414453635176317,
+      "manualCurrentPrice": null,
+      "purchaseTime": "08:00"
+    },
+    {
+      "id": "1786190008278",
+      "portfolioId": "hist_default",
+      "ticker": "GDX.L",
+      "date": "2026-03-03",
+      "purchasePrice": 120.5,
+      "shares": 0.1658921161825726,
+      "manualCurrentPrice": null,
+      "purchaseTime": "08:00"
+    },
+    {
+      "id": "1786190076047",
+      "portfolioId": "hist_default",
+      "ticker": "GDX.L",
+      "date": "2025-10-28",
+      "purchasePrice": 79.27,
+      "shares": 0.12615112905260503,
+      "manualCurrentPrice": null,
+      "purchaseTime": "08:00"
+    },
+    {
+      "id": "1786190248983",
+      "portfolioId": "hist_default",
+      "ticker": "SMH.L",
+      "date": "2026-04-14",
+      "purchasePrice": 79.27,
+      "shares": 0.12615112905260503,
+      "manualCurrentPrice": null,
+      "purchaseTime": "08:00"
+    },
+    {
+      "id": "1786190283656",
+      "portfolioId": "hist_default",
+      "ticker": "SMH.L",
+      "date": "2026-01-19",
+      "purchasePrice": 68.91,
+      "shares": 0.07981425047162967,
+      "manualCurrentPrice": null,
+      "purchaseTime": "08:00"
+    },
+    {
+      "id": "1786190335618",
+      "portfolioId": "hist_default",
+      "ticker": "SMH.L",
+      "date": "2025-10-28",
+      "purchasePrice": 61.9,
+      "shares": 0.24846526655896609,
+      "manualCurrentPrice": null,
+      "purchaseTime": "08:00"
+    },
+    {
+      "id": "1786190458660",
+      "portfolioId": "hist_default",
+      "ticker": "SMH.L",
+      "date": "2025-10-17",
+      "purchasePrice": 58.02,
+      "shares": 0.1189245087900724,
+      "manualCurrentPrice": null,
+      "purchaseTime": "08:00"
+    },
+    {
+      "id": "1786190495442",
+      "portfolioId": "hist_default",
+      "ticker": "SMH.L",
+      "date": "2025-08-29",
+      "purchasePrice": 48.58,
+      "shares": 0.32194318649650067,
+      "manualCurrentPrice": null,
+      "purchaseTime": "08:00"
+    },
+    {
+      "id": "1786190530486",
+      "portfolioId": "hist_default",
+      "ticker": "SMH.L",
+      "date": "2025-06-26",
+      "purchasePrice": 46.735,
+      "shares": 0.17117791804857174,
+      "manualCurrentPrice": null,
+      "purchaseTime": "08:00"
+    },
+    {
+      "id": "1786190562059",
+      "portfolioId": "hist_default",
+      "ticker": "SMH.L",
+      "date": "2025-06-26",
+      "purchasePrice": 46.735,
+      "shares": 0.17331764202417888,
+      "manualCurrentPrice": null,
+      "purchaseTime": "08:00"
+    },
+    {
+      "id": "1786190692795",
+      "portfolioId": "hist_default",
+      "ticker": "SMH.L",
+      "date": "2025-10-28",
+      "purchasePrice": 61.9,
+      "shares": 0.13505654281098545,
+      "manualCurrentPrice": null,
+      "purchaseTime": "08:00"
+    },
+    {
+      "id": "1786190812221",
+      "portfolioId": "hist_default",
+      "ticker": "IPLT.L",
+      "date": "2026-02-25",
+      "purchasePrice": 33.125,
+      "shares": 0.3190943396226415,
+      "manualCurrentPrice": null,
+      "purchaseTime": "08:00"
+    },
+    {
+      "id": "1786190921873",
+      "portfolioId": "hist_default",
+      "ticker": "IPLT.L",
+      "date": "2026-02-25",
+      "purchasePrice": 33.125,
+      "shares": 0.3190943396226415,
+      "manualCurrentPrice": null,
+      "purchaseTime": "08:00"
+    },
+    {
+      "id": "1786190981660",
+      "portfolioId": "hist_default",
+      "ticker": "IPLT.L",
+      "date": "2026-01-30",
+      "purchasePrice": 31.5675,
+      "shares": 0.3148808109606399,
+      "manualCurrentPrice": null,
+      "purchaseTime": "08:00"
+    },
+    {
+      "id": "1786191037460",
+      "portfolioId": "hist_default",
+      "ticker": "IPLT.L",
+      "date": "2026-01-29",
+      "purchasePrice": 37.1,
+      "shares": 2.7929919137466306,
+      "manualCurrentPrice": null,
+      "purchaseTime": "08:00"
+    },
+    {
+      "id": "1786217423656",
+      "portfolioId": "hist_default",
+      "ticker": "NVDA",
+      "date": "2026-04-27",
+      "purchasePrice": 216.3578,
+      "shares": 0.05079548784467212,
+      "manualCurrentPrice": null,
+      "purchaseTime": "09:30"
+    },
+    {
+      "id": "1786217574741",
+      "portfolioId": "hist_default",
+      "ticker": "NVDA",
+      "date": "2026-04-14",
+      "purchasePrice": 196.2812,
+      "shares": 0.051354892878176815,
+      "manualCurrentPrice": null,
+      "purchaseTime": "09:30"
+    },
+    {
+      "id": "1786217632151",
+      "portfolioId": "hist_default",
+      "ticker": "NVDA",
+      "date": "2025-06-26",
+      "purchasePrice": 154.8138,
+      "shares": 0.032232268699560376,
+      "manualCurrentPrice": null,
+      "purchaseTime": "09:30"
+    },
+    {
+      "id": "1786221248943",
+      "portfolioId": "hist_default",
+      "ticker": "SMH.L",
+      "date": "2026-05-15",
+      "purchasePrice": 101.58,
+      "shares": 0.048040952943492816,
+      "manualCurrentPrice": null,
+      "purchaseTime": "08:00"
+    },
+    {
+      "id": "1786225864189",
+      "portfolioId": "hist_default",
+      "ticker": "SMH.L",
+      "date": "2026-04-27",
+      "purchasePrice": 88.73,
+      "shares": 0.11270145384875464,
+      "manualCurrentPrice": null,
+      "purchaseTime": "08:00"
+    },
+    {
+      "id": "1786188217542",
+      "portfolioId": "hist_default",
+      "ticker": "SMH.L",
+      "date": "2026-05-08",
+      "purchasePrice": 101.72,
+      "shares": 0.04905623279591034,
+      "manualCurrentPrice": null,
+      "purchaseTime": "08:00"
+    },
+    {
+      "id": "1786188271285",
+      "portfolioId": "hist_default",
+      "ticker": "SMH.L",
+      "date": "2026-04-22",
+      "purchasePrice": 83.8,
+      "shares": 0.11933174224343676,
+      "manualCurrentPrice": null,
+      "purchaseTime": "08:00"
+    },
+    {
+      "id": "1786189821526",
+      "portfolioId": "hist_default",
+      "ticker": "GDX.L",
+      "date": "2026-04-14",
+      "purchasePrice": 113.91,
+      "shares": 0.08778860503906594,
+      "manualCurrentPrice": null,
+      "purchaseTime": "08:00"
     }
   ]
 }

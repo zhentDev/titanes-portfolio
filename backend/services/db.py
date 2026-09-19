@@ -238,14 +238,21 @@ def count_users() -> int:
 def claim_legacy_data(user_id: str):
     """
     Assigns all legacy data (where user_id IS NULL) to the designated user_id.
-    Guarantees absolute zero data loss for existing investments.
+    Guarantees absolute zero data loss for existing investments, while keeping
+    system baseline strategies ('historical', 'strat_mm20') global.
     """
     with get_connection() as con:
         con.execute("UPDATE purchase_portfolios SET user_id = ? WHERE user_id IS NULL", [user_id])
         con.execute("UPDATE individual_purchases SET user_id = ? WHERE user_id IS NULL", [user_id])
-        con.execute("UPDATE custom_strategies SET user_id = ? WHERE user_id IS NULL", [user_id])
-        con.execute("UPDATE rebalances SET user_id = ? WHERE user_id IS NULL", [user_id])
-        con.execute("UPDATE rebalance_tickers SET user_id = ? WHERE user_id IS NULL", [user_id])
+        con.execute("UPDATE custom_strategies SET user_id = ? WHERE user_id IS NULL AND is_system = FALSE", [user_id])
+        con.execute(
+            "UPDATE rebalances SET user_id = ? WHERE user_id IS NULL AND strategy_id NOT IN ('historical', 'strat_mm20')",
+            [user_id],
+        )
+        con.execute(
+            "UPDATE rebalance_tickers SET user_id = ? WHERE user_id IS NULL AND strategy_id NOT IN ('historical', 'strat_mm20')",
+            [user_id],
+        )
 
 
 # ── Rebalances ────────────────────────────────────────────────────────────────

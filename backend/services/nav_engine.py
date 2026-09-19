@@ -18,6 +18,7 @@ def calculate_nav(
     num_slots: int = 15,
     selected_tickers: list[str] | None = None,
     strategy_id: str = "historical",
+    user_id: str | None = None,
 ) -> dict:
     """
     Calculate portfolio NAV using DuckDB rebalance history.
@@ -28,7 +29,7 @@ def calculate_nav(
 
     prices_df = prices_df.clone() if hasattr(prices_df, "clone") else prices_df
 
-    rebalances = get_all_rebalances(strategy_id=strategy_id)
+    rebalances = get_all_rebalances(strategy_id=strategy_id, user_id=user_id)
     if not rebalances:
         return _empty_response(investment)
 

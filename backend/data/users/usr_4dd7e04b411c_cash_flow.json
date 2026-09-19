@@ -1,0 +1,20 @@
+{
+  "activePeriod": "2026-08",
+  "startPeriod": "2026-08",
+  "currency": "COP",
+  "allocationModel": "custom",
+  "customRatios": {
+    "needs": 35.0,
+    "wants": 30.0,
+    "savings": 35.0
+  },
+  "emergencyFundTargetMonths": 6,
+  "inflows": [],
+  "needs": [],
+  "wants": [],
+  "wealth": [],
+  "expensesLog": [],
+  "creditCards": [],
+  "creditCardPayments": [],
+  "periodsData": {}
+}

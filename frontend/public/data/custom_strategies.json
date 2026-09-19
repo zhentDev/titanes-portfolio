@@ -1,15 +1,1 @@
-[
-  {
-    "id": "strat_1788304141581",
-    "name": "Mejores acciones - sept 2026",
-    "country": "\ud83c\uddfa\ud83c\uddf8",
-    "numSlots": 20,
-    "capital": 1010.0,
-    "activeInvested": 1010.0,
-    "benchmark": "Russell 2000 (IWM)",
-    "color": "#a855f7",
-    "isSystem": false,
-    "isRealMoney": true,
-    "createdAt": "2026-09-01T18:09:01.607291"
-  }
-]
+[]
