@@ -120,6 +120,7 @@ def save_cash_flow_db(data: dict[str, Any], user_id: Optional[str] = None) -> No
 # --- Pydantic Data Models ---
 
 class InflowItem(BaseModel):
+    model_config = {"extra": "allow"}
     id: str | None = None
     name: str
     amount: float
@@ -129,6 +130,7 @@ class InflowItem(BaseModel):
 
 
 class NeedExpenseItem(BaseModel):
+    model_config = {"extra": "allow"}
     id: str | None = None
     name: str
     amount: float
@@ -139,39 +141,43 @@ class NeedExpenseItem(BaseModel):
 
 
 class WantExpenseItem(BaseModel):
+    model_config = {"extra": "allow"}
     id: str | None = None
     name: str
-    budgetedAmount: float
+    budgetedAmount: float = 0.0
     actualSpent: float = 0.0
     category: str = "lifestyle"
     createdAt: str | None = None
 
 
 class WealthItem(BaseModel):
+    model_config = {"extra": "allow"}
     id: str | None = None
     name: str
-    targetAmount: float
+    targetAmount: float = 0.0
     actualContributed: float = 0.0
     targetType: str = "investment"
     createdAt: str | None = None
 
 
 class CustomRatiosModel(BaseModel):
+    model_config = {"extra": "allow"}
     needs: float = 50.0
     wants: float = 30.0
     savings: float = 20.0
 
 
 class CashFlowSyncPayload(BaseModel):
+    model_config = {"extra": "allow"}
     activePeriod: str | None = None
     currency: str | None = None
     allocationModel: str | None = None
-    customRatios: CustomRatiosModel | None = None
+    customRatios: dict | None = None
     emergencyFundTargetMonths: int | None = None
-    inflows: list[InflowItem] | None = None
-    needs: list[NeedExpenseItem] | None = None
-    wants: list[WantExpenseItem] | None = None
-    wealth: list[WealthItem] | None = None
+    inflows: list[dict] | None = None
+    needs: list[dict] | None = None
+    wants: list[dict] | None = None
+    wealth: list[dict] | None = None
     payrollAccount: dict | None = None
     creditCards: list[dict] | None = None
     creditPurchases: list[dict] | None = None
