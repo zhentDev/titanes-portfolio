@@ -120,7 +120,28 @@ def generate_static():
             json.dump(purchases_payload, f, indent=2)
         print("[STATIC GEN] Guardado: purchases.json")
 
-        custom_strats = get_custom_strategies()
+        # Export ALL strategies for static hosting fallback (owner's data)
+        with get_connection() as con:
+            strat_rows = con.execute("""
+                SELECT id, name, country, num_slots, capital, active_invested, benchmark, color, is_system, is_real_money, created_at
+                FROM custom_strategies
+                ORDER BY created_at ASC
+            """).fetchall()
+        custom_strats = []
+        for r in strat_rows:
+            custom_strats.append({
+                "id": r[0],
+                "name": r[1],
+                "country": r[2] or "\U0001f30e",
+                "numSlots": r[3] or 20,
+                "capital": r[4] or 1000.0,
+                "activeInvested": r[5] or 1000.0,
+                "benchmark": r[6] or "S&P 500",
+                "color": r[7] or "#a855f7",
+                "isSystem": bool(r[8]),
+                "isRealMoney": bool(r[9]),
+                "createdAt": r[10].isoformat() if hasattr(r[10], 'isoformat') else str(r[10]),
+            })
         with open(out_dir / "custom_strategies.json", "w", encoding="utf-8") as f:
             json.dump(custom_strats, f, indent=2)
         print("[STATIC GEN] Guardado: custom_strategies.json")

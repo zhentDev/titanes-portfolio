@@ -65,7 +65,6 @@ export const usePortfolioStore = create(
         sp500: true,
         nasdaq: true,
         base: true,
-        strat_mm20: true, // Auto-show the default system strategy
       },
       // ── Main Mode Settings (Divisa e Inflación) ──
       mainPortfolioSettings: {
@@ -318,20 +317,7 @@ export const usePortfolioStore = create(
         });
       },
 
-      customStrategies: [
-        {
-          id: "strat_mm20",
-          name: "MM20 Mid-caps PRO",
-          country: "🇺🇸",
-          numSlots: 20,
-          capital: 1000,
-          activeInvested: 250,
-          benchmark: "S&P 500",
-          color: "#10b981",
-          createdAt: new Date().toISOString(),
-          isSystem: true,
-        },
-      ],
+      customStrategies: [],
       strategyRebalances: {},
 
       initFetchCustomStrategies: async () => {
@@ -339,14 +325,10 @@ export const usePortfolioStore = create(
           const backendStrats = await fetchCustomStrategiesApi();
           if (Array.isArray(backendStrats) && backendStrats.length > 0) {
             set((state) => {
-              const sysStrat = state.customStrategies.find((s) => s.id === "strat_mm20");
               const existingMap = new Map(state.customStrategies.map((s) => [s.id, s]));
               backendStrats.forEach((bs) => {
                 existingMap.set(bs.id, { ...existingMap.get(bs.id), ...bs });
               });
-              if (sysStrat && !existingMap.has("strat_mm20")) {
-                existingMap.set("strat_mm20", sysStrat);
-              }
               const mergedStrats = Array.from(existingMap.values());
               const updatedSettings = { ...state.settingsByMode };
               mergedStrats.forEach((st) => {
@@ -611,7 +593,7 @@ export const usePortfolioStore = create(
               numSlots: 15,
             },
           },
-          visibleSeries: { nav: true, sp500: true, nasdaq: true, base: true, strat_mm20: true },
+          visibleSeries: { nav: true, sp500: true, nasdaq: true, base: true },
         }),
       getSettingsForMode: (mode) => {
         const state = get();
@@ -641,12 +623,8 @@ export const usePortfolioStore = create(
           merged.settingsByMode.live =
             merged.settingsByMode.live || currentState.settingsByMode.live;
         }
-        if (
-          !merged.customStrategies ||
-          !merged.customStrategies.find((s) => s.id === "strat_mm20")
-        ) {
-          const sysStrat = currentState.customStrategies.find((s) => s.id === "strat_mm20");
-          merged.customStrategies = [...(merged.customStrategies || []), sysStrat].filter(Boolean);
+        if (!merged.customStrategies) {
+          merged.customStrategies = [];
         }
         (merged.customStrategies || []).forEach((st) => {
           if (!merged.settingsByMode[st.id]) {

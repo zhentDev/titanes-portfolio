@@ -139,6 +139,27 @@ def init_db():
         except duckdb.Error as e:
             print(f"Custom strategies migration error: {e}")
 
+        # Migration: Neutralize is_system — each user sees only their own strategies
+        try:
+            con.execute("UPDATE custom_strategies SET is_system = FALSE WHERE is_system = TRUE")
+        except duckdb.Error as e:
+            print(f"is_system neutralization migration error: {e}")
+
+        # Migration: Clean orphan rebalances whose strategy_id has no entry in custom_strategies
+        # (excluding built-in 'historical' which is always valid)
+        try:
+            orphan_ids = con.execute("""
+                SELECT DISTINCT r.strategy_id FROM rebalances r
+                WHERE r.strategy_id != 'historical'
+                  AND r.strategy_id NOT IN (SELECT id FROM custom_strategies)
+            """).fetchall()
+            for (oid,) in orphan_ids:
+                con.execute("DELETE FROM rebalance_tickers WHERE strategy_id = ?", [oid])
+                con.execute("DELETE FROM rebalances WHERE strategy_id = ?", [oid])
+                print(f"[MIGRATION] Cleaned orphan rebalances for strategy_id={oid}")
+        except duckdb.Error as e:
+            print(f"Orphan rebalances cleanup error: {e}")
+
         # Migration: Add user_id and strategy_id to rebalances and rebalance_tickers if missing
         try:
             rebal_cols = [row[1] for row in con.execute("PRAGMA table_info('rebalances')").fetchall()]
@@ -383,17 +404,12 @@ def get_custom_strategies(user_id: Optional[str] = None) -> list[dict]:
             rows = con.execute("""
                 SELECT id, name, country, num_slots, capital, active_invested, benchmark, color, is_system, is_real_money, created_at
                 FROM custom_strategies
-                WHERE user_id = ? OR (user_id IS NULL AND is_system = TRUE)
+                WHERE user_id = ?
                 ORDER BY created_at ASC
             """, [user_id]).fetchall()
         else:
-            # Unauthenticated: only return system/template strategies, NEVER private user strategies
-            rows = con.execute("""
-                SELECT id, name, country, num_slots, capital, active_invested, benchmark, color, is_system, is_real_money, created_at
-                FROM custom_strategies
-                WHERE is_system = TRUE
-                ORDER BY created_at ASC
-            """).fetchall()
+            # Unauthenticated: no strategies visible — each user sees only their own
+            rows = []
 
         strategies = []
         for r in rows:

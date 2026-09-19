@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { FINANCIAL_CONCEPTS } from "../../data/financialConcepts";
+import { useTheme } from "../../context/ThemeContext";
 
 /**
  * Componente InfoTooltip
@@ -27,6 +28,8 @@ export default function InfoTooltip({
   size = "sm",
   style = {},
 }) {
+  const { theme } = useTheme();
+  const isLight = theme === "light";
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
   const timerRef = useRef(null);
@@ -109,7 +112,7 @@ export default function InfoTooltip({
         <span
           className="info-tooltip-trigger-custom"
           style={{
-            borderBottom: "1px dashed rgba(255, 255, 255, 0.35)",
+            borderBottom: isLight ? "1px dashed rgba(0, 0, 0, 0.25)" : "1px dashed rgba(255, 255, 255, 0.35)",
             paddingBottom: "1px",
             transition: "border-color 0.2s ease",
           }}
@@ -128,9 +131,9 @@ export default function InfoTooltip({
             height: size === "sm" ? 18 : 22,
             fontSize: size === "sm" ? "0.68rem" : "0.78rem",
             borderRadius: "50%",
-            background: "rgba(255, 255, 255, 0.08)",
+            background: isLight ? "rgba(0, 120, 180, 0.1)" : "rgba(255, 255, 255, 0.08)",
             color: "var(--text-secondary)",
-            border: "1px solid rgba(255, 255, 255, 0.15)",
+            border: isLight ? "1px solid rgba(0, 120, 180, 0.3)" : "1px solid rgba(255, 255, 255, 0.15)",
             lineHeight: 1,
             userSelect: "none",
             transition: "all 0.2s ease",
@@ -154,18 +157,19 @@ export default function InfoTooltip({
             zIndex: 999999,
             width: 290,
             maxWidth: "calc(100vw - 24px)",
-            background: "rgba(10, 15, 29, 0.96)",
+            background: isLight ? "rgba(255, 255, 255, 0.98)" : "rgba(10, 15, 29, 0.96)",
             backdropFilter: "blur(16px)",
             WebkitBackdropFilter: "blur(16px)",
-            border: "1px solid rgba(0, 229, 255, 0.35)",
+            border: isLight ? "1px solid rgba(0, 120, 180, 0.25)" : "1px solid rgba(0, 229, 255, 0.35)",
             borderRadius: "12px",
             padding: "14px 16px",
-            boxShadow:
-              "0 12px 36px rgba(0, 0, 0, 0.75), 0 0 20px rgba(0, 229, 255, 0.12)",
+            boxShadow: isLight
+              ? "0 8px 24px rgba(0, 0, 0, 0.12), 0 0 12px rgba(0, 120, 180, 0.08)"
+              : "0 12px 36px rgba(0, 0, 0, 0.75), 0 0 20px rgba(0, 229, 255, 0.12)",
             textAlign: "left",
             pointerEvents: "auto",
             fontSize: "0.8rem",
-            color: "#f1f5f9",
+            color: isLight ? "#1e293b" : "#f1f5f9",
           }}
         >
           {/* Header */}
@@ -184,7 +188,7 @@ export default function InfoTooltip({
               style={{
                 fontWeight: 700,
                 fontSize: "0.85rem",
-                color: "#fff",
+                color: isLight ? "#0f172a" : "#fff",
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
@@ -216,7 +220,7 @@ export default function InfoTooltip({
             style={{
               margin: "0 0 10px 0",
               lineHeight: 1.45,
-              color: "#cbd5e1",
+              color: isLight ? "#475569" : "#cbd5e1",
               fontSize: "0.78rem",
             }}
           >
@@ -227,13 +231,13 @@ export default function InfoTooltip({
           {data.rule && (
             <div
               style={{
-                background: "rgba(0, 229, 255, 0.06)",
+                background: isLight ? "rgba(0, 120, 180, 0.06)" : "rgba(0, 229, 255, 0.06)",
                 borderLeft: "3px solid var(--accent-primary)",
                 padding: "6px 10px",
                 borderRadius: "0 6px 6px 0",
                 fontSize: "0.73rem",
                 lineHeight: 1.4,
-                color: "#94a3b8",
+                color: isLight ? "#64748b" : "#94a3b8",
               }}
             >
               <strong style={{ color: "var(--accent-primary)", display: "block", marginBottom: 2 }}>
