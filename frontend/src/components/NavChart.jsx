@@ -42,6 +42,7 @@ export default function NavChart({
 
   const { visibleSeries, toggleSeries, customStrategies, strategyRebalances } = usePortfolioStore();
   const { theme } = useTheme();
+  const isLight = theme === "light";
   const chartColors = useMemo(() => getChartColors(theme), [theme]);
 
   const baseActive = navData?.[0]?.value ?? investment;
@@ -776,9 +777,27 @@ export default function NavChart({
                 fontSize: "0.72rem",
                 fontWeight: 700,
                 cursor: "pointer",
-                background: showStrategiesPanel ? "rgba(192, 132, 252, 0.12)" : "rgba(255, 255, 255, 0.04)",
-                border: `1px solid ${showStrategiesPanel ? "rgba(192, 132, 252, 0.35)" : "rgba(255, 255, 255, 0.1)"}`,
-                color: showStrategiesPanel ? "#c084fc" : "var(--text-muted)",
+                background: showStrategiesPanel
+                  ? isLight
+                    ? "rgba(147, 51, 234, 0.12)"
+                    : "rgba(192, 132, 252, 0.12)"
+                  : isLight
+                    ? "rgba(0, 0, 0, 0.04)"
+                    : "rgba(255, 255, 255, 0.04)",
+                border: `1px solid ${
+                  showStrategiesPanel
+                    ? isLight
+                      ? "rgba(147, 51, 234, 0.4)"
+                      : "rgba(192, 132, 252, 0.35)"
+                    : isLight
+                      ? "rgba(0, 0, 0, 0.12)"
+                      : "rgba(255, 255, 255, 0.1)"
+                }`,
+                color: showStrategiesPanel
+                  ? isLight
+                    ? "#7e22ce"
+                    : "#c084fc"
+                  : "var(--text-muted)",
                 transition: "all 0.15s ease",
               }}
               title="Mostrar / Ocultar panel de estrategias adicionales en el gráfico"
@@ -811,11 +830,33 @@ export default function NavChart({
                 fontSize: "0.72rem",
                 fontWeight: 700,
                 cursor: "pointer",
-                background: isLogActive ? "rgba(56, 189, 248, 0.12)" : "rgba(255, 255, 255, 0.04)",
-                border: `1px solid ${isLogActive ? "rgba(56, 189, 248, 0.35)" : "rgba(255, 255, 255, 0.1)"}`,
-                color: isLogActive ? "#38bdf8" : "#94a3b8",
+                background: isLogActive
+                  ? isLight
+                    ? "rgba(2, 132, 199, 0.12)"
+                    : "rgba(56, 189, 248, 0.12)"
+                  : isLight
+                    ? "rgba(0, 0, 0, 0.04)"
+                    : "rgba(255, 255, 255, 0.04)",
+                border: `1px solid ${
+                  isLogActive
+                    ? isLight
+                      ? "rgba(2, 132, 199, 0.4)"
+                      : "rgba(56, 189, 248, 0.35)"
+                    : isLight
+                      ? "rgba(0, 0, 0, 0.12)"
+                      : "rgba(255, 255, 255, 0.1)"
+                }`,
+                color: isLogActive
+                  ? isLight
+                    ? "#0369a1"
+                    : "#38bdf8"
+                  : "var(--text-muted)",
                 transition: "all 0.15s ease",
-                boxShadow: isLogActive ? "0 0 10px rgba(56, 189, 248, 0.15)" : "none",
+                boxShadow: isLogActive
+                  ? isLight
+                    ? "0 0 10px rgba(2, 132, 199, 0.15)"
+                    : "0 0 10px rgba(56, 189, 248, 0.15)"
+                  : "none",
               }}
               title={
                 manualScaleMode
@@ -839,7 +880,7 @@ export default function NavChart({
           <span
             style={{
               fontSize: "0.75rem",
-              color: "#94a3b8",
+              color: isLight ? "#475569" : "#94a3b8",
               fontFamily: "'JetBrains Mono', monospace",
               opacity: hoverValues?.date ? 1 : 0,
               transition: "opacity 0.15s ease",
@@ -889,8 +930,8 @@ export default function NavChart({
             gap: 12,
             padding: "8px 12px",
             marginBottom: "14px",
-            background: "rgba(0, 0, 0, 0.2)",
-            border: "1px solid rgba(255, 255, 255, 0.06)",
+            background: isLight ? "rgba(241, 245, 249, 0.9)" : "rgba(0, 0, 0, 0.2)",
+            border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.06)"}`,
             borderRadius: 8,
           }}
         >
@@ -905,7 +946,7 @@ export default function NavChart({
                     fontSize: "0.68rem",
                     textTransform: "uppercase",
                     letterSpacing: "0.06em",
-                    color: "#34d399",
+                    color: isLight ? "#059669" : "#34d399",
                     fontWeight: 800,
                     whiteSpace: "nowrap",
                   }}
@@ -945,13 +986,31 @@ export default function NavChart({
                         alignItems: "center",
                         gap: 6,
                         background: isVisible
-                          ? "rgba(16, 185, 129, 0.12)"
-                          : "rgba(255,255,255,0.02)",
-                        border: `1px solid ${isVisible ? "rgba(16, 185, 129, 0.5)" : "#334155"}`,
+                          ? isLight
+                            ? "rgba(16, 185, 129, 0.16)"
+                            : "rgba(16, 185, 129, 0.12)"
+                          : isLight
+                            ? "rgba(0, 0, 0, 0.04)"
+                            : "rgba(255,255,255,0.02)",
+                        border: `1px solid ${
+                          isVisible
+                            ? isLight
+                              ? "rgba(16, 185, 129, 0.6)"
+                              : "rgba(16, 185, 129, 0.5)"
+                            : isLight
+                              ? "rgba(0, 0, 0, 0.12)"
+                              : "#334155"
+                        }`,
                         padding: "3px 8px",
                         borderRadius: 6,
                         cursor: "pointer",
-                        color: isVisible ? "#f1f5f9" : "#94a3b8",
+                        color: isVisible
+                          ? isLight
+                            ? "#0f172a"
+                            : "#f1f5f9"
+                          : isLight
+                            ? "#64748b"
+                            : "#94a3b8",
                         fontSize: "0.72rem",
                         transition: "all 0.15s ease",
                       }}
@@ -967,29 +1026,30 @@ export default function NavChart({
                         }}
                       />
                       <span style={{ fontSize: "0.68rem" }}>{strat.country || "💵"}</span>
-                      <strong>{strat.name}</strong>
+                      <strong style={{ color: isVisible ? (isLight ? "#0f172a" : "#f1f5f9") : undefined }}>{strat.name}</strong>
                       <span
                         style={{
                           fontSize: "0.6rem",
                           padding: "1px 4px",
                           borderRadius: 3,
-                          background: "rgba(16, 185, 129, 0.2)",
-                          color: "#34d399",
+                          background: isLight ? "rgba(16, 185, 129, 0.25)" : "rgba(16, 185, 129, 0.2)",
+                          color: isLight ? "#047857" : "#34d399",
                           fontWeight: 700,
                         }}
                       >
                         REAL
                       </span>
                       {stratUsd != null && (
-                        <span className="mono" style={{ color: "#34d399", fontWeight: 700 }}>
+                        <span className="mono" style={{ color: isLight ? "#059669" : "#34d399", fontWeight: 700 }}>
                           ${stratUsd.toFixed(2)}
                         </span>
                       )}
                       {stratPct != null && (
                         <span
                           style={{
-                            color: stratPct >= 0 ? "#22c55e" : "#ef4444",
+                            color: stratPct >= 0 ? (isLight ? "#16a34a" : "#22c55e") : (isLight ? "#dc2626" : "#ef4444"),
                             fontSize: "0.68rem",
+                            fontWeight: 600,
                           }}
                         >
                           ({stratPct >= 0 ? "+" : ""}
@@ -1015,7 +1075,7 @@ export default function NavChart({
                   gap: 6,
                   flexWrap: "wrap",
                   paddingLeft: 8,
-                  borderLeft: "1px solid rgba(255,255,255,0.1)",
+                  borderLeft: `1px solid ${isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.1)"}`,
                 }}
               >
                 <span
@@ -1023,7 +1083,7 @@ export default function NavChart({
                     fontSize: "0.68rem",
                     textTransform: "uppercase",
                     letterSpacing: "0.06em",
-                    color: "#c084fc",
+                    color: isLight ? "#7e22ce" : "#c084fc",
                     fontWeight: 700,
                     whiteSpace: "nowrap",
                   }}
@@ -1062,12 +1122,32 @@ export default function NavChart({
                         display: "flex",
                         alignItems: "center",
                         gap: 6,
-                        background: isVisible ? `${strat.color}1A` : "rgba(255,255,255,0.02)",
-                        border: `1px solid ${isVisible ? `${strat.color}66` : "#334155"}`,
+                        background: isVisible
+                          ? isLight
+                            ? `${strat.color}25`
+                            : `${strat.color}1A`
+                          : isLight
+                            ? "rgba(0, 0, 0, 0.04)"
+                            : "rgba(255,255,255,0.02)",
+                        border: `1px solid ${
+                          isVisible
+                            ? isLight
+                              ? `${strat.color}88`
+                              : `${strat.color}66`
+                            : isLight
+                              ? "rgba(0, 0, 0, 0.12)"
+                              : "#334155"
+                        }`,
                         padding: "3px 8px",
                         borderRadius: 6,
                         cursor: "pointer",
-                        color: isVisible ? "#f1f5f9" : "#94a3b8",
+                        color: isVisible
+                          ? isLight
+                            ? "#0f172a"
+                            : "#f1f5f9"
+                          : isLight
+                            ? "#64748b"
+                            : "#94a3b8",
                         fontSize: "0.72rem",
                         transition: "all 0.15s ease",
                       }}
@@ -1083,29 +1163,30 @@ export default function NavChart({
                         }}
                       />
                       <span style={{ fontSize: "0.68rem" }}>{strat.country || "🌎"}</span>
-                      <strong>{strat.name}</strong>
+                      <strong style={{ color: isVisible ? (isLight ? "#0f172a" : "#f1f5f9") : undefined }}>{strat.name}</strong>
                       <span
                         style={{
                           fontSize: "0.6rem",
                           padding: "1px 4px",
                           borderRadius: 3,
                           background: `${strat.color}22`,
-                          color: strat.color,
+                          color: isLight ? "#6b21a8" : strat.color,
                           fontWeight: 700,
                         }}
                       >
                         {strat.isSystem ? "PRO" : "SIM"}
                       </span>
                       {stratUsd != null && (
-                        <span className="mono" style={{ color: strat.color, fontWeight: 700 }}>
+                        <span className="mono" style={{ color: isLight ? "#059669" : strat.color, fontWeight: 700 }}>
                           ${stratUsd.toFixed(2)}
                         </span>
                       )}
                       {stratPct != null && (
                         <span
                           style={{
-                            color: stratPct >= 0 ? "#22c55e" : "#ef4444",
+                            color: stratPct >= 0 ? (isLight ? "#16a34a" : "#22c55e") : (isLight ? "#dc2626" : "#ef4444"),
                             fontSize: "0.68rem",
+                            fontWeight: 600,
                           }}
                         >
                           ({stratPct >= 0 ? "+" : ""}
@@ -1130,8 +1211,8 @@ export default function NavChart({
             gap: 10,
             flexWrap: "wrap",
             padding: "10px 14px",
-            background: "rgba(255, 255, 255, 0.02)",
-            border: "1px solid rgba(255, 255, 255, 0.06)",
+            background: isLight ? "rgba(241, 245, 249, 0.75)" : "rgba(255, 255, 255, 0.02)",
+            border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.06)"}`,
             borderRadius: "var(--radius)",
             marginBottom: "14px",
           }}
@@ -1152,8 +1233,8 @@ export default function NavChart({
                   fontSize: "0.68rem",
                   padding: "2px 7px",
                   borderRadius: 4,
-                  background: "rgba(0,229,255,0.1)",
-                  color: "var(--accent-primary)",
+                  background: isLight ? "rgba(2, 132, 199, 0.12)" : "rgba(0,229,255,0.1)",
+                  color: isLight ? "#0284c7" : "var(--accent-primary)",
                   fontWeight: 700,
                 }}
               >
@@ -1193,7 +1274,7 @@ export default function NavChart({
             style={{
               width: 1,
               height: 16,
-              background: "rgba(255, 255, 255, 0.1)",
+              background: isLight ? "rgba(0, 0, 0, 0.1)" : "rgba(255, 255, 255, 0.1)",
               margin: "0 4px",
             }}
           />
