@@ -584,7 +584,7 @@ def main():
     #   vez de reiniciar el proceso repetidamente en cascada.
     backend_cmd = (
         f'"{sys.executable}" -m uvicorn main:app --host 0.0.0.0 --port 8000 '
-        f"--reload --reload-dir services --reload-delay 2"
+        f"--reload --reload-dir services --reload-dir routers --reload-delay 2"
     )
     backend_thread = threading.Thread(
         target=stream_process,

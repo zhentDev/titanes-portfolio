@@ -25,6 +25,8 @@ import {
 } from "../api/client";
 import { getCurrentPeriod } from "../utils/periodUtils";
 
+let syncDebounceTimer = null;
+
 const DEFAULT_RATIOS = {
   needs: 35,
   wants: 30,
@@ -383,30 +385,39 @@ export const useCashFlowStore = create(
           console.warn("[CashFlow] Safeguard: backend sync blocked because store is not initialized yet!");
           return;
         }
-        set({ isSyncing: true });
-        try {
-          await syncCashFlowStateApi({
-            activePeriod: state.activePeriod,
-            currency: state.currency,
-            allocationModel: state.allocationModel,
-            customRatios: state.customRatios,
-            emergencyFundTargetMonths: state.emergencyFundTargetMonths,
-            payrollAccount: state.payrollAccount,
-            creditCards: state.creditCards,
-            creditPurchases: state.creditPurchases,
-            creditCardPayments: state.creditCardPayments,
-            expensesLog: state.expensesLog,
-            inflows: state.inflows,
-            needs: state.needs,
-            wants: state.wants,
-            wealth: state.wealth,
-            periodsData: state.periodsData,
-          });
-        } catch (err) {
-          console.error("[CashFlow] Error syncing to backend:", err);
-        } finally {
-          set({ isSyncing: false });
+
+        // Cancel previous pending sync timer to debounce rapid updates
+        if (syncDebounceTimer) {
+          clearTimeout(syncDebounceTimer);
         }
+
+        syncDebounceTimer = setTimeout(async () => {
+          set({ isSyncing: true });
+          try {
+            const currentState = get();
+            await syncCashFlowStateApi({
+              activePeriod: currentState.activePeriod,
+              currency: currentState.currency,
+              allocationModel: currentState.allocationModel,
+              customRatios: currentState.customRatios,
+              emergencyFundTargetMonths: currentState.emergencyFundTargetMonths,
+              payrollAccount: currentState.payrollAccount,
+              creditCards: currentState.creditCards,
+              creditPurchases: currentState.creditPurchases,
+              creditCardPayments: currentState.creditCardPayments,
+              expensesLog: currentState.expensesLog,
+              inflows: currentState.inflows,
+              needs: currentState.needs,
+              wants: currentState.wants,
+              wealth: currentState.wealth,
+              periodsData: currentState.periodsData,
+            });
+          } catch (err) {
+            console.error("[CashFlow] Error syncing to backend:", err);
+          } finally {
+            set({ isSyncing: false });
+          }
+        }, 300);
       },
 
       // ── Payroll Account Settings ─────────────────────
