@@ -2042,7 +2042,7 @@ export default function App() {
             <div className="bottom-grid">
               {/* Holdings table */}
               <div className="card fade-up" style={{ animationDelay: "100ms" }}>
-                {navData?.holdings?.length > 0 && !loading ? (
+                {navData?.holdings?.length > 0 ? (
                   <HoldingsTable
                     holdings={navData.holdings}
                     investment={investment}

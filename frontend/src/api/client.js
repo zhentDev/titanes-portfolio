@@ -55,7 +55,37 @@ async function safeFetch(url, options = {}, retries = 1, delayMs = 300) {
   }
 }
 
+// ── Client-Side In-Memory Cache (0ms latency on tab switching) ──
+const API_CACHE = new Map();
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes cache
+
+export function invalidateApiCache(prefix = "") {
+  if (!prefix) {
+    API_CACHE.clear();
+    return;
+  }
+  for (const key of API_CACHE.keys()) {
+    if (key.includes(prefix)) {
+      API_CACHE.delete(key);
+    }
+  }
+}
+
 async function fetchWithFallback(endpoint, staticFile, options = {}) {
+  const cacheKey = `${endpoint}_${staticFile || ""}`;
+  const now = Date.now();
+
+  // 1. Instant Cache hit (0 ms)
+  if (!options.bypassCache && API_CACHE.has(cacheKey)) {
+    const cached = API_CACHE.get(cacheKey);
+    if (now - cached.timestamp < CACHE_TTL_MS) {
+      return cached.data;
+    }
+    API_CACHE.delete(cacheKey);
+  }
+
+  let resultData = null;
+
   try {
     const timeout = options.timeoutMs || TIMEOUT_MS;
     const controller = new AbortController();
@@ -69,19 +99,25 @@ async function fetchWithFallback(endpoint, staticFile, options = {}) {
     clearTimeout(timer);
 
     if (res.ok) {
-      return await res.json();
+      resultData = await res.json();
     }
   } catch {
     // Backend offline / waking up
   }
 
   // Seamless static fallback
-  if (staticFile) {
+  if (!resultData && staticFile) {
     const staticUrl = getStaticDataPath(staticFile);
     const staticRes = await fetch(staticUrl);
     if (staticRes.ok) {
-      return await staticRes.json();
+      resultData = await staticRes.json();
     }
+  }
+
+  if (resultData != null) {
+    // Store in client memory cache
+    API_CACHE.set(cacheKey, { timestamp: now, data: resultData });
+    return resultData;
   }
 
   throw new Error(
@@ -212,6 +248,8 @@ export async function createRebalance({ rebalance_date, cash_added, tickers, str
     body: JSON.stringify({ rebalance_date, cash_added, tickers, strategy_id }),
   });
   if (!res.ok) throw new Error("Error al registrar rebalanceo");
+  invalidateApiCache("/nav");
+  invalidateApiCache("/rebalances");
   return res.json();
 }
 
@@ -222,6 +260,8 @@ export async function deleteRebalance(date, strategyId = "historical") {
     method: "DELETE",
   });
   if (!res.ok) throw new Error("Error al eliminar rebalanceo");
+  invalidateApiCache("/nav");
+  invalidateApiCache("/rebalances");
   return res.json();
 }
 
@@ -233,6 +273,8 @@ export async function updateRebalanceDateApi(oldDate, newDate, strategyId = "his
     body: JSON.stringify({ old_date: oldDate, new_date: newDate, strategy_id: strategyId }),
   });
   if (!res.ok) throw new Error("Error al actualizar fecha de rebalanceo");
+  invalidateApiCache("/nav");
+  invalidateApiCache("/rebalances");
   return res.json();
 }
 
@@ -249,9 +291,12 @@ export async function saveCustomStrategyApi(strat) {
       body: JSON.stringify(strat),
     });
     if (!res.ok) throw new Error("Error al guardar estrategia en backend");
+    invalidateApiCache("/custom-strategies");
+    invalidateApiCache("/nav");
     return res.json();
   } catch (e) {
     console.warn("Backend unavailable for saving custom strategy, using local storage", e);
+    invalidateApiCache("/custom-strategies");
     return { status: "local_only" };
   }
 }
@@ -262,9 +307,12 @@ export async function deleteCustomStrategyApi(strategyId) {
       method: "DELETE",
     });
     if (!res.ok) throw new Error("Error al eliminar estrategia en backend");
+    invalidateApiCache("/custom-strategies");
+    invalidateApiCache("/nav");
     return res.json();
   } catch (e) {
     console.warn("Backend unavailable for deleting custom strategy", e);
+    invalidateApiCache("/custom-strategies");
     return { status: "local_only" };
   }
 }
@@ -284,11 +332,13 @@ export async function createPurchasePortfolio(id, name, isPlan = false) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id, name, isPlan }),
   });
+  invalidateApiCache("/purchases");
   return res.json();
 }
 
 export async function deletePurchasePortfolioApi(id) {
   const res = await safeFetch(`${BASE}/purchases/portfolios/${id}`, { method: "DELETE" });
+  invalidateApiCache("/purchases");
   return res.json();
 }
 
@@ -298,6 +348,7 @@ export async function togglePortfolioPlanApi(id, isPlan, planConfig = null) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ isPlan, planConfig }),
   });
+  invalidateApiCache("/purchases");
   return res.json();
 }
 
@@ -313,6 +364,7 @@ export async function updatePortfolioSettingsApi(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ assetCurrency, localCurrency, inflationRate, useAutoColInflation }),
   });
+  invalidateApiCache("/purchases");
   return res.json();
 }
 
@@ -340,6 +392,7 @@ export async function createPurchaseLot(lot) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(lot),
   });
+  invalidateApiCache("/purchases");
   return res.json();
 }
 
@@ -350,11 +403,13 @@ export async function updatePurchaseLots(lots) {
     body: JSON.stringify(lots),
   });
   if (!res.ok) throw new Error("Failed to update purchase lots");
+  invalidateApiCache("/purchases");
   return res.json();
 }
 
 export async function deletePurchaseLot(id) {
   const res = await fetch(`${BASE}/purchases/lots/${id}`, { method: "DELETE" });
+  invalidateApiCache("/purchases");
   return res.json();
 }
 
@@ -364,6 +419,7 @@ export async function syncPurchasesMigration(purchasePortfolios, individualPurch
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ purchasePortfolios, individualPurchases }),
   });
+  invalidateApiCache("/purchases");
   return res.json();
 }
 
