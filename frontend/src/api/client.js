@@ -57,7 +57,12 @@ async function safeFetch(url, options = {}, retries = 1, delayMs = 300) {
 
 // ── Client-Side In-Memory Cache (0ms latency on tab switching) ──
 const API_CACHE = new Map();
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hora (60 minutos) de caché fija en cliente
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hora normal en días de semana
+
+function isWeekend() {
+  const day = new Date().getDay(); // 0 = Domingo, 6 = Sábado
+  return day === 0 || day === 6;
+}
 
 export function invalidateApiCache(prefix = "") {
   if (!prefix) {
@@ -76,9 +81,11 @@ async function fetchWithFallback(endpoint, staticFile, options = {}) {
   const now = Date.now();
 
   // 1. Instant Cache hit (0 ms)
+  // En fines de semana (Sábado y Domingo), los mercados están 100% cerrados: la caché no expira
   if (!options.bypassCache && API_CACHE.has(cacheKey)) {
     const cached = API_CACHE.get(cacheKey);
-    if (now - cached.timestamp < CACHE_TTL_MS) {
+    const ttl = isWeekend() ? 48 * 60 * 60 * 1000 : CACHE_TTL_MS;
+    if (now - cached.timestamp < ttl) {
       return cached.data;
     }
     API_CACHE.delete(cacheKey);
