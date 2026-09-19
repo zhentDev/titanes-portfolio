@@ -18,6 +18,7 @@ import RebalanceManager from "./components/RebalanceManager";
 import RebalanceTimer from "./components/RebalanceTimer";
 import SectorAllocation from "./components/SectorAllocation";
 import { InfoTooltip } from "./components/Common";
+import AffiliateBanner from "./components/Common/AffiliateBanner";
 import AuthModal from "./components/AuthModal";
 import AuthWall from "./components/AuthWall";
 import { useAuthStore } from "./store/authStore";
@@ -2046,6 +2047,9 @@ export default function App() {
                 )}
               </div>
             )}
+
+            {/* ── Banner de Monetización / Afiliados ───────────── */}
+            <AffiliateBanner />
 
             {/* ── Bottom grid ───────────────────────────── */}
             <div className="bottom-grid">
