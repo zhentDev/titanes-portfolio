@@ -12,7 +12,10 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-import pypdf
+try:
+    import pypdf
+except ImportError:
+    pypdf = None
 
 
 def fix_ocr_dollar_sign_misread(raw_amount_str: str) -> str:
@@ -81,6 +84,13 @@ def extract_text_from_pdf(pdf_bytes: bytes, password: str | None = None) -> dict
     Decrypts (if needed) and extracts text from a PDF file.
     Returns dict with extracted text, page count, and encryption status.
     """
+    if pypdf is None:
+        return {
+            "success": False,
+            "error": "PYPDF_NOT_INSTALLED",
+            "message": "pypdf no está instalado en el servidor.",
+            "text": "",
+        }
     try:
         reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
         
