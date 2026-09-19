@@ -741,3 +741,35 @@
   color: #0f172a;
 }
 
+/* ═══════════════════════════════════════════════════════
+   Ad & Notification Positioning (Bottom-Left Corner)
+   Discreet, non-intrusive layout
+   ═══════════════════════════════════════════════════════ */
+
+/* Pin any dynamic ad containers or push tags to bottom-left */
+div[id*="zone_"],
+div[id*="monetag"],
+div[class*="monetag"],
+div[data-zone],
+.ad-bottom-left-container {
+  position: fixed !important;
+  bottom: 16px !important;
+  left: 16px !important;
+  right: auto !important;
+  top: auto !important;
+  z-index: 9999 !important;
+  max-width: 320px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
+  border-radius: var(--radius-md) !important;
+  overflow: hidden !important;
+}
+
+/* In-Page Push banner overrides for Monetag / network */
+div[class*="in-page-push"],
+div[id*="in-page-push"] {
+  left: 16px !important;
+  right: auto !important;
+  bottom: 16px !important;
+  top: auto !important;
+}
+
