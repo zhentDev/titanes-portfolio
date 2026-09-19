@@ -144,6 +144,28 @@ export const BANK_PRESETS = [
     defaultRateEA: 4.58,
     logoSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%"><rect width="100" height="100" rx="22" fill="#1e293b"/><rect x="25" y="25" width="50" height="50" rx="8" fill="#d9272e"/><text x="50" y="58" font-family="'JetBrains Mono', sans-serif" font-weight="900" font-size="20" fill="#ffffff" text-anchor="middle">IBKR</text></svg>`,
   },
+  {
+    id: "arq",
+    name: "ARQ Finance",
+    country: "🌎",
+    currency: "USD",
+    color: "#10b981",
+    icon: "💳",
+    payoutFrequency: "daily",
+    defaultRateEA: 3.50,
+    logoSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%"><rect width="100" height="100" rx="22" fill="#064e3b"/><text x="50" y="60" font-family="'JetBrains Mono', sans-serif" font-weight="900" font-size="28" fill="#34d399" text-anchor="middle">ARQ</text></svg>`,
+  },
+  {
+    id: "lemon",
+    name: "Lemon Cash",
+    country: "🌎",
+    currency: "USD",
+    color: "#84cc16",
+    icon: "🍋",
+    payoutFrequency: "weekly",
+    defaultRateEA: 5.00,
+    logoSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%"><rect width="100" height="100" rx="22" fill="#14532d"/><text x="50" y="60" font-family="'JetBrains Mono', sans-serif" font-weight="900" font-size="26" fill="#a3e635" text-anchor="middle">LEMON</text></svg>`,
+  },
 ];
 
 /**

@@ -21,6 +21,7 @@ import LoanSettlementModal from "./LoanSettlementModal";
 import PayrollEntityModal from "./PayrollEntityModal";
 import PillarBreakdownCard from "./PillarBreakdownCard";
 import RealCashLiquidityCard from "./RealCashLiquidityCard";
+import AffiliateBanner from "../Common/AffiliateBanner";
 import "./CashFlow.css";
 
 export default function CashFlowHub() {
@@ -1158,6 +1159,9 @@ export default function CashFlowHub() {
           </div>
         )}
       </div>
+
+      {/* ── Banner de Referidos Financieros (Nu, Rappi, Plenti, ARQ) ── */}
+      <AffiliateBanner type="fixed_income" />
 
       {/* ── 11. Interactive Allocation Modal ───────────────────────── */}
       <CashFlowAllocationModal

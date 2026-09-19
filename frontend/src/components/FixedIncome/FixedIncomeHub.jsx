@@ -9,6 +9,8 @@ import FixedIncomeModal from "./FixedIncomeModal";
 import FixedIncomeProjectionChart from "./FixedIncomeProjectionChart";
 import StatementImporterModal from "./StatementImporterModal";
 import HourglassRangeSlider from "../Common/HourglassRangeSlider";
+import AffiliateBanner from "../Common/AffiliateBanner";
+import { getReferralForEntity } from "../../utils/referralLinks";
 
 const PERIOD_UNLOCK_DAYS = {
   "1M": 7,
@@ -1385,6 +1387,9 @@ export default function FixedIncomeHub() {
         )}
       </div>
 
+      {/* ── Banner de Referidos de Renta Fija (Nu, Rappi, Plenti, ARQ) ── */}
+      <AffiliateBanner type="fixed_income" />
+
       {/* ── ENTITIES & ACCOUNTS SECTION (COLLAPSIBLE) ───────── */}
       <div
         style={{
@@ -1562,6 +1567,35 @@ export default function FixedIncomeHub() {
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  {/* Botón de Referido / Beneficio de Bienvenida si existe para esta entidad */}
+                  {(() => {
+                    const ref = getReferralForEntity(entity.name || entity.id);
+                    if (!ref) return null;
+                    return (
+                      <a
+                        href={ref.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          textDecoration: "none",
+                          background: "linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(16, 185, 129, 0.2) 100%)",
+                          border: "1px solid rgba(245, 158, 11, 0.4)",
+                          color: "#fbbf24",
+                          borderRadius: 6,
+                          padding: "4px 8px",
+                          fontSize: "0.72rem",
+                          fontWeight: 800,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                        }}
+                        title={`Abrir cuenta en ${entity.name} con beneficios y tasas preferenciales`}
+                      >
+                        🎁 Abrir Cuenta
+                      </a>
+                    );
+                  })()}
+
                   {/* Direct Add Object Buttons for this Entity */}
                   <button
                     onClick={() => {
