@@ -11,5 +11,31 @@
     "isSystem": false,
     "isRealMoney": true,
     "createdAt": "2026-09-01T18:09:01.607291"
+  },
+  {
+    "id": "strat_1786185510491",
+    "name": "Las mejores acciones",
+    "country": "\ud83c\uddfa\ud83c\uddf8",
+    "numSlots": 20,
+    "capital": 1000.0,
+    "activeInvested": 1000.0,
+    "benchmark": "S&P 500",
+    "color": "#a855f7",
+    "isSystem": false,
+    "isRealMoney": false,
+    "createdAt": "2026-09-18T23:33:20.993586"
+  },
+  {
+    "id": "strat_1787923882798",
+    "name": "Titanes ProPicksIA",
+    "country": "\ud83c\uddfa\ud83c\uddf8",
+    "numSlots": 15,
+    "capital": 1000.0,
+    "activeInvested": 1000.0,
+    "benchmark": "S&P 500",
+    "color": "#3b82f6",
+    "isSystem": false,
+    "isRealMoney": false,
+    "createdAt": "2026-09-18T23:33:21.336019"
   }
 ]
