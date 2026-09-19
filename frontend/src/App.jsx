@@ -423,12 +423,21 @@ export default function App() {
       <header className="app-header">
         <div className="header-left">
           <div className="logo">
-            <span className="logo-icon">◈</span>
+            <img
+              src="./favicon.svg"
+              alt="Kpital Zhent Logo"
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 6,
+                filter: "drop-shadow(0 0 8px rgba(0, 229, 255, 0.4))",
+              }}
+            />
             <span className="logo-text">
-              Titanes<span>Tech</span>
+              Kpital <span>Zhent</span>
             </span>
           </div>
-          <div className="header-subtitle">Custom ETF & ProPicks AI Terminal</div>
+          <div className="header-subtitle">Terminal Multiactivo & Estrategias Cuantitativas</div>
         </div>
 
         <nav className="header-nav-menu">
