@@ -412,19 +412,19 @@ export default function StrategyChart({
       });
     });
 
-    const handleResize = () => {
+    const ro = new ResizeObserver(() => {
       if (containerRef.current && chartRef.current) {
+        const responsiveHeight = window.innerWidth <= 640 ? 280 : 320;
         chartRef.current.applyOptions({
           width: containerRef.current.clientWidth,
-          height: 340,
+          height: responsiveHeight,
         });
       }
-    };
-    window.addEventListener("resize", handleResize);
-    handleResize();
+    });
+    ro.observe(containerRef.current);
 
     return () => {
-      window.removeEventListener("resize", handleResize);
+      ro.disconnect();
     };
   }, [strategy?.color, strategy?.benchmark, strategy?.name]);
 

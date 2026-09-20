@@ -16,8 +16,43 @@
     <link rel="canonical" href="https://zhentdev.github.io/titanes-portfolio/" />
 
     <!-- Monetag In-Page Push & Vignette Ad Tags -->
-    <script>(function(s){s.dataset.zone='11837652',s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
-    <script>(function(s){s.dataset.zone='11837655',s.src='https://n6wxm.com/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
+    <script>
+    (function() {
+      function loadMonetagAds() {
+        if (!localStorage.getItem('monetagCooldown')) {
+          var target = document.body || document.head || document.documentElement;
+          if (!target) return;
+          // Carga únicamente un script de anuncio (In-Page Push) para evitar banners duplicados apilados
+          var s1 = document.createElement('script');
+          s1.dataset.zone = '11837652';
+          s1.src = 'https://nap5k.com/tag.min.js';
+          target.appendChild(s1);
+        }
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadMonetagAds);
+      } else {
+        loadMonetagAds();
+      }
+
+      // Listen for ad close events to set cooldown (45 minutes)
+      document.addEventListener('click', function(e) {
+        if (e.target && e.target.closest && e.target.closest('.monetag-close, .vignette-close, .close')) {
+          localStorage.setItem('monetagCooldown', Date.now() + 45*60*1000);
+        }
+      });
+    })();
+    </script>
+    <style>
+    /* Force Monetag ads to bottom-left */
+    iframe[src*="nap5k"], iframe[src*="n6wxm"], [id*="monetag"], .monetag, .in-page-push {
+      position: fixed !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      z-index: 10000 !important;
+    }
+    </style>
 
     <!-- Open Graph / Facebook / WhatsApp Preview -->
     <meta property="og:type" content="website" />

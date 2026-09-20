@@ -94,6 +94,7 @@ export default function CreateStrategyModal({
 
   return (
     <div
+      className="modal-overlay-responsive"
       style={{
         position: "fixed",
         inset: 0,
@@ -108,20 +109,23 @@ export default function CreateStrategyModal({
       onClick={onClose}
     >
       <div
-        className="card fade-up"
+        className="card fade-up modal-sheet-responsive"
         style={{
           width: "100%",
           maxWidth: "520px",
-          padding: "28px",
+          maxHeight: "90vh",
+          overflowY: "auto",
+          padding: "24px",
           background: "var(--bg-card)",
           border: isRealMoney ? "1px solid rgba(16, 185, 129, 0.4)" : "1px solid var(--border)",
-          borderRadius: "var(--radius)",
+          borderRadius: "var(--radius-lg)",
           boxShadow: isRealMoney
             ? "0 20px 40px rgba(16, 185, 129, 0.15)"
             : "0 20px 40px rgba(0, 0, 0, 0.6)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
+        <div className="modal-drag-handle" />
         <div
           style={{
             display: "flex",

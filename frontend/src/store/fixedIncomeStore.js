@@ -56,17 +56,6 @@ export const useFixedIncomeStore = create(
 
           // Estado actual en localStorage (Zustand persist)
           const localState = get();
-          console.log("[FixedIncome] ── Estado LOCAL (localStorage) ──");
-          console.log("  entities:", localState.entities.length, localState.entities.map(e => e.name));
-          console.log("  accounts:", localState.accounts.length, localState.accounts.map(a => `${a.name} ($${a.balance})`));
-          console.log("  cdts:", localState.cdts.length, localState.cdts.map(c => `${c.name} [${c.startDate}]`));
-          console.log("  transactions:", localState.transactions.length);
-
-          console.log("[FixedIncome] ── Estado BACKEND (API) ──");
-          console.log("  entities:", res?.entities?.length || 0);
-          console.log("  accounts:", res?.accounts?.length || 0);
-          console.log("  cdts:", res?.cdts?.length || 0);
-          console.log("  transactions:", res?.transactions?.length || 0);
 
           // Source of truth: prefer backend data if available; fallback to localStorage only if backend is empty
           const finalEntities = res?.entities && res.entities.length > 0 ? res.entities : (localState.entities || []);
@@ -92,7 +81,7 @@ export const useFixedIncomeStore = create(
             (!res?.transactions?.length && localState.transactions.length > 0);
 
           if (backendNeedsSync) {
-            console.log("[FixedIncome] Backend vacío, sincronizando localStorage → Backend...");
+// console.log removed: Backend sync start
             try {
               await syncFixedIncomeStateApi({
                 entities: mergedEntities,
@@ -100,7 +89,7 @@ export const useFixedIncomeStore = create(
                 cdts: mergedCDTs,
                 transactions: mergedTransactions,
               });
-              console.log("[FixedIncome] ✅ Sync localStorage → Backend completado");
+              // Sync localStorage → Backend completado
             } catch (syncErr) {
               console.warn("[FixedIncome] ⚠️ Sync falló (datos solo en localStorage):", syncErr);
             }

@@ -155,22 +155,11 @@ def load_fixed_income_db(user_id: str | None = None) -> dict[str, Any]:
     target_file = get_user_fixed_income_file(user_id)
     uid = user_id or get_current_user_id()
 
-    # Seed user file from existing legacy data if user file doesn't exist yet
-    if uid and not target_file.exists():
-        if DATA_FILE.exists():
-            try:
-                with open(DATA_FILE, encoding="utf-8") as sf:
-                    seed_data = json.load(sf)
-                save_fixed_income_db(seed_data, uid)
-                return seed_data
-            except Exception:
-                pass
-        save_fixed_income_db(DEFAULT_FIXED_INCOME_DATA, uid)
-        return DEFAULT_FIXED_INCOME_DATA.copy()
-
+    # If file doesn't exist, seed with clean empty defaults (never leak owner data)
     if not target_file.exists():
-        save_fixed_income_db(DEFAULT_FIXED_INCOME_DATA, uid)
-        return DEFAULT_FIXED_INCOME_DATA.copy()
+        initial_data = DEFAULT_FIXED_INCOME_DATA.copy()
+        save_fixed_income_db(initial_data, uid)
+        return initial_data
     try:
         with open(target_file, encoding="utf-8") as f:
             return json.load(f)

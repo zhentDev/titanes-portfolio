@@ -502,20 +502,31 @@ h3 {
   box-shadow: 0 0 12px rgba(0, 229, 255, 0.3);
 }
 
-/* ── Period Selector ─────────────────────────── */
+/* ── Period Selector (Horizontal Smooth Scrollable Carousel) ──────────────── */
 .period-selector {
   display: inline-flex;
-  width: fit-content;
-  gap: 2px;
+  width: auto;
+  max-width: 100%;
+  gap: 4px;
   background: var(--bg-surface);
   border-radius: var(--radius-sm);
-  padding: 3px;
+  padding: 4px;
   border: 1px solid var(--border);
   margin-bottom: 12px;
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
 }
+
+.period-selector::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
+}
+
 .period-btn {
-  padding: 5px 12px;
-  border-radius: 4px;
+  padding: 6px 14px;
+  min-height: 36px; /* Ergonomic touch height */
+  border-radius: 6px;
   border: none;
   font-size: 0.75rem;
   font-weight: 600;
@@ -524,10 +535,16 @@ h3 {
   color: var(--text-muted);
   transition: all var(--duration) var(--ease);
   font-family: "JetBrains Mono", monospace;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  user-select: none;
 }
 .period-btn.active {
   background: var(--bg-card);
   color: var(--accent-primary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 .period-btn:hover:not(.active) {
   color: var(--text-secondary);

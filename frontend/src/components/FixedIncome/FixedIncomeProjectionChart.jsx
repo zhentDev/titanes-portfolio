@@ -104,6 +104,8 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
       },
       handleScroll: { mouseWheel: true, pressedMouseMove: true },
       handleScale: { mouseWheel: true, pinch: true },
+      width: containerRef.current.clientWidth || 300,
+      height: containerRef.current.clientHeight || (window.innerWidth <= 640 ? 230 : 270),
     });
 
     const chart = chartRef.current;
@@ -194,7 +196,12 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
 
     const ro = new ResizeObserver(() => {
       if (containerRef.current && chartRef.current) {
-        chartRef.current.applyOptions({ width: containerRef.current.clientWidth });
+        const containerHeight = containerRef.current.clientHeight;
+        const responsiveHeight = containerHeight > 0 ? containerHeight : (window.innerWidth <= 640 ? 230 : 270);
+        chartRef.current.applyOptions({
+          width: containerRef.current.clientWidth,
+          height: responsiveHeight,
+        });
       }
     });
     ro.observe(containerRef.current);
@@ -290,16 +297,19 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
 
   return (
     <div
-      style={{
-        position: "relative",
-        width: "100%",
-        height: 380,
-        background: "var(--bg-card)",
-        borderRadius: 14,
-        border: "1px solid var(--border)",
-        padding: "14px 18px",
-        boxShadow: "var(--shadow-card)",
-      }}
+        style={{
+          position: "relative",
+          width: "100%",
+          minHeight: 380,
+          height: "auto",
+          display: "flex",
+          flexDirection: "column",
+          background: "var(--bg-card)",
+          borderRadius: 14,
+          border: "1px solid var(--border)",
+          padding: "14px 18px",
+          boxShadow: "var(--shadow-card)",
+        }}
     >
       {/* ── TOP CONTROLS & FILTER BAR ────────────────────────── */}
       <div
@@ -583,7 +593,7 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
         </div>
       </div>
 
-      <div ref={containerRef} style={{ width: "100%", height: 260 }} />
+      <div ref={containerRef} style={{ width: "100%", flex: 1, minHeight: 230 }} />
     </div>
   );
 }

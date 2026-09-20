@@ -359,7 +359,12 @@ export default function NavChart({
 
     const ro = new ResizeObserver(() => {
       if (containerRef.current && chartRef.current) {
-        chartRef.current.applyOptions({ width: containerRef.current.clientWidth });
+        const w = containerRef.current.clientWidth;
+        const responsiveHeight = window.innerWidth <= 640 ? 290 : window.innerWidth <= 1024 ? 350 : chartHeight;
+        chartRef.current.applyOptions({
+          width: w,
+          height: responsiveHeight,
+        });
       }
     });
     ro.observe(containerRef.current);
@@ -367,7 +372,7 @@ export default function NavChart({
     setChartReady((prev) => prev + 1);
 
     return () => ro.disconnect();
-  }, [isLiveMode, customStrategies]);
+  }, [isLiveMode, customStrategies, chartHeight]);
 
   // Init chart once on component mount
   useEffect(() => {
@@ -1331,7 +1336,8 @@ export default function NavChart({
         ref={containerRef}
         style={{
           width: "100%",
-          height: `${chartHeight}px`,
+          height: `${typeof window !== "undefined" && window.innerWidth <= 640 ? 290 : typeof window !== "undefined" && window.innerWidth <= 1024 ? 350 : chartHeight}px`,
+          minHeight: "260px",
           position: "relative",
           borderRadius: "calc(var(--radius) - 4px)",
           overflow: "hidden",

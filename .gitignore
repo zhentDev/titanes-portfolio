@@ -19,6 +19,7 @@ backend/.ruff_cache/
 backend/*.duckdb.wal
 backend/titanes_backup.duckdb
 backend/data/*.duckdb
+backend/data/users/
 backend/*.db
 
 # Environment & AI tools
@@ -26,5 +27,5 @@ backend/*.db
 .aider*
 .continue/
 *.pre_auth_backup
-
-
+sw*.js
+googled33240e5b43d9f27.html

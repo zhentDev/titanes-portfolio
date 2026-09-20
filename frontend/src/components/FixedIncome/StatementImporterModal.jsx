@@ -127,48 +127,7 @@ export default function StatementImporterModal({ isOpen, onClose }) {
 
       setExtractedData(res);
 
-      // Log each transaction and whether it adds (Agregaste) or subtracts (Retiraste) from the Cajita balance
-      console.group("📊 TITANES TRACKER - DESGLOSE DE MOVIMIENTOS OCR");
-      console.log("Analizando transacciones de Cajitas para calcular balance neto:");
-      const movements = res.parsedData?.movements || [];
-      const pocketCalcs = {};
-      
-      movements.forEach((m) => {
-        const isAgregaste = m.description.toLowerCase().startsWith("agregaste");
-        const actionText = isAgregaste ? "SUMA (+) a la Cajita" : "RESTA (-) de la Cajita";
-        const absVal = Math.abs(m.amount);
-        
-        // Extract cajita name from description
-        const nameMatch = m.description.match(/(?:a|de)\s+(Cajita\s+[A-Za-z0-9\sáéíóúÁÉÍÓÚñÑ]+)/i);
-        const cajitaName = nameMatch ? nameMatch[1].trim() : "Desconocida";
-        
-        console.log(
-          `%c[${m.date}] %c${m.description} %c$${absVal.toLocaleString("es-CO")} ➔ %c${actionText}`,
-          "color: #820ad1; font-weight: bold;",
-          "color: #e2e8f0;",
-          "color: #10b981; font-weight: bold;",
-          isAgregaste ? "color: #10b981; font-weight: bold;" : "color: #f43f5e; font-weight: bold;"
-        );
-        
-        if (cajitaName !== "Desconocida") {
-          if (!pocketCalcs[cajitaName]) pocketCalcs[cajitaName] = 0;
-          if (isAgregaste) {
-            pocketCalcs[cajitaName] += absVal;
-          } else {
-            pocketCalcs[cajitaName] -= absVal;
-          }
-        }
-      });
-      
-      console.log("\n📈 BALANCE NETO FINAL POR CAJITA:");
-      Object.keys(pocketCalcs).forEach((cName) => {
-        console.log(
-          `%c${cName}: %c$${pocketCalcs[cName].toLocaleString("es-CO")}`,
-          "color: #94a3b8; font-weight: bold;",
-          pocketCalcs[cName] >= 0 ? "color: #10b981; font-weight: bold;" : "color: #f43f5e; font-weight: bold;"
-        );
-      });
-      console.groupEnd();
+      // OCR movement analysis (debug logging removed)
 
       setTargetEntityId(res.bankEntity?.id || (entities.length > 0 ? entities[0].id : "ent_nu"));
       setSelectedAccounts((res.parsedData.accounts || []).map((_, i) => i));

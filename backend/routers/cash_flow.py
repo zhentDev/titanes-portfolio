@@ -55,30 +55,11 @@ def get_user_cash_flow_file(user_id: Optional[str] = None) -> Path:
 def load_cash_flow_db(user_id: Optional[str] = None) -> dict[str, Any]:
     target_file = get_user_cash_flow_file(user_id)
 
-    # Seed user data from existing legacy data if new user file
-    if user_id and not target_file.exists():
-        if DATA_FILE.exists():
-            try:
-                with open(DATA_FILE, "r", encoding="utf-8") as sf:
-                    seed_data = json.load(sf)
-                save_cash_flow_db(seed_data, user_id)
-                return seed_data
-            except Exception:
-                pass
-        elif BACKUP_FILE.exists():
-            try:
-                with open(BACKUP_FILE, "r", encoding="utf-8") as bf:
-                    seed_data = json.load(bf)
-                save_cash_flow_db(seed_data, user_id)
-                return seed_data
-            except Exception:
-                pass
-        save_cash_flow_db(DEFAULT_CASH_FLOW_DATA, user_id)
-        return DEFAULT_CASH_FLOW_DATA.copy()
-
+    # For new users or when file doesn't exist, seed with clean empty defaults (never leak owner data)
     if not target_file.exists():
-        save_cash_flow_db(DEFAULT_CASH_FLOW_DATA, user_id)
-        return DEFAULT_CASH_FLOW_DATA.copy()
+        initial_data = DEFAULT_CASH_FLOW_DATA.copy()
+        save_cash_flow_db(initial_data, user_id)
+        return initial_data
     try:
         with open(target_file, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -203,6 +184,11 @@ def sync_cash_flow_state(payload: CashFlowSyncPayload, request: Request):
     user_id = user["sub"] if user else None
     db = load_cash_flow_db(user_id)
 
+    def dump_val(v):
+        if hasattr(v, "model_dump"):
+            return v.model_dump()
+        return v
+
     if payload.activePeriod is not None:
         db["activePeriod"] = payload.activePeriod
     if payload.currency is not None:
@@ -210,29 +196,29 @@ def sync_cash_flow_state(payload: CashFlowSyncPayload, request: Request):
     if payload.allocationModel is not None:
         db["allocationModel"] = payload.allocationModel
     if payload.customRatios is not None:
-        db["customRatios"] = payload.customRatios.model_dump()
+        db["customRatios"] = dump_val(payload.customRatios)
     if payload.emergencyFundTargetMonths is not None:
         db["emergencyFundTargetMonths"] = payload.emergencyFundTargetMonths
     if payload.inflows is not None:
-        db["inflows"] = [item.model_dump() for item in payload.inflows]
+        db["inflows"] = [dump_val(item) for item in payload.inflows]
     if payload.needs is not None:
-        db["needs"] = [item.model_dump() for item in payload.needs]
+        db["needs"] = [dump_val(item) for item in payload.needs]
     if payload.wants is not None:
-        db["wants"] = [item.model_dump() for item in payload.wants]
+        db["wants"] = [dump_val(item) for item in payload.wants]
     if payload.wealth is not None:
-        db["wealth"] = [item.model_dump() for item in payload.wealth]
+        db["wealth"] = [dump_val(item) for item in payload.wealth]
     if payload.payrollAccount is not None:
-        db["payrollAccount"] = payload.payrollAccount
+        db["payrollAccount"] = dump_val(payload.payrollAccount)
     if payload.creditCards is not None:
-        db["creditCards"] = payload.creditCards
+        db["creditCards"] = [dump_val(item) for item in payload.creditCards] if isinstance(payload.creditCards, list) else payload.creditCards
     if payload.creditPurchases is not None:
-        db["creditPurchases"] = payload.creditPurchases
+        db["creditPurchases"] = [dump_val(item) for item in payload.creditPurchases] if isinstance(payload.creditPurchases, list) else payload.creditPurchases
     if payload.expensesLog is not None:
-        db["expensesLog"] = payload.expensesLog
+        db["expensesLog"] = [dump_val(item) for item in payload.expensesLog] if isinstance(payload.expensesLog, list) else payload.expensesLog
     if payload.creditCardPayments is not None:
-        db["creditCardPayments"] = payload.creditCardPayments
+        db["creditCardPayments"] = [dump_val(item) for item in payload.creditCardPayments] if isinstance(payload.creditCardPayments, list) else payload.creditCardPayments
     if payload.periodsData is not None:
-        db["periodsData"] = payload.periodsData
+        db["periodsData"] = dump_val(payload.periodsData)
 
     save_cash_flow_db(db, user_id)
     return {"status": "ok", "message": "Cash flow synchronized successfully", "data": db}

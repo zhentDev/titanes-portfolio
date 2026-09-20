@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { InfoTooltip, MarketScheduleBadge } from "./Common";
 
 export default function HoldingsTable({
@@ -8,6 +9,8 @@ export default function HoldingsTable({
   unit = "pct",
   onToggleUnit,
 }) {
+  const [mobileViewMode, setMobileViewMode] = useState("auto"); // 'auto' | 'card' | 'table'
+
   if (!holdings?.length) return null;
 
   const slotValue = investment / numSlots;
@@ -19,6 +22,8 @@ export default function HoldingsTable({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          flexWrap: "wrap",
+          gap: 8,
           marginBottom: "14px",
         }}
       >
@@ -45,10 +50,121 @@ export default function HoldingsTable({
             <button className={`unit-btn ${unit === "pct" ? "active" : ""}`}>%</button>
             <button className={`unit-btn ${unit === "usd" ? "active" : ""}`}>$</button>
           </div>
+
+          {/* Selector de modo vista Móvil (Tarjetas vs Tabla) */}
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 2,
+              background: "rgba(0, 0, 0, 0.2)",
+              border: "1px solid var(--border)",
+              borderRadius: "16px",
+              padding: "2px",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setMobileViewMode(mobileViewMode === "card" ? "table" : "card")}
+              style={{
+                padding: "3px 8px",
+                borderRadius: "12px",
+                border: "none",
+                fontSize: "0.72rem",
+                fontWeight: 600,
+                cursor: "pointer",
+                background: mobileViewMode === "card" ? "var(--accent-primary)" : "transparent",
+                color: mobileViewMode === "card" ? "#000" : "var(--text-muted)",
+                transition: "all 0.15s ease",
+              }}
+              title="Cambiar vista entre Tabla y Tarjetas táctiles"
+            >
+              {mobileViewMode === "card" ? "📱 Tarjetas" : "📊 Tabla"}
+            </button>
+          </div>
         </div>
       </div>
-      <div style={{ overflowX: "auto", minWidth: 0, width: "100%" }}>
-        <table style={{ width: "100%", minWidth: "780px", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
+
+      {/* ── Vista de Tarjetas Táctiles (Mobile Card View) ─── */}
+      {mobileViewMode === "card" ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
+          {holdings.map((h) => {
+            const isSelected = h.selected !== false;
+            const returnPct = h.return_pct ?? 0;
+            const returnUsd = h.return_usd ?? (h.current_price - h.start_price) * (h.shares || 0);
+            const isGain = (unit === "pct" ? returnPct : returnUsd) >= 0;
+
+            return (
+              <div
+                key={h.ticker}
+                onClick={() => onToggleTicker && onToggleTicker(h.ticker)}
+                style={{
+                  padding: "12px 14px",
+                  background: isSelected ? "var(--bg-surface)" : "rgba(255, 255, 255, 0.02)",
+                  border: `1px solid ${isSelected ? "var(--border)" : "rgba(255, 255, 255, 0.05)"}`,
+                  borderLeft: `4px solid ${isSelected ? (isGain ? "var(--gain)" : "var(--loss)") : "var(--neutral)"}`,
+                  borderRadius: "var(--radius-md)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                  cursor: "pointer",
+                  opacity: isSelected ? 1 : 0.5,
+                  transition: "all 0.2s ease",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <strong style={{ fontSize: "1rem", color: isSelected ? "var(--accent-primary)" : "var(--text-muted)" }}>
+                        {h.ticker}
+                      </strong>
+                      {h.exchange && (
+                        <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", background: "rgba(255,255,255,0.05)", padding: "1px 5px", borderRadius: 4 }}>
+                          {h.exchange}
+                        </span>
+                      )}
+                      <MarketScheduleBadge ticker={h.ticker} exchange={h.exchange} size="xs" />
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
+                      {h.name || h.ticker} · <span style={{ color: "var(--accent-primary)" }}>{h.sector || "Tecnología"}</span>
+                    </div>
+                  </div>
+
+                  <span
+                    className={`badge ${isGain ? "gain" : "loss"}`}
+                    style={{ fontSize: "0.85rem", padding: "4px 8px" }}
+                  >
+                    {isGain ? "▲" : "▼"} {unit === "pct" ? `${Math.abs(returnPct).toFixed(2)}%` : `$${Math.abs(returnUsd).toFixed(2)}`}
+                  </span>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, paddingTop: 6, borderTop: "1px solid var(--border)" }}>
+                  <div>
+                    <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>Precio Actual</div>
+                    <div className="mono" style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                      ${h.current_price?.toFixed(2)}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>Valor ({h.shares?.toFixed(2)} uds)</div>
+                    <div className="mono" style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--text-secondary)" }}>
+                      ${h.current_value?.toFixed(2)}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>Simulación</div>
+                    <span style={{ fontSize: "0.7rem", fontWeight: 700, color: isSelected ? "var(--gain)" : "var(--text-muted)" }}>
+                      {isSelected ? "Activa ✓" : "Excluida ✗"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div style={{ overflowX: "auto", minWidth: 0, width: "100%", WebkitOverflowScrolling: "touch" }}>
+          <table style={{ width: "100%", minWidth: "780px", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
           <thead>
             <tr style={{ borderBottom: "1px solid var(--border)" }}>
               {[
@@ -347,6 +463,7 @@ export default function HoldingsTable({
           </tbody>
         </table>
       </div>
+      )}
     </div>
   );
 }

@@ -25,6 +25,8 @@ export default function DynamicStrategyView({
   onDelete,
   onUpdate,
   onBack,
+  onSelectStrategy,
+  customStrategies,
   firstInvestDate,
 }) {
   const storageKey = `titanes_strat_${strategy.id}_rebalances`;
@@ -583,6 +585,37 @@ export default function DynamicStrategyView({
             <h2 style={{ margin: 0, fontSize: "1.35rem", fontWeight: 800, color: "#f1f5f9" }}>
               {strategy.name}
             </h2>
+
+            {onSelectStrategy && (
+              <select
+                value={strategy.id}
+                onChange={(e) => onSelectStrategy(e.target.value)}
+                style={{
+                  background: "rgba(255, 255, 255, 0.08)",
+                  border: "1px solid var(--border-accent)",
+                  borderRadius: 8,
+                  color: "var(--accent-primary)",
+                  padding: "4px 10px",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  outline: "none",
+                }}
+                title="Cambiar de Estrategia"
+              >
+                <option value="historical" style={{ background: "#111827", color: "#fff" }}>
+                  🏆 Titanes Tech (CORE)
+                </option>
+                <option value="live" style={{ background: "#111827", color: "#fff" }}>
+                  ⚡ Live Tracker (LIVE)
+                </option>
+                {(customStrategies || []).map((s) => (
+                  <option key={s.id} value={s.id} style={{ background: "#111827", color: "#fff" }}>
+                    {s.isRealMoney ? "💵" : "🧪"} {s.name}
+                  </option>
+                ))}
+              </select>
+            )}
             {strategy.isRealMoney ? (
               <span
                 style={{

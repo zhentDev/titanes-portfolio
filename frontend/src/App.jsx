@@ -86,6 +86,8 @@ export default function App() {
   // Navigation Dropdown States & Outside Click Handlers
   const [stratOpen, setStratOpen] = useState(false);
   const [purchasesOpen, setPurchasesOpen] = useState(false);
+  const [mobileStratModalOpen, setMobileStratModalOpen] = useState(false);
+  const [mobilePurchasesModalOpen, setMobilePurchasesModalOpen] = useState(false);
   const stratDropdownRef = useRef(null);
   const purchasesDropdownRef = useRef(null);
 
@@ -677,7 +679,7 @@ export default function App() {
           </button>
 
           {/* 7. Cuenta de Usuario & Login */}
-          <div className="nav-dropdown" ref={userDropdownRef} style={{ position: "relative" }}>
+          <div className="nav-dropdown header-user-dropdown" ref={userDropdownRef} style={{ position: "relative" }}>
             {user ? (
               <button
                 type="button"
@@ -815,6 +817,271 @@ export default function App() {
         }}
       />
 
+      {/* ── Mobile Selector Sheet: Estrategias & Portafolios ── */}
+      {mobileStratModalOpen && (
+        <div
+          className="modal-overlay-responsive"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.65)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+          onClick={() => setMobileStratModalOpen(false)}
+        >
+          <div
+            className="modal-sheet-responsive"
+            style={{
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border)",
+              borderRadius: "16px",
+              padding: "18px",
+              width: "100%",
+              maxWidth: 440,
+              maxHeight: "85vh",
+              overflowY: "auto",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.5)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-drag-handle" />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "var(--text-primary)" }}>
+                📊 Seleccionar Estrategia
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileStratModalOpen(false)}
+                style={{
+                  background: "rgba(255,255,255,0.08)",
+                  border: "none",
+                  borderRadius: "50%",
+                  width: 30,
+                  height: 30,
+                  color: "var(--text-secondary)",
+                  cursor: "pointer",
+                  fontSize: "1rem",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div className="dropdown-header">Estrategias Base</div>
+              <button
+                type="button"
+                className={`dropdown-item ${mode === "historical" ? "selected" : ""}`}
+                style={{ padding: "10px 12px", borderRadius: 8, fontSize: "0.9rem" }}
+                onClick={() => {
+                  setMode("historical");
+                  setMobileStratModalOpen(false);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              >
+                <span className="item-icon">🏆</span>
+                <span className="item-title">Titanes Tech</span>
+                <span className="system-badge core">CORE</span>
+              </button>
+
+              <button
+                type="button"
+                className={`dropdown-item ${mode === "live" ? "selected" : ""}`}
+                style={{ padding: "10px 12px", borderRadius: 8, fontSize: "0.9rem" }}
+                onClick={() => {
+                  setMode("live");
+                  setMobileStratModalOpen(false);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              >
+                <span className="item-icon">⚡</span>
+                <span className="item-title">Live Tracker</span>
+                <span className="system-badge pro">LIVE</span>
+              </button>
+
+              {/* Dinero Real */}
+              {(() => {
+                const realMoneyStrats = (customStrategies || []).filter((s) => s.isRealMoney);
+                if (realMoneyStrats.length === 0) return null;
+                return (
+                  <>
+                    <div className="dropdown-divider" style={{ margin: "8px 0" }} />
+                    <div className="dropdown-header" style={{ color: "#34d399" }}>
+                      💵 Dinero Real Activo
+                    </div>
+                    {realMoneyStrats.map((strat) => (
+                      <button
+                        type="button"
+                        key={strat.id}
+                        className={`dropdown-item ${mode === strat.id ? "selected" : ""}`}
+                        style={{ padding: "10px 12px", borderRadius: 8, fontSize: "0.9rem" }}
+                        onClick={() => {
+                          setMode(strat.id);
+                          setMobileStratModalOpen(false);
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
+                      >
+                        <span className="item-icon">{strat.country || "💵"}</span>
+                        <span className="item-title">{strat.name}</span>
+                        <span className="system-badge real">REAL</span>
+                      </button>
+                    ))}
+                  </>
+                );
+              })()}
+
+              {/* Modelos & Simulaciones */}
+              {(() => {
+                const simulatedStrats = (customStrategies || []).filter((s) => !s.isRealMoney);
+                if (simulatedStrats.length === 0) return null;
+                return (
+                  <>
+                    <div className="dropdown-divider" style={{ margin: "8px 0" }} />
+                    <div className="dropdown-header" style={{ color: "#c084fc" }}>
+                      🧪 Modelos & Simulaciones
+                    </div>
+                    {simulatedStrats.map((strat) => (
+                      <button
+                        type="button"
+                        key={strat.id}
+                        className={`dropdown-item ${mode === strat.id ? "selected" : ""}`}
+                        style={{ padding: "10px 12px", borderRadius: 8, fontSize: "0.9rem" }}
+                        onClick={() => {
+                          setMode(strat.id);
+                          setMobileStratModalOpen(false);
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
+                      >
+                        <span className="item-icon">{strat.country || "🌎"}</span>
+                        <span className="item-title">{strat.name}</span>
+                        {strat.isSystem ? (
+                          <span className="system-badge pro">PRO</span>
+                        ) : (
+                          <span className="system-badge custom">{strat.numSlots} slots</span>
+                        )}
+                      </button>
+                    ))}
+                  </>
+                );
+              })()}
+
+              <div className="dropdown-divider" style={{ margin: "8px 0" }} />
+              <button
+                type="button"
+                className="dropdown-action-btn cyan"
+                style={{ padding: "10px 12px", fontSize: "0.85rem" }}
+                onClick={() => {
+                  setMobileStratModalOpen(false);
+                  setIsModalOpen(true);
+                }}
+              >
+                <span>+ Crear Nueva Estrategia</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Mobile Selector Sheet: Históricos de Compras ─────── */}
+      {mobilePurchasesModalOpen && (
+        <div
+          className="modal-overlay-responsive"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.65)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+          onClick={() => setMobilePurchasesModalOpen(false)}
+        >
+          <div
+            className="modal-sheet-responsive"
+            style={{
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border)",
+              borderRadius: "16px",
+              padding: "18px",
+              width: "100%",
+              maxWidth: 440,
+              maxHeight: "85vh",
+              overflowY: "auto",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.5)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-drag-handle" />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "var(--text-primary)" }}>
+                🛒 Históricos de Compras
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobilePurchasesModalOpen(false)}
+                style={{
+                  background: "rgba(255,255,255,0.08)",
+                  border: "none",
+                  borderRadius: "50%",
+                  width: 30,
+                  height: 30,
+                  color: "var(--text-secondary)",
+                  cursor: "pointer",
+                  fontSize: "1rem",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {(purchasePortfolios || []).map((port) => (
+                <button
+                  type="button"
+                  key={port.id}
+                  className={`dropdown-item ${mode === port.id ? "selected" : ""}`}
+                  style={{ padding: "10px 12px", borderRadius: 8, fontSize: "0.9rem" }}
+                  onClick={() => {
+                    setMode(port.id);
+                    setMobilePurchasesModalOpen(false);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                >
+                  <span className="item-icon">🛒</span>
+                  <span className="item-title">{port.name}</span>
+                </button>
+              ))}
+
+              <div className="dropdown-divider" style={{ margin: "8px 0" }} />
+              <button
+                type="button"
+                className="dropdown-action-btn orange"
+                style={{ padding: "10px 12px", fontSize: "0.85rem" }}
+                onClick={async () => {
+                  setMobilePurchasesModalOpen(false);
+                  const name = await toastPrompt("Nombre del nuevo Histórico de Compras:");
+                  if (name) addPurchasePortfolio(name);
+                }}
+              >
+                <span>+ Nuevo Histórico</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Main layout ─────────────────────────────────── */}
       <main className="app-main">
         {mode === "cash_flow" ? (
@@ -822,7 +1089,7 @@ export default function App() {
         ) : mode === "fixed_income" ? (
           <FixedIncomeHub />
         ) : (purchasePortfolios || []).some((p) => p.id === mode) ? (
-          <IndividualPurchasesView portfolioId={mode} />
+          <IndividualPurchasesView portfolioId={mode} onSelectPortfolio={(id) => setMode(id)} />
         ) : mode === "live" ? (
           <LiveMode key={refreshKey} navData={navData} investment={investment} />
         ) : customStrategies?.some((s) => s.id === mode) ? (
@@ -832,6 +1099,8 @@ export default function App() {
             onDelete={deleteCustomStrategy}
             onUpdate={updateCustomStrategy}
             onBack={() => setMode("historical")}
+            onSelectStrategy={(id) => setMode(id)}
+            customStrategies={customStrategies}
             firstInvestDate={
               (() => {
                 const strat = customStrategies.find((s) => s.id === mode);
@@ -868,6 +1137,36 @@ export default function App() {
                 marginBottom: 16,
               }}
             >
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <select
+                  value={mode}
+                  onChange={(e) => setMode(e.target.value)}
+                  style={{
+                    background: "rgba(255, 255, 255, 0.08)",
+                    border: "1px solid var(--border-accent)",
+                    borderRadius: 8,
+                    color: "var(--accent-primary)",
+                    padding: "6px 12px",
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    outline: "none",
+                  }}
+                  title="Cambiar de Estrategia o Portafolio"
+                >
+                  <option value="historical" style={{ background: "#111827", color: "#fff" }}>
+                    🏆 Titanes Tech (CORE)
+                  </option>
+                  <option value="live" style={{ background: "#111827", color: "#fff" }}>
+                    ⚡ Live Tracker (LIVE)
+                  </option>
+                  {(customStrategies || []).map((s) => (
+                    <option key={s.id} value={s.id} style={{ background: "#111827", color: "#fff" }}>
+                      {s.isRealMoney ? "💵" : "🧪"} {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div
                 style={{
                   display: "flex",
@@ -2105,6 +2404,93 @@ export default function App() {
 
       {/* ── Modal de Autenticación (Login / Registro / OAuth2) ── */}
       <AuthModal />
+
+      {/* ── Mobile Bottom Navigation Bar (< 768px) ── */}
+      <nav className="mobile-bottom-nav" aria-label="Navegación Móvil Principal">
+        {/* 1. Estrategias */}
+        <button
+          type="button"
+          className={`bottom-nav-item ${isStrategyMode ? "active" : ""}`}
+          onClick={() => {
+            setMobileStratModalOpen(true);
+            setMobilePurchasesModalOpen(false);
+          }}
+          aria-label="Estrategias"
+        >
+          <span className="nav-icon">📊</span>
+          <span>Estrategias</span>
+        </button>
+
+        {/* 2. Compras */}
+        <button
+          type="button"
+          className={`bottom-nav-item ${isPurchaseMode ? "active" : ""}`}
+          onClick={() => {
+            setMobilePurchasesModalOpen(true);
+            setMobileStratModalOpen(false);
+          }}
+          aria-label="Compras"
+        >
+          <span className="nav-icon">🛒</span>
+          <span>Compras</span>
+        </button>
+
+        {/* 3. Renta Fija */}
+        <button
+          type="button"
+          className={`bottom-nav-item ${mode === "fixed_income" ? "active" : ""}`}
+          onClick={() => {
+            setMode("fixed_income");
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          aria-label="Renta Fija y CDTs"
+        >
+          <span className="nav-icon">🏦</span>
+          <span>Renta Fija</span>
+        </button>
+
+        {/* 4. Flujo de Caja */}
+        <button
+          type="button"
+          className={`bottom-nav-item ${mode === "cash_flow" ? "active" : ""}`}
+          onClick={() => {
+            setMode("cash_flow");
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          aria-label="Flujo de Caja"
+        >
+          <span className="nav-icon">🌊</span>
+          <span>Flujo</span>
+        </button>
+
+        {/* 5. Alternar Tema Diurno / Nocturno */}
+        <button
+          type="button"
+          className="bottom-nav-item"
+          onClick={toggleTheme}
+          aria-label="Cambiar Tema"
+        >
+          <span className="nav-icon">{theme === "dark" ? "☀️" : "🌙"}</span>
+          <span>{theme === "dark" ? "Diurno" : "Noche"}</span>
+        </button>
+
+        {/* 6. Perfil / Auth */}
+        <button
+          type="button"
+          className="bottom-nav-item"
+          onClick={() => {
+            if (user) {
+              setUserDropdownOpen((prev) => !prev);
+            } else {
+              openAuthModal("login");
+            }
+          }}
+          aria-label="Perfil de usuario"
+        >
+          <span className="nav-icon">👤</span>
+          <span>{user ? "Perfil" : "Acceder"}</span>
+        </button>
+      </nav>
 
       {/* ── Footer ──────────────────────────────────────── */}
       <footer className="app-footer">

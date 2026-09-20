@@ -95,7 +95,7 @@ export const usePortfolioStore = create(
 
           if (backendEmpty && hasLocalData) {
             // 🚨 MIGRATE LOCAL DATA TO DUCKDB 🚨
-            console.log("Migrando datos locales a DuckDB...");
+            // Migrate local data to DuckDB
             await syncPurchasesMigration(localPorts, localLots);
             toast.success(
               "¡Tus compras fueron migradas a la base de datos de DuckDB exitosamente!",

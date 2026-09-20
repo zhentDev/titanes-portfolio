@@ -50,6 +50,7 @@ export default function InflationExplorerModal({ isOpen, onClose, inflationData 
 
   return (
     <div
+      className="modal-overlay-responsive"
       style={{
         position: "fixed",
         top: 0,
@@ -68,7 +69,7 @@ export default function InflationExplorerModal({ isOpen, onClose, inflationData 
       onClick={onClose}
     >
       <div
-        className="card fade-up"
+        className="card fade-up modal-sheet-responsive"
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "100%",
@@ -86,6 +87,7 @@ export default function InflationExplorerModal({ isOpen, onClose, inflationData 
             : "0 25px 50px -12px rgba(0, 0, 0, 0.7)",
         }}
       >
+        <div className="modal-drag-handle" />
         {/* Header */}
         <div
           style={{

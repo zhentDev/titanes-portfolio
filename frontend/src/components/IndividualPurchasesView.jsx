@@ -23,7 +23,7 @@ import InflationExplorerModal from "./InflationExplorerModal";
 import PlanConfigModal from "./PlanConfigModal";
 import PlanExecutionModal from "./PlanExecutionModal";
 
-export default function IndividualPurchasesView({ portfolioId = "hist_default" }) {
+export default function IndividualPurchasesView({ portfolioId = "hist_default", onSelectPortfolio }) {
   const {
     individualPurchases,
     addPurchase,
@@ -729,9 +729,16 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
       chartInstanceRef.current = null;
     }
 
-    if (currentPurchases.length === 0) return;
+    const getResponsiveChartHeight = () => {
+      if (typeof window === "undefined") return 460;
+      if (window.innerWidth <= 640) return 280;
+      if (window.innerWidth <= 1024) return 350;
+      return 460;
+    };
 
     const chart = createChart(chartContainerRef.current, {
+      width: chartContainerRef.current.clientWidth,
+      height: getResponsiveChartHeight(),
       layout: {
         background: { type: ColorType.Solid, color: "transparent" },
         textColor: chartColors.textColor,
@@ -894,7 +901,19 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
 
     chart.timeScale().fitContent();
 
+    const ro = new ResizeObserver(() => {
+      if (chartContainerRef.current && chartInstanceRef.current) {
+        const w = chartContainerRef.current.clientWidth;
+        chartInstanceRef.current.applyOptions({
+          width: w,
+          height: getResponsiveChartHeight(),
+        });
+      }
+    });
+    ro.observe(chartContainerRef.current);
+
     return () => {
+      ro.disconnect();
       if (chartInstanceRef.current) {
         chartInstanceRef.current.remove();
         chartInstanceRef.current = null;
@@ -924,24 +943,59 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
             style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}
           >
             <div>
-              <h2
+              <div
                 style={{
-                  fontSize: "1.4rem",
-                  fontWeight: 800,
-                  color: "#f1f5f9",
                   display: "flex",
                   alignItems: "center",
-                  gap: 10,
+                  gap: 12,
+                  flexWrap: "wrap",
                   marginBottom: 8,
                 }}
               >
-                <span>🛒</span> {portfolio.name}
-              </h2>
+                <h2
+                  style={{
+                    fontSize: "1.4rem",
+                    fontWeight: 800,
+                    color: "#f1f5f9",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    margin: 0,
+                  }}
+                >
+                  <span>🛒</span> {portfolio.name}
+                </h2>
+
+                {purchasePortfolios && purchasePortfolios.length > 1 && onSelectPortfolio && (
+                  <select
+                    value={portfolioId}
+                    onChange={(e) => onSelectPortfolio(e.target.value)}
+                    style={{
+                      background: "rgba(255, 255, 255, 0.08)",
+                      border: "1px solid var(--border-accent)",
+                      borderRadius: 8,
+                      color: "var(--accent-primary)",
+                      padding: "4px 10px",
+                      fontSize: "0.8rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      outline: "none",
+                    }}
+                    title="Cambiar Histórico de Compras"
+                  >
+                    {purchasePortfolios.map((p) => (
+                      <option key={p.id} value={p.id} style={{ background: "#111827", color: "#fff" }}>
+                        📁 {p.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
               <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: 20 }}>
                 Registra y trackea compras reales de ETFs, ETCs o Acciones con sus valores de
                 apertura exactos.
               </p>
-              <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
                 <label
                   style={{
                     display: "flex",
@@ -950,6 +1004,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                     cursor: "pointer",
                     fontSize: "0.85rem",
                     color: portfolio.isPlan ? "#00e5ff" : "var(--text-secondary)",
+                    padding: "4px 8px",
+                    borderRadius: "8px",
+                    background: "rgba(255, 255, 255, 0.03)",
                   }}
                 >
                   <input
@@ -977,13 +1034,14 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                     background: "rgba(245, 158, 11, 0.08)",
                     border: "1px solid rgba(245, 158, 11, 0.25)",
                     color: "#fbbf24",
-                    padding: "4px 12px",
+                    padding: "6px 12px",
                     borderRadius: "12px",
                     fontSize: "0.8rem",
                     display: "flex",
                     alignItems: "center",
                     gap: 6,
                     cursor: "pointer",
+                    minHeight: 32,
                   }}
                 >
                   🔍 Ver Historial IPC (
@@ -996,13 +1054,14 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                     background: "transparent",
                     border: "1px solid rgba(255,255,255,0.2)",
                     color: "var(--text-secondary)",
-                    padding: "4px 12px",
+                    padding: "6px 12px",
                     borderRadius: "12px",
                     fontSize: "0.8rem",
                     display: "flex",
                     alignItems: "center",
                     gap: 6,
                     cursor: "pointer",
+                    minHeight: 32,
                   }}
                 >
                   ⚙️ Configurar Divisa/Inflación
@@ -1036,10 +1095,14 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
             <div
               style={{
                 display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "center",
+                gap: 4,
                 background: theme === "light" ? "#f1f5f9" : "rgba(0,0,0,0.3)",
                 borderRadius: 20,
                 padding: 4,
                 border: theme === "light" ? "1px solid rgba(0,0,0,0.08)" : "1px solid rgba(255,255,255,0.1)",
+                maxWidth: "100%",
               }}
             >
               <button
@@ -1912,10 +1975,13 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
         {/* GRAPH CONTAINER */}
         <div className="card fade-up" style={{ padding: "20px", marginBottom: "24px" }}>
           <div
+            className="purchases-chart-header"
             style={{
               display: "flex",
               justifyContent: "space-between",
-              alignItems: "flex-end",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: 12,
               marginBottom: 16,
             }}
           >
@@ -1933,9 +1999,25 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
               <span>Evolución del Portafolio Histórico</span>
             </h3>
             <div
-              style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-end",
+                gap: 8,
+                flexWrap: "wrap",
+                width: "100%",
+                maxWidth: 420,
+              }}
             >
-              <div style={{ display: "flex", gap: 16, fontSize: "0.75rem" }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 12,
+                  fontSize: "0.75rem",
+                  flexWrap: "wrap",
+                  justifyContent: "flex-end",
+                }}
+              >
                 <button
                   onClick={() => toggleSeries("valor")}
                   style={{
@@ -2019,7 +2101,15 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                 </span>
               )}
 
-              <div style={{ display: "flex", gap: 6 }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 4,
+                  flexWrap: "wrap",
+                  justifyContent: "flex-end",
+                  maxWidth: "100%",
+                }}
+              >
                 {["1M", "3M", "6M", "YTD", "1Y", "5Y", "ALL"].map((range) => (
                   <button
                     key={range}
@@ -2030,11 +2120,12 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                       border: "1px solid rgba(255,255,255,0.1)",
                       color: "var(--text-secondary)",
                       borderRadius: 4,
-                      padding: "2px 8px",
-                      fontSize: "0.7rem",
+                      padding: "3px 8px",
+                      fontSize: "0.72rem",
                       cursor: isRangeEnabled(range) ? "pointer" : "not-allowed",
                       opacity: isRangeEnabled(range) ? 1 : 0.35,
                       transition: "all 0.2s",
+                      minHeight: 26,
                     }}
                     onMouseOver={(e) => {
                       if (!isRangeEnabled(range)) return;
@@ -2067,7 +2158,14 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
               Registra tu primera compra para ver la gráfica de evolución temporal.
             </div>
           ) : (
-            <div ref={chartContainerRef} style={{ width: "100%", height: 500 }} />
+            <div
+              ref={chartContainerRef}
+              className="purchases-chart-container"
+              style={{
+                width: "100%",
+                height: typeof window !== "undefined" && window.innerWidth <= 640 ? 280 : typeof window !== "undefined" && window.innerWidth <= 1024 ? 350 : 460,
+              }}
+            />
           )}
         </div>
 
@@ -2191,7 +2289,8 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
 
         {/* FORM & PURCHASES LIST */}
         <div
-          style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 24, alignItems: "start" }}
+          className="purchases-main-grid"
+          style={{ display: "grid", gap: 24, alignItems: "start" }}
         >
           {/* ADD PURCHASE FORM */}
           <div className="card fade-up" style={{ padding: "20px" }}>
@@ -3020,11 +3119,13 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                             flex: 1,
                             display: "flex",
                             justifyContent: "flex-end",
-                            gap: 24,
-                            marginRight: 16,
+                            alignItems: "center",
+                            flexWrap: "wrap",
+                            gap: 14,
+                            marginRight: 8,
                           }}
                         >
-                          <div>
+                          <div style={{ minWidth: 80 }}>
                             <div style={{ color: "var(--text-secondary)", fontSize: "0.7rem" }}>
                               Total Invertido
                             </div>
@@ -3035,10 +3136,10 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                                 : group.totalInvestedFx.toFixed(2)}
                             </div>
                             <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
-                              Volumen: {group.totalShares.toFixed(4)}
+                              Vol: {group.totalShares.toFixed(4)}
                             </div>
                           </div>
-                          <div>
+                          <div style={{ minWidth: 80 }}>
                             <div style={{ color: "var(--text-secondary)", fontSize: "0.7rem" }}>
                               Valor Mercado
                             </div>
@@ -3059,7 +3160,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                                   : group.totalCurrentValueReal.toFixed(2)}
                             </div>
                             <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
-                              Apertura Prom: ${group.avgOpenPrice.toFixed(2)}
+                              Apertura: ${group.avgOpenPrice.toFixed(2)}
                             </div>
                           </div>
                           {(() => {
@@ -3077,11 +3178,11 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default" }
                                   : group.profitPctReal;
                             const isPositive = profit >= 0;
                             return (
-                              <div style={{ minWidth: 120 }}>
+                              <div style={{ minWidth: 100 }}>
                                 <div style={{ color: "var(--text-secondary)", fontSize: "0.7rem" }}>
                                   {yieldViewMode === "REAL"
-                                    ? "Beneficio Real Neto"
-                                    : "Beneficio Neto"}
+                                    ? "Beneficio Real"
+                                    : "Beneficio"}
                                 </div>
                                 <div
                                   style={{
