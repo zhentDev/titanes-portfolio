@@ -48,13 +48,35 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
     }
   };
 
-  // Format currency
+  // Format currency full for HUD / Tooltips
   const fmtMoney = (v) => {
     if (v === undefined || v === null || isNaN(v)) return "--";
     return `${currency === "COP" ? "$" : "US$"}${Number(v).toLocaleString("en-US", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;
+  };
+
+  // Format currency abbreviated for Chart Axis (e.g. $6M, $4K, $500)
+  const fmtAxisMoney = (v) => {
+    if (v === undefined || v === null || isNaN(v)) return "--";
+    const num = Number(v);
+    const abs = Math.abs(num);
+    const prefix = currency === "COP" ? "$" : "US$";
+    const sign = num < 0 ? "-" : "";
+    if (abs >= 1_000_000_000) {
+      const formatted = (abs / 1_000_000_000).toFixed(1).replace(/\.0$/, "");
+      return `${sign}${prefix}${formatted}B`;
+    }
+    if (abs >= 1_000_000) {
+      const formatted = (abs / 1_000_000).toFixed(1).replace(/\.0$/, "");
+      return `${sign}${prefix}${formatted}M`;
+    }
+    if (abs >= 1_000) {
+      const formatted = (abs / 1_000).toFixed(1).replace(/\.0$/, "");
+      return `${sign}${prefix}${formatted}k`;
+    }
+    return `${sign}${prefix}${abs.toFixed(0)}`;
   };
 
   // Latest point fallback for HUD
@@ -120,7 +142,7 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
       lastValueVisible: false, // Clean: no invasive badges covering the lines
       priceFormat: {
         type: "custom",
-        formatter: (price) => fmtMoney(price),
+        formatter: (price) => fmtAxisMoney(price),
       },
     });
 
@@ -132,7 +154,7 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
       lastValueVisible: false,
       priceFormat: {
         type: "custom",
-        formatter: (price) => fmtMoney(price),
+        formatter: (price) => fmtAxisMoney(price),
       },
     });
 
@@ -144,7 +166,7 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
       lastValueVisible: false,
       priceFormat: {
         type: "custom",
-        formatter: (price) => fmtMoney(price),
+        formatter: (price) => fmtAxisMoney(price),
       },
     });
 
