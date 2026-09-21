@@ -141,18 +141,39 @@ def init_db():
         except duckdb.Error as e:
             print(f"Custom strategies migration error: {e}")
 
-        # Migration: Neutralize is_system — each user sees only their own strategies
+        # Seed built-in simulated model strategy 'strat_mm20' (MM20 Mid-caps PRO)
         try:
-            con.execute("UPDATE custom_strategies SET is_system = FALSE WHERE is_system = TRUE")
+            con.execute("""
+                INSERT INTO custom_strategies (id, name, country, num_slots, capital, active_invested, benchmark, color, is_system, is_real_money, user_id)
+                VALUES ('strat_mm20', 'MM20 Mid-caps PRO', '🇺🇸', 20, 1000.0, 250.0, 'S&P MidCap 400', '#10b981', TRUE, FALSE, 'usr_9487dd2209d2')
+                ON CONFLICT (id) DO UPDATE SET
+                    name = EXCLUDED.name,
+                    benchmark = EXCLUDED.benchmark,
+                    is_system = TRUE,
+                    is_real_money = FALSE,
+                    user_id = 'usr_9487dd2209d2'
+            """)
+            con.execute("""
+                INSERT INTO rebalances (rebalance_date, cash_added, strategy_id, user_id)
+                VALUES ('2026-08-01', 0.0, 'strat_mm20', 'usr_9487dd2209d2')
+                ON CONFLICT (rebalance_date, strategy_id) DO NOTHING
+            """)
+            con.execute("DELETE FROM rebalance_tickers WHERE strategy_id = 'strat_mm20'")
+            mm20_tickers = ['ARLP', 'ACLS', 'BHC', 'DIOD', 'HAE', 'NSIT', 'POWI', 'VECO', 'OSK', 'SM']
+            for t in mm20_tickers:
+                con.execute("""
+                    INSERT INTO rebalance_tickers (rebalance_date, ticker, strategy_id, user_id)
+                    VALUES ('2026-08-01', ?, 'strat_mm20', 'usr_9487dd2209d2')
+                """, [t])
         except duckdb.Error as e:
-            print(f"is_system neutralization migration error: {e}")
+            print(f"Seed strat_mm20 error: {e}")
 
         # Migration: Clean orphan rebalances whose strategy_id has no entry in custom_strategies
-        # (excluding built-in 'historical' which is always valid)
+        # (excluding built-in 'historical' and 'strat_mm20' which are always valid)
         try:
             orphan_ids = con.execute("""
                 SELECT DISTINCT r.strategy_id FROM rebalances r
-                WHERE r.strategy_id != 'historical'
+                WHERE r.strategy_id NOT IN ('historical', 'strat_mm20')
                   AND r.strategy_id NOT IN (SELECT id FROM custom_strategies)
             """).fetchall()
             for (oid,) in orphan_ids:

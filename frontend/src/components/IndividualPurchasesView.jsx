@@ -22,6 +22,7 @@ import ChangeTickerModal from "./ChangeTickerModal";
 import InflationExplorerModal from "./InflationExplorerModal";
 import PlanConfigModal from "./PlanConfigModal";
 import PlanExecutionModal from "./PlanExecutionModal";
+import XtbImportModal from "./XtbImportModal";
 
 export default function IndividualPurchasesView({ portfolioId = "hist_default", onSelectPortfolio }) {
   const {
@@ -31,6 +32,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
     updatePurchase,
     updateMultiplePurchases,
     purchasePortfolios,
+    addPurchasePortfolio,
     deletePurchasePortfolio,
     batchUpdateStatus,
     runBatchRecalculate,
@@ -57,6 +59,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
   const [showExecutionModal, setShowExecutionModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showInflationExplorer, setShowInflationExplorer] = useState(false);
+  const [showXtbModal, setShowXtbModal] = useState(false);
   const [changingTickerGroup, setChangingTickerGroup] = useState(null);
 
   const portfolio = purchasePortfolios?.find((p) => p.id === portfolioId) || {
@@ -464,6 +467,12 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
       setShowExecutionModal(false);
     } catch (e) {
       toast.error("Error al registrar compras del plan", { id: loadingToast });
+    }
+  };
+
+  const handleImportXtbPurchases = async (trades) => {
+    for (const p of trades) {
+      await addPurchase(p);
     }
   };
 
@@ -1065,6 +1074,27 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                   }}
                 >
                   ⚙️ Configurar Divisa/Inflación
+                </button>
+
+                <button
+                  onClick={() => setShowXtbModal(true)}
+                  style={{
+                    background: "rgba(0, 229, 255, 0.08)",
+                    border: "1px solid rgba(0, 229, 255, 0.35)",
+                    color: "#00e5ff",
+                    padding: "6px 12px",
+                    borderRadius: "12px",
+                    fontSize: "0.8rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    cursor: "pointer",
+                    minHeight: 32,
+                    fontWeight: 700,
+                  }}
+                  title="Importar compras copiadas desde xStation 5 de XTB"
+                >
+                  📥 Importar de XTB
                 </button>
               </div>
             </div>
@@ -2294,19 +2324,47 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
         >
           {/* ADD PURCHASE FORM */}
           <div className="card fade-up" style={{ padding: "20px" }}>
-            <h3
+            <div
               style={{
-                margin: "0 0 16px 0",
-                fontSize: "1.05rem",
-                fontWeight: 700,
                 display: "flex",
                 alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: "16px",
+                flexWrap: "wrap",
                 gap: 8,
               }}
             >
-              <span>➕</span>
-              <span>Registrar Compra (ETF/ETC/Acción)</span>
-            </h3>
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: "1.05rem",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <span>➕</span>
+                <span>Registrar Compra (ETF/ETC/Acción)</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowXtbModal(true)}
+                className="btn btn-sm btn-ghost"
+                style={{
+                  border: "1px solid rgba(0, 229, 255, 0.3)",
+                  color: "#00e5ff",
+                  fontSize: "0.76rem",
+                  padding: "4px 10px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+                title="Importar posiciones desde xStation de XTB"
+              >
+                <span>📥</span> Pegar tabla XTB
+              </button>
+            </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
@@ -3629,6 +3687,15 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
           liveQuote={changingTickerGroup ? liveQuotes[changingTickerGroup.ticker] : null}
           portfolioCurrency={portfolio.assetCurrency || "USD"}
           onConfirmChange={handleConfirmChangeTicker}
+        />
+        <XtbImportModal
+          isOpen={showXtbModal}
+          onClose={() => setShowXtbModal(false)}
+          currentPortfolioId={portfolioId}
+          purchasePortfolios={purchasePortfolios}
+          onImportPurchases={handleImportXtbPurchases}
+          onCreatePortfolio={addPurchasePortfolio}
+          onSelectPortfolio={onSelectPortfolio}
         />
       </div>
     </>

@@ -57,6 +57,12 @@ export const usePortfolioStore = create(
           period: "3M",
           numSlots: 15,
         },
+        strat_mm20: {
+          tickers: ["ARLP", "ACLS", "BHC", "DIOD", "HAE", "NSIT", "POWI", "VECO", "OSK", "SM"],
+          investment: 1000,
+          period: "1Y",
+          numSlots: 20,
+        },
       },
       mode: "historical", // 'historical' | 'live' | custom strategy ID
       period: "3M", // Shared top-level period for backward compatibility with StrategyChart and DynamicStrategyView
@@ -65,6 +71,7 @@ export const usePortfolioStore = create(
         sp500: true,
         nasdaq: true,
         base: true,
+        strat_mm20: true,
       },
       // ── Main Mode Settings (Divisa e Inflación) ──
       mainPortfolioSettings: {
@@ -317,18 +324,45 @@ export const usePortfolioStore = create(
         });
       },
 
-      customStrategies: [],
-      strategyRebalances: {},
+      customStrategies: [
+        {
+          id: "strat_mm20",
+          name: "MM20 Mid-caps PRO",
+          country: "🇺🇸",
+          numSlots: 20,
+          capital: 1000,
+          activeInvested: 250,
+          benchmark: "S&P MidCap 400",
+          color: "#10b981",
+          createdAt: "2026-08-01T00:00:00.000Z",
+          isSystem: true,
+          isRealMoney: false,
+        },
+      ],
+      strategyRebalances: {
+        strat_mm20: [
+          {
+            date: "2026-08-01",
+            rebalance_date: "2026-08-01",
+            cash_added: 0,
+            tickers: ["ARLP", "ACLS", "BHC", "DIOD", "HAE", "NSIT", "POWI", "VECO", "OSK", "SM"],
+          },
+        ],
+      },
 
       initFetchCustomStrategies: async () => {
         try {
           const backendStrats = await fetchCustomStrategiesApi();
           if (Array.isArray(backendStrats) && backendStrats.length > 0) {
             set((state) => {
+              const sysStrat = state.customStrategies.find((s) => s.id === "strat_mm20");
               const existingMap = new Map(state.customStrategies.map((s) => [s.id, s]));
               backendStrats.forEach((bs) => {
                 existingMap.set(bs.id, { ...existingMap.get(bs.id), ...bs });
               });
+              if (sysStrat && !existingMap.has("strat_mm20")) {
+                existingMap.set("strat_mm20", sysStrat);
+              }
               const mergedStrats = Array.from(existingMap.values());
               const updatedSettings = { ...state.settingsByMode };
               mergedStrats.forEach((st) => {
@@ -625,6 +659,35 @@ export const usePortfolioStore = create(
         }
         if (!merged.customStrategies) {
           merged.customStrategies = [];
+        }
+        if (!merged.customStrategies.find((s) => s.id === "strat_mm20")) {
+          const sysStrat = currentState.customStrategies.find((s) => s.id === "strat_mm20") || {
+            id: "strat_mm20",
+            name: "MM20 Mid-caps PRO",
+            country: "🇺🇸",
+            numSlots: 20,
+            capital: 1000,
+            activeInvested: 250,
+            benchmark: "S&P MidCap 400",
+            color: "#10b981",
+            createdAt: "2026-08-01T00:00:00.000Z",
+            isSystem: true,
+            isRealMoney: false,
+          };
+          merged.customStrategies = [sysStrat, ...merged.customStrategies];
+        }
+        if (!merged.strategyRebalances?.strat_mm20 || merged.strategyRebalances.strat_mm20.length === 0) {
+          merged.strategyRebalances = {
+            ...merged.strategyRebalances,
+            strat_mm20: [
+              {
+                date: "2026-08-01",
+                rebalance_date: "2026-08-01",
+                cash_added: 0,
+                tickers: ["ARLP", "ACLS", "BHC", "DIOD", "HAE", "NSIT", "POWI", "VECO", "OSK", "SM"],
+              },
+            ],
+          };
         }
         (merged.customStrategies || []).forEach((st) => {
           if (!merged.settingsByMode[st.id]) {
