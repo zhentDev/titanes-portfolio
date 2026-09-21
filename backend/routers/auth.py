@@ -105,6 +105,8 @@ def register(payload: RegisterRequest):
 
     token = create_access_token({"sub": user_id, "email": email, "name": user_name})
 
+    print(f"\n[AUTH NOTICE] NUEVO REGISTRO EXITOSO: {email} (ID: {user_id}, Total: {db.count_users()})\n")
+
     return {
         "token": token,
         "user": _clean_user_dict(new_user),
@@ -113,13 +115,20 @@ def register(payload: RegisterRequest):
 
 
 @router.post("/login")
-def login(payload: LoginRequest):
-    email = payload.email.strip().lower()
+def login_local(payload: LoginRequest):
+    email = payload.email.lower().strip()
     user = db.get_user_by_email(email)
-    if not user or not user.get("password_hash"):
+
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Correo o contraseña incorrectos.",
+        )
+
+    if not user.get("password_hash"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Esta cuenta fue creada con Google. Inicia sesión con el botón de Google.",
         )
 
     if not verify_password(payload.password, user["password_hash"]):
@@ -128,7 +137,9 @@ def login(payload: LoginRequest):
             detail="Correo o contraseña incorrectos.",
         )
 
-    token = create_access_token({"sub": user["id"], "email": user["email"], "name": user["name"]})
+    token = create_access_token({"sub": user["id"], "email": email, "name": user["name"]})
+
+    print(f"[AUTH NOTICE] INICIO DE SESIÓN EXITOSO: {email} (ID: {user['id']})")
 
     return {
         "token": token,
@@ -208,4 +219,35 @@ def get_me(current_user: dict = Depends(get_current_user)):
 
     return {
         "user": _clean_user_dict(user),
+    }
+
+
+@router.get("/admin/users")
+def get_admin_users(secret: Optional[str] = None, current_user: Optional[dict] = Depends(get_current_user)):
+    """
+    Endpoint de confirmación rápida para el propietario.
+    Permite ver todos los usuarios registrados si:
+    1. Está autenticado como caballerojesus703@hotmail.com, O
+    2. Pasa ?secret=titanes2026 en la URL directamente desde el navegador.
+    """
+    is_owner = False
+    if current_user:
+        email = (current_user.get("email") or "").lower().strip()
+        if email == "caballerojesus703@hotmail.com":
+            is_owner = True
+
+    if secret == "titanes2026":
+        is_owner = True
+
+    if not is_owner:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acceso restringido al propietario.",
+        )
+
+    users = db.list_all_users()
+    return {
+        "total": len(users),
+        "database": "PostgreSQL" if db.DATABASE_URL else "DuckDB Local",
+        "users": users,
     }

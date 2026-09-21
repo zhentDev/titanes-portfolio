@@ -298,6 +298,17 @@ def init_db():
             # Auto-sync PostgreSQL users into local DuckDB so local joins continue working
             _sync_postgres_users_to_duckdb(con)
 
+        # Print all registered users to logs for easy verification in Render
+        try:
+            users_list = list_all_users()
+            print("=" * 65)
+            print(f"[AUTH REPORT] Total usuarios registrados: {len(users_list)}")
+            for u in users_list:
+                print(f"  • Email: {u['email']} | Nombre: {u.get('name')} | ID: {u['id']} | Pro: {u.get('is_pro')} | Creado: {u.get('created_at')}")
+            print("=" * 65)
+        except Exception as e:
+            print(f"[AUTH REPORT] Error logging users: {e}")
+
 
 # ── Persistent User Backup & Fusion ──────────────────────────────────────────
 
@@ -651,6 +662,57 @@ def count_users() -> int:
     with get_connection() as con:
         row = con.execute("SELECT COUNT(*) FROM users").fetchone()
         return row[0] if row else 0
+
+
+def list_all_users() -> List[dict]:
+    """Returns a list of all registered users without exposing passwords."""
+    if DATABASE_URL:
+        try:
+            with pg_session() as conn:
+                if conn:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            SELECT id, email, name, provider, provider_id, avatar_url, created_at, is_pro
+                            FROM users
+                            ORDER BY created_at DESC
+                        """)
+                        rows = cur.fetchall()
+                        return [
+                            {
+                                "id": r[0],
+                                "email": r[1],
+                                "name": r[2],
+                                "provider": r[3],
+                                "provider_id": r[4],
+                                "avatar_url": r[5],
+                                "created_at": r[6].isoformat() if hasattr(r[6], "isoformat") else str(r[6]),
+                                "is_pro": bool(r[7] or (r[1] and r[1].lower().strip() == "caballerojesus703@hotmail.com")),
+                            }
+                            for r in rows
+                        ]
+        except Exception as e:
+            print(f"[POSTGRES] list_all_users error: {e}")
+
+    # Fallback to DuckDB
+    with get_connection() as con:
+        rows = con.execute("""
+            SELECT id, email, name, provider, provider_id, avatar_url, created_at, is_pro
+            FROM users
+            ORDER BY created_at DESC
+        """).fetchall()
+        return [
+            {
+                "id": r[0],
+                "email": r[1],
+                "name": r[2],
+                "provider": r[3],
+                "provider_id": r[4],
+                "avatar_url": r[5],
+                "created_at": str(r[6]),
+                "is_pro": bool(r[7] or (r[1] and r[1].lower().strip() == "caballerojesus703@hotmail.com")),
+            }
+            for r in rows
+        ]
 
 
 def claim_legacy_data(user_id: str):
