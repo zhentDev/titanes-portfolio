@@ -21,6 +21,7 @@ import { InfoTooltip } from "./components/Common";
 import AffiliateBanner from "./components/Common/AffiliateBanner";
 import AuthModal from "./components/AuthModal";
 import AuthWall from "./components/AuthWall";
+import StrategyPaywall from "./components/StrategyPaywall";
 import { useAuthStore } from "./store/authStore";
 import { usePortfolioStore } from "./store/portfolioStore";
 import { exportPortfolioCSV } from "./utils/exportReport";
@@ -107,9 +108,25 @@ export default function App() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const isOwner = Boolean(
+    user?.email && user.email.toLowerCase().trim() === "caballerojesus703@hotmail.com"
+  );
+  const isPro = Boolean(user?.is_pro || isOwner);
+
   const isStrategyMode =
     mode === "historical" || mode === "live" || (customStrategies || []).some((s) => s.id === mode);
   const isPurchaseMode = (purchasePortfolios || []).some((p) => p.id === mode);
+
+  // If user is not PRO and lands on the historical default strategy mode, guide them to fixed_income
+  const hasCheckedInitialMode = useRef(false);
+  useEffect(() => {
+    if (isInitialized && !hasCheckedInitialMode.current) {
+      hasCheckedInitialMode.current = true;
+      if (!isPro && mode === "historical") {
+        setMode("fixed_income");
+      }
+    }
+  }, [isInitialized, isPro, mode, setMode]);
 
   const currentStrategyLabel = useMemo(() => {
     if (mode === "historical") return "🏆 Titanes Tech";
@@ -170,6 +187,10 @@ export default function App() {
   }, [mode]);
 
   useEffect(() => {
+    if (!isPro) {
+      setLoading(false);
+      return;
+    }
     let isCancelled = false;
     setLoading(true);
     setError(null);
@@ -189,7 +210,7 @@ export default function App() {
     return () => {
       isCancelled = true;
     };
-  }, [tickers, period, investment, numSlots, refreshKey]);
+  }, [tickers, period, investment, numSlots, refreshKey, isPro]);
 
   // Client-side instant recalculation: 0ms latency, no spinner, no page reload, pure butter-smooth animation!
   const navData = useMemo(() => {
@@ -454,7 +475,25 @@ export default function App() {
                 setPurchasesOpen(false);
               }}
             >
-              <span className="btn-label">📊 Estrategias</span>
+              <span className="btn-label" style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                📊 Estrategias
+                {!isPro && (
+                  <span
+                    style={{
+                      background: "rgba(168, 85, 247, 0.2)",
+                      border: "1px solid rgba(168, 85, 247, 0.5)",
+                      color: "#c084fc",
+                      fontSize: "0.62rem",
+                      fontWeight: 800,
+                      padding: "1px 5px",
+                      borderRadius: 4,
+                      letterSpacing: "0.04em",
+                    }}
+                  >
+                    🔒 PRO
+                  </span>
+                )}
+              </span>
               <span className="active-badge">{currentStrategyLabel}</span>
               <span className="chevron">{stratOpen ? "▲" : "▼"}</span>
             </button>
@@ -1091,6 +1130,8 @@ export default function App() {
           <FixedIncomeHub />
         ) : (purchasePortfolios || []).some((p) => p.id === mode) ? (
           <IndividualPurchasesView portfolioId={mode} onSelectPortfolio={(id) => setMode(id)} />
+        ) : !isPro && isStrategyMode ? (
+          <StrategyPaywall onOpenAuth={openAuthModal} />
         ) : mode === "live" ? (
           <LiveMode key={refreshKey} navData={navData} investment={investment} />
         ) : customStrategies?.some((s) => s.id === mode) ? (
@@ -2418,8 +2459,8 @@ export default function App() {
           }}
           aria-label="Estrategias"
         >
-          <span className="nav-icon">📊</span>
-          <span>Estrategias</span>
+          <span className="nav-icon">{isPro ? "📊" : "🔒"}</span>
+          <span>{isPro ? "Estrategias" : "PRO"}</span>
         </button>
 
         {/* 2. Compras */}

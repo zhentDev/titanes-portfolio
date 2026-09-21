@@ -179,6 +179,14 @@ def init_db():
         except duckdb.Error as e:
             print(f"Rebalance tickers migration error: {e}")
 
+        # Migration: Add is_pro column to users if missing
+        try:
+            user_cols = [row[1] for row in con.execute("PRAGMA table_info('users')").fetchall()]
+            if "is_pro" not in user_cols:
+                con.execute("ALTER TABLE users ADD COLUMN is_pro BOOLEAN DEFAULT FALSE")
+        except duckdb.Error as e:
+            print(f"Users is_pro migration error: {e}")
+
 
 # ── User Operations ───────────────────────────────────────────────────────────
 
@@ -186,7 +194,7 @@ def get_user_by_email(email: str) -> Optional[dict]:
     with get_connection() as con:
         row = con.execute(
             """
-            SELECT id, email, name, password_hash, provider, provider_id, avatar_url, created_at
+            SELECT id, email, name, password_hash, provider, provider_id, avatar_url, created_at, is_pro
             FROM users
             WHERE LOWER(TRIM(email)) = LOWER(TRIM(?))
             """,
@@ -194,6 +202,7 @@ def get_user_by_email(email: str) -> Optional[dict]:
         ).fetchone()
         if not row:
             return None
+        is_owner = bool(row[1] and row[1].lower().strip() == "caballerojesus703@hotmail.com")
         return {
             "id": row[0],
             "email": row[1],
@@ -203,6 +212,7 @@ def get_user_by_email(email: str) -> Optional[dict]:
             "provider_id": row[5],
             "avatar_url": row[6],
             "created_at": row[7].isoformat() if hasattr(row[7], "isoformat") else str(row[7]),
+            "is_pro": bool(row[8] or is_owner),
         }
 
 
@@ -210,7 +220,7 @@ def get_user_by_id(user_id: str) -> Optional[dict]:
     with get_connection() as con:
         row = con.execute(
             """
-            SELECT id, email, name, password_hash, provider, provider_id, avatar_url, created_at
+            SELECT id, email, name, password_hash, provider, provider_id, avatar_url, created_at, is_pro
             FROM users
             WHERE id = ?
             """,
@@ -218,6 +228,7 @@ def get_user_by_id(user_id: str) -> Optional[dict]:
         ).fetchone()
         if not row:
             return None
+        is_owner = bool(row[1] and row[1].lower().strip() == "caballerojesus703@hotmail.com")
         return {
             "id": row[0],
             "email": row[1],
@@ -227,6 +238,7 @@ def get_user_by_id(user_id: str) -> Optional[dict]:
             "provider_id": row[5],
             "avatar_url": row[6],
             "created_at": row[7].isoformat() if hasattr(row[7], "isoformat") else str(row[7]),
+            "is_pro": bool(row[8] or is_owner),
         }
 
 
@@ -321,26 +333,26 @@ def add_rebalance(
 
 
 def get_all_rebalances(strategy_id: str = "historical", user_id: Optional[str] = None) -> list[dict]:
+    # Proprietary quant strategies ('historical', 'strat_mm20', etc.) and custom strategies
+    # are restricted to PRO subscribers and the platform owner.
+    # Non-authenticated or free users do not receive proprietary backtest/rebalance data.
+    if not user_id:
+        return []
+
+    # Check if user is PRO / owner
+    user = get_user_by_id(user_id)
+    if not user or not user.get("is_pro"):
+        return []
+
     with get_connection() as con:
-        if user_id:
-            results = con.execute("""
-                SELECT r.rebalance_date, r.cash_added, list(t.ticker) as tickers
-                FROM rebalances r
-                LEFT JOIN rebalance_tickers t ON r.rebalance_date = t.rebalance_date AND r.strategy_id = t.strategy_id
-                WHERE r.strategy_id = ? AND (r.user_id = ? OR r.user_id IS NULL)
-                GROUP BY r.rebalance_date, r.cash_added
-                ORDER BY r.rebalance_date ASC
-            """, [strategy_id, user_id]).fetchall()
-        else:
-            # Unauthenticated: only return system/global baseline rebalances (where user_id IS NULL)
-            results = con.execute("""
-                SELECT r.rebalance_date, r.cash_added, list(t.ticker) as tickers
-                FROM rebalances r
-                LEFT JOIN rebalance_tickers t ON r.rebalance_date = t.rebalance_date AND r.strategy_id = t.strategy_id
-                WHERE r.strategy_id = ? AND r.user_id IS NULL
-                GROUP BY r.rebalance_date, r.cash_added
-                ORDER BY r.rebalance_date ASC
-            """, [strategy_id]).fetchall()
+        results = con.execute("""
+            SELECT r.rebalance_date, r.cash_added, list(t.ticker) as tickers
+            FROM rebalances r
+            LEFT JOIN rebalance_tickers t ON r.rebalance_date = t.rebalance_date AND r.strategy_id = t.strategy_id
+            WHERE r.strategy_id = ? AND (r.user_id = ? OR r.user_id IS NULL)
+            GROUP BY r.rebalance_date, r.cash_added
+            ORDER BY r.rebalance_date ASC
+        """, [strategy_id, user_id]).fetchall()
 
         rebalances = []
         for row in results:
@@ -399,17 +411,21 @@ def update_rebalance_date(old_date: date, new_date: date, strategy_id: str = "hi
 # ── Custom Strategies ─────────────────────────────────────────────────────────
 
 def get_custom_strategies(user_id: Optional[str] = None) -> list[dict]:
+    if not user_id:
+        return []
+
+    # Custom algorithmic strategies are locked for PRO members and owner
+    user = get_user_by_id(user_id)
+    if not user or not user.get("is_pro"):
+        return []
+
     with get_connection() as con:
-        if user_id:
-            rows = con.execute("""
-                SELECT id, name, country, num_slots, capital, active_invested, benchmark, color, is_system, is_real_money, created_at
-                FROM custom_strategies
-                WHERE user_id = ?
-                ORDER BY created_at ASC
-            """, [user_id]).fetchall()
-        else:
-            # Unauthenticated: no strategies visible — each user sees only their own
-            rows = []
+        rows = con.execute("""
+            SELECT id, name, country, num_slots, capital, active_invested, benchmark, color, is_system, is_real_money, created_at
+            FROM custom_strategies
+            WHERE user_id = ?
+            ORDER BY created_at ASC
+        """, [user_id]).fetchall()
 
         strategies = []
         for r in rows:

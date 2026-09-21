@@ -47,6 +47,7 @@ class OAuthRequest(BaseModel):
 
 
 def _clean_user_dict(u: dict) -> dict:
+    is_owner = bool(u.get("email") and u["email"].lower().strip() == "caballerojesus703@hotmail.com")
     return {
         "id": u["id"],
         "email": u["email"],
@@ -54,6 +55,7 @@ def _clean_user_dict(u: dict) -> dict:
         "provider": u.get("provider", "local"),
         "avatar_url": u.get("avatar_url"),
         "created_at": u.get("created_at"),
+        "is_pro": bool(u.get("is_pro") or is_owner),
     }
 
 
