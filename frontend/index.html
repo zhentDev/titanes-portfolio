@@ -44,12 +44,13 @@
       });
     })();
     </script>
-    <style>
-    /* Force Monetag ads to bottom-left */
-    iframe[src*="nap5k"], iframe[src*="n6wxm"], [id*="monetag"], .monetag, .in-page-push {
+    /* Force Monetag ads and push notifications to bottom-left corner */
+    iframe[src*="nap5k"], iframe[src*="n6wxm"], [id*="monetag"], .monetag, .in-page-push, [class*="in-page-push"], div[id*="zone_"], div[data-zone] {
       position: fixed !important;
-      bottom: 0 !important;
-      left: 0 !important;
+      bottom: 16px !important;
+      left: 16px !important;
+      top: auto !important;
+      right: auto !important;
       z-index: 10000 !important;
     }
     </style>

@@ -765,7 +765,8 @@ export default function App() {
                   right: 0,
                   top: "100%",
                   marginTop: 6,
-                  minWidth: 200,
+                  minWidth: 240,
+                  maxWidth: 320,
                   zIndex: 1000,
                   background: "var(--bg-surface)",
                   border: "1px solid var(--border)",
@@ -776,7 +777,7 @@ export default function App() {
               >
                 <div style={{ padding: "8px 12px", borderBottom: "1px solid var(--border)", marginBottom: 6 }}>
                   <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "var(--text-primary)" }}>{user.name || "Usuario"}</div>
-                  <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{user.email}</div>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", wordBreak: "break-all", whiteSpace: "normal" }}>{user.email}</div>
                 </div>
                 <button
                   type="button"
