@@ -167,3 +167,5 @@ websockets==17.1
     #   yfinance
 yfinance==0.2.61
     # via titanes-portfolio-backend (backend/pyproject.toml)
+psycopg2-binary>=2.9.9
+    # via titanes-portfolio-backend (backend/pyproject.toml)

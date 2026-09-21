@@ -1,11 +1,69 @@
 from datetime import date
 import json
+import os
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 import duckdb
 
 DB_PATH = str(Path(__file__).resolve().parent.parent / "titanes.duckdb")
 USERS_BACKUP_PATH = Path(__file__).resolve().parent.parent / "data" / "users_backup.json"
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+_pg_pool = None
+_pg_pool_failed = False
+
+
+def get_pg_connection():
+    global _pg_pool, _pg_pool_failed
+    if not DATABASE_URL or _pg_pool_failed:
+        return None
+    if _pg_pool is None:
+        try:
+            from psycopg2.pool import ThreadedConnectionPool
+            clean_url = DATABASE_URL.strip()
+            if clean_url.startswith("postgres://"):
+                clean_url = clean_url.replace("postgres://", "postgresql://", 1)
+            _pg_pool = ThreadedConnectionPool(minconn=1, maxconn=10, dsn=clean_url, connect_timeout=5)
+            print("[POSTGRES] Connected to PostgreSQL pool successfully.")
+        except Exception as e:
+            print(f"[POSTGRES] Error initializing PostgreSQL pool: {e}")
+            _pg_pool = None
+            _pg_pool_failed = True
+            return None
+    try:
+        return _pg_pool.getconn()
+    except Exception as e:
+        print(f"[POSTGRES] Error getting connection from pool: {e}")
+        return None
+
+
+def release_pg_connection(conn):
+    global _pg_pool
+    if _pg_pool and conn:
+        try:
+            _pg_pool.putconn(conn)
+        except Exception:
+            pass
+
+
+@contextmanager
+def pg_session():
+    conn = get_pg_connection()
+    if not conn:
+        yield None
+        return
+    try:
+        yield conn
+        conn.commit()
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise e
+    finally:
+        release_pg_connection(conn)
 
 
 def get_connection():
@@ -213,6 +271,33 @@ def init_db():
         # Auto-Restore users from persistent JSON backup (to prevent Docker rebuild wipes)
         _restore_users_from_backup(con)
 
+        # PostgreSQL initialization and auto-migration
+        if DATABASE_URL:
+            try:
+                with pg_session() as pg_conn:
+                    if pg_conn:
+                        with pg_conn.cursor() as cur:
+                            cur.execute("""
+                                CREATE TABLE IF NOT EXISTS users (
+                                    id VARCHAR(64) PRIMARY KEY,
+                                    email VARCHAR(255) UNIQUE NOT NULL,
+                                    name VARCHAR(255),
+                                    password_hash TEXT,
+                                    provider VARCHAR(64) DEFAULT 'local',
+                                    provider_id VARCHAR(255),
+                                    avatar_url TEXT,
+                                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                    is_pro BOOLEAN DEFAULT FALSE
+                                );
+                            """)
+                        print("[POSTGRES] Initialized users table in PostgreSQL.")
+                        _migrate_users_to_postgres_if_empty(pg_conn)
+            except Exception as e:
+                print(f"[POSTGRES] init_db error: {e}")
+
+            # Auto-sync PostgreSQL users into local DuckDB so local joins continue working
+            _sync_postgres_users_to_duckdb(con)
+
 
 # ── Persistent User Backup & Fusion ──────────────────────────────────────────
 
@@ -281,9 +366,137 @@ def _restore_users_from_backup(con):
         print(f"[RESTORE] Error restoring users from backup: {e}")
 
 
+def _migrate_users_to_postgres_if_empty(conn):
+    """If PostgreSQL users table is empty, auto-seed with users from backup or DuckDB."""
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM users")
+            count = cur.fetchone()[0]
+            if count > 0:
+                return
+
+            print("[POSTGRES] users table is empty. Migrating users from backup/DuckDB...")
+            users_to_insert = []
+            if USERS_BACKUP_PATH.exists():
+                try:
+                    with open(USERS_BACKUP_PATH, "r", encoding="utf-8") as f:
+                        users_to_insert = json.load(f)
+                except Exception as e:
+                    print(f"[POSTGRES] Error loading users_backup.json: {e}")
+
+            if not users_to_insert:
+                try:
+                    with get_connection() as duck_con:
+                        rows = duck_con.execute("""
+                            SELECT id, email, name, password_hash, provider, provider_id, avatar_url, created_at, is_pro
+                            FROM users
+                        """).fetchall()
+                        for r in rows:
+                            users_to_insert.append({
+                                "id": r[0],
+                                "email": r[1],
+                                "name": r[2],
+                                "password_hash": r[3],
+                                "provider": r[4],
+                                "provider_id": r[5],
+                                "avatar_url": r[6],
+                                "created_at": r[7].isoformat() if hasattr(r[7], "isoformat") else str(r[7]),
+                                "is_pro": bool(r[8]),
+                            })
+                except Exception as e:
+                    print(f"[POSTGRES] Error reading users from DuckDB: {e}")
+
+            for u in users_to_insert:
+                cur.execute("""
+                    INSERT INTO users (id, email, name, password_hash, provider, provider_id, avatar_url, created_at, is_pro)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (email) DO NOTHING
+                """, [
+                    u["id"],
+                    u["email"].lower().strip(),
+                    u.get("name"),
+                    u.get("password_hash"),
+                    u.get("provider", "local"),
+                    u.get("provider_id"),
+                    u.get("avatar_url"),
+                    u.get("created_at"),
+                    bool(u.get("is_pro", False)),
+                ])
+            print(f"[POSTGRES] Migrated {len(users_to_insert)} user(s) to PostgreSQL.")
+    except Exception as e:
+        print(f"[POSTGRES] Migration error: {e}")
+
+
+def _sync_postgres_users_to_duckdb(duck_con):
+    """Sync all users from PostgreSQL into DuckDB so local joins work."""
+    if not DATABASE_URL:
+        return
+    try:
+        with pg_session() as conn:
+            if not conn:
+                return
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT id, email, name, password_hash, provider, provider_id, avatar_url, created_at, is_pro
+                    FROM users
+                """)
+                pg_users = cur.fetchall()
+            for r in pg_users:
+                duck_con.execute("""
+                    INSERT INTO users (id, email, name, password_hash, provider, provider_id, avatar_url, created_at, is_pro)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT (email) DO UPDATE SET
+                        name = COALESCE(EXCLUDED.name, users.name),
+                        password_hash = COALESCE(EXCLUDED.password_hash, users.password_hash),
+                        is_pro = COALESCE(EXCLUDED.is_pro, users.is_pro)
+                """, [
+                    r[0],
+                    r[1].lower().strip() if r[1] else "",
+                    r[2],
+                    r[3],
+                    r[4] or "local",
+                    r[5],
+                    r[6],
+                    r[7],
+                    bool(r[8]),
+                ])
+            print(f"[POSTGRES->DUCKDB] Synchronized {len(pg_users)} user(s) from PostgreSQL to DuckDB.")
+    except Exception as e:
+        print(f"[POSTGRES->DUCKDB] Sync error: {e}")
+
+
 # ── User Operations ───────────────────────────────────────────────────────────
 
 def get_user_by_email(email: str) -> Optional[dict]:
+    clean_email = email.lower().strip()
+    if DATABASE_URL:
+        try:
+            with pg_session() as conn:
+                if conn:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            SELECT id, email, name, password_hash, provider, provider_id, avatar_url, created_at, is_pro
+                            FROM users
+                            WHERE LOWER(TRIM(email)) = %s
+                        """, [clean_email])
+                        row = cur.fetchone()
+                        if row:
+                            is_owner = bool(row[1] and row[1].lower().strip() == "caballerojesus703@hotmail.com")
+                            return {
+                                "id": row[0],
+                                "email": row[1],
+                                "name": row[2],
+                                "password_hash": row[3],
+                                "provider": row[4],
+                                "provider_id": row[5],
+                                "avatar_url": row[6],
+                                "created_at": row[7].isoformat() if hasattr(row[7], "isoformat") else str(row[7]),
+                                "is_pro": bool(row[8] or is_owner),
+                            }
+        except Exception as e:
+            print(f"[POSTGRES] get_user_by_email error: {e}")
+
+    # Fallback to DuckDB
     with get_connection() as con:
         row = con.execute(
             """
@@ -291,7 +504,7 @@ def get_user_by_email(email: str) -> Optional[dict]:
             FROM users
             WHERE LOWER(TRIM(email)) = LOWER(TRIM(?))
             """,
-            [email],
+            [clean_email],
         ).fetchone()
         if not row:
             return None
@@ -310,6 +523,34 @@ def get_user_by_email(email: str) -> Optional[dict]:
 
 
 def get_user_by_id(user_id: str) -> Optional[dict]:
+    if DATABASE_URL:
+        try:
+            with pg_session() as conn:
+                if conn:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            SELECT id, email, name, password_hash, provider, provider_id, avatar_url, created_at, is_pro
+                            FROM users
+                            WHERE id = %s
+                        """, [user_id])
+                        row = cur.fetchone()
+                        if row:
+                            is_owner = bool(row[1] and row[1].lower().strip() == "caballerojesus703@hotmail.com")
+                            return {
+                                "id": row[0],
+                                "email": row[1],
+                                "name": row[2],
+                                "password_hash": row[3],
+                                "provider": row[4],
+                                "provider_id": row[5],
+                                "avatar_url": row[6],
+                                "created_at": row[7].isoformat() if hasattr(row[7], "isoformat") else str(row[7]),
+                                "is_pro": bool(row[8] or is_owner),
+                            }
+        except Exception as e:
+            print(f"[POSTGRES] get_user_by_id error: {e}")
+
+    # Fallback to DuckDB
     with get_connection() as con:
         row = con.execute(
             """
@@ -336,20 +577,58 @@ def get_user_by_id(user_id: str) -> Optional[dict]:
 
 
 def create_user(user_data: dict) -> dict:
+    email = user_data["email"].lower().strip()
+    name = user_data.get("name") or email.split("@")[0]
+    pwd_hash = user_data.get("password_hash")
+    provider = user_data.get("provider", "local")
+    provider_id = user_data.get("provider_id")
+    avatar_url = user_data.get("avatar_url")
+    is_pro = bool(user_data.get("is_pro", False))
+
+    if DATABASE_URL:
+        try:
+            with pg_session() as conn:
+                if conn:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            INSERT INTO users (id, email, name, password_hash, provider, provider_id, avatar_url, is_pro)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                            ON CONFLICT (email) DO UPDATE SET
+                                name = EXCLUDED.name,
+                                password_hash = EXCLUDED.password_hash,
+                                is_pro = EXCLUDED.is_pro
+                        """, [
+                            user_data["id"],
+                            email,
+                            name,
+                            pwd_hash,
+                            provider,
+                            provider_id,
+                            avatar_url,
+                            is_pro,
+                        ])
+                    print(f"[POSTGRES] Saved user {email} in PostgreSQL.")
+        except Exception as e:
+            print(f"[POSTGRES] create_user error: {e}")
+
+    # Mirror to DuckDB and local JSON backup
     with get_connection() as con:
         con.execute(
             """
             INSERT INTO users (id, email, name, password_hash, provider, provider_id, avatar_url)
             VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (email) DO UPDATE SET
+                name = EXCLUDED.name,
+                password_hash = EXCLUDED.password_hash
             """,
             [
                 user_data["id"],
-                user_data["email"].lower().strip(),
-                user_data.get("name") or user_data["email"].split("@")[0],
-                user_data.get("password_hash"),
-                user_data.get("provider", "local"),
-                user_data.get("provider_id"),
-                user_data.get("avatar_url"),
+                email,
+                name,
+                pwd_hash,
+                provider,
+                provider_id,
+                avatar_url,
             ],
         )
         _backup_users_to_disk(con)
@@ -357,6 +636,18 @@ def create_user(user_data: dict) -> dict:
 
 
 def count_users() -> int:
+    if DATABASE_URL:
+        try:
+            with pg_session() as conn:
+                if conn:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT COUNT(*) FROM users")
+                        row = cur.fetchone()
+                        if row:
+                            return row[0]
+        except Exception as e:
+            print(f"[POSTGRES] count_users error: {e}")
+
     with get_connection() as con:
         row = con.execute("SELECT COUNT(*) FROM users").fetchone()
         return row[0] if row else 0
