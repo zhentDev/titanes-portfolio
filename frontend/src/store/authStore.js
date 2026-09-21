@@ -42,6 +42,11 @@ export const useAuthStore = create((set, get) => ({
       localStorage.setItem("titanes_auth_token", res.token);
       set({ token: res.token, user: res.user, isAuthModalOpen: false });
       toast.success(`¡Bienvenido de nuevo, ${res.user.name || res.user.email}!`, { icon: "👋" });
+      if (typeof window !== "undefined") {
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      }
       return true;
     } catch (err) {
       toast.error(err.message || "Error al iniciar sesión");
@@ -64,6 +69,11 @@ export const useAuthStore = create((set, get) => ({
         });
       } else {
         toast.success(`¡Cuenta creada con éxito! Bienvenido, ${res.user.name}`, { icon: "🚀" });
+      }
+      if (typeof window !== "undefined") {
+        setTimeout(() => {
+          window.location.reload();
+        }, 600);
       }
       return true;
     } catch (err) {
@@ -92,7 +102,14 @@ export const useAuthStore = create((set, get) => ({
 
   logout: () => {
     localStorage.removeItem("titanes_auth_token");
+    localStorage.removeItem("titanes_fixed_income_store");
+    localStorage.removeItem("titanes-portfolio");
     set({ token: null, user: null });
     toast("Sesión cerrada correctamente", { icon: "🔒" });
+    if (typeof window !== "undefined") {
+      setTimeout(() => {
+        window.location.reload();
+      }, 400);
+    }
   },
 }));

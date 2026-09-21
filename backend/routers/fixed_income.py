@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -72,67 +72,8 @@ DEFAULT_FIXED_INCOME_DATA = {
             "createdAt": "2025-01-01T00:00:00Z"
         }
     ],
-    "accounts": [
-        {
-            "id": "acc_nu_cajita",
-            "entityId": "ent_nu",
-            "name": "Cajita de Ahorro Nu",
-            "type": "pocket",
-            "currency": "COP",
-            "balance": 5000000.0,
-            "interestRateEA": 12.0,
-            "isTaxExemptGMF": True,
-            "rateHistory": [
-                {"date": "2024-10-01", "rateEA": 13.0},
-                {"date": "2025-01-15", "rateEA": 12.0}
-            ],
-            "createdAt": "2025-01-01T00:00:00Z"
-        },
-        {
-            "id": "acc_lulo_pocket",
-            "entityId": "ent_lulo",
-            "name": "Bolsillo Lulo",
-            "type": "pocket",
-            "currency": "COP",
-            "balance": 2500000.0,
-            "interestRateEA": 13.0,
-            "isTaxExemptGMF": True,
-            "rateHistory": [
-                {"date": "2024-11-01", "rateEA": 13.0}
-            ],
-            "createdAt": "2025-01-01T00:00:00Z"
-        },
-        {
-            "id": "acc_ibkr_cash",
-            "entityId": "ent_ibkr",
-            "name": "USD Cash Yield",
-            "type": "wallet",
-            "currency": "USD",
-            "balance": 1500.0,
-            "interestRateEA": 4.83,
-            "isTaxExemptGMF": False,
-            "rateHistory": [
-                {"date": "2025-01-01", "rateEA": 4.83}
-            ],
-            "createdAt": "2025-01-01T00:00:00Z"
-        }
-    ],
-    "cdts": [
-        {
-            "id": "cdt_pibank_180",
-            "entityId": "ent_pibank",
-            "name": "CDT Digital 180 Días",
-            "capital": 10000000.0,
-            "currency": "COP",
-            "interestRateEA": 11.5,
-            "termDays": 180,
-            "startDate": "2025-01-15",
-            "maturityDate": "2025-07-14",
-            "reteFuentePct": 4.0,
-            "isAutoRenew": False,
-            "createdAt": "2025-01-15T00:00:00Z"
-        }
-    ],
+    "accounts": [],
+    "cdts": [],
     "transactions": []
 }
 

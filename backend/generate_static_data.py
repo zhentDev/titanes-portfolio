@@ -80,45 +80,14 @@ def generate_static():
     # Export purchases data and custom strategies from DuckDB for static hosting
     try:
         from services.db import get_connection, get_custom_strategies
-        with get_connection() as con:
-            port_rows = con.execute(
-                "SELECT id, name, is_plan, plan_config, asset_currency, local_currency, annual_inflation_rate, use_auto_col_inflation FROM purchase_portfolios"
-            ).fetchall()
-            lot_rows = con.execute(
-                "SELECT id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price, purchase_time FROM individual_purchases"
-            ).fetchall()
-
+        # Export clean empty purchases data for static hosting (private purchases are served only authenticated)
         purchases_payload = {
-            "purchasePortfolios": [
-                {
-                    "id": r[0],
-                    "name": r[1],
-                    "isPlan": bool(r[2]),
-                    "planConfig": json.loads(r[3]) if r[3] else None,
-                    "assetCurrency": r[4] or "USD",
-                    "localCurrency": r[5] or "COP",
-                    "inflationRate": r[6] or 0.0,
-                    "useAutoColInflation": bool(r[7]),
-                }
-                for r in port_rows
-            ],
-            "individualPurchases": [
-                {
-                    "id": r[0],
-                    "portfolioId": r[1],
-                    "ticker": r[2],
-                    "date": r[3].isoformat() if hasattr(r[3], "isoformat") else str(r[3]),
-                    "purchasePrice": r[4],
-                    "shares": r[5],
-                    "manualCurrentPrice": r[6],
-                    "purchaseTime": r[7],
-                }
-                for r in lot_rows
-            ],
+            "purchasePortfolios": [],
+            "individualPurchases": [],
         }
         with open(out_dir / "purchases.json", "w", encoding="utf-8") as f:
             json.dump(purchases_payload, f, indent=2)
-        print("[STATIC GEN] Guardado: purchases.json")
+        print("[STATIC GEN] Guardado: purchases.json (plantilla limpia)")
 
         # Export ALL strategies for static hosting fallback (owner's data)
         with get_connection() as con:
