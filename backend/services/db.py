@@ -1,9 +1,11 @@
 from datetime import date
+import json
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 import duckdb
 
 DB_PATH = str(Path(__file__).resolve().parent.parent / "titanes.duckdb")
+USERS_BACKUP_PATH = Path(__file__).resolve().parent.parent / "data" / "users_backup.json"
 
 
 def get_connection():
@@ -187,6 +189,76 @@ def init_db():
         except duckdb.Error as e:
             print(f"Users is_pro migration error: {e}")
 
+        # Auto-Restore users from persistent JSON backup (to prevent Docker rebuild wipes)
+        _restore_users_from_backup(con)
+
+
+# ── Persistent User Backup & Fusion ──────────────────────────────────────────
+
+def _backup_users_to_disk(con=None):
+    """Back up all registered users to a persistent JSON file."""
+    try:
+        def _dump(c):
+            rows = c.execute("""
+                SELECT id, email, name, password_hash, provider, provider_id, avatar_url, created_at, is_pro
+                FROM users
+            """).fetchall()
+            users_list = []
+            for r in rows:
+                users_list.append({
+                    "id": r[0],
+                    "email": r[1],
+                    "name": r[2],
+                    "password_hash": r[3],
+                    "provider": r[4],
+                    "provider_id": r[5],
+                    "avatar_url": r[6],
+                    "created_at": r[7].isoformat() if hasattr(r[7], "isoformat") else str(r[7]),
+                    "is_pro": bool(r[8]),
+                })
+            USERS_BACKUP_PATH.parent.mkdir(parents=True, exist_ok=True)
+            with open(USERS_BACKUP_PATH, "w", encoding="utf-8") as f:
+                json.dump(users_list, f, indent=2)
+
+        if con:
+            _dump(con)
+        else:
+            with get_connection() as c:
+                _dump(c)
+    except Exception as e:
+        print(f"[BACKUP] Error backing up users: {e}")
+
+
+def _restore_users_from_backup(con):
+    """Restore users from JSON backup on container start (ON CONFLICT DO NOTHING)."""
+    if not USERS_BACKUP_PATH.exists():
+        return
+    try:
+        with open(USERS_BACKUP_PATH, "r", encoding="utf-8") as f:
+            users_list = json.load(f)
+        for u in users_list:
+            con.execute("""
+                INSERT INTO users (id, email, name, password_hash, provider, provider_id, avatar_url, created_at, is_pro)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT (email) DO UPDATE SET
+                    name = COALESCE(EXCLUDED.name, users.name),
+                    password_hash = COALESCE(EXCLUDED.password_hash, users.password_hash),
+                    is_pro = COALESCE(EXCLUDED.is_pro, users.is_pro)
+            """, [
+                u["id"],
+                u["email"].lower().strip(),
+                u.get("name"),
+                u.get("password_hash"),
+                u.get("provider", "local"),
+                u.get("provider_id"),
+                u.get("avatar_url"),
+                u.get("created_at"),
+                bool(u.get("is_pro", False)),
+            ])
+        print(f"[RESTORE] Synchronized {len(users_list)} user(s) from persistent backup.")
+    except Exception as e:
+        print(f"[RESTORE] Error restoring users from backup: {e}")
+
 
 # ── User Operations ───────────────────────────────────────────────────────────
 
@@ -259,6 +331,7 @@ def create_user(user_data: dict) -> dict:
                 user_data.get("avatar_url"),
             ],
         )
+        _backup_users_to_disk(con)
     return get_user_by_id(user_data["id"])
 
 
