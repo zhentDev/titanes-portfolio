@@ -37,5 +37,18 @@
     "isSystem": false,
     "isRealMoney": false,
     "createdAt": "2026-09-18T23:33:21.336019"
+  },
+  {
+    "id": "strat_mm20",
+    "name": "MM20 Mid-caps PRO",
+    "country": "\ud83c\uddfa\ud83c\uddf8",
+    "numSlots": 20,
+    "capital": 1000.0,
+    "activeInvested": 250.0,
+    "benchmark": "S&P MidCap 400",
+    "color": "#10b981",
+    "isSystem": true,
+    "isRealMoney": false,
+    "createdAt": "2026-09-21T09:26:21.282334"
   }
 ]

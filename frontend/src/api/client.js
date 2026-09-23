@@ -107,6 +107,16 @@ async function fetchWithFallback(endpoint, staticFile, options = {}) {
 
     if (res.ok) {
       resultData = await res.json();
+      // If backend responded with an empty shell but a staticFile exists, fallback to staticFile
+      if (staticFile && resultData && typeof resultData === "object") {
+        const isEmptyAccounts = Array.isArray(resultData.accounts) && resultData.accounts.length === 0;
+        const isEmptyCDTs = Array.isArray(resultData.cdts) && resultData.cdts.length === 0;
+        const isEmptyInflows = Array.isArray(resultData.inflows) && resultData.inflows.length === 0;
+        const isEmptyNeeds = Array.isArray(resultData.needs) && resultData.needs.length === 0;
+        if ((isEmptyAccounts && isEmptyCDTs) || (isEmptyInflows && isEmptyNeeds)) {
+          resultData = null; // trigger static fallback below
+        }
+      }
     }
   } catch {
     // Backend offline / waking up

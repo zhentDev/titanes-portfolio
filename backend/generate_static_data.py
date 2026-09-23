@@ -71,6 +71,13 @@ def generate_static():
             df.write(sf.read())
         print("[STATIC GEN] Guardado: fixed_income.json")
 
+    # Copy cash flow data if present
+    cash_flow_src = backend_dir / "data" / "cash_flow.json"
+    if cash_flow_src.exists():
+        with open(cash_flow_src, "r", encoding="utf-8") as sf, open(out_dir / "cash_flow.json", "w", encoding="utf-8") as df:
+            df.write(sf.read())
+        print("[STATIC GEN] Guardado: cash_flow.json")
+
     hist_rates_src = backend_dir / "data" / "historical_rates.json"
     if hist_rates_src.exists():
         with open(hist_rates_src, "r", encoding="utf-8") as sf, open(out_dir / "historical_rates.json", "w", encoding="utf-8") as df:

@@ -84,14 +84,34 @@ def load_cash_flow_db(user_id: Optional[str] = None) -> dict[str, Any]:
             except Exception:
                 pass
 
-    # For new users or when file doesn't exist, seed with clean empty defaults
+    # For new users or when file doesn't exist, seed with owner data if user_id == OWNER_ID, else clean defaults
     if not target_file.exists():
-        initial_data = DEFAULT_CASH_FLOW_DATA.copy()
+        initial_data = None
+        if (not user_id or user_id == OWNER_ID) and DATA_FILE.exists():
+            try:
+                with open(DATA_FILE, "r", encoding="utf-8") as f:
+                    candidate = json.load(f)
+                if candidate.get("inflows") or candidate.get("needs") or candidate.get("wants") or candidate.get("wealth"):
+                    initial_data = candidate
+            except Exception:
+                pass
+        if not initial_data:
+            initial_data = DEFAULT_CASH_FLOW_DATA.copy()
         save_cash_flow_db(initial_data, user_id)
         return initial_data
     try:
         with open(target_file, "r", encoding="utf-8") as f:
             data = json.load(f)
+            # If owner file exists but is empty, seed from DATA_FILE
+            if (not user_id or user_id == OWNER_ID) and not (data.get("inflows") or data.get("needs") or data.get("wants") or data.get("wealth")) and DATA_FILE.exists():
+                try:
+                    with open(DATA_FILE, "r", encoding="utf-8") as df:
+                        seeded = json.load(df)
+                    if seeded.get("inflows") or seeded.get("needs") or seeded.get("wants") or seeded.get("wealth"):
+                        save_cash_flow_db(seeded, user_id)
+                        data = seeded
+                except Exception:
+                    pass
             # Ensure critical keys exist
             for k, v in DEFAULT_CASH_FLOW_DATA.items():
                 if k not in data or data[k] is None:

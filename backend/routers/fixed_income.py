@@ -118,14 +118,35 @@ def load_fixed_income_db(user_id: str | None = None) -> dict[str, Any]:
             except Exception:
                 pass
 
-    # If file doesn't exist, seed with clean empty defaults (for isolated new users)
+    # If file doesn't exist, seed with owner data if uid == OWNER_ID, else clean empty defaults
     if not target_file.exists():
-        initial_data = DEFAULT_FIXED_INCOME_DATA.copy()
+        initial_data = None
+        if (not uid or uid == OWNER_ID) and DATA_FILE.exists():
+            try:
+                with open(DATA_FILE, encoding="utf-8") as f:
+                    candidate = json.load(f)
+                if candidate.get("accounts") or candidate.get("cdts"):
+                    initial_data = candidate
+            except Exception:
+                pass
+        if not initial_data:
+            initial_data = DEFAULT_FIXED_INCOME_DATA.copy()
         save_fixed_income_db(initial_data, uid)
         return initial_data
     try:
         with open(target_file, encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+            # If owner file exists but is empty (e.g. wiped or initialized with empty template), seed from DATA_FILE
+            if (not uid or uid == OWNER_ID) and not data.get("accounts") and not data.get("cdts") and DATA_FILE.exists():
+                try:
+                    with open(DATA_FILE, encoding="utf-8") as df:
+                        seeded = json.load(df)
+                    if seeded.get("accounts") or seeded.get("cdts"):
+                        save_fixed_income_db(seeded, uid)
+                        return seeded
+                except Exception:
+                    pass
+            return data
     except Exception:
         return DEFAULT_FIXED_INCOME_DATA.copy()
 
