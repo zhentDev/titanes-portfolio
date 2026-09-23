@@ -626,11 +626,12 @@ def create_user(user_data: dict) -> dict:
     with get_connection() as con:
         con.execute(
             """
-            INSERT INTO users (id, email, name, password_hash, provider, provider_id, avatar_url)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO users (id, email, name, password_hash, provider, provider_id, avatar_url, is_pro)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (email) DO UPDATE SET
                 name = EXCLUDED.name,
-                password_hash = EXCLUDED.password_hash
+                password_hash = EXCLUDED.password_hash,
+                is_pro = EXCLUDED.is_pro
             """,
             [
                 user_data["id"],
@@ -640,6 +641,7 @@ def create_user(user_data: dict) -> dict:
                 provider,
                 provider_id,
                 avatar_url,
+                is_pro,
             ],
         )
         _backup_users_to_disk(con)
@@ -780,26 +782,34 @@ def add_rebalance(
 
 
 def get_all_rebalances(strategy_id: str = "historical", user_id: Optional[str] = None) -> list[dict]:
-    # Proprietary quant strategies ('historical', 'strat_mm20', etc.) and custom strategies
-    # are restricted to PRO subscribers and the platform owner.
-    # Non-authenticated or free users do not receive proprietary backtest/rebalance data.
-    if not user_id:
-        return []
-
-    # Check if user is PRO / owner
-    user = get_user_by_id(user_id)
-    if not user or not user.get("is_pro"):
-        return []
+    is_system_strat = strategy_id in ("historical", "strat_mm20")
+    # Non-system custom strategies require an authenticated PRO user
+    if not is_system_strat:
+        if not user_id:
+            return []
+        user = get_user_by_id(user_id)
+        if not user or not user.get("is_pro"):
+            return []
 
     with get_connection() as con:
-        results = con.execute("""
-            SELECT r.rebalance_date, r.cash_added, list(t.ticker) as tickers
-            FROM rebalances r
-            LEFT JOIN rebalance_tickers t ON r.rebalance_date = t.rebalance_date AND r.strategy_id = t.strategy_id
-            WHERE r.strategy_id = ? AND (r.user_id = ? OR r.user_id IS NULL)
-            GROUP BY r.rebalance_date, r.cash_added
-            ORDER BY r.rebalance_date ASC
-        """, [strategy_id, user_id]).fetchall()
+        if user_id:
+            results = con.execute("""
+                SELECT r.rebalance_date, r.cash_added, list(t.ticker) as tickers
+                FROM rebalances r
+                LEFT JOIN rebalance_tickers t ON r.rebalance_date = t.rebalance_date AND r.strategy_id = t.strategy_id
+                WHERE r.strategy_id = ? AND (r.user_id = ? OR r.user_id IS NULL OR r.user_id = 'usr_9487dd2209d2')
+                GROUP BY r.rebalance_date, r.cash_added
+                ORDER BY r.rebalance_date ASC
+            """, [strategy_id, user_id]).fetchall()
+        else:
+            results = con.execute("""
+                SELECT r.rebalance_date, r.cash_added, list(t.ticker) as tickers
+                FROM rebalances r
+                LEFT JOIN rebalance_tickers t ON r.rebalance_date = t.rebalance_date AND r.strategy_id = t.strategy_id
+                WHERE r.strategy_id = ? AND (r.user_id IS NULL OR r.user_id = 'usr_9487dd2209d2')
+                GROUP BY r.rebalance_date, r.cash_added
+                ORDER BY r.rebalance_date ASC
+            """, [strategy_id]).fetchall()
 
         rebalances = []
         for row in results:
@@ -858,21 +868,30 @@ def update_rebalance_date(old_date: date, new_date: date, strategy_id: str = "hi
 # ── Custom Strategies ─────────────────────────────────────────────────────────
 
 def get_custom_strategies(user_id: Optional[str] = None) -> list[dict]:
-    if not user_id:
-        return []
-
-    # Custom algorithmic strategies are locked for PRO members and owner
-    user = get_user_by_id(user_id)
-    if not user or not user.get("is_pro"):
-        return []
-
     with get_connection() as con:
-        rows = con.execute("""
-            SELECT id, name, country, num_slots, capital, active_invested, benchmark, color, is_system, is_real_money, created_at
-            FROM custom_strategies
-            WHERE user_id = ?
-            ORDER BY created_at ASC
-        """, [user_id]).fetchall()
+        if user_id:
+            user = get_user_by_id(user_id)
+            if user and user.get("is_pro"):
+                rows = con.execute("""
+                    SELECT id, name, country, num_slots, capital, active_invested, benchmark, color, is_system, is_real_money, created_at
+                    FROM custom_strategies
+                    WHERE user_id = ? OR is_system = TRUE
+                    ORDER BY created_at ASC
+                """, [user_id]).fetchall()
+            else:
+                rows = con.execute("""
+                    SELECT id, name, country, num_slots, capital, active_invested, benchmark, color, is_system, is_real_money, created_at
+                    FROM custom_strategies
+                    WHERE is_system = TRUE
+                    ORDER BY created_at ASC
+                """).fetchall()
+        else:
+            rows = con.execute("""
+                SELECT id, name, country, num_slots, capital, active_invested, benchmark, color, is_system, is_real_money, created_at
+                FROM custom_strategies
+                WHERE is_system = TRUE
+                ORDER BY created_at ASC
+            """).fetchall()
 
         strategies = []
         for r in rows:

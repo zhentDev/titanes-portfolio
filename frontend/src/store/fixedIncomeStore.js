@@ -84,10 +84,10 @@ export const useFixedIncomeStore = create(
 // console.log removed: Backend sync start
             try {
               await syncFixedIncomeStateApi({
-                entities: mergedEntities,
-                accounts: mergedAccounts,
-                cdts: mergedCDTs,
-                transactions: mergedTransactions,
+                entities: finalEntities,
+                accounts: finalAccounts,
+                cdts: finalCDTs,
+                transactions: finalTransactions,
               });
               // Sync localStorage → Backend completado
             } catch (syncErr) {

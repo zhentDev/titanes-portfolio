@@ -18,6 +18,7 @@ from services import db
 from services.auth import (
     create_access_token,
     get_current_user,
+    get_optional_current_user,
     hash_password,
     verify_google_oauth_token,
     verify_password,
@@ -223,7 +224,7 @@ def get_me(current_user: dict = Depends(get_current_user)):
 
 
 @router.get("/admin/users")
-def get_admin_users(secret: Optional[str] = None, current_user: Optional[dict] = Depends(get_current_user)):
+def get_admin_users(secret: Optional[str] = None, current_user: Optional[dict] = Depends(get_optional_current_user)):
     """
     Endpoint de confirmación rápida para el propietario.
     Permite ver todos los usuarios registrados si:

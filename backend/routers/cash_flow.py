@@ -44,6 +44,9 @@ DEFAULT_CASH_FLOW_DATA = {
 }
 
 
+OWNER_ID = "usr_9487dd2209d2"
+
+
 def get_user_cash_flow_file(user_id: Optional[str] = None) -> Path:
     if not user_id:
         return DATA_FILE
@@ -55,7 +58,33 @@ def get_user_cash_flow_file(user_id: Optional[str] = None) -> Path:
 def load_cash_flow_db(user_id: Optional[str] = None) -> dict[str, Any]:
     target_file = get_user_cash_flow_file(user_id)
 
-    # For new users or when file doesn't exist, seed with clean empty defaults (never leak owner data)
+    # For public / unauthenticated showcase:
+    if not user_id:
+        owner_file = DATA_DIR / "users" / f"{OWNER_ID}_cash_flow.json"
+        if target_file.exists():
+            try:
+                with open(target_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if data.get("inflows") or data.get("needs") or data.get("wants") or data.get("wealth"):
+                    for k, v in DEFAULT_CASH_FLOW_DATA.items():
+                        if k not in data or data[k] is None:
+                            data[k] = v
+                    return data
+            except Exception:
+                pass
+        # Fallback to owner's cash flow portfolio showcase
+        if owner_file.exists():
+            try:
+                with open(owner_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                for k, v in DEFAULT_CASH_FLOW_DATA.items():
+                    if k not in data or data[k] is None:
+                        data[k] = v
+                return data
+            except Exception:
+                pass
+
+    # For new users or when file doesn't exist, seed with clean empty defaults
     if not target_file.exists():
         initial_data = DEFAULT_CASH_FLOW_DATA.copy()
         save_cash_flow_db(initial_data, user_id)

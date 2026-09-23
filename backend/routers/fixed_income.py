@@ -81,6 +81,9 @@ DEFAULT_FIXED_INCOME_DATA = {
 from services.auth import get_current_user_id
 
 
+OWNER_ID = "usr_9487dd2209d2"
+
+
 def get_user_fixed_income_file(user_id: str | None = None) -> Path:
     uid = user_id or get_current_user_id()
     if not uid:
@@ -93,10 +96,29 @@ def get_user_fixed_income_file(user_id: str | None = None) -> Path:
 def load_fixed_income_db(user_id: str | None = None) -> dict[str, Any]:
     """Load JSON database with failover to default initial state and user isolation."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    target_file = get_user_fixed_income_file(user_id)
     uid = user_id or get_current_user_id()
+    target_file = get_user_fixed_income_file(user_id)
 
-    # If file doesn't exist, seed with clean empty defaults (never leak owner data)
+    # For public / unauthenticated showcase:
+    if not uid:
+        owner_file = DATA_DIR / "users" / f"{OWNER_ID}_fixed_income.json"
+        if target_file.exists():
+            try:
+                with open(target_file, encoding="utf-8") as f:
+                    data = json.load(f)
+                if data.get("accounts") or data.get("cdts"):
+                    return data
+            except Exception:
+                pass
+        # Fallback to owner's fixed income portfolio showcase
+        if owner_file.exists():
+            try:
+                with open(owner_file, encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception:
+                pass
+
+    # If file doesn't exist, seed with clean empty defaults (for isolated new users)
     if not target_file.exists():
         initial_data = DEFAULT_FIXED_INCOME_DATA.copy()
         save_fixed_income_db(initial_data, uid)
