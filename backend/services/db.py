@@ -268,6 +268,22 @@ def init_db():
         except duckdb.Error as e:
             print(f"Users is_pro migration error: {e}")
 
+        # Persistent storage tables for Fixed Income and Cash Flow
+        con.execute("""
+            CREATE TABLE IF NOT EXISTS user_fixed_income (
+                user_id VARCHAR PRIMARY KEY,
+                data TEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        con.execute("""
+            CREATE TABLE IF NOT EXISTS user_cash_flow (
+                user_id VARCHAR PRIMARY KEY,
+                data TEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
         # Auto-Restore users from persistent JSON backup (to prevent Docker rebuild wipes)
         _restore_users_from_backup(con)
 
@@ -290,7 +306,21 @@ def init_db():
                                     is_pro BOOLEAN DEFAULT FALSE
                                 );
                             """)
-                        print("[POSTGRES] Initialized users table in PostgreSQL.")
+                            cur.execute("""
+                                CREATE TABLE IF NOT EXISTS user_fixed_income (
+                                    user_id VARCHAR(64) PRIMARY KEY,
+                                    data TEXT NOT NULL,
+                                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                                );
+                            """)
+                            cur.execute("""
+                                CREATE TABLE IF NOT EXISTS user_cash_flow (
+                                    user_id VARCHAR(64) PRIMARY KEY,
+                                    data TEXT NOT NULL,
+                                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                                );
+                            """)
+                        print("[POSTGRES] Initialized users, user_fixed_income and user_cash_flow tables in PostgreSQL.")
                         _migrate_users_to_postgres_if_empty(pg_conn)
             except Exception as e:
                 print(f"[POSTGRES] init_db error: {e}")
@@ -961,6 +991,106 @@ def delete_custom_strategy(strategy_id: str, user_id: Optional[str] = None):
             con.execute("DELETE FROM custom_strategies WHERE id = ? AND is_system = FALSE", [strategy_id])
             con.execute("DELETE FROM rebalance_tickers WHERE strategy_id = ?", [strategy_id])
             con.execute("DELETE FROM rebalances WHERE strategy_id = ?", [strategy_id])
+
+
+# ── Fixed Income & Cash Flow DB Operations ───────────────────────────────────
+
+def get_user_fixed_income_db(user_id: str) -> Optional[dict[str, Any]]:
+    """Retrieve fixed income JSON payload for a user from Postgres or DuckDB."""
+    if DATABASE_URL:
+        try:
+            with pg_session() as conn:
+                if conn:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT data FROM user_fixed_income WHERE user_id = %s", [user_id])
+                        row = cur.fetchone()
+                        if row and row[0]:
+                            return json.loads(row[0]) if isinstance(row[0], str) else row[0]
+        except Exception as e:
+            print(f"[POSTGRES] get_user_fixed_income_db error: {e}")
+
+    with get_connection() as con:
+        row = con.execute("SELECT data FROM user_fixed_income WHERE user_id = ?", [user_id]).fetchone()
+        if row and row[0]:
+            return json.loads(row[0]) if isinstance(row[0], str) else row[0]
+    return None
+
+
+def save_user_fixed_income_db(user_id: str, data: dict[str, Any]) -> None:
+    """Save fixed income JSON payload for a user to Postgres (if available) and DuckDB."""
+    json_str = json.dumps(data, ensure_ascii=False)
+    if DATABASE_URL:
+        try:
+            with pg_session() as conn:
+                if conn:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            INSERT INTO user_fixed_income (user_id, data, updated_at)
+                            VALUES (%s, %s, CURRENT_TIMESTAMP)
+                            ON CONFLICT (user_id) DO UPDATE SET
+                                data = EXCLUDED.data,
+                                updated_at = CURRENT_TIMESTAMP
+                        """, [user_id, json_str])
+        except Exception as e:
+            print(f"[POSTGRES] save_user_fixed_income_db error: {e}")
+
+    with get_connection() as con:
+        con.execute("""
+            INSERT INTO user_fixed_income (user_id, data, updated_at)
+            VALUES (?, ?, now())
+            ON CONFLICT (user_id) DO UPDATE SET
+                data = EXCLUDED.data,
+                updated_at = now()
+        """, [user_id, json_str])
+
+
+def get_user_cash_flow_db(user_id: str) -> Optional[dict[str, Any]]:
+    """Retrieve cash flow JSON payload for a user from Postgres or DuckDB."""
+    if DATABASE_URL:
+        try:
+            with pg_session() as conn:
+                if conn:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT data FROM user_cash_flow WHERE user_id = %s", [user_id])
+                        row = cur.fetchone()
+                        if row and row[0]:
+                            return json.loads(row[0]) if isinstance(row[0], str) else row[0]
+        except Exception as e:
+            print(f"[POSTGRES] get_user_cash_flow_db error: {e}")
+
+    with get_connection() as con:
+        row = con.execute("SELECT data FROM user_cash_flow WHERE user_id = ?", [user_id]).fetchone()
+        if row and row[0]:
+            return json.loads(row[0]) if isinstance(row[0], str) else row[0]
+    return None
+
+
+def save_user_cash_flow_db(user_id: str, data: dict[str, Any]) -> None:
+    """Save cash flow JSON payload for a user to Postgres (if available) and DuckDB."""
+    json_str = json.dumps(data, ensure_ascii=False)
+    if DATABASE_URL:
+        try:
+            with pg_session() as conn:
+                if conn:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            INSERT INTO user_cash_flow (user_id, data, updated_at)
+                            VALUES (%s, %s, CURRENT_TIMESTAMP)
+                            ON CONFLICT (user_id) DO UPDATE SET
+                                data = EXCLUDED.data,
+                                updated_at = CURRENT_TIMESTAMP
+                        """, [user_id, json_str])
+        except Exception as e:
+            print(f"[POSTGRES] save_user_cash_flow_db error: {e}")
+
+    with get_connection() as con:
+        con.execute("""
+            INSERT INTO user_cash_flow (user_id, data, updated_at)
+            VALUES (?, ?, now())
+            ON CONFLICT (user_id) DO UPDATE SET
+                data = EXCLUDED.data,
+                updated_at = now()
+        """, [user_id, json_str])
 
 
 # Initialize database schema and run migrations

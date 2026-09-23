@@ -79,6 +79,7 @@ DEFAULT_FIXED_INCOME_DATA = {
 
 
 from services.auth import get_current_user_id
+from services.db import get_user_fixed_income_db, save_user_fixed_income_db
 
 
 OWNER_ID = "usr_9487dd2209d2"
@@ -94,70 +95,87 @@ def get_user_fixed_income_file(user_id: str | None = None) -> Path:
 
 
 def load_fixed_income_db(user_id: str | None = None) -> dict[str, Any]:
-    """Load JSON database with failover to default initial state and user isolation."""
+    """
+    Load fixed income data with Database as primary source of truth (DuckDB / Postgres)
+    and transparent dual-sync with existing JSON files as non-destructive backup.
+    """
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     uid = user_id or get_current_user_id()
     target_file = get_user_fixed_income_file(user_id)
 
-    # For public / unauthenticated showcase:
-    if not uid:
-        owner_file = DATA_DIR / "users" / f"{OWNER_ID}_fixed_income.json"
+    # 1. Try reading from Database (Postgres / DuckDB)
+    effective_uid = uid or OWNER_ID
+    db_data = get_user_fixed_income_db(effective_uid)
+    if db_data and (db_data.get("accounts") or db_data.get("cdts")):
+        return db_data
+
+    # 2. If DB has no records yet for this user:
+    # If this is a separate registered user (not owner and not public demo), start with clean isolated defaults
+    if uid and uid != OWNER_ID:
         if target_file.exists():
             try:
                 with open(target_file, encoding="utf-8") as f:
-                    data = json.load(f)
-                if data.get("accounts") or data.get("cdts"):
-                    return data
+                    seed_data = json.load(f)
+                    return seed_data
             except Exception:
                 pass
-        # Fallback to owner's fixed income portfolio showcase
-        if owner_file.exists():
+        initial_clean = DEFAULT_FIXED_INCOME_DATA.copy()
+        save_fixed_income_db(initial_clean, uid)
+        return initial_clean
+
+    # For Owner or Public Showcase: seed from existing JSON backup without deleting anything
+    seed_data = None
+    if target_file.exists():
+        try:
+            with open(target_file, encoding="utf-8") as f:
+                seed_data = json.load(f)
+        except Exception:
+            pass
+
+    if (not seed_data or (not seed_data.get("accounts") and not seed_data.get("cdts"))):
+        if DATA_FILE.exists():
             try:
-                with open(owner_file, encoding="utf-8") as f:
-                    return json.load(f)
+                with open(DATA_FILE, encoding="utf-8") as df:
+                    candidate = json.load(df)
+                if candidate.get("accounts") or candidate.get("cdts"):
+                    seed_data = candidate
             except Exception:
                 pass
 
-    # If file doesn't exist, seed with owner data if uid == OWNER_ID, else clean empty defaults
-    if not target_file.exists():
-        initial_data = None
-        if (not uid or uid == OWNER_ID) and DATA_FILE.exists():
-            try:
-                with open(DATA_FILE, encoding="utf-8") as f:
-                    candidate = json.load(f)
-                if candidate.get("accounts") or candidate.get("cdts"):
-                    initial_data = candidate
-            except Exception:
-                pass
-        if not initial_data:
-            initial_data = DEFAULT_FIXED_INCOME_DATA.copy()
-        save_fixed_income_db(initial_data, uid)
-        return initial_data
-    try:
-        with open(target_file, encoding="utf-8") as f:
-            data = json.load(f)
-            # If owner file exists but is empty (e.g. wiped or initialized with empty template), seed from DATA_FILE
-            if (not uid or uid == OWNER_ID) and not data.get("accounts") and not data.get("cdts") and DATA_FILE.exists():
-                try:
-                    with open(DATA_FILE, encoding="utf-8") as df:
-                        seeded = json.load(df)
-                    if seeded.get("accounts") or seeded.get("cdts"):
-                        save_fixed_income_db(seeded, uid)
-                        return seeded
-                except Exception:
-                    pass
-            return data
-    except Exception:
-        return DEFAULT_FIXED_INCOME_DATA.copy()
+    if not seed_data:
+        seed_data = DEFAULT_FIXED_INCOME_DATA.copy()
+
+    # Save to Database and maintain JSON backup
+    save_fixed_income_db(seed_data, effective_uid)
+    return seed_data
 
 
 def save_fixed_income_db(data: dict[str, Any], user_id: str | None = None) -> None:
-    """Save data safely to JSON file for designated user or global fallback."""
+    """
+    Save data safely to Database (DuckDB / Postgres) AND mirror to JSON file as permanent backup.
+    """
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    target_file = get_user_fixed_income_file(user_id)
-    target_file.parent.mkdir(parents=True, exist_ok=True)
-    with open(target_file, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    uid = user_id or get_current_user_id()
+    effective_uid = uid or OWNER_ID
+
+    # 1. Primary: Save to Database
+    try:
+        save_user_fixed_income_db(effective_uid, data)
+    except Exception as e:
+        logger.error(f"[FixedIncome DB] Error saving to database: {e}")
+
+    # 2. Dual-Write: Mirror to JSON file as permanent backup (NO deletions)
+    try:
+        target_file = get_user_fixed_income_file(user_id)
+        target_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(target_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        # If saving owner data, also keep master DATA_FILE in sync
+        if not uid or uid == OWNER_ID:
+            with open(DATA_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        logger.error(f"[FixedIncome Backup] Error mirroring to JSON backup: {e}")
 
 
 # --- Pydantic Data Models ---

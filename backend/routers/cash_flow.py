@@ -16,6 +16,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from services.auth import get_optional_current_user
+from services.db import get_user_cash_flow_db, save_user_cash_flow_db
 
 logger = logging.getLogger(__name__)
 
@@ -56,73 +57,84 @@ def get_user_cash_flow_file(user_id: Optional[str] = None) -> Path:
 
 
 def load_cash_flow_db(user_id: Optional[str] = None) -> dict[str, Any]:
+    """
+    Load cash flow data with Database as primary source of truth (DuckDB / Postgres)
+    and transparent dual-sync with existing JSON files as non-destructive backup.
+    """
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    effective_uid = user_id or OWNER_ID
     target_file = get_user_cash_flow_file(user_id)
 
-    # For public / unauthenticated showcase:
-    if not user_id:
-        owner_file = DATA_DIR / "users" / f"{OWNER_ID}_cash_flow.json"
+    # 1. Try reading from Database (Postgres / DuckDB)
+    db_data = get_user_cash_flow_db(effective_uid)
+    if db_data and (db_data.get("inflows") or db_data.get("needs") or db_data.get("wants") or db_data.get("wealth")):
+        for k, v in DEFAULT_CASH_FLOW_DATA.items():
+            if k not in db_data or db_data[k] is None:
+                db_data[k] = v
+        return db_data
+
+    # 2. If DB has no records yet for this user:
+    # If this is a separate registered user (not owner and not public demo), start with clean isolated defaults
+    if user_id and user_id != OWNER_ID:
         if target_file.exists():
             try:
                 with open(target_file, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                if data.get("inflows") or data.get("needs") or data.get("wants") or data.get("wealth"):
+                    seed_data = json.load(f)
                     for k, v in DEFAULT_CASH_FLOW_DATA.items():
-                        if k not in data or data[k] is None:
-                            data[k] = v
-                    return data
+                        if k not in seed_data or seed_data[k] is None:
+                            seed_data[k] = v
+                    return seed_data
             except Exception:
                 pass
-        # Fallback to owner's cash flow portfolio showcase
-        if owner_file.exists():
+        initial_clean = DEFAULT_CASH_FLOW_DATA.copy()
+        save_cash_flow_db(initial_clean, user_id)
+        return initial_clean
+
+    # For Owner or Public Showcase: seed from existing JSON backup without deleting anything
+    seed_data = None
+    if target_file.exists():
+        try:
+            with open(target_file, "r", encoding="utf-8") as f:
+                seed_data = json.load(f)
+        except Exception:
+            pass
+
+    if (not seed_data or not (seed_data.get("inflows") or seed_data.get("needs") or seed_data.get("wants") or seed_data.get("wealth"))):
+        if DATA_FILE.exists():
             try:
-                with open(owner_file, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                for k, v in DEFAULT_CASH_FLOW_DATA.items():
-                    if k not in data or data[k] is None:
-                        data[k] = v
-                return data
+                with open(DATA_FILE, "r", encoding="utf-8") as df:
+                    candidate = json.load(df)
+                if candidate.get("inflows") or candidate.get("needs") or candidate.get("wants") or candidate.get("wealth"):
+                    seed_data = candidate
             except Exception:
                 pass
 
-    # For new users or when file doesn't exist, seed with owner data if user_id == OWNER_ID, else clean defaults
-    if not target_file.exists():
-        initial_data = None
-        if (not user_id or user_id == OWNER_ID) and DATA_FILE.exists():
-            try:
-                with open(DATA_FILE, "r", encoding="utf-8") as f:
-                    candidate = json.load(f)
-                if candidate.get("inflows") or candidate.get("needs") or candidate.get("wants") or candidate.get("wealth"):
-                    initial_data = candidate
-            except Exception:
-                pass
-        if not initial_data:
-            initial_data = DEFAULT_CASH_FLOW_DATA.copy()
-        save_cash_flow_db(initial_data, user_id)
-        return initial_data
-    try:
-        with open(target_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            # If owner file exists but is empty, seed from DATA_FILE
-            if (not user_id or user_id == OWNER_ID) and not (data.get("inflows") or data.get("needs") or data.get("wants") or data.get("wealth")) and DATA_FILE.exists():
-                try:
-                    with open(DATA_FILE, "r", encoding="utf-8") as df:
-                        seeded = json.load(df)
-                    if seeded.get("inflows") or seeded.get("needs") or seeded.get("wants") or seeded.get("wealth"):
-                        save_cash_flow_db(seeded, user_id)
-                        data = seeded
-                except Exception:
-                    pass
-            # Ensure critical keys exist
-            for k, v in DEFAULT_CASH_FLOW_DATA.items():
-                if k not in data or data[k] is None:
-                    data[k] = v
-            return data
-    except Exception as e:
-        logger.error(f"[CashFlow] Failed reading data file {target_file}: {e}")
-        return DEFAULT_CASH_FLOW_DATA.copy()
+    if not seed_data:
+        seed_data = DEFAULT_CASH_FLOW_DATA.copy()
+
+    for k, v in DEFAULT_CASH_FLOW_DATA.items():
+        if k not in seed_data or seed_data[k] is None:
+            seed_data[k] = v
+
+    # Save to Database and maintain JSON backup
+    save_cash_flow_db(seed_data, effective_uid)
+    return seed_data
 
 
 def save_cash_flow_db(data: dict[str, Any], user_id: Optional[str] = None) -> None:
+    """
+    Save data safely to Database (DuckDB / Postgres) AND mirror to JSON file as permanent backup.
+    """
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    effective_uid = user_id or OWNER_ID
+
+    # 1. Primary: Save to Database
+    try:
+        save_user_cash_flow_db(effective_uid, data)
+    except Exception as e:
+        logger.error(f"[CashFlow DB] Error saving to database: {e}")
+
+    # 2. Dual-Write: Mirror to JSON file as permanent backup (NO deletions)
     target_file = get_user_cash_flow_file(user_id)
     target_file.parent.mkdir(parents=True, exist_ok=True)
     temp_file = target_file.with_suffix(".tmp")
@@ -131,17 +143,12 @@ def save_cash_flow_db(data: dict[str, Any], user_id: Optional[str] = None) -> No
             json.dump(data, f, indent=2, ensure_ascii=False)
         temp_file.replace(target_file)
 
-        # Mirror legacy file if global
-        if not user_id:
-            try:
-                PUBLIC_DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
-                with open(PUBLIC_DATA_FILE, "w", encoding="utf-8") as pf:
-                    json.dump(data, pf, indent=2, ensure_ascii=False)
-            except Exception:
-                pass
-
+        # Mirror master legacy file if owner or global
+        if not user_id or user_id == OWNER_ID:
+            with open(DATA_FILE, "w", encoding="utf-8") as df:
+                json.dump(data, df, indent=2, ensure_ascii=False)
     except Exception as e:
-        logger.error(f"[CashFlow] Failed writing data file: {e}")
+        logger.error(f"[CashFlow Backup] Failed writing JSON backup: {e}")
         if temp_file.exists():
             temp_file.unlink(missing_ok=True)
         raise HTTPException(status_code=500, detail="Database write failure")
