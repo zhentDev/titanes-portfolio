@@ -432,8 +432,8 @@ export async function syncPurchasesMigration(purchasePortfolios, individualPurch
 
 /** ── FIXED INCOME & SAVINGS ACCOUNTS API ── */
 
-export async function fetchFixedIncomeData() {
-  return await fetchWithFallback("/fixed-income/data", "fixed_income.json");
+export async function fetchFixedIncomeData(options = {}) {
+  return await fetchWithFallback("/fixed-income/data", "fixed_income.json", options);
 }
 
 export async function createFixedIncomeEntity(entity) {
@@ -592,8 +592,8 @@ export async function confirmStatementImportApi(
 
 // ── Cash Flow & Budget Allocation API ────────────────────────────
 
-export async function fetchCashFlowData() {
-  return await fetchWithFallback("/cash-flow", "cash_flow.json");
+export async function fetchCashFlowData(options = {}) {
+  return await fetchWithFallback("/cash-flow", "cash_flow.json", options);
 }
 
 export async function syncCashFlowStateApi(payload) {

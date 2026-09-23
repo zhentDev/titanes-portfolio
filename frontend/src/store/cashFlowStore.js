@@ -106,7 +106,7 @@ export const useCashFlowStore = create(
     // ── Initialization directly from Local Backend Database (SSOT) ──
     initFetchCashFlow: async () => {
       try {
-        const res = await fetchCashFlowData();
+        const res = await fetchCashFlowData({ bypassCache: true });
         if (!res) {
           set({ isInitialized: true });
           return;

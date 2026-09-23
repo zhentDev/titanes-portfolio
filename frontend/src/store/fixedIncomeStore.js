@@ -46,7 +46,7 @@ export const useFixedIncomeStore = create(
       // ── Initialization & Backend Sync ───────────────
       initFetchFixedIncome: async () => {
         try {
-          const res = await fetchFixedIncomeData();
+          const res = await fetchFixedIncomeData({ bypassCache: true });
           let rates = { entities: {} };
           try {
             rates = await fetchHistoricalRates();
