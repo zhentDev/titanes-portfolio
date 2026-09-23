@@ -57,11 +57,12 @@ export const useFixedIncomeStore = create(
           // Estado actual en localStorage (Zustand persist)
           const localState = get();
 
-          // Source of truth: prefer backend data if available; fallback to localStorage only if backend is empty
-          const finalEntities = res?.entities && res.entities.length > 0 ? res.entities : (localState.entities || []);
-          const finalAccounts = res?.accounts && res.accounts.length > 0 ? res.accounts : (localState.accounts || []);
-          const finalCDTs = res?.cdts && res.cdts.length > 0 ? res.cdts : (localState.cdts || []);
-          const finalTransactions = res?.transactions && Array.isArray(res.transactions) && res.transactions.length > 0
+          // Source of truth: prefer fetched vitrina/backend data if it contains accounts or cdts
+          const hasFetchedData = (res?.accounts && res.accounts.length > 0) || (res?.cdts && res.cdts.length > 0);
+          const finalEntities = (hasFetchedData && res.entities?.length > 0) ? res.entities : ((localState.entities && localState.entities.length > 0) ? localState.entities : (res?.entities || []));
+          const finalAccounts = (hasFetchedData && res.accounts?.length > 0) ? res.accounts : (localState.accounts || []);
+          const finalCDTs = (hasFetchedData && res.cdts?.length > 0) ? res.cdts : (localState.cdts || []);
+          const finalTransactions = (hasFetchedData && res.transactions?.length > 0)
             ? res.transactions
             : (localState.transactions || []);
 

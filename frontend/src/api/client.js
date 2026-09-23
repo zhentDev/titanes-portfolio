@@ -433,9 +433,7 @@ export async function syncPurchasesMigration(purchasePortfolios, individualPurch
 /** ── FIXED INCOME & SAVINGS ACCOUNTS API ── */
 
 export async function fetchFixedIncomeData() {
-  const res = await safeFetch(`${BASE}/fixed-income/data`, {}, 2, 500);
-  if (!res.ok) throw new Error("Error fetching fixed income data");
-  return res.json();
+  return await fetchWithFallback("/fixed-income/data", "fixed_income.json");
 }
 
 export async function createFixedIncomeEntity(entity) {
