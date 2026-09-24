@@ -62,20 +62,15 @@ def load_cash_flow_db(user_id: Optional[str] = None) -> dict[str, Any]:
     and transparent dual-sync with existing JSON files as non-destructive backup.
     """
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    effective_uid = user_id or OWNER_ID
     target_file = get_user_cash_flow_file(user_id)
-
-    # 1. Try reading from Database (Postgres / DuckDB)
-    db_data = get_user_cash_flow_db(effective_uid)
-    if db_data and (db_data.get("inflows") or db_data.get("needs") or db_data.get("wants") or db_data.get("wealth")):
-        for k, v in DEFAULT_CASH_FLOW_DATA.items():
-            if k not in db_data or db_data[k] is None:
-                db_data[k] = v
-        return db_data
-
-    # 2. If DB has no records yet for this user:
-    # If this is a separate registered user (not owner and not public demo), start with clean isolated defaults
+    # 1. Non-owner registered user: completely isolated cash flow
     if user_id and user_id != OWNER_ID:
+        db_data = get_user_cash_flow_db(user_id)
+        if db_data is not None:
+            for k, v in DEFAULT_CASH_FLOW_DATA.items():
+                if k not in db_data or db_data[k] is None:
+                    db_data[k] = v
+            return db_data
         if target_file.exists():
             try:
                 with open(target_file, "r", encoding="utf-8") as f:
@@ -89,6 +84,15 @@ def load_cash_flow_db(user_id: Optional[str] = None) -> dict[str, Any]:
         initial_clean = DEFAULT_CASH_FLOW_DATA.copy()
         save_cash_flow_db(initial_clean, user_id)
         return initial_clean
+
+    # 2. Owner or Public Showcase: Try reading from Database (Postgres / DuckDB)
+    effective_uid = user_id or OWNER_ID
+    db_data = get_user_cash_flow_db(effective_uid)
+    if db_data and (db_data.get("inflows") or db_data.get("needs") or db_data.get("wants") or db_data.get("wealth")):
+        for k, v in DEFAULT_CASH_FLOW_DATA.items():
+            if k not in db_data or db_data[k] is None:
+                db_data[k] = v
+        return db_data
 
     # For Owner or Public Showcase: seed from existing JSON backup without deleting anything
     seed_data = None

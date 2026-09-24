@@ -252,3 +252,36 @@ def get_admin_users(secret: Optional[str] = None, current_user: Optional[dict] =
         "database": "PostgreSQL" if db.DATABASE_URL else "DuckDB Local",
         "users": users,
     }
+
+
+@router.delete("/admin/users/{email}")
+def delete_admin_user(email: str, secret: Optional[str] = None, current_user: Optional[dict] = Depends(get_optional_current_user)):
+    """
+    Permite eliminar una cuenta de usuario y sus datos aislados de la base de datos (PostgreSQL/DuckDB).
+    Protegido: Solo accesible por el propietario caballerojesus703@hotmail.com o con ?secret=titanes2026.
+    """
+    clean_email = email.lower().strip()
+    if clean_email == "caballerojesus703@hotmail.com":
+        raise HTTPException(status_code=400, detail="No se puede eliminar la cuenta del propietario principal.")
+
+    is_owner = False
+    if current_user:
+        user_email = (current_user.get("email") or "").lower().strip()
+        if user_email == "caballerojesus703@hotmail.com":
+            is_owner = True
+
+    if secret == "titanes2026":
+        is_owner = True
+
+    if not is_owner:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acceso restringido al propietario.",
+        )
+
+    deleted = db.delete_user_by_email(clean_email)
+    return {
+        "success": deleted,
+        "message": f"Usuario {clean_email} eliminado exitosamente de la base de datos.",
+    }
+

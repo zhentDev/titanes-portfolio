@@ -747,6 +747,62 @@ def list_all_users() -> List[dict]:
         ]
 
 
+def delete_user_by_email(email: str) -> bool:
+    """
+    Deletes a user account by email from PostgreSQL, DuckDB, user tables, and disk backup.
+    Protects the master owner account from accidental deletion.
+    """
+    clean_email = email.lower().strip()
+    if clean_email == "caballerojesus703@hotmail.com":
+        print(f"[SECURITY] Refusing to delete master owner account: {clean_email}")
+        return False
+
+    user = get_user_by_email(clean_email)
+    user_id = user["id"] if user else None
+
+    # 1. Delete from PostgreSQL
+    if DATABASE_URL:
+        try:
+            with pg_session() as conn:
+                if conn:
+                    with conn.cursor() as cur:
+                        if user_id:
+                            cur.execute("DELETE FROM user_fixed_income WHERE user_id = %s", [user_id])
+                            cur.execute("DELETE FROM user_cash_flow WHERE user_id = %s", [user_id])
+                        cur.execute("DELETE FROM users WHERE LOWER(TRIM(email)) = %s", [clean_email])
+                    print(f"[POSTGRES] Deleted user {clean_email} (ID: {user_id}) from PostgreSQL.")
+        except Exception as e:
+            print(f"[POSTGRES] delete_user_by_email error: {e}")
+
+    # 2. Delete from DuckDB
+    try:
+        with get_connection() as con:
+            if user_id:
+                con.execute("DELETE FROM user_fixed_income WHERE user_id = ?", [user_id])
+                con.execute("DELETE FROM user_cash_flow WHERE user_id = ?", [user_id])
+                con.execute("DELETE FROM purchase_portfolios WHERE user_id = ?", [user_id])
+                con.execute("DELETE FROM individual_purchases WHERE user_id = ?", [user_id])
+                con.execute("DELETE FROM custom_strategies WHERE user_id = ? AND is_system = FALSE", [user_id])
+            con.execute("DELETE FROM users WHERE LOWER(TRIM(email)) = ?", [clean_email])
+            _backup_users_to_disk(con)
+    except Exception as e:
+        print(f"[DUCKDB] delete_user_by_email error: {e}")
+
+    # 3. Clean any disk JSON backup for this user if it exists
+    if user_id:
+        try:
+            user_fi = USERS_BACKUP_PATH.parent / "users" / f"{user_id}_fixed_income.json"
+            if user_fi.exists():
+                user_fi.unlink(missing_ok=True)
+            user_cf = USERS_BACKUP_PATH.parent / "users" / f"{user_id}_cash_flow.json"
+            if user_cf.exists():
+                user_cf.unlink(missing_ok=True)
+        except Exception as e:
+            print(f"[DISK] delete user files error: {e}")
+
+    return True
+
+
 def claim_legacy_data(user_id: str):
     """
     Assigns all legacy data (where user_id IS NULL) to the designated user_id.

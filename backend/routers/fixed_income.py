@@ -103,15 +103,11 @@ def load_fixed_income_db(user_id: str | None = None) -> dict[str, Any]:
     uid = user_id or get_current_user_id()
     target_file = get_user_fixed_income_file(user_id)
 
-    # 1. Try reading from Database (Postgres / DuckDB)
-    effective_uid = uid or OWNER_ID
-    db_data = get_user_fixed_income_db(effective_uid)
-    if db_data and (db_data.get("accounts") or db_data.get("cdts")):
-        return db_data
-
-    # 2. If DB has no records yet for this user:
-    # If this is a separate registered user (not owner and not public demo), start with clean isolated defaults
+    # 1. Non-owner registered user: completely isolated portfolio
     if uid and uid != OWNER_ID:
+        db_data = get_user_fixed_income_db(uid)
+        if db_data is not None:
+            return db_data
         if target_file.exists():
             try:
                 with open(target_file, encoding="utf-8") as f:
@@ -122,6 +118,12 @@ def load_fixed_income_db(user_id: str | None = None) -> dict[str, Any]:
         initial_clean = DEFAULT_FIXED_INCOME_DATA.copy()
         save_fixed_income_db(initial_clean, uid)
         return initial_clean
+
+    # 2. Owner or Public Showcase: Try reading from Database (Postgres / DuckDB)
+    effective_uid = uid or OWNER_ID
+    db_data = get_user_fixed_income_db(effective_uid)
+    if db_data and (db_data.get("accounts") or db_data.get("cdts")):
+        return db_data
 
     # For Owner or Public Showcase: seed from existing JSON backup without deleting anything
     seed_data = None
