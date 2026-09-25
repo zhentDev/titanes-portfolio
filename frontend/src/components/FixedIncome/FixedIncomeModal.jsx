@@ -76,11 +76,6 @@ export default function FixedIncomeModal({
   const [accountTaxExempt, setAccountTaxExempt] = useState(true);
   const [accountStartDate, setAccountStartDate] = useState("2023-06-01");
 
-  // Gold / Commodity Staking State (XAUt / PAXG)
-  const [goldQuantity, setGoldQuantity] = useState("");
-  const [goldBuyPrice, setGoldBuyPrice] = useState("");
-  const [goldSellPrice, setGoldSellPrice] = useState("");
-  const [goldCommission, setGoldCommission] = useState("");
 
   // CDT Form State
   const [cdtName, setCdtName] = useState("");
@@ -157,10 +152,6 @@ export default function FixedIncomeModal({
         setAccountRateEA("");
         setAccountTaxExempt(true);
         setAccountStartDate("2023-06-01");
-        setGoldQuantity("");
-        setGoldBuyPrice("");
-        setGoldSellPrice("");
-        setGoldCommission("");
       } else if (initialTab === "cdt") {
         setCdtName("");
         setCdtCapital("");
@@ -201,10 +192,6 @@ export default function FixedIncomeModal({
       setAccountRateEA(String(editItem.interestRateEA || ""));
       setAccountTaxExempt(editItem.isTaxExemptGMF ?? true);
       setAccountStartDate(editItem.startDate || (editItem.createdAt ? editItem.createdAt.slice(0, 10) : "2023-06-01"));
-      setGoldQuantity(String(editItem.goldQuantity || ""));
-      setGoldBuyPrice(String(editItem.goldBuyPrice || ""));
-      setGoldSellPrice(String(editItem.goldSellPrice || ""));
-      setGoldCommission(String(editItem.goldCommission || ""));
     } else if (initialTab === "cdt") {
       setSelectedEntityId(editItem.entityId || "");
       setCdtName(editItem.name || "");
@@ -395,10 +382,6 @@ export default function FixedIncomeModal({
       isTaxExemptGMF: accountTaxExempt,
       startDate: accountStartDate,
       createdAt: editItem?.createdAt || `${accountStartDate}T00:00:00.000Z`,
-      goldQuantity: Number(goldQuantity) || undefined,
-      goldBuyPrice: Number(goldBuyPrice) || undefined,
-      goldSellPrice: Number(goldSellPrice) || undefined,
-      goldCommission: Number(goldCommission) || undefined,
     };
     if (editItem?.id) {
       await updateAccount({ ...accountData, id: editItem.id });
@@ -722,7 +705,6 @@ export default function FixedIncomeModal({
                     <option value="pocket">⚡ Bolsillo / Cajita</option>
                     <option value="savings">💳 Cuenta de Ahorro</option>
                     <option value="wallet">💵 Billetera / Cash Yield</option>
-                    <option value="crypto">🪙 Oro / Crypto Staking (XAUt / PAXG)</option>
                   </select>
                 </div>
                 <div>
@@ -756,143 +738,6 @@ export default function FixedIncomeModal({
                   </select>
                 </div>
               </div>
-
-              {accountType === "crypto" && (
-                <div
-                  style={{
-                    background: "rgba(212, 175, 55, 0.08)",
-                    border: "1px solid rgba(212, 175, 55, 0.3)",
-                    borderRadius: 10,
-                    padding: "12px 14px",
-                    marginTop: 6,
-                    marginBottom: 10,
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#f59e0b" }}>
-                      🪙 Parámetros de Oro / Crypto (XAUt / PAXG)
-                    </span>
-                    <span style={{ fontSize: "0.68rem", color: "#38bdf8" }}>
-                      Spread Bid/Ask y Comisiones
-                    </span>
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.68rem", color: "#cbd5e1", marginBottom: 3 }}>
-                        Cantidad de Oro / Tokens
-                      </label>
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="ej. 0.35 onzas o 10.5 g"
-                        value={goldQuantity}
-                        onChange={(e) => {
-                          const qty = e.target.value;
-                          setGoldQuantity(qty);
-                          if (qty && goldSellPrice) {
-                            setAccountBalance(String(Number(qty) * Number(goldSellPrice)));
-                          }
-                        }}
-                        style={{
-                          width: "100%",
-                          padding: "6px 10px",
-                          borderRadius: 6,
-                          background: "#0f172a",
-                          border: "1px solid rgba(212, 175, 55, 0.3)",
-                          color: "#f8fafc",
-                          fontSize: "0.8rem",
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.68rem", color: "#cbd5e1", marginBottom: 3 }}>
-                        💸 Comisión / Fee Pagado (USD)
-                      </label>
-                      <CurrencyInput
-                        currency="USD"
-                        placeholder="0.00"
-                        value={goldCommission}
-                        onChange={(val) => setGoldCommission(val !== "" ? String(val) : "")}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.68rem", color: "#cbd5e1", marginBottom: 3 }}>
-                        📥 Precio de Compra / Ask (USD)
-                      </label>
-                      <CurrencyInput
-                        currency="USD"
-                        placeholder="2420.00"
-                        value={goldBuyPrice}
-                        onChange={(val) => setGoldBuyPrice(val !== "" ? String(val) : "")}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.68rem", color: "#cbd5e1", marginBottom: 3 }}>
-                        📤 Precio de Venta Actual / Bid (USD)
-                      </label>
-                      <CurrencyInput
-                        currency="USD"
-                        placeholder="2450.00"
-                        value={goldSellPrice}
-                        onChange={(val) => {
-                          const sp = val !== "" ? String(val) : "";
-                          setGoldSellPrice(sp);
-                          if (goldQuantity && sp) {
-                            setAccountBalance(String(Number(goldQuantity) * Number(sp)));
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {Number(goldQuantity) > 0 && Number(goldBuyPrice) > 0 && Number(goldSellPrice) > 0 && (
-                    <div
-                      style={{
-                        marginTop: 8,
-                        padding: "6px 10px",
-                        background: "rgba(0,0,0,0.3)",
-                        borderRadius: 6,
-                        fontSize: "0.68rem",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        flexWrap: "wrap",
-                        gap: 6,
-                      }}
-                    >
-                      <span style={{ color: "#94a3b8" }}>
-                        Costo Total:{" "}
-                        <strong style={{ color: "#f8fafc" }}>
-                          ${(Number(goldQuantity) * Number(goldBuyPrice) + Number(goldCommission || 0)).toLocaleString("en-US", { maximumFractionDigits: 2 })} USD
-                        </strong>
-                      </span>
-                      <span style={{ color: "#94a3b8" }}>
-                        Valor Liquidable:{" "}
-                        <strong style={{ color: "#38bdf8" }}>
-                          ${(Number(goldQuantity) * Number(goldSellPrice)).toLocaleString("en-US", { maximumFractionDigits: 2 })} USD
-                        </strong>
-                      </span>
-                      <span style={{ color: "#94a3b8" }}>
-                        Efecto Precio + Fee:{" "}
-                        <strong
-                          style={{
-                            color:
-                              Number(goldQuantity) * Number(goldSellPrice) - (Number(goldQuantity) * Number(goldBuyPrice) + Number(goldCommission || 0)) >= 0
-                                ? "#10b981"
-                                : "#ef4444",
-                          }}
-                        >
-                          {Number(goldQuantity) * Number(goldSellPrice) - (Number(goldQuantity) * Number(goldBuyPrice) + Number(goldCommission || 0)) >= 0 ? "+" : ""}
-                          ${(Number(goldQuantity) * Number(goldSellPrice) - (Number(goldQuantity) * Number(goldBuyPrice) + Number(goldCommission || 0))).toLocaleString("en-US", { maximumFractionDigits: 2 })} USD
-                        </strong>
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>

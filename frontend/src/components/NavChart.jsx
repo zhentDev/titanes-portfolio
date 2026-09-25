@@ -37,12 +37,23 @@ export default function NavChart({
   const chartRef = useRef(null);
   const seriesRef = useRef({});
   const [hoverValues, setHoverValues] = useState(null);
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== "undefined" ? window.innerWidth <= 640 : false));
   const [manualScaleMode, setManualScaleMode] = useState(null); // null = auto, 'log' = force log, 'normal' = force normal
   const [chartReady, setChartReady] = useState(0);
 
   const { visibleSeries, toggleSeries, customStrategies, strategyRebalances } = usePortfolioStore();
   const { theme } = useTheme();
   const isLight = theme === "light";
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 640;
+      setIsMobile((prev) => (prev !== mobile ? mobile : prev));
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const chartColors = useMemo(() => getChartColors(theme), [theme]);
 
   const baseActive = navData?.[0]?.value ?? investment;
@@ -165,7 +176,7 @@ export default function NavChart({
 
     chartRef.current.applyOptions({
       leftPriceScale: {
-        visible: hasVisibleStrategies,
+        visible: !isMobile && hasVisibleStrategies,
         mode: mode,
         borderColor: chartColors.borderColor,
         textColor: chartColors.leftScaleText,
@@ -179,7 +190,7 @@ export default function NavChart({
         autoScale: true,
       },
     });
-  }, [isLogActive, customStrategies, visibleSeries, chartColors]);
+  }, [isLogActive, customStrategies, visibleSeries, chartColors, isMobile]);
 
   const initChart = useCallback(() => {
     if (!containerRef.current) return;
@@ -207,6 +218,13 @@ export default function NavChart({
       },
       localization: {
         locale: "es-CO",
+        priceFormatter: (price) => {
+          if (typeof price !== "number" || isNaN(price)) return "";
+          if (isMobile) {
+            return "$" + Math.round(price);
+          }
+          return "$" + price.toFixed(2);
+        },
         timeFormatter: (time) => {
           if (typeof time === "number") {
             const date = new Date(time * 1000);
@@ -221,7 +239,7 @@ export default function NavChart({
         },
       },
       leftPriceScale: {
-        visible: hasVisibleStrategies,
+        visible: !isMobile && hasVisibleStrategies,
         mode: initialMode,
         borderColor: chartColors.borderColor,
         textColor: chartColors.leftScaleText,
@@ -236,7 +254,7 @@ export default function NavChart({
       },
       timeScale: {
         borderColor: chartColors.borderColor,
-        barSpacing: 8,
+        barSpacing: isMobile ? 12 : 8,
         fixLeftEdge: true,
         fixRightEdge: true,
         timeVisible: true,
@@ -267,8 +285,11 @@ export default function NavChart({
       bottomColor: chartColors.navAreaBottom,
       lineWidth: 2,
       priceLineVisible: false,
-      lastValueVisible: true,
-      title: isLiveMode ? "Portafolio En Vivo" : "Titanes",
+      lastValueVisible: !isMobile,
+      title: isMobile ? "" : isLiveMode ? "Portafolio En Vivo" : "Titanes",
+      priceFormat: isMobile
+        ? { type: "price", precision: 0, minMove: 1 }
+        : { type: "price", precision: 2, minMove: 0.01 },
       visible: visibleSeries?.nav !== false,
       priceScaleId: "right",
     });
@@ -279,8 +300,11 @@ export default function NavChart({
       lineWidth: 2,
       lineStyle: LineStyle.Dashed,
       priceLineVisible: false,
-      lastValueVisible: true,
-      title: "S&P 500",
+      lastValueVisible: !isMobile,
+      title: isMobile ? "" : "S&P 500",
+      priceFormat: isMobile
+        ? { type: "price", precision: 0, minMove: 1 }
+        : { type: "price", precision: 2, minMove: 0.01 },
       visible: visibleSeries?.sp500 !== false,
       priceScaleId: "right",
     });
@@ -291,8 +315,11 @@ export default function NavChart({
       lineWidth: 2,
       lineStyle: LineStyle.Dotted,
       priceLineVisible: false,
-      lastValueVisible: true,
-      title: "NASDAQ",
+      lastValueVisible: !isMobile,
+      title: isMobile ? "" : "NASDAQ",
+      priceFormat: isMobile
+        ? { type: "price", precision: 0, minMove: 1 }
+        : { type: "price", precision: 2, minMove: 0.01 },
       visible: visibleSeries?.nasdaq !== false,
       priceScaleId: "right",
     });
@@ -305,8 +332,11 @@ export default function NavChart({
           lineWidth: 2,
           lineStyle: LineStyle.Solid,
           priceLineVisible: false,
-          lastValueVisible: true,
-          title: strat.name,
+          lastValueVisible: !isMobile,
+          title: isMobile ? "" : strat.name,
+          priceFormat: isMobile
+            ? { type: "price", precision: 0, minMove: 1 }
+            : { type: "price", precision: 2, minMove: 0.01 },
           visible: visibleSeries?.[strat.id] !== false,
           priceScaleId: "left", // LEFT AXIS!
         });
@@ -320,7 +350,10 @@ export default function NavChart({
       lineStyle: LineStyle.Dashed,
       priceLineVisible: false,
       lastValueVisible: false,
-      title: "Base",
+      title: isMobile ? "" : "Base",
+      priceFormat: isMobile
+        ? { type: "price", precision: 0, minMove: 1 }
+        : { type: "price", precision: 2, minMove: 0.01 },
       visible: visibleSeries?.base !== false,
       priceScaleId: "right",
     });
@@ -342,6 +375,7 @@ export default function NavChart({
         : null;
 
       const newHover = {
+        date: param.time,
         nav: navVal != null ? navVal : null,
         sp500: spVal != null ? spVal : null,
         nasdaq: nsdVal != null ? nsdVal : null,
@@ -372,9 +406,9 @@ export default function NavChart({
     setChartReady((prev) => prev + 1);
 
     return () => ro.disconnect();
-  }, [isLiveMode, customStrategies, chartHeight]);
+  }, [isLiveMode, customStrategies, chartHeight, isMobile]);
 
-  // Init chart once on component mount
+  // Init chart once on component mount or isMobile change
   useEffect(() => {
     const cleanup = initChart();
     return () => {
@@ -392,9 +426,9 @@ export default function NavChart({
     }
   }, [theme]);
 
-  // Helper to convert array to Lightweight Charts format
-  const toSeries = (arr) =>
-    (arr || [])
+  // Helper to convert array to Lightweight Charts format with responsive downsampling for mobile
+  const toSeries = (arr) => {
+    const raw = (arr || [])
       .filter((d) => d && (d.date || d.time) && d.value != null && !isNaN(d.value))
       .map((d) => {
         const rawTime = d.time ?? d.date;
@@ -409,6 +443,25 @@ export default function NavChart({
       .sort((a, b) => (a.time > b.time ? 1 : a.time < b.time ? -1 : 0))
       .filter((v, idx, self) => idx === 0 || v.time !== self[idx - 1].time);
 
+    // On mobile devices, downsample if there are more than 30 data points
+    // (e.g. taking periodic samples to avoid cramped jitter while preserving start and end points)
+    if (isMobile && raw.length > 30) {
+      const sampled = [];
+      const interval = Math.ceil(raw.length / 28);
+      const lastPoint = raw[raw.length - 1];
+
+      for (let i = 0; i < raw.length; i += interval) {
+        sampled.push(raw[i]);
+      }
+      if (sampled[sampled.length - 1].time !== lastPoint.time) {
+        sampled.push(lastPoint);
+      }
+      return sampled;
+    }
+
+    return raw;
+  };
+
   // Update series data with real price action
   useEffect(() => {
     if (!chartRef.current) return;
@@ -421,8 +474,11 @@ export default function NavChart({
           lineWidth: 2,
           lineStyle: LineStyle.Solid,
           priceLineVisible: false,
-          lastValueVisible: true,
-          title: strat.name,
+          lastValueVisible: !isMobile,
+          title: isMobile ? "" : strat.name,
+          priceFormat: isMobile
+            ? { type: "price", precision: 0, minMove: 1 }
+            : { type: "price", precision: 2, minMove: 0.01 },
           visible: visibleSeries?.[strat.id] !== false,
           priceScaleId: "left", // LEFT AXIS!
         });
@@ -580,7 +636,7 @@ export default function NavChart({
     }
 
     chartRef.current.timeScale().fitContent();
-  }, [navData, sp500Data, nasdaqData, customStrategies, strategyRebalances, customNavData, liveStratQuotes, investment, numSlots, rebalances, holdings, period, getStratCap, getBenchNorm, chartReady]);
+  }, [navData, sp500Data, nasdaqData, customStrategies, strategyRebalances, customNavData, liveStratQuotes, investment, numSlots, rebalances, holdings, period, getStratCap, getBenchNorm, chartReady, isMobile]);
 
   const lastNav = navData?.[navData.length - 1]?.value;
   const lastSP = sp500Data?.[sp500Data.length - 1]?.value;

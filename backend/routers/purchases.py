@@ -39,42 +39,64 @@ class PurchaseLot(BaseModel):
     shares: float
     manualCurrentPrice: Optional[float] = None
     purchaseTime: Optional[str] = None
+    commissionAmount: Optional[float] = 0.0
+    notes: Optional[str] = None
+
+
+class SaleItem(BaseModel):
+    id: str
+    lotId: Optional[str] = None
+    portfolioId: str
+    ticker: str
+    saleDate: str
+    saleTime: Optional[str] = None
+    salePrice: float
+    shares: float
+    saleCommission: Optional[float] = 0.0
+    realizedPnl: Optional[float] = 0.0
+    notes: Optional[str] = None
+    purchaseDate: Optional[str] = None
+    costBasis: Optional[float] = 0.0
 
 
 class SyncPayload(BaseModel):
     purchasePortfolios: List[PortfolioItem]
     individualPurchases: List[PurchaseLot]
+    purchaseSales: Optional[List[SaleItem]] = []
 
 
 @router.get("/purchases/portfolios")
 def get_all_purchases_data(request: Request):
     user = get_optional_current_user(request)
     user_id = user["sub"] if user else None
+    # For owner or local dev without session: fallback to OWNER_ID 'usr_9487dd2209d2'
+    effective_user_id = user_id or "usr_9487dd2209d2"
 
     with get_connection() as con:
-        if user_id:
-            portfolios = con.execute(
-                """
-                SELECT id, name, is_plan, plan_config, asset_currency, local_currency, annual_inflation_rate, use_auto_col_inflation 
-                FROM purchase_portfolios 
-                WHERE user_id = ?
-                """,
-                [user_id],
-            ).fetchall()
-            lots = con.execute(
-                """
-                SELECT id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price, purchase_time 
-                FROM individual_purchases 
-                WHERE user_id = ?
-                """,
-                [user_id],
-            ).fetchall()
-        else:
-            # Unauthenticated: return empty list to protect private financial data
-            return {
-                "purchasePortfolios": [],
-                "individualPurchases": []
-            }
+        portfolios = con.execute(
+            """
+            SELECT id, name, is_plan, plan_config, asset_currency, local_currency, annual_inflation_rate, use_auto_col_inflation 
+            FROM purchase_portfolios 
+            WHERE user_id = ? OR user_id IS NULL
+            """,
+            [effective_user_id],
+        ).fetchall()
+        lots = con.execute(
+            """
+            SELECT id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price, purchase_time, commission_amount, notes 
+            FROM individual_purchases 
+            WHERE user_id = ? OR user_id IS NULL
+            """,
+            [effective_user_id],
+        ).fetchall()
+        sales = con.execute(
+            """
+            SELECT id, lot_id, portfolio_id, ticker, sale_date, sale_time, sale_price, shares, sale_commission, realized_pnl, notes, purchase_date, cost_basis
+            FROM purchase_sales
+            WHERE user_id = ? OR user_id IS NULL
+            """,
+            [effective_user_id],
+        ).fetchall()
 
         return {
             "purchasePortfolios": [
@@ -100,8 +122,28 @@ def get_all_purchases_data(request: Request):
                     "shares": lot[5],
                     "manualCurrentPrice": lot[6],
                     "purchaseTime": lot[7] if len(lot) > 7 else None,
+                    "commissionAmount": lot[8] if len(lot) > 8 and lot[8] is not None else 0.0,
+                    "notes": lot[9] if len(lot) > 9 else None,
                 }
                 for lot in lots
+            ],
+            "purchaseSales": [
+                {
+                    "id": s[0],
+                    "lotId": s[1],
+                    "portfolioId": s[2],
+                    "ticker": s[3],
+                    "saleDate": str(s[4]),
+                    "saleTime": s[5],
+                    "salePrice": s[6],
+                    "shares": s[7],
+                    "saleCommission": s[8] if len(s) > 8 and s[8] is not None else 0.0,
+                    "realizedPnl": s[9] if len(s) > 9 and s[9] is not None else 0.0,
+                    "notes": s[10] if len(s) > 10 else None,
+                    "purchaseDate": str(s[11]) if len(s) > 11 and s[11] is not None else None,
+                    "costBasis": s[12] if len(s) > 12 and s[12] is not None else 0.0,
+                }
+                for s in sales
             ],
         }
 
@@ -192,14 +234,14 @@ def delete_portfolio(portfolio_id: str):
 @router.post("/purchases/lots")
 def create_lot(lot: PurchaseLot, request: Request):
     user = get_optional_current_user(request)
-    user_id = user["sub"] if user else None
+    user_id = user["sub"] if user else "usr_9487dd2209d2"
 
     with get_connection() as con:
         con.execute(
             """
             INSERT INTO individual_purchases 
-            (id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price, purchase_time, user_id) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price, purchase_time, commission_amount, notes, user_id) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (id) DO UPDATE SET 
                 portfolio_id=EXCLUDED.portfolio_id,
                 ticker=EXCLUDED.ticker,
@@ -208,6 +250,8 @@ def create_lot(lot: PurchaseLot, request: Request):
                 shares=EXCLUDED.shares,
                 manual_current_price=EXCLUDED.manual_current_price,
                 purchase_time=EXCLUDED.purchase_time,
+                commission_amount=EXCLUDED.commission_amount,
+                notes=EXCLUDED.notes,
                 user_id=COALESCE(EXCLUDED.user_id, individual_purchases.user_id)
             """,
             [
@@ -219,6 +263,8 @@ def create_lot(lot: PurchaseLot, request: Request):
                 lot.shares,
                 lot.manualCurrentPrice,
                 lot.purchaseTime,
+                lot.commissionAmount or 0.0,
+                lot.notes,
                 user_id,
             ],
         )
@@ -235,7 +281,7 @@ def update_lots(lots: List[PurchaseLot], request: Request):
             con.execute(
                 """
                 UPDATE individual_purchases 
-                SET portfolio_id=?, ticker=?, date=?, purchase_price=?, shares=?, manual_current_price=?, purchase_time=?
+                SET portfolio_id=?, ticker=?, date=?, purchase_price=?, shares=?, manual_current_price=?, purchase_time=?, commission_amount=?, notes=?
                 WHERE id=?
                 """,
                 [
@@ -246,6 +292,8 @@ def update_lots(lots: List[PurchaseLot], request: Request):
                     lot.shares,
                     lot.manualCurrentPrice,
                     lot.purchaseTime,
+                    lot.commissionAmount or 0.0,
+                    lot.notes,
                     lot.id,
                 ],
             )
@@ -274,8 +322,8 @@ def sync_migration(payload: SyncPayload, request: Request):
             con.execute(
                 """
                 INSERT INTO individual_purchases 
-                (id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price, purchase_time, user_id) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price, purchase_time, commission_amount, notes, user_id) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (id) DO NOTHING
                 """,
                 [
@@ -287,11 +335,93 @@ def sync_migration(payload: SyncPayload, request: Request):
                     lot.shares,
                     lot.manualCurrentPrice,
                     lot.purchaseTime,
+                    lot.commissionAmount or 0.0,
+                    lot.notes,
                     user_id,
                 ],
             )
+        if payload.purchaseSales:
+            for s in payload.purchaseSales:
+                con.execute(
+                    """
+                    INSERT INTO purchase_sales
+                    (id, lot_id, portfolio_id, ticker, sale_date, sale_time, sale_price, shares, sale_commission, realized_pnl, notes, user_id, purchase_date, cost_basis)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT (id) DO NOTHING
+                    """,
+                    [
+                        s.id,
+                        s.lotId,
+                        s.portfolioId,
+                        s.ticker,
+                        s.saleDate,
+                        s.saleTime,
+                        s.salePrice,
+                        s.shares,
+                        s.saleCommission or 0.0,
+                        s.realizedPnl or 0.0,
+                        s.notes,
+                        user_id,
+                        s.purchaseDate,
+                        s.costBasis or 0.0,
+                    ],
+                )
     return {
         "success": True,
         "migratedPortfolios": len(payload.purchasePortfolios),
         "migratedLots": len(payload.individualPurchases),
+        "migratedSales": len(payload.purchaseSales or []),
     }
+
+
+@router.post("/purchases/sales")
+def create_sale(sale: SaleItem, request: Request):
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else "usr_9487dd2209d2"
+
+    with get_connection() as con:
+        con.execute(
+            """
+            INSERT INTO purchase_sales
+            (id, lot_id, portfolio_id, ticker, sale_date, sale_time, sale_price, shares, sale_commission, realized_pnl, notes, user_id, purchase_date, cost_basis)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (id) DO UPDATE SET
+                lot_id=EXCLUDED.lot_id,
+                portfolio_id=EXCLUDED.portfolio_id,
+                ticker=EXCLUDED.ticker,
+                sale_date=EXCLUDED.sale_date,
+                sale_time=EXCLUDED.sale_time,
+                sale_price=EXCLUDED.sale_price,
+                shares=EXCLUDED.shares,
+                sale_commission=EXCLUDED.sale_commission,
+                realized_pnl=EXCLUDED.realized_pnl,
+                notes=EXCLUDED.notes,
+                user_id=COALESCE(EXCLUDED.user_id, purchase_sales.user_id),
+                purchase_date=COALESCE(EXCLUDED.purchase_date, purchase_sales.purchase_date),
+                cost_basis=COALESCE(EXCLUDED.cost_basis, purchase_sales.cost_basis)
+            """,
+            [
+                sale.id,
+                sale.lotId,
+                sale.portfolioId,
+                sale.ticker,
+                sale.saleDate,
+                sale.saleTime,
+                sale.salePrice,
+                sale.shares,
+                sale.saleCommission or 0.0,
+                sale.realizedPnl or 0.0,
+                sale.notes,
+                user_id,
+                sale.purchaseDate,
+                sale.costBasis or 0.0,
+            ],
+        )
+    return {"success": True}
+
+
+@router.delete("/purchases/sales/{sale_id}")
+def delete_sale(sale_id: str):
+    with get_connection() as con:
+        con.execute("DELETE FROM purchase_sales WHERE id = ?", [sale_id])
+    return {"success": True}

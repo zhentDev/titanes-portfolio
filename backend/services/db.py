@@ -156,21 +156,59 @@ def init_db():
                 shares DOUBLE,
                 manual_current_price DOUBLE,
                 purchase_time VARCHAR,
+                commission_amount DOUBLE DEFAULT 0.0,
+                notes VARCHAR,
                 user_id VARCHAR,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (portfolio_id) REFERENCES purchase_portfolios(id)
             )
         """)
 
-        # Migration: Add purchase_time and user_id to individual_purchases if missing
+        # Migration: Add purchase_time, commission_amount, notes, and user_id to individual_purchases if missing
         try:
             ip_cols = [row[1] for row in con.execute("PRAGMA table_info('individual_purchases')").fetchall()]
             if "purchase_time" not in ip_cols:
                 con.execute("ALTER TABLE individual_purchases ADD COLUMN purchase_time VARCHAR")
+            if "commission_amount" not in ip_cols:
+                con.execute("ALTER TABLE individual_purchases ADD COLUMN commission_amount DOUBLE DEFAULT 0.0")
+            if "notes" not in ip_cols:
+                con.execute("ALTER TABLE individual_purchases ADD COLUMN notes VARCHAR")
             if "user_id" not in ip_cols:
                 con.execute("ALTER TABLE individual_purchases ADD COLUMN user_id VARCHAR")
         except duckdb.Error as e:
             print(f"Individual purchases migration error: {e}")
+
+        # Table for Realized Sales (Ventas / Liquidaciones de lotes)
+        con.execute("""
+            CREATE TABLE IF NOT EXISTS purchase_sales (
+                id VARCHAR PRIMARY KEY,
+                lot_id VARCHAR,
+                portfolio_id VARCHAR,
+                ticker VARCHAR,
+                sale_date DATE,
+                sale_time VARCHAR,
+                sale_price DOUBLE,
+                shares DOUBLE,
+                sale_commission DOUBLE DEFAULT 0.0,
+                realized_pnl DOUBLE DEFAULT 0.0,
+                notes VARCHAR,
+                user_id VARCHAR,
+                purchase_date DATE,
+                cost_basis DOUBLE DEFAULT 0.0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (portfolio_id) REFERENCES purchase_portfolios(id)
+            )
+        """)
+
+        # Migration: Add purchase_date and cost_basis to purchase_sales if missing
+        try:
+            ps_cols = [row[1] for row in con.execute("PRAGMA table_info('purchase_sales')").fetchall()]
+            if "purchase_date" not in ps_cols:
+                con.execute("ALTER TABLE purchase_sales ADD COLUMN purchase_date DATE")
+            if "cost_basis" not in ps_cols:
+                con.execute("ALTER TABLE purchase_sales ADD COLUMN cost_basis DOUBLE DEFAULT 0.0")
+        except duckdb.Error as e:
+            print(f"Purchase sales migration error: {e}")
 
         con.execute("""
             CREATE TABLE IF NOT EXISTS custom_strategies (

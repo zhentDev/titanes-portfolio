@@ -635,7 +635,11 @@ export default function App() {
                       setPurchasesOpen(false);
                     }}
                   >
-                    <span className="item-icon">🛒</span>
+                    <span className="item-icon">
+                      {port.id === "hist_crypto" || (port.name && port.name.toLowerCase().includes("cripto"))
+                        ? "🪙"
+                        : "🛒"}
+                    </span>
                     <span className="item-title">{port.name}</span>
                   </button>
                 ))}

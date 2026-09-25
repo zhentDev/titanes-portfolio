@@ -22,6 +22,18 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
   // Scale mode: Linear vs Logarithmic
   const [isLogScale, setIsLogScale] = useState(false);
 
+  // Mobile detection
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== "undefined" ? window.innerWidth <= 640 : false));
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 640;
+      setIsMobile((prev) => (prev !== mobile ? mobile : prev));
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   // Hover state for clean HUD header (avoids obstructing the chart)
   const [hoverData, setHoverData] = useState(null);
 
@@ -105,7 +117,7 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
         horzLine: { color: chartColors.crosshairColor, width: 1, style: LineStyle.Dashed },
       },
       leftPriceScale: {
-        visible: true,
+        visible: !isMobile,
         borderColor: chartColors.borderColor,
         textColor: chartColors.purpleScaleText,
         autoScale: true,
@@ -119,7 +131,7 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
       },
       timeScale: {
         borderColor: chartColors.borderColor,
-        barSpacing: 10,
+        barSpacing: isMobile ? 14 : 10,
         fixLeftEdge: true,
         fixRightEdge: true,
         timeVisible: true,
@@ -241,14 +253,17 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
     }
   }, [theme]);
 
-  // Update Logarithmic / Normal Mode
+  // Update Logarithmic / Normal Mode and Responsive Left Scale
   useEffect(() => {
     if (!chartRef.current) return;
     chartRef.current.priceScale("right").applyOptions({
       mode: isLogScale ? PriceScaleMode.Logarithmic : PriceScaleMode.Normal,
     });
+    chartRef.current.priceScale("left").applyOptions({
+      visible: !isMobile,
+    });
     chartRef.current.timeScale().fitContent();
-  }, [isLogScale]);
+  }, [isLogScale, isMobile]);
 
   // Update Series Visibility dynamically based on visibleSeries state
   useEffect(() => {

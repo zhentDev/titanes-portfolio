@@ -90,7 +90,12 @@ export function detectExchangeKey(ticker = "", exchange = "") {
   const t = String(ticker).trim().toUpperCase();
   const e = String(exchange).trim().toUpperCase();
 
-  if (t.includes("-USD") && (t.includes("BTC") || t.includes("ETH") || e === "CCC" || e === "CRYPTOCURRENCY")) {
+  if (
+    e === "CRYPTO" ||
+    e === "CCC" ||
+    e === "CRYPTOCURRENCY" ||
+    (t.includes("-USD") && (t.includes("BTC") || t.includes("ETH") || t.includes("XAUT") || t.includes("PAXG") || t.includes("SOL") || t.includes("ADA") || t.includes("USDT") || t.includes("USDC")))
+  ) {
     return "CRYPTO";
   }
   if (t.endsWith(".HK") || ["HKG", "HKEX", "HONG KONG"].includes(e)) {
@@ -272,6 +277,7 @@ export function getMarketSchedule(ticker = "", exchange = "") {
  */
 export const MARKET_REGIONS = [
   { id: "ALL", label: "Todos", icon: "🌐" },
+  { id: "CRYPTO", label: "Cripto / Oro", icon: "🪙", hint: "XAUT-USD, BTC-USD, ETH-USD (24/7)" },
   { id: "US", label: "EE.UU.", icon: "🇺🇸", hint: "NYSE / NASDAQ (Sin sufijo)" },
   { id: "GER", label: "Alemania", icon: "🇩🇪", hint: "Frankfurt .F / Xetra .DE (XTB: .DE)" },
   { id: "UK", label: "Londres", icon: "🇬🇧", hint: "LSE .L (XTB: .UK)" },
@@ -293,7 +299,36 @@ export function translateBrokerTicker(rawInput = "") {
 
   const suggestions = [];
 
-  if (clean.endsWith(".UK")) {
+  if (clean === "XAUT" || clean === "PLENTI" || clean === "ORO") {
+    suggestions.push({
+      ticker: "XAUT-USD",
+      note: "Tether Gold (XAUt - Plenti)",
+      badge: "🪙 Oro Digital (24/7)",
+    });
+    suggestions.push({
+      ticker: "PAXG-USD",
+      note: "PAX Gold (PAXG)",
+      badge: "🪙 Oro Digital (24/7)",
+    });
+  } else if (clean === "PAXG") {
+    suggestions.push({
+      ticker: "PAXG-USD",
+      note: "PAX Gold (PAXG)",
+      badge: "🪙 Oro Digital (24/7)",
+    });
+  } else if (clean === "BTC") {
+    suggestions.push({
+      ticker: "BTC-USD",
+      note: "Bitcoin (Yahoo Finance)",
+      badge: "🌐 Bitcoin (24/7)",
+    });
+  } else if (clean === "ETH") {
+    suggestions.push({
+      ticker: "ETH-USD",
+      note: "Ethereum (Yahoo Finance)",
+      badge: "🌐 Ethereum (24/7)",
+    });
+  } else if (clean.endsWith(".UK")) {
     const base = clean.slice(0, -3);
     suggestions.push({
       ticker: `${base}.L`,
@@ -344,6 +379,20 @@ export function translateBrokerTicker(rawInput = "") {
 export function getBrokerEquivalenceInfo(ticker = "", exchange = "") {
   const t = String(ticker).trim().toUpperCase();
   const e = String(exchange).trim().toUpperCase();
+
+  if (
+    e === "CRYPTO" ||
+    e === "CCC" ||
+    e === "CRYPTOCURRENCY" ||
+    (t.includes("-USD") && (t.includes("BTC") || t.includes("ETH") || t.includes("XAUT") || t.includes("PAXG") || t.includes("SOL") || t.includes("ADA")))
+  ) {
+    return {
+      region: "CRYPTO",
+      marketLabel: "Cripto / Oro Digital (24/7)",
+      flag: "🪙",
+      brokerTip: "Opera 24/7 sin cierre de mercado. Compatible con Plenti (XAUt) y exchanges cripto.",
+    };
+  }
 
   if (t.endsWith(".F")) {
     return {

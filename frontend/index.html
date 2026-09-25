@@ -19,19 +19,42 @@
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5026153133538836"
      crossorigin="anonymous"></script>
 
-    <!-- Monetag In-Page Push & Vignette Ad Tags -->
+    <!-- Monetag In-Page Push Ad Tag & Cooldown Control -->
     <script>
     (function() {
-      function loadMonetagAds() {
-        if (!localStorage.getItem('monetagCooldown')) {
-          var target = document.body || document.head || document.documentElement;
-          if (!target) return;
-          // Carga únicamente un script de anuncio (In-Page Push) para evitar banners duplicados apilados
-          var s1 = document.createElement('script');
-          s1.dataset.zone = '11837652';
-          s1.src = 'https://nap5k.com/tag.min.js';
-          target.appendChild(s1);
+      // =========================================================================
+      // ⏱️ PARÁMETRO DE TIEMPO DE ESPERA / COOLDOWN (Configurable en Horas)
+      // Modifica este valor para cambiar cuánto tiempo esperar tras cerrar un anuncio.
+      // Ejemplos: 4 = 4 horas, 12 = 12 horas, 24 = 1 día, 0.5 = 30 minutos.
+      // =========================================================================
+      const AD_COOLDOWN_HOURS = 6; 
+      const COOLDOWN_MS = AD_COOLDOWN_HOURS * 60 * 60 * 1000;
+
+      function isCooldownActive() {
+        const stored = localStorage.getItem('monetagCooldown');
+        if (!stored) return false;
+        const expiry = Number(stored);
+        if (Date.now() < expiry) {
+          return true; // Aún está en periodo de espera
         }
+        // Ya expiró, limpiar el cooldown antiguo
+        localStorage.removeItem('monetagCooldown');
+        return false;
+      }
+
+      function activateCooldown() {
+        localStorage.setItem('monetagCooldown', Date.now() + COOLDOWN_MS);
+      }
+
+      function loadMonetagAds() {
+        if (isCooldownActive()) return;
+
+        var target = document.body || document.head || document.documentElement;
+        if (!target) return;
+        var s1 = document.createElement('script');
+        s1.dataset.zone = '11837652';
+        s1.src = 'https://nap5k.com/tag.min.js';
+        target.appendChild(s1);
       }
 
       if (document.readyState === 'loading') {
@@ -40,23 +63,92 @@
         loadMonetagAds();
       }
 
-      // Listen for ad close events to set cooldown (45 minutes)
+      // 1. Escucha clicks en botones nativos de cierre ('X' o botón de dismiss)
       document.addEventListener('click', function(e) {
-        if (e.target && e.target.closest && e.target.closest('.monetag-close, .vignette-close, .close')) {
-          localStorage.setItem('monetagCooldown', Date.now() + 45*60*1000);
+        if (e.target && e.target.closest && e.target.closest('.monetag-close, .vignette-close, .close, [class*="close"], [aria-label*="close"]')) {
+          activateCooldown();
         }
-      });
+      }, true);
+
+      // 2. Gesto de deslizar a un lado (Swipe-to-Dismiss) en pantallas táctiles
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let activeAdEl = null;
+
+      function findAdContainer(target) {
+        if (!target || !target.closest) return null;
+        return target.closest('iframe[src*="nap5k"], iframe[src*="n6wxm"], [id*="monetag"], .monetag, .in-page-push, [class*="in-page-push"], div[id*="zone_"], div[data-zone]');
+      }
+
+      document.addEventListener('touchstart', function(e) {
+        const adEl = findAdContainer(e.target);
+        if (adEl && e.touches.length === 1) {
+          activeAdEl = adEl;
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+        }
+      }, { passive: true });
+
+      document.addEventListener('touchmove', function(e) {
+        if (!activeAdEl || e.touches.length !== 1) return;
+        const currentX = e.touches[0].clientX;
+        const deltaX = currentX - touchStartX;
+        const deltaY = e.touches[0].clientY - touchStartY;
+        // Solo deslizar si el movimiento es predominantemente horizontal
+        if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
+          activeAdEl.style.transition = 'none';
+          activeAdEl.style.transform = `translateX(${deltaX}px) scale(0.85)`;
+          activeAdEl.style.opacity = `${Math.max(0.1, 1 - Math.abs(deltaX) / 220)}`;
+        }
+      }, { passive: true });
+
+      document.addEventListener('touchend', function(e) {
+        if (!activeAdEl) return;
+        const touchEndX = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX : touchStartX;
+        const deltaX = touchEndX - touchStartX;
+
+        if (Math.abs(deltaX) > 60) {
+          // Deslizado exitoso: expulsar hacia el lado correspondiente y eliminar
+          const flyOut = deltaX > 0 ? '120vw' : '-120vw';
+          activeAdEl.style.transition = 'transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.25s ease';
+          activeAdEl.style.transform = `translateX(${flyOut}) scale(0.8)`;
+          activeAdEl.style.opacity = '0';
+          
+          setTimeout(() => {
+            if (activeAdEl && activeAdEl.parentNode) {
+              activeAdEl.parentNode.removeChild(activeAdEl);
+            }
+            activeAdEl = null;
+          }, 300);
+
+          activateCooldown();
+        } else {
+          // Si no alcanzó el umbral, retornar a la posición inicial
+          activeAdEl.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
+          activeAdEl.style.transform = '';
+          activeAdEl.style.opacity = '1';
+          activeAdEl = null;
+        }
+      }, { passive: true });
     })();
     </script>
     <style>
-    /* Force Monetag ads and push notifications to bottom-left corner */
+    /* Ubicación y diseño base de los anuncios */
     iframe[src*="nap5k"], iframe[src*="n6wxm"], [id*="monetag"], .monetag, .in-page-push, [class*="in-page-push"], div[id*="zone_"], div[data-zone] {
-      position: fixed !important;
-      bottom: 16px !important;
-      left: 16px !important;
-      top: auto !important;
-      right: auto !important;
-      z-index: 10000 !important;
+      touch-action: pan-y !important;
+      user-select: none !important;
+      -webkit-user-select: none !important;
+    }
+
+    /* Adaptación para pantallas pequeñas / móviles (<= 640px) */
+    @media (max-width: 640px) {
+      iframe[src*="nap5k"], iframe[src*="n6wxm"], [id*="monetag"], .monetag, .in-page-push, [class*="in-page-push"], div[id*="zone_"], div[data-zone] {
+        transform: scale(0.82) !important;
+        transform-origin: top center !important;
+        max-width: 90vw !important;
+        margin: 0 auto !important;
+        font-size: 13px !important;
+      }
     }
     </style>
 

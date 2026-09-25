@@ -46,7 +46,7 @@
       "id": "in_stock_div",
       "name": "Ingreso por Renta Variable",
       "category": "passive_equity",
-      "amount": 35930,
+      "amount": 37212,
       "currency": "COP",
       "isPassive": true,
       "isAutoSynced": true,
@@ -186,7 +186,7 @@
       "category": "equity_investment",
       "targetAmount": 30000000,
       "monthlyContribution": 500000,
-      "currentBalance": 21557965,
+      "currentBalance": 22326935,
       "currency": "COP",
       "linkedModule": "variable_income",
       "paymentSource": {

@@ -293,6 +293,17 @@ export default function StrategyChart({
   const seriesRef = useRef({});
   const [hoverValues, setHoverValues] = useState(null);
 
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== "undefined" ? window.innerWidth <= 640 : false));
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 640;
+      setIsMobile((prev) => (prev !== mobile ? mobile : prev));
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const { theme } = useTheme();
   const chartColors = useMemo(() => getChartColors(theme), [theme]);
 
@@ -349,6 +360,16 @@ export default function StrategyChart({
         vertLine: { color: chartColors.crosshairColor, width: 1, style: LineStyle.Dashed },
         horzLine: { color: chartColors.crosshairColor, width: 1, style: LineStyle.Dashed },
       },
+      localization: {
+        locale: "es-CO",
+        priceFormatter: (price) => {
+          if (typeof price !== "number" || isNaN(price)) return "";
+          if (isMobile) {
+            return "$" + Math.round(price);
+          }
+          return "$" + price.toFixed(2);
+        },
+      },
       rightPriceScale: {
         borderColor: chartColors.borderColor,
         scaleMargins: { top: 0.1, bottom: 0.1 },
@@ -356,6 +377,7 @@ export default function StrategyChart({
       timeScale: {
         borderColor: chartColors.borderColor,
         timeVisible: false,
+        barSpacing: isMobile ? 12 : 8,
       },
       handleScroll: true,
       handleScale: true,
@@ -367,7 +389,10 @@ export default function StrategyChart({
       lineStyle: LineStyle.Dashed,
       priceLineVisible: false,
       lastValueVisible: false,
-      title: "Capital Invertido",
+      title: isMobile ? "" : "Capital Invertido",
+      priceFormat: isMobile
+        ? { type: "price", precision: 0, minMove: 1 }
+        : { type: "price", precision: 2, minMove: 0.01 },
     });
 
     seriesRef.current.sp500 = chartRef.current.addLineSeries({
@@ -375,7 +400,10 @@ export default function StrategyChart({
       lineWidth: 1.5,
       priceLineVisible: false,
       lastValueVisible: false,
-      title: strategy?.benchmark || "S&P 500",
+      title: isMobile ? "" : (strategy?.benchmark || "S&P 500"),
+      priceFormat: isMobile
+        ? { type: "price", precision: 0, minMove: 1 }
+        : { type: "price", precision: 2, minMove: 0.01 },
     });
 
     seriesRef.current.nasdaq = chartRef.current.addLineSeries({
@@ -383,15 +411,21 @@ export default function StrategyChart({
       lineWidth: 1.5,
       priceLineVisible: false,
       lastValueVisible: false,
-      title: "NASDAQ",
+      title: isMobile ? "" : "NASDAQ",
+      priceFormat: isMobile
+        ? { type: "price", precision: 0, minMove: 1 }
+        : { type: "price", precision: 2, minMove: 0.01 },
     });
 
     seriesRef.current.strat = chartRef.current.addLineSeries({
       color: strategy?.color || COLORS.mm20,
       lineWidth: 2.5,
       priceLineVisible: false,
-      lastValueVisible: true,
-      title: strategy?.name || "Estrategia",
+      lastValueVisible: !isMobile,
+      title: isMobile ? "" : (strategy?.name || "Estrategia"),
+      priceFormat: isMobile
+        ? { type: "price", precision: 0, minMove: 1 }
+        : { type: "price", precision: 2, minMove: 0.01 },
     });
 
     chartRef.current.subscribeCrosshairMove((param) => {
@@ -426,7 +460,7 @@ export default function StrategyChart({
     return () => {
       ro.disconnect();
     };
-  }, [strategy?.color, strategy?.benchmark, strategy?.name]);
+  }, [strategy?.color, strategy?.benchmark, strategy?.name, isMobile]);
 
   useEffect(() => {
     const cleanup = initChart();
@@ -444,6 +478,24 @@ export default function StrategyChart({
     }
   }, [theme]);
 
+  // Downsample helper for mobile
+  const sampleArr = (arr) => {
+    if (!arr || !Array.isArray(arr)) return [];
+    if (isMobile && arr.length > 30) {
+      const sampled = [];
+      const interval = Math.ceil(arr.length / 28);
+      const lastPoint = arr[arr.length - 1];
+      for (let i = 0; i < arr.length; i += interval) {
+        sampled.push(arr[i]);
+      }
+      if (sampled[sampled.length - 1]?.time !== lastPoint?.time) {
+        sampled.push(lastPoint);
+      }
+      return sampled;
+    }
+    return arr;
+  };
+
   useEffect(() => {
     if (!chartRef.current || !chartData) return;
     const isIntraday = period === "1D";
@@ -453,12 +505,12 @@ export default function StrategyChart({
         secondsVisible: false,
       },
     });
-    seriesRef.current.sp500?.setData(chartData.sp500);
-    seriesRef.current.nasdaq?.setData(chartData.nasdaq);
-    seriesRef.current.baseLine?.setData(chartData.baseLine);
-    seriesRef.current.strat?.setData(chartData.strat);
+    seriesRef.current.sp500?.setData(sampleArr(chartData.sp500));
+    seriesRef.current.nasdaq?.setData(sampleArr(chartData.nasdaq));
+    seriesRef.current.baseLine?.setData(sampleArr(chartData.baseLine));
+    seriesRef.current.strat?.setData(sampleArr(chartData.strat));
     chartRef.current.timeScale().fitContent();
-  }, [chartData, period]);
+  }, [chartData, period, isMobile]);
 
   const lastSP = chartData.sp500[chartData.sp500.length - 1]?.value;
   const lastNasdaq = chartData.nasdaq[chartData.nasdaq.length - 1]?.value;

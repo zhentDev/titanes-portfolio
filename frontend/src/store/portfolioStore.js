@@ -8,9 +8,11 @@ import { persist } from "zustand/middleware";
 import {
   createPurchaseLot,
   createPurchasePortfolio,
+  createPurchaseSale,
   deleteCustomStrategyApi,
   deletePurchaseLot,
   deletePurchasePortfolioApi,
+  deletePurchaseSale,
   fetchCustomStrategiesApi,
   fetchHistoricalPrice,
   fetchPurchasesData,
@@ -87,6 +89,7 @@ export const usePortfolioStore = create(
       // ── HISTORICAL INDIVIDUAL PURCHASES ──
       purchasePortfolios: [{ id: "hist_default", name: "Compras Principales" }],
       individualPurchases: [],
+      purchaseSales: [],
       initFetchPurchases: async () => {
         try {
           const res = await fetchPurchasesData();
@@ -111,11 +114,13 @@ export const usePortfolioStore = create(
             set({
               purchasePortfolios: refetched.purchasePortfolios,
               individualPurchases: refetched.individualPurchases,
+              purchaseSales: refetched.purchaseSales || [],
             });
           } else if (res.purchasePortfolios.length > 0) {
             set({
               purchasePortfolios: res.purchasePortfolios,
               individualPurchases: res.individualPurchases,
+              purchaseSales: res.purchaseSales || [],
             });
           }
         } catch (err) {
@@ -138,6 +143,48 @@ export const usePortfolioStore = create(
           }));
         } catch (e) {
           toast.error("Error eliminando la compra de BD");
+        }
+      },
+      addPurchaseSale: async (sale, updatedLot) => {
+        try {
+          await createPurchaseSale(sale);
+          if (updatedLot) {
+            if (updatedLot.shares <= 0) {
+              await deletePurchaseLot(updatedLot.id);
+              set((state) => ({
+                purchaseSales: [sale, ...state.purchaseSales],
+                individualPurchases: state.individualPurchases.filter((p) => p.id !== updatedLot.id),
+              }));
+            } else {
+              await updatePurchaseLots([updatedLot]);
+              set((state) => ({
+                purchaseSales: [sale, ...state.purchaseSales],
+                individualPurchases: state.individualPurchases.map((p) =>
+                  p.id === updatedLot.id ? { ...p, ...updatedLot } : p,
+                ),
+              }));
+            }
+          } else {
+            set((state) => ({
+              purchaseSales: [sale, ...state.purchaseSales],
+            }));
+          }
+          toast.success("¡Venta registrada exitosamente!");
+        } catch (e) {
+          console.error("Error al registrar venta:", e);
+          toast.error("Error registrando la venta en BD");
+        }
+      },
+      removePurchaseSale: async (id) => {
+        try {
+          await deletePurchaseSale(id);
+          set((state) => ({
+            purchaseSales: state.purchaseSales.filter((s) => s.id !== id),
+          }));
+          toast.success("Registro de venta eliminado");
+        } catch (e) {
+          console.error("Error al eliminar venta:", e);
+          toast.error("Error eliminando la venta de BD");
         }
       },
       updatePurchase: async (updated) => {
@@ -644,6 +691,7 @@ export const usePortfolioStore = create(
         mainPortfolioSettings: s.mainPortfolioSettings,
         purchasePortfolios: s.purchasePortfolios,
         individualPurchases: s.individualPurchases,
+        purchaseSales: s.purchaseSales,
         customStrategies: s.customStrategies,
         strategyRebalances: s.strategyRebalances,
       }),

@@ -406,7 +406,7 @@ export async function fetchColInflationHistory() {
 }
 
 export async function createPurchaseLot(lot) {
-  const res = await fetch(`${BASE}/purchases/lots`, {
+  const res = await safeFetch(`${BASE}/purchases/lots`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(lot),
@@ -416,7 +416,7 @@ export async function createPurchaseLot(lot) {
 }
 
 export async function updatePurchaseLots(lots) {
-  const res = await fetch(`${BASE}/purchases/lots`, {
+  const res = await safeFetch(`${BASE}/purchases/lots`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(lots),
@@ -427,16 +427,32 @@ export async function updatePurchaseLots(lots) {
 }
 
 export async function deletePurchaseLot(id) {
-  const res = await fetch(`${BASE}/purchases/lots/${id}`, { method: "DELETE" });
+  const res = await safeFetch(`${BASE}/purchases/lots/${id}`, { method: "DELETE" });
   invalidateApiCache("/purchases");
   return res.json();
 }
 
-export async function syncPurchasesMigration(purchasePortfolios, individualPurchases) {
+export async function createPurchaseSale(sale) {
+  const res = await safeFetch(`${BASE}/purchases/sales`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(sale),
+  });
+  invalidateApiCache("/purchases");
+  return res.json();
+}
+
+export async function deletePurchaseSale(id) {
+  const res = await safeFetch(`${BASE}/purchases/sales/${id}`, { method: "DELETE" });
+  invalidateApiCache("/purchases");
+  return res.json();
+}
+
+export async function syncPurchasesMigration(purchasePortfolios, individualPurchases, purchaseSales = []) {
   const res = await safeFetch(`${BASE}/purchases/sync`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ purchasePortfolios, individualPurchases }),
+    body: JSON.stringify({ purchasePortfolios, individualPurchases, purchaseSales }),
   });
   invalidateApiCache("/purchases");
   return res.json();

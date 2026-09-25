@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
-export default function PlanExecutionModal({ isOpen, onClose, planAnalysis, liveQuotes, onSave }) {
+export default function PlanExecutionModal({
+  isOpen,
+  onClose,
+  planAnalysis,
+  liveQuotes,
+  currentPurchases = [],
+  onSave,
+}) {
   const [executionDate, setExecutionDate] = useState("");
   const [items, setItems] = useState([]);
 
@@ -14,31 +21,54 @@ export default function PlanExecutionModal({ isOpen, onClose, planAnalysis, live
       const initialItems = Object.entries(planAnalysis.distribution).map(([ticker, pct]) => {
         const targetAmount = (pct / 100) * planAnalysis.avgAmount;
 
-        let initialPrice = "";
-        let initialShares = "";
+        let detectedPrice = "";
+        let isEstimated = false;
 
+        // 1. Intentar precio en vivo
         if (liveQuotes && liveQuotes[ticker] && liveQuotes[ticker].price) {
-          initialPrice = liveQuotes[ticker].price;
-          // Auto-calcular acciones iniciales basadas en el precio en vivo
-          initialShares = (targetAmount / initialPrice).toFixed(4);
+          detectedPrice = Number(liveQuotes[ticker].price);
+        } else {
+          // 2. Fallback: buscar el último precio de compra registrado para este activo
+          const matchingPurchases = currentPurchases
+            .filter((p) => p.ticker === ticker && Number(p.purchasePrice) > 0)
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+          if (matchingPurchases.length > 0) {
+            detectedPrice = Number(matchingPurchases[0].purchasePrice);
+            isEstimated = true;
+          }
+        }
+
+        let initialShares = "";
+        if (detectedPrice > 0) {
+          initialShares = (targetAmount / detectedPrice).toFixed(4);
         }
 
         return {
           ticker,
           targetAmount,
-          purchasePrice: initialPrice,
+          purchasePrice: detectedPrice ? detectedPrice.toString() : "",
           shares: initialShares,
+          isEstimated,
         };
       });
       setItems(initialItems);
     }
-  }, [isOpen, planAnalysis, liveQuotes]);
+  }, [isOpen, planAnalysis, liveQuotes, currentPurchases]);
 
   if (!isOpen || !planAnalysis) return null;
 
   const handleUpdateItem = (index, field, value) => {
     const newItems = [...items];
     newItems[index][field] = value;
+
+    // Si el usuario cambia el precio, auto-recalcular el volumen para cumplir el monto objetivo
+    if (field === "purchasePrice") {
+      const numPrice = Number(value);
+      if (numPrice > 0 && newItems[index].targetAmount > 0) {
+        newItems[index].shares = (newItems[index].targetAmount / numPrice).toFixed(4);
+      }
+    }
     setItems(newItems);
   };
 

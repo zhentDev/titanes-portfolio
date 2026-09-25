@@ -134,6 +134,27 @@ TICKER_METADATA: dict[str, dict[str, str]] = {
         "sector": "Benchmark S&P MidCap 400",
         "exchange": "NYSE",
     },
+    # Cripto & Oro Digital (Plenti / Exchanges)
+    "XAUT-USD": {
+        "name": "Tether Gold (XAUt / Plenti)",
+        "sector": "Cripto / Oro Físico Tokenizado",
+        "exchange": "CRYPTO",
+    },
+    "PAXG-USD": {
+        "name": "PAX Gold (PAXG)",
+        "sector": "Cripto / Oro Físico Tokenizado",
+        "exchange": "CRYPTO",
+    },
+    "BTC-USD": {
+        "name": "Bitcoin (BTC)",
+        "sector": "Criptomoneda",
+        "exchange": "CRYPTO",
+    },
+    "ETH-USD": {
+        "name": "Ethereum (ETH)",
+        "sector": "Criptomoneda / Smart Contracts",
+        "exchange": "CRYPTO",
+    },
 }
 
 
@@ -478,6 +499,9 @@ def is_ticker_market_open(ticker: str, exchange: str | None = None) -> bool:
     ex_clean = (exchange or "").strip().upper()
 
     try:
+        if ex_clean in ["CRYPTO", "CRYPTOCURRENCY", "CCC"] or t_clean.endswith("-USD") and any(c in t_clean for c in ["BTC", "ETH", "XAUT", "PAXG", "SOL", "ADA", "BNB"]):
+            return True
+
         if t_clean.endswith(".HK") or ex_clean in ["HKG", "HKEX", "HONG KONG"]:
             tz = zoneinfo.ZoneInfo("Asia/Hong_Kong")
             now = datetime.now(tz)

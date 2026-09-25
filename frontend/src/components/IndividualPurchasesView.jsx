@@ -27,10 +27,13 @@ import XtbImportModal from "./XtbImportModal";
 export default function IndividualPurchasesView({ portfolioId = "hist_default", onSelectPortfolio }) {
   const {
     individualPurchases,
+    purchaseSales,
     addPurchase,
     removePurchase,
     updatePurchase,
     updateMultiplePurchases,
+    addPurchaseSale,
+    removePurchaseSale,
     purchasePortfolios,
     addPurchasePortfolio,
     deletePurchasePortfolio,
@@ -52,6 +55,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
   const [editingPurchase, setEditingPurchase] = useState(null);
   const [editInvested, setEditInvested] = useState(0);
   const [editPrice, setEditPrice] = useState(0);
+  const [editCommissionAmount, setEditCommissionAmount] = useState(0);
   const [editDate, setEditDate] = useState("");
   const [editPurchaseTime, setEditPurchaseTime] = useState("");
   const [editTicker, setEditTicker] = useState("");
@@ -61,6 +65,17 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
   const [showInflationExplorer, setShowInflationExplorer] = useState(false);
   const [showXtbModal, setShowXtbModal] = useState(false);
   const [changingTickerGroup, setChangingTickerGroup] = useState(null);
+
+  // Selling state
+  const [sellingLot, setSellingLot] = useState(null);
+  const [saleMode, setSaleMode] = useState("shares"); // 'shares' | 'usd'
+  const [saleShares, setSaleShares] = useState(0);
+  const [saleAmountUSD, setSaleAmountUSD] = useState(0);
+  const [salePrice, setSalePrice] = useState(0);
+  const [saleCommission, setSaleCommission] = useState(0);
+  const [saleDate, setSaleDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [saleTime, setSaleTime] = useState("");
+  const [saleNotes, setSaleNotes] = useState("");
 
   const portfolio = purchasePortfolios?.find((p) => p.id === portfolioId) || {
     name: "Histórico",
@@ -153,6 +168,38 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
     return individualPurchases.filter((p) => p.portfolioId === portfolioId);
   }, [individualPurchases, portfolioId]);
 
+  const currentSales = useMemo(() => {
+    return (purchaseSales || [])
+      .filter((s) => (s.portfolioId || s.portfolio_id) === portfolioId)
+      .map((s) => ({
+        id: s.id,
+        lotId: s.lotId || s.lot_id,
+        portfolioId: s.portfolioId || s.portfolio_id,
+        ticker: s.ticker,
+        saleDate: s.saleDate || s.sale_date,
+        saleTime: s.saleTime || s.sale_time,
+        salePrice: Number(s.salePrice ?? s.sale_price ?? 0),
+        shares: Number(s.shares ?? 0),
+        saleCommission: Number(s.saleCommission ?? s.sale_commission ?? 0),
+        realizedPnl: Number(s.realizedPnl ?? s.realized_pnl ?? 0),
+        notes: s.notes,
+        purchaseDate: s.purchaseDate || s.purchase_date,
+        costBasis: Number(s.costBasis ?? s.cost_basis ?? 0),
+        // keep snake_case aliases for any legacy references
+        portfolio_id: s.portfolioId || s.portfolio_id,
+        sale_date: s.saleDate || s.sale_date,
+        sale_time: s.saleTime || s.sale_time,
+        sale_price: Number(s.salePrice ?? s.sale_price ?? 0),
+        sale_commission: Number(s.saleCommission ?? s.sale_commission ?? 0),
+        realized_pnl: Number(s.realizedPnl ?? s.realized_pnl ?? 0),
+      }))
+      .sort((a, b) => new Date(b.saleDate) - new Date(a.saleDate));
+  }, [purchaseSales, portfolioId]);
+
+  const totalRealizedPnl = useMemo(() => {
+    return currentSales.reduce((acc, s) => acc + (s.realizedPnl || 0), 0);
+  }, [currentSales]);
+
   // Auto-asignar hora oficial de apertura de mercado a posiciones abiertas que no cuenten con hora registrada
   const processedNoTimeIdsRef = useRef(new Set());
   useEffect(() => {
@@ -200,6 +247,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
   const [purchaseTime, setPurchaseTime] = useState("");
   const [investedAmount, setInvestedAmount] = useState(500);
   const [price, setPrice] = useState(100);
+  const [commissionAmount, setCommissionAmount] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
   const [selectedMeta, setSelectedMeta] = useState(null);
@@ -394,6 +442,8 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
     const defaultOpenTime = getMarketOpenTime(selectedMeta.ticker, selectedMeta.exchange);
     const finalPurchaseTime = purchaseTime.trim() || defaultOpenTime;
 
+    const comm = Number(commissionAmount) || 0;
+
     const newPurchase = {
       id: Date.now().toString(),
       ticker: selectedMeta.ticker,
@@ -403,12 +453,14 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
       investedAmount: inv,
       shares: calculatedShares,
       purchasePrice: prc,
+      commissionAmount: comm,
       portfolioId,
     };
 
     addPurchase(newPurchase);
 
     setInvestedAmount(500);
+    setCommissionAmount(0);
     setDate(new Date().toISOString().split("T")[0]);
     setPurchaseTime("");
   };
@@ -417,6 +469,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
     if (!editingPurchase) return;
     const inv = Number(editInvested);
     const prc = Number(editPrice);
+    const comm = Number(editCommissionAmount) || 0;
 
     if (inv <= 0 || prc <= 0) {
       toast.error("El monto invertido y el precio deben ser mayores a cero.");
@@ -433,6 +486,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
       purchaseTime: finalPurchaseTime,
       investedAmount: inv,
       purchasePrice: prc,
+      commissionAmount: comm,
       shares: inv / prc,
       manualCurrentPrice: Number(editingPurchase.manualCurrentPrice) || undefined,
     };
@@ -441,9 +495,107 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
     setEditingPurchase(null);
     setEditInvested(0);
     setEditPrice(0);
+    setEditCommissionAmount(0);
     setEditDate("");
     setEditPurchaseTime("");
     setEditTicker("");
+  };
+
+  const handleExecuteSale = async () => {
+    if (!sellingLot) return;
+    const soldPrice = Number(salePrice);
+    const soldComm = Number(saleCommission) || 0;
+    const maxShares = Number(sellingLot.shares);
+
+    if (soldPrice <= 0 || isNaN(soldPrice)) {
+      toast.error("El precio de venta debe ser mayor a 0.");
+      return;
+    }
+
+    let soldShares = 0;
+    if (saleMode === "usd") {
+      const amtUSD = Number(saleAmountUSD);
+      if (amtUSD <= 0 || isNaN(amtUSD)) {
+        toast.error("El monto en dólares a liquidar debe ser mayor a 0.");
+        return;
+      }
+      soldShares = amtUSD / soldPrice;
+    } else {
+      soldShares = Number(saleShares);
+      if (soldShares <= 0 || isNaN(soldShares)) {
+        toast.error("Las unidades a vender deben ser mayores a 0.");
+        return;
+      }
+    }
+
+    // Si supera maxShares por más de un margen de redondeo minúsculo
+    if (soldShares > maxShares + 1e-4) {
+      toast.error(`No puedes vender más unidades de las disponibles (${maxShares.toFixed(4)} uds).`);
+      return;
+    }
+
+    // Clamp si está muy cerca del 100%
+    if (soldShares > maxShares) {
+      soldShares = maxShares;
+    }
+
+    // Cost basis calculation (proportional)
+    const originalInvested = Number(sellingLot.investedAmount || sellingLot.shares * sellingLot.purchasePrice);
+    const costBasisSold = (soldShares / maxShares) * originalInvested;
+    const grossRevenue = soldShares * soldPrice;
+    const realizedPnl = grossRevenue - costBasisSold - soldComm;
+
+    const saleRecord = {
+      id: `sale_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      lot_id: sellingLot.id,
+      lotId: sellingLot.id,
+      portfolio_id: portfolioId,
+      portfolioId: portfolioId,
+      ticker: sellingLot.ticker,
+      sale_date: saleDate,
+      saleDate: saleDate,
+      sale_time: saleTime.trim() || getMarketOpenTime(sellingLot.ticker, sellingLot.exchange),
+      saleTime: saleTime.trim() || getMarketOpenTime(sellingLot.ticker, sellingLot.exchange),
+      sale_price: soldPrice,
+      salePrice: soldPrice,
+      shares: soldShares,
+      sale_commission: soldComm,
+      saleCommission: soldComm,
+      realized_pnl: realizedPnl,
+      realizedPnl: realizedPnl,
+      notes: saleNotes.trim() || undefined,
+      purchase_date: sellingLot.date,
+      purchaseDate: sellingLot.date,
+      cost_basis: costBasisSold,
+      costBasis: costBasisSold,
+    };
+
+    const remainingShares = Math.max(0, maxShares - soldShares);
+    let updatedLot = null;
+
+    if (remainingShares < 1e-5) {
+      // 100% sold: lot is completely closed
+      updatedLot = {
+        ...sellingLot,
+        shares: 0,
+      };
+    } else {
+      // Partial sale: reduce shares and remaining invested amount proportionally
+      const remainingInvested = originalInvested - costBasisSold;
+      updatedLot = {
+        ...sellingLot,
+        shares: remainingShares,
+        investedAmount: remainingInvested,
+      };
+    }
+
+    await addPurchaseSale(saleRecord, updatedLot);
+    setSellingLot(null);
+    setSaleShares(0);
+    setSaleAmountUSD(0);
+    setSalePrice(0);
+    setSaleCommission(0);
+    setSaleNotes("");
   };
 
   const handleExecutePlan = async (purchases) => {
@@ -487,23 +639,28 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
   const lotDataList = useMemo(() => {
     return currentPurchases.map((p) => {
       const invested = (p.shares && p.purchasePrice) ? p.shares * p.purchasePrice : (p.investedAmount ?? 0);
+      const commission = Number(p.commissionAmount || 0);
       const liveQuote = liveQuotes[p.ticker];
       const currentPrice = p.manualCurrentPrice || liveQuote?.price || p.purchasePrice;
 
       // Calculate current value based on return ratio (ideal for ETFs/ETCs)
       const ratio = p.purchasePrice > 0 ? currentPrice / p.purchasePrice : 1;
       const currentValue = invested * ratio;
-      const profit = currentValue - invested;
-      const profitPct = invested > 0 ? (profit / invested) * 100 : 0;
+      // Net profit discounts broker / Plenti commission: profit = currentValue - (invested + commission)
+      const totalCostBasis = invested + commission;
+      const profit = currentValue - totalCostBasis;
+      const profitPct = totalCostBasis > 0 ? (profit / totalCostBasis) * 100 : 0;
 
       // FX and Real Yield Calculations
       const historicalFx = fxData.history[p.date] || fxData.current || 1.0;
       const currentFx = fxData.current || 1.0;
 
       const investedFx = invested * historicalFx;
+      const commissionFx = commission * historicalFx;
+      const totalCostBasisFx = totalCostBasis * historicalFx;
       const currentValueFx = currentValue * currentFx;
-      const profitFx = currentValueFx - investedFx;
-      const profitPctFx = investedFx > 0 ? (profitFx / investedFx) * 100 : 0;
+      const profitFx = currentValueFx - totalCostBasisFx;
+      const profitPctFx = totalCostBasisFx > 0 ? (profitFx / totalCostBasisFx) * 100 : 0;
 
       // FX-ISOLATED effect: gain/loss purely from currency movement (assumes zero asset change)
       const fxEffect = invested * (currentFx - historicalFx);
@@ -551,14 +708,18 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
 
       const currentValueReal = currentValueFx / (inflationFactor > 0 ? inflationFactor : 1.0);
       const inflationLoss = currentValueFx - currentValueReal;
-      const profitReal = currentValueReal - investedFx;
-      const profitPctReal = investedFx > 0 ? (profitReal / investedFx) * 100 : 0;
+      const profitReal = currentValueReal - totalCostBasisFx;
+      const profitPctReal = totalCostBasisFx > 0 ? (profitReal / totalCostBasisFx) * 100 : 0;
 
       return {
         ...p,
         purchaseTime: p.purchaseTime || getMarketOpenTime(p.ticker, p.exchange),
         name: liveQuote?.name || p.name,
         invested,
+        commission,
+        commissionFx,
+        totalCostBasis,
+        totalCostBasisFx,
         currentPrice,
         currentValue,
         profit,
@@ -590,6 +751,8 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
 
   const summary = useMemo(() => {
     let totalInvested = 0;
+    let totalCommission = 0;
+    let totalCommissionFx = 0;
     let totalCurrentValue = 0;
     let totalInvestedFx = 0;
     let totalCurrentValueFx = 0;
@@ -598,6 +761,8 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
 
     lotDataList.forEach((lot) => {
       totalInvested += lot.invested;
+      totalCommission += (lot.commission || 0);
+      totalCommissionFx += (lot.commissionFx || 0);
       totalCurrentValue += lot.currentValue;
       totalInvestedFx += lot.investedFx;
       totalCurrentValueFx += lot.currentValueFx;
@@ -605,28 +770,78 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
       totalFxEffect += lot.fxEffect || 0;
     });
 
-    const netReturn = totalCurrentValue - totalInvested;
-    const netReturnPct = totalInvested > 0 ? (netReturn / totalInvested) * 100 : 0;
+    const openCostBasis = totalInvested + totalCommission;
+    const openCostBasisFx = totalInvestedFx + totalCommissionFx;
+    const openNetReturn = totalCurrentValue - openCostBasis;
+    const openNetReturnFx = totalCurrentValueFx - openCostBasisFx;
 
-    const netReturnFx = totalCurrentValueFx - totalInvestedFx;
-    const netReturnPctFx = totalInvestedFx > 0 ? (netReturnFx / totalInvestedFx) * 100 : 0;
+    // Realized metrics from closed sales
+    const currentFx = fxData.current || 1.0;
+    let realizedPnlTotal = 0;
+    let realizedProceedsTotal = 0;
+    let realizedCostBasisTotal = 0;
+    let realizedPnlTotalFx = 0;
+    let realizedProceedsTotalFx = 0;
+    let realizedCostBasisTotalFx = 0;
+
+    currentSales.forEach((s) => {
+      const pnl = Number(s.realizedPnl ?? s.realized_pnl ?? 0);
+      const cost = Number(s.costBasis ?? s.cost_basis ?? 0);
+      const shares = Number(s.shares ?? 0);
+      const prc = Number(s.salePrice ?? s.sale_price ?? 0);
+      const grossProceeds = (shares > 0 && prc > 0) ? shares * prc : (cost + pnl);
+
+      realizedPnlTotal += pnl;
+      realizedCostBasisTotal += cost;
+      realizedProceedsTotal += grossProceeds;
+
+      const saleFx = fxData.history?.[s.saleDate || s.sale_date] || currentFx;
+      const buyFx = fxData.history?.[s.purchaseDate || s.purchase_date] || saleFx;
+
+      realizedPnlTotalFx += pnl * saleFx;
+      realizedCostBasisTotalFx += cost * buyFx;
+      realizedProceedsTotalFx += grossProceeds * saleFx;
+    });
+
+    // Total Portfolio Metrics (Open positions + Realized sales)
+    const netReturn = openNetReturn + realizedPnlTotal;
+    const totalCostBasis = openCostBasis + realizedCostBasisTotal;
+    const netReturnPct = totalCostBasis > 0 ? (netReturn / totalCostBasis) * 100 : (openCostBasis > 0 ? (netReturn / openCostBasis) * 100 : 0);
+
+    const netReturnFx = openNetReturnFx + realizedPnlTotalFx;
+    const totalCostBasisFx = openCostBasisFx + realizedCostBasisTotalFx;
+    const netReturnPctFx = totalCostBasisFx > 0 ? (netReturnFx / totalCostBasisFx) * 100 : (openCostBasisFx > 0 ? (netReturnFx / openCostBasisFx) * 100 : 0);
 
     // FX effect isolated: purely from currency movement
-    const totalFxEffectPct = totalInvestedFx > 0 ? (totalFxEffect / totalInvestedFx) * 100 : 0;
+    const totalFxEffectPct = totalCostBasisFx > 0 ? (totalFxEffect / totalCostBasisFx) * 100 : 0;
     // Asset-only gain in COP = total COP gain minus the FX movement contribution
     const assetGainInCop = netReturnFx - totalFxEffect;
-    const assetGainInCopPct = totalInvestedFx > 0 ? (assetGainInCop / totalInvestedFx) * 100 : 0;
+    const assetGainInCopPct = totalCostBasisFx > 0 ? (assetGainInCop / totalCostBasisFx) * 100 : 0;
 
     const totalInflationLoss = totalCurrentValueFx - totalCurrentValueReal;
     const totalInflationLossPct =
-      totalInvestedFx > 0 ? (totalInflationLoss / totalInvestedFx) * 100 : 0;
+      totalCostBasisFx > 0 ? (totalInflationLoss / totalCostBasisFx) * 100 : 0;
 
-    const netReturnReal = totalCurrentValueReal - totalInvestedFx;
-    const netReturnPctReal = totalInvestedFx > 0 ? (netReturnReal / totalInvestedFx) * 100 : 0;
+    const netReturnReal = (totalCurrentValueReal - openCostBasisFx) + realizedPnlTotalFx;
+    const netReturnPctReal = totalCostBasisFx > 0 ? (netReturnReal / totalCostBasisFx) * 100 : 0;
 
     return {
       totalInvested,
+      totalCommission,
+      totalCommissionFx,
+      totalCostBasis,
+      totalCostBasisFx,
+      openCostBasis,
+      openCostBasisFx,
       totalCurrentValue,
+      openNetReturn,
+      openNetReturnFx,
+      realizedPnlTotal,
+      realizedProceedsTotal,
+      realizedCostBasisTotal,
+      realizedPnlTotalFx,
+      realizedProceedsTotalFx,
+      realizedCostBasisTotalFx,
       netReturn,
       netReturnPct,
       totalInvestedFx,
@@ -643,7 +858,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
       netReturnReal,
       netReturnPctReal,
     };
-  }, [lotDataList]);
+  }, [lotDataList, currentSales, fxData]);
 
   // Group lots by ticker
   const groupedLots = useMemo(() => {
@@ -655,6 +870,10 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
           name: p.name,
           lots: [],
           totalInvested: 0,
+          totalCommission: 0,
+          totalCommissionFx: 0,
+          totalCostBasis: 0,
+          totalCostBasisFx: 0,
           totalCurrentValue: 0,
           totalShares: 0,
           totalInvestedFx: 0,
@@ -665,6 +884,10 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
       }
       groups[p.ticker].lots.push(p);
       groups[p.ticker].totalInvested += p.invested;
+      groups[p.ticker].totalCommission += (p.commission || 0);
+      groups[p.ticker].totalCommissionFx += (p.commissionFx || 0);
+      groups[p.ticker].totalCostBasis += (p.totalCostBasis || p.invested);
+      groups[p.ticker].totalCostBasisFx += (p.totalCostBasisFx || p.investedFx);
       groups[p.ticker].totalCurrentValue += p.currentValue;
       groups[p.ticker].totalShares += p.shares;
       groups[p.ticker].totalInvestedFx += p.investedFx;
@@ -674,15 +897,15 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
     });
 
     Object.values(groups).forEach((g) => {
-      g.profit = g.totalCurrentValue - g.totalInvested;
-      g.profitPct = g.totalInvested > 0 ? (g.profit / g.totalInvested) * 100 : 0;
+      g.profit = g.totalCurrentValue - g.totalCostBasis;
+      g.profitPct = g.totalCostBasis > 0 ? (g.profit / g.totalCostBasis) * 100 : 0;
       g.isPositive = g.profit >= 0;
 
-      g.profitFx = g.totalCurrentValueFx - g.totalInvestedFx;
-      g.profitPctFx = g.totalInvestedFx > 0 ? (g.profitFx / g.totalInvestedFx) * 100 : 0;
+      g.profitFx = g.totalCurrentValueFx - g.totalCostBasisFx;
+      g.profitPctFx = g.totalCostBasisFx > 0 ? (g.profitFx / g.totalCostBasisFx) * 100 : 0;
 
-      g.profitReal = g.totalCurrentValueReal - g.totalInvestedFx;
-      g.profitPctReal = g.totalInvestedFx > 0 ? (g.profitReal / g.totalInvestedFx) * 100 : 0;
+      g.profitReal = g.totalCurrentValueReal - g.totalCostBasisFx;
+      g.profitPctReal = g.totalCostBasisFx > 0 ? (g.profitReal / g.totalCostBasisFx) * 100 : 0;
 
       g.currentPrice = g.lots[0].currentPrice;
       g.avgOpenPrice = g.totalShares > 0 ? g.totalInvested / g.totalShares : 0;
@@ -818,13 +1041,41 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
 
     const sortedPurchases = [...lotDataList].sort((a, b) => new Date(a.date) - new Date(b.date));
 
+    // Also collect closed / sold positions from currentSales so they have historical presence in the chart
+    const closedSalesList = currentSales.map((s) => {
+      const pDate = s.purchaseDate || s.saleDate;
+      const costBasis = Number(s.costBasis || 0);
+      const grossRev = Number(s.shares || 0) * Number(s.salePrice || 0);
+      const realizedVal = grossRev > 0 ? grossRev : (costBasis + Number(s.realizedPnl || 0));
+      return {
+        id: s.id,
+        ticker: s.ticker,
+        purchaseDate: pDate,
+        saleDate: s.saleDate,
+        invested: costBasis > 0 ? costBasis : realizedVal,
+        exitValue: realizedVal,
+        realizedPnl: Number(s.realizedPnl || 0),
+      };
+    });
+
     const todayStr = new Date().toISOString().split("T")[0];
     const todayTime = new Date(todayStr).getTime();
 
-    // Generate timeline dates: purchase dates + today + 1st of every month in between
-    const datesSet = new Set([...sortedPurchases.map((p) => p.date), todayStr]);
-    if (sortedPurchases.length > 0) {
-      const currentDate = new Date(sortedPurchases[0].date);
+    // Generate timeline dates: purchase dates + sale dates + today + 1st of every month in between
+    const allKeyDates = [
+      ...sortedPurchases.map((p) => p.date),
+      ...closedSalesList.map((s) => s.purchaseDate),
+      ...closedSalesList.map((s) => s.saleDate),
+      todayStr,
+    ].filter(Boolean);
+
+    const datesSet = new Set(allKeyDates);
+    const earliestDateStr = allKeyDates.length > 0
+      ? allKeyDates.slice().sort()[0]
+      : todayStr;
+
+    if (earliestDateStr) {
+      const currentDate = new Date(earliestDateStr);
       const endDate = new Date(todayStr);
       currentDate.setDate(1);
       while (currentDate <= endDate) {
@@ -854,6 +1105,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
       const currentSp500 = getClosestIndexPrice(dateStr, "SP500");
       const currentNasdaq = getClosestIndexPrice(dateStr, "NASDAQ");
 
+      // 1. Active lots
       sortedPurchases.forEach((lot) => {
         const lotStartTime = new Date(lot.date).getTime();
 
@@ -895,6 +1147,28 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
         }
       });
 
+      // 2. Closed / Sold positions trace during their holding period
+      closedSalesList.forEach((closed) => {
+        const buyTime = new Date(closed.purchaseDate).getTime();
+        const saleTime = new Date(closed.saleDate).getTime();
+
+        if (buyTime <= dateTime && dateTime <= saleTime) {
+          // While the lot was held between purchaseDate and saleDate: part of active portfolio exposure
+          totalInvested += closed.invested;
+          if (dateStr === closed.purchaseDate) {
+            totalValue += closed.invested;
+          } else if (dateStr === closed.saleDate) {
+            totalValue += closed.exitValue;
+          } else {
+            // Interpolate value between purchase cost and exit value over the holding period
+            const holdingDuration = saleTime - buyTime;
+            const progress = holdingDuration > 0 ? (dateTime - buyTime) / holdingDuration : 1;
+            const interpolatedVal = closed.invested + (closed.exitValue - closed.invested) * Math.min(1, Math.max(0, progress));
+            totalValue += interpolatedVal;
+          }
+        }
+      });
+
       investedData.push({ time: dateStr, value: Number(totalInvested.toFixed(2)) });
       valueData.push({ time: dateStr, value: Number(totalValue.toFixed(2)) });
       if (hasIndexData) {
@@ -928,7 +1202,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
         chartInstanceRef.current = null;
       }
     };
-  }, [lotDataList, indicesHistory]);
+  }, [lotDataList, currentSales, indicesHistory]);
 
   useEffect(() => {
     if (chartInstanceRef.current) {
@@ -1001,8 +1275,8 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                 )}
               </div>
               <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: 20 }}>
-                Registra y trackea compras reales de ETFs, ETCs o Acciones con sus valores de
-                apertura exactos.
+                Registra y trackea compras reales de ETFs, ETCs, Acciones y Criptos / Oro Digital (XAUt, PAXG, BTC) con sus valores de
+                apertura exactos y descuento de comisiones.
               </p>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
                 <label
@@ -1309,6 +1583,13 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                       {netReturnPct.toFixed(2)}%)
                     </span>
                   </div>
+                  {summary.realizedPnlTotal !== 0 && (
+                    <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>
+                      Latente: <span className="mono" style={{ color: summary.openNetReturn >= 0 ? "#10b981" : "#ef4444", fontWeight: 600 }}>{summary.openNetReturn >= 0 ? "+" : ""}${summary.openNetReturn.toFixed(2)}</span>
+                      {" | "}
+                      Realizado: <span className="mono" style={{ color: summary.realizedPnlTotal >= 0 ? "#10b981" : "#ef4444", fontWeight: 600 }}>{summary.realizedPnlTotal >= 0 ? "+" : ""}${summary.realizedPnlTotal.toFixed(2)}</span>
+                    </div>
+                  )}
                 </div>
               );
             })()}
@@ -1409,8 +1690,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                   {summary.netReturnPct.toFixed(2)}%)
                 </div>
                 <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
-                  Inv: ${summary.totalInvested.toFixed(2)} ➔ Val: $
-                  {summary.totalCurrentValue.toFixed(2)}
+                  Inv: ${summary.totalInvested.toFixed(2)}
+                  {summary.totalCommission > 0 && ` + Fees: $${summary.totalCommission.toFixed(2)}`}
+                  {" "}➔ Val: ${summary.totalCurrentValue.toFixed(2)}
                 </div>
               </div>
 
@@ -2174,7 +2456,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
             </div>
           </div>
 
-          {currentPurchases.length === 0 ? (
+          {currentPurchases.length === 0 && currentSales.length === 0 ? (
             <div
               style={{
                 height: 220,
@@ -2198,124 +2480,6 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
             />
           )}
         </div>
-
-        {/* EDIT PURCHASE MODAL */}
-        {editingPurchase && (
-          <div
-            className="modal"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 1000,
-            }}
-          >
-            <div
-              className="card"
-              style={{
-                padding: "24px",
-                width: "340px",
-                background: "var(--bg-surface)",
-                borderRadius: "var(--radius)",
-                border: "1px solid var(--border)",
-              }}
-            >
-              <h3 style={{ marginBottom: "16px", fontWeight: 700, color: "#f1f5f9" }}>
-                ✏️ Editar Compra
-              </h3>
-              <div style={{ marginBottom: "12px" }}>
-                <label
-                  style={{
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    color: "var(--text-muted)",
-                    display: "block",
-                    marginBottom: 4,
-                  }}
-                >
-                  Ticker
-                </label>
-                <input
-                  type="text"
-                  value={editTicker}
-                  onChange={(e) => setEditTicker(e.target.value.toUpperCase())}
-                  style={{
-                    width: "100%",
-                    padding: "8px 10px",
-                    borderRadius: "4px",
-                    border: "1px solid var(--border)",
-                    background: "var(--bg-card)",
-                    color: "var(--text-primary)",
-                  }}
-                />
-              </div>
-              <div style={{ marginBottom: "12px" }}>
-                <label
-                  style={{
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    color: "var(--text-muted)",
-                    display: "block",
-                    marginBottom: 4,
-                  }}
-                >
-                  Valor de Apertura (Inversión USD)
-                </label>
-                <input
-                  type="number"
-                  min="0.01"
-                  step="any"
-                  value={editInvested}
-                  onChange={(e) => setEditInvested(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "8px 10px",
-                    borderRadius: "4px",
-                    border: "1px solid var(--border)",
-                    background: "var(--bg-card)",
-                    color: "var(--text-primary)",
-                  }}
-                />
-              </div>
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Fecha de Compra</span>
-                </label>
-                <input
-                  type="date"
-                  className="input input-bordered"
-                  value={editDate}
-                  onChange={(e) => setEditDate(e.target.value)}
-                />
-              </div>
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">
-                    Precio de Apertura{" "}
-                    {isFetchingHistorical && (
-                      <span style={{ color: "#f59e0b", fontSize: "0.7rem" }}>Buscando...</span>
-                    )}
-                  </span>
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  className="input input-bordered"
-                  value={editPrice}
-                  onChange={(e) => setEditPrice(e.target.value)}
-                />
-              </div>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-                <button className="btn btn-ghost" onClick={() => setEditingPurchase(null)}>
-                  Cancelar
-                </button>
-                <button className="btn btn-primary" onClick={handleSaveEditedPurchase}>
-                  Guardar Cambios
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* FORM & PURCHASES LIST */}
         <div
@@ -2345,7 +2509,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                 }}
               >
                 <span>➕</span>
-                <span>Registrar Compra (ETF/ETC/Acción)</span>
+                <span>Registrar Compra (ETF/Acción/Cripto)</span>
               </h3>
               <button
                 type="button"
@@ -2377,12 +2541,12 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                     marginBottom: 6,
                   }}
                 >
-                  1. Buscar Ticker / ETF
+                  1. Buscar Ticker / ETF / Cripto
                 </label>
                 <div style={{ display: "flex", gap: 8 }}>
                   <input
                     type="text"
-                    placeholder="Ticker (ej. SMH, QQQ, TSLA)"
+                    placeholder="Ticker (ej. XAUT-USD, SMH, BTC-USD, AAPL)"
                     value={ticker}
                     onChange={(e) => {
                       setTicker(e.target.value.toUpperCase());
@@ -2931,15 +3095,68 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                 </label>
               </div>
 
-              <button
-                type="button"
-                className="btn btn-primary"
-                style={{ marginTop: 8, padding: "12px", fontWeight: 700, fontSize: "0.85rem" }}
-                disabled={!selectedMeta}
-                onClick={handleAddPurchase}
-              >
-                Registrar Compra
-              </button>
+              <div className="form-control">
+                <label className="label" style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span className="label-text">
+                    Comisión / Descuento Broker o Plenti ({portfolio.assetCurrency || "USD"})
+                  </span>
+                  <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                    Opcional
+                  </span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  placeholder="0.00"
+                  className="input input-bordered"
+                  value={commissionAmount}
+                  onChange={(e) => setCommissionAmount(e.target.value)}
+                />
+                <label className="label">
+                  <span className="label-text-alt text-muted" style={{ fontSize: "0.7rem", lineHeight: 1.25 }}>
+                    💡 Se sumará al costo base para descontar la tarifa o spread de tu rentabilidad neta real.
+                    {(selectedMeta?.ticker?.includes("XAUT") || selectedMeta?.ticker?.includes("PAXG") || selectedMeta?.ticker?.includes("-USD")) && (
+                      <span style={{ color: "#00e5ff", display: "block", marginTop: 2 }}>
+                        🪙 Compra en Plenti: Ingresa aquí la comisión o spread cobrado por la app.
+                      </span>
+                    )}
+                  </span>
+                </label>
+              </div>
+
+              {(() => {
+                const canAdd = Boolean(
+                  selectedMeta &&
+                  Number(investedAmount) > 0 &&
+                  Number(price) > 0 &&
+                  date &&
+                  date.trim().length > 0
+                );
+                return (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    style={{
+                      marginTop: 8,
+                      padding: "12px",
+                      fontWeight: 700,
+                      fontSize: "0.85rem",
+                      cursor: canAdd ? "pointer" : "not-allowed",
+                      opacity: canAdd ? 1 : 0.45,
+                    }}
+                    disabled={!canAdd}
+                    onClick={handleAddPurchase}
+                    title={
+                      canAdd
+                        ? "Registrar compra en el portafolio"
+                        : "Completa los campos obligatorios: Buscar/seleccionar activo, Monto invertido > 0, Precio > 0 y Fecha válida"
+                    }
+                  >
+                    Registrar Compra
+                  </button>
+                );
+              })()}
             </div>
           </div>
 
@@ -3196,6 +3413,11 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                             <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
                               Vol: {group.totalShares.toFixed(4)}
                             </div>
+                            {group.totalCommission > 0 && (
+                              <div style={{ fontSize: "0.65rem", color: "#f59e0b", fontWeight: 600 }}>
+                                Fees: -${group.totalCommission.toFixed(2)}
+                              </div>
+                            )}
                           </div>
                           <div style={{ minWidth: 80 }}>
                             <div style={{ color: "var(--text-secondary)", fontSize: "0.7rem" }}>
@@ -3353,6 +3575,19 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                                     >
                                       Vol: {p.shares.toFixed(4)}
                                     </div>
+                                    {p.commission > 0 && (
+                                      <div
+                                        style={{
+                                          fontSize: "0.65rem",
+                                          color: "#f59e0b",
+                                          marginTop: 2,
+                                          fontWeight: 600,
+                                        }}
+                                        title="Comisión o spread descontado (Plenti/Broker)"
+                                      >
+                                        🏷️ Fee: -${p.commission.toFixed(2)}
+                                      </div>
+                                    )}
                                   </div>
                                   <div>
                                     <div style={{ color: "var(--text-secondary)" }}>
@@ -3446,10 +3681,31 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                                 <button
                                   className="btn btn-sm btn-ghost"
                                   onClick={() => {
+                                    const curPrice = p.currentPrice || p.purchasePrice;
+                                    const totalValUSD = (p.shares * curPrice);
+                                    setSellingLot(p);
+                                    setSaleMode("shares");
+                                    setSaleShares(p.shares);
+                                    setSaleAmountUSD(Number(totalValUSD.toFixed(2)));
+                                    setSalePrice(curPrice);
+                                    setSaleCommission(0);
+                                    setSaleDate(new Date().toISOString().split("T")[0]);
+                                    setSaleTime(new Date().toTimeString().slice(0, 5));
+                                    setSaleNotes("");
+                                  }}
+                                  title="Registrar venta o liquidación de este lote"
+                                  style={{ color: "#10b981", fontWeight: 700 }}
+                                >
+                                  💰
+                                </button>
+                                <button
+                                  className="btn btn-sm btn-ghost"
+                                  onClick={() => {
                                     setEditingPurchase(p);
                                     setEditTicker(p.ticker);
                                     setEditInvested(p.investedAmount || p.invested);
                                     setEditPrice(p.purchasePrice);
+                                    setEditCommissionAmount(p.commissionAmount || p.commission || 0);
                                     setEditDate(p.date);
                                     setEditPurchaseTime(p.purchaseTime || getMarketOpenTime(p.ticker, p.exchange));
                                   }}
@@ -3492,8 +3748,562 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
           </div>
         </div>
 
+        {/* ── Historial de Ventas Realizadas / Liquidaciones ── */}
+        <div className="card fade-up" style={{ padding: 24, marginTop: 24 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: 12,
+              marginBottom: 16,
+            }}
+          >
+            <div>
+              <h2 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                <span>💰</span> Historial de Ventas Realizadas
+              </h2>
+              <p style={{ margin: "4px 0 0 0", fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                Registro de posiciones cerradas y liquidaciones con ganancia/pérdida consolidada
+              </p>
+            </div>
+            {currentSales.length > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "6px 14px",
+                  borderRadius: 8,
+                  background: totalRealizedPnl >= 0 ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
+                  border: `1px solid ${totalRealizedPnl >= 0 ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)"}`,
+                }}
+              >
+                <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>PnL Realizado Total:</span>
+                <span
+                  className="mono"
+                  style={{
+                    fontWeight: 700,
+                    fontSize: "0.95rem",
+                    color: totalRealizedPnl >= 0 ? "#10b981" : "#ef4444",
+                  }}
+                >
+                  {totalRealizedPnl >= 0 ? "+" : ""}${totalRealizedPnl.toFixed(2)}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {currentSales.length === 0 ? (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "32px 16px",
+                color: "var(--text-muted)",
+                fontSize: "0.85rem",
+                background: "rgba(255,255,255,0.02)",
+                borderRadius: 8,
+                border: "1px dashed var(--border-subtle)",
+              }}
+            >
+              No has registrado ninguna venta en este portafolio aún.
+              <br />
+              <span style={{ fontSize: "0.75rem", opacity: 0.8 }}>
+                Haz clic en el botón 💰 de cualquiera de tus lotes arriba para liquidar o vender posiciones parciales o totales.
+              </span>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {currentSales.map((s) => {
+                const isWin = (s.realized_pnl || 0) >= 0;
+                return (
+                  <div
+                    key={s.id}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "12px 16px",
+                      borderRadius: 8,
+                      background: "rgba(255,255,255,0.02)",
+                      border: "1px solid var(--border-subtle)",
+                      flexWrap: "wrap",
+                      gap: 12,
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <div
+                        style={{
+                          fontWeight: 700,
+                          fontSize: "1rem",
+                          color: "var(--text-primary)",
+                          background: "rgba(255,255,255,0.05)",
+                          padding: "4px 8px",
+                          borderRadius: 6,
+                        }}
+                      >
+                        {s.ticker}
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                        <div style={{ fontSize: "0.85rem", color: "var(--text-primary)" }}>
+                          Vendidas: <strong className="mono">{Number(s.shares).toFixed(4)}</strong> uds a{" "}
+                          <strong className="mono">${Number(s.sale_price).toFixed(2)}</strong>
+                        </div>
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                          📅 {s.sale_date} {s.sale_time ? `• ⏰ ${s.sale_time}` : ""}
+                          {s.sale_commission > 0 && ` • Comisión/Fee: $${s.sale_commission.toFixed(2)}`}
+                          {s.notes && ` • Nota: ${s.notes}`}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Beneficio Realizado</div>
+                        <div
+                          className="mono"
+                          style={{
+                            fontWeight: 700,
+                            fontSize: "0.95rem",
+                            color: isWin ? "#10b981" : "#ef4444",
+                          }}
+                        >
+                          {isWin ? "+" : ""}${Number(s.realized_pnl || 0).toFixed(2)}
+                        </div>
+                      </div>
+                      <button
+                        className="btn btn-sm btn-ghost"
+                        onClick={async () => {
+                          const ok = await toastConfirm("¿Eliminar este registro de venta?");
+                          if (ok) removePurchaseSale(s.id);
+                        }}
+                        title="Eliminar registro de venta"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         {/* ── Banner de Monetización / Afiliados ───────────── */}
         <AffiliateBanner />
+
+        {/* SALE MODAL */}
+        {sellingLot && (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: "rgba(0,0,0,0.8)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 1000,
+              padding: 20,
+            }}
+          >
+            <div
+              className="card fade-up"
+              style={{
+                width: "100%",
+                maxWidth: 480,
+                padding: 24,
+                background: "#1e293b",
+                border: "1px solid rgba(255,255,255,0.1)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 16,
+                }}
+              >
+                <h3 style={{ margin: 0, color: "#f1f5f9", display: "flex", alignItems: "center", gap: 8 }}>
+                  💰 Registrar Venta ({sellingLot.ticker})
+                </h3>
+                <button
+                  onClick={() => setSellingLot(null)}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: "var(--text-muted)",
+                    fontSize: "1.2rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div
+                  style={{
+                    padding: "10px 14px",
+                    background: "rgba(255,255,255,0.04)",
+                    borderRadius: 8,
+                    fontSize: "0.8rem",
+                    display: "flex",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <div>
+                    <span style={{ color: "var(--text-muted)" }}>Lote Comprado: </span>
+                    <strong className="mono" style={{ color: "#f1f5f9" }}>
+                      {Number(sellingLot.shares).toFixed(4)} uds
+                    </strong>
+                  </div>
+                  <div>
+                    <span style={{ color: "var(--text-muted)" }}>Precio Compra: </span>
+                    <strong className="mono" style={{ color: "#f1f5f9" }}>
+                      ${Number(sellingLot.purchasePrice).toFixed(2)}
+                    </strong>
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div className="form-control">
+                    <label className="label">
+                      <span className="label-text" style={{ fontSize: "0.8rem" }}>Fecha de Venta</span>
+                    </label>
+                    <input
+                      type="date"
+                      className="input input-bordered input-sm"
+                      value={saleDate}
+                      onChange={(e) => setSaleDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-control">
+                    <label className="label">
+                      <span className="label-text" style={{ fontSize: "0.8rem" }}>Hora</span>
+                    </label>
+                    <input
+                      type="time"
+                      className="input input-bordered input-sm"
+                      value={saleTime}
+                      onChange={(e) => setSaleTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Precio Ejecutado */}
+                <div className="form-control">
+                  <label className="label" style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span className="label-text" style={{ fontSize: "0.8rem" }}>Precio de Venta Ejecutado ($)</span>
+                    {sellingLot.currentPrice && (
+                      <span
+                        style={{ fontSize: "0.68rem", color: "#38bdf8", cursor: "pointer", textDecoration: "underline" }}
+                        onClick={() => {
+                          const curP = Number(sellingLot.currentPrice);
+                          setSalePrice(curP);
+                          if (saleMode === "shares") {
+                            setSaleAmountUSD(Number((saleShares * curP).toFixed(2)));
+                          }
+                        }}
+                      >
+                        Usar precio actual (${Number(sellingLot.currentPrice).toFixed(2)})
+                      </span>
+                    )}
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    className="input input-bordered input-sm"
+                    value={salePrice}
+                    onChange={(e) => {
+                      const newP = Number(e.target.value);
+                      setSalePrice(newP);
+                      if (newP > 0) {
+                        if (saleMode === "shares") {
+                          setSaleAmountUSD(Number((saleShares * newP).toFixed(2)));
+                        } else {
+                          setSaleShares(saleAmountUSD / newP);
+                        }
+                      }
+                    }}
+                  />
+                </div>
+
+                {/* Selector de Modo: Por Unidades o Por Dólares */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      background: "rgba(255,255,255,0.05)",
+                      padding: 2,
+                      borderRadius: 8,
+                      border: "1px solid rgba(255,255,255,0.1)",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSaleMode("shares");
+                        if (salePrice > 0 && saleAmountUSD > 0) {
+                          setSaleShares(saleAmountUSD / salePrice);
+                        }
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: "6px 10px",
+                        border: "none",
+                        borderRadius: 6,
+                        background: saleMode === "shares" ? "#3b82f6" : "transparent",
+                        color: saleMode === "shares" ? "#fff" : "var(--text-muted)",
+                        fontWeight: 600,
+                        fontSize: "0.78rem",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      Por Unidades (uds)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSaleMode("usd");
+                        if (salePrice > 0 && saleShares > 0) {
+                          setSaleAmountUSD(Number((saleShares * salePrice).toFixed(2)));
+                        }
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: "6px 10px",
+                        border: "none",
+                        borderRadius: 6,
+                        background: saleMode === "usd" ? "#3b82f6" : "transparent",
+                        color: saleMode === "usd" ? "#fff" : "var(--text-muted)",
+                        fontWeight: 600,
+                        fontSize: "0.78rem",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      Por Monto en Dólares ($)
+                    </button>
+                  </div>
+
+                  {saleMode === "shares" ? (
+                    <div className="form-control">
+                      <label className="label" style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span className="label-text" style={{ fontSize: "0.8rem" }}>Unidades a Vender</span>
+                        <span
+                          style={{ fontSize: "0.68rem", color: "#38bdf8", cursor: "pointer", textDecoration: "underline" }}
+                          onClick={() => {
+                            setSaleShares(sellingLot.shares);
+                            if (salePrice > 0) {
+                              setSaleAmountUSD(Number((sellingLot.shares * salePrice).toFixed(2)));
+                            }
+                          }}
+                        >
+                          Vender 100% ({Number(sellingLot.shares).toFixed(4)} uds)
+                        </span>
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        max={sellingLot.shares}
+                        className="input input-bordered input-sm"
+                        value={saleShares}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setSaleShares(val);
+                          if (salePrice > 0) {
+                            setSaleAmountUSD(Number((val * salePrice).toFixed(2)));
+                          }
+                        }}
+                      />
+                      <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
+                        ≈ ${(Number(saleShares) * Number(salePrice || 0)).toFixed(2)} USD brutos
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="form-control">
+                      <label className="label" style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span className="label-text" style={{ fontSize: "0.8rem" }}>Monto en Dólares a Vender ($)</span>
+                        <span
+                          style={{ fontSize: "0.68rem", color: "#38bdf8", cursor: "pointer", textDecoration: "underline" }}
+                          onClick={() => {
+                            const maxUSD = Number((sellingLot.shares * (salePrice || sellingLot.purchasePrice)).toFixed(2));
+                            setSaleAmountUSD(maxUSD);
+                            setSaleShares(sellingLot.shares);
+                          }}
+                        >
+                          Vender Todo ($
+                          {Number((sellingLot.shares * (salePrice || sellingLot.purchasePrice)).toFixed(2))})
+                        </span>
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        className="input input-bordered input-sm"
+                        placeholder="Ej. 100.00"
+                        value={saleAmountUSD}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setSaleAmountUSD(val);
+                          if (salePrice > 0) {
+                            setSaleShares(val / salePrice);
+                          }
+                        }}
+                      />
+                      <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
+                        Equivale a: <strong className="mono" style={{ color: "#38bdf8" }}>{salePrice > 0 ? (saleAmountUSD / salePrice).toFixed(4) : 0}</strong> unidades de {sellingLot.ticker}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="form-control">
+                  <label className="label" style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span className="label-text" style={{ fontSize: "0.8rem" }}>
+                      Comisión / Fee de Venta o Retiro Plenti ($)
+                    </span>
+                    <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>Opcional</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    placeholder="0.00"
+                    className="input input-bordered input-sm"
+                    value={saleCommission}
+                    onChange={(e) => setSaleCommission(Number(e.target.value))}
+                  />
+                </div>
+
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text" style={{ fontSize: "0.8rem" }}>Notas o Motivo</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Toma de ganancias, liquidación Plenti..."
+                    className="input input-bordered input-sm"
+                    value={saleNotes}
+                    onChange={(e) => setSaleNotes(e.target.value)}
+                  />
+                </div>
+
+                {/* Calculation preview */}
+                {(() => {
+                  const sPrice = Number(salePrice) || 0;
+                  const sComm = Number(saleCommission) || 0;
+                  const maxSh = Number(sellingLot.shares) || 1;
+                  const sShares = saleMode === "usd" 
+                    ? (sPrice > 0 ? Number(saleAmountUSD) / sPrice : 0)
+                    : Number(saleShares) || 0;
+
+                  const origInv = Number(sellingLot.investedAmount || sellingLot.shares * sellingLot.purchasePrice);
+                  const costBasis = (Math.min(sShares, maxSh) / maxSh) * origInv;
+                  const grossRev = sShares * sPrice;
+                  const netGain = grossRev - costBasis - sComm;
+                  const gainPct = costBasis > 0 ? (netGain / costBasis) * 100 : 0;
+                  const isPositive = netGain >= 0;
+
+                  return (
+                    <div
+                      style={{
+                        padding: "10px 14px",
+                        background: isPositive ? "rgba(16, 185, 129, 0.08)" : "rgba(239, 68, 68, 0.08)",
+                        border: `1px solid ${isPositive ? "rgba(16, 185, 129, 0.25)" : "rgba(239, 68, 68, 0.25)"}`,
+                        borderRadius: 8,
+                        fontSize: "0.8rem",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 4,
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span style={{ color: "var(--text-muted)" }}>Ingreso Bruto de Venta:</span>
+                        <strong className="mono" style={{ color: "#f1f5f9" }}>
+                          ${grossRev.toFixed(2)}
+                        </strong>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span style={{ color: "var(--text-muted)" }}>Costo Base de lo Vendido:</span>
+                        <span className="mono" style={{ color: "var(--text-muted)" }}>
+                          ${costBasis.toFixed(2)}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          borderTop: "1px solid rgba(255,255,255,0.08)",
+                          paddingTop: 4,
+                          marginTop: 2,
+                        }}
+                      >
+                        <span style={{ fontWeight: 600 }}>Ganancia Realizada Neta:</span>
+                        <strong
+                          className="mono"
+                          style={{ color: isPositive ? "#10b981" : "#ef4444", fontSize: "0.9rem" }}
+                        >
+                          {isPositive ? "+" : ""}${netGain.toFixed(2)} ({isPositive ? "+" : ""}{gainPct.toFixed(2)}%)
+                        </strong>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-ghost"
+                    onClick={() => setSellingLot(null)}
+                  >
+                    Cancelar
+                  </button>
+                  {(() => {
+                    const sPrice = Number(salePrice) || 0;
+                    const maxSh = Number(sellingLot?.shares) || 0;
+                    const sShares = saleMode === "usd"
+                      ? (sPrice > 0 ? Number(saleAmountUSD) / sPrice : 0)
+                      : Number(saleShares) || 0;
+                    const canSell = Boolean(
+                      sPrice > 0 &&
+                      sShares > 0 &&
+                      sShares <= maxSh + 1e-4 &&
+                      saleDate &&
+                      saleDate.trim().length > 0
+                    );
+                    return (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-success"
+                        onClick={handleExecuteSale}
+                        disabled={!canSell}
+                        style={{
+                          color: "#fff",
+                          fontWeight: 600,
+                          cursor: canSell ? "pointer" : "not-allowed",
+                          opacity: canSell ? 1 : 0.45,
+                        }}
+                        title={
+                          canSell
+                            ? "Confirmar liquidación o venta"
+                            : "Completa los campos obligatorios: Precio > 0, Cantidad/Monto a vender > 0 (sin exceder el disponible) y Fecha válida"
+                        }
+                      >
+                        Confirmar Venta
+                      </button>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* EDIT PURCHASE MODAL */}
         {editingPurchase && (
@@ -3621,6 +4431,26 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                   </div>
                 </div>
 
+                <div className="form-control">
+                  <label className="label" style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span className="label-text" style={{ fontSize: "0.8rem" }}>
+                      Comisión / Descuento Plenti o Broker ($)
+                    </span>
+                    <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
+                      Opcional
+                    </span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    placeholder="0.00"
+                    className="input input-bordered input-sm"
+                    value={editCommissionAmount}
+                    onChange={(e) => setEditCommissionAmount(Number(e.target.value))}
+                  />
+                </div>
+
                 <div
                   style={{
                     padding: "8px 12px",
@@ -3646,13 +4476,33 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                   >
                     Cancelar
                   </button>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-primary"
-                    onClick={handleSaveEditedPurchase}
-                  >
-                    Guardar Cambios
-                  </button>
+                  {(() => {
+                    const canSave = Boolean(
+                      Number(editInvested) > 0 &&
+                      Number(editPrice) > 0 &&
+                      editDate &&
+                      editDate.trim().length > 0
+                    );
+                    return (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-primary"
+                        onClick={handleSaveEditedPurchase}
+                        disabled={!canSave}
+                        style={{
+                          cursor: canSave ? "pointer" : "not-allowed",
+                          opacity: canSave ? 1 : 0.45,
+                        }}
+                        title={
+                          canSave
+                            ? "Guardar cambios del lote"
+                            : "Completa los campos obligatorios: Monto invertido > 0, Precio > 0 y Fecha válida"
+                        }
+                      >
+                        Guardar Cambios
+                      </button>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
@@ -3673,6 +4523,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
           onClose={() => setShowExecutionModal(false)}
           planAnalysis={planAnalysis}
           liveQuotes={liveQuotes}
+          currentPurchases={currentPurchases}
           onSave={handleExecutePlan}
         />
         <InflationExplorerModal
