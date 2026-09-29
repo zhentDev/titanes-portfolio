@@ -384,8 +384,8 @@ export default function StrategyChart({
     });
 
     seriesRef.current.baseLine = chartRef.current.addLineSeries({
-      color: "rgba(255, 255, 255, 0.4)",
-      lineWidth: 1,
+      color: chartColors.base || "#94a3b8",
+      lineWidth: 2,
       lineStyle: LineStyle.Dashed,
       priceLineVisible: false,
       lastValueVisible: false,
@@ -746,9 +746,9 @@ export default function StrategyChart({
               </div>
             )}
             {visibleSeries.baseLine && (
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.7rem", opacity: 0.75 }}>
-                <span style={{ width: 7, height: 2, background: "rgba(255,255,255,0.4)", flexShrink: 0 }} />
-                <span style={{ color: "#94a3b8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", fontWeight: 600 }}>
+                <span style={{ width: 10, height: 2, background: chartColors.base || "#94a3b8", flexShrink: 0, borderRadius: 1 }} />
+                <span style={{ color: "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   Base
                 </span>
               </div>

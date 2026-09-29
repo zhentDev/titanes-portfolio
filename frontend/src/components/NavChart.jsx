@@ -343,10 +343,10 @@ export default function NavChart({
       });
     }
 
-    // Base investment line (Right Axis)
+    // Base investment line (Right Axis) — highlighted with clear visibility and clean dashed style
     seriesRef.current.base = chart.addLineSeries({
-      color: "rgba(255,255,255,0.18)",
-      lineWidth: 1,
+      color: chartColors.base || "#94a3b8",
+      lineWidth: 2,
       lineStyle: LineStyle.Dashed,
       priceLineVisible: false,
       lastValueVisible: false,
@@ -1471,9 +1471,9 @@ export default function NavChart({
                 );
               })}
             {visibleSeries?.base !== false && (
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.7rem", opacity: 0.75 }}>
-                <span style={{ width: 7, height: 2, background: isLight ? "#94a3b8" : "rgba(255,255,255,0.4)", flexShrink: 0 }} />
-                <span style={{ color: isLight ? "#64748b" : "#94a3b8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", fontWeight: 600 }}>
+                <span style={{ width: 10, height: 2, background: chartColors.base || "#94a3b8", flexShrink: 0, borderRadius: 1 }} />
+                <span style={{ color: isLight ? "#475569" : "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   Base
                 </span>
               </div>

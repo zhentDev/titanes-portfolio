@@ -26,6 +26,8 @@ export function getChartColors(theme) {
       leftScaleText: "#059669",
       rightScaleText: "#0284c7",
       purpleScaleText: "#7c3aed",
+      // Base investment reference line
+      base: "#64748b",
     };
   }
 
@@ -49,6 +51,8 @@ export function getChartColors(theme) {
     leftScaleText: "#10b981",
     rightScaleText: "#00e5ff",
     purpleScaleText: "#c084fc",
+    // Base investment reference line (clear, visible silver-slate dashed line)
+    base: "#94a3b8",
   };
 }
 
@@ -100,5 +104,11 @@ export function applyChartTheme(chart, theme, seriesMap = {}) {
   }
   if (seriesMap.rate?.applyOptions) {
     seriesMap.rate.applyOptions({ color: c.rate });
+  }
+  if (seriesMap.base?.applyOptions) {
+    seriesMap.base.applyOptions({ color: c.base });
+  }
+  if (seriesMap.baseLine?.applyOptions) {
+    seriesMap.baseLine.applyOptions({ color: c.base });
   }
 }
