@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchIntraday, fetchLiveQuotes, fetchNAV } from "../api/client";
+import { usePortfolioStore } from "../store/portfolioStore";
 import NavChart from "./NavChart";
 
 const POLL_INTERVAL = 60_000;
@@ -15,10 +16,29 @@ function nyseIsOpenNow() {
 }
 
 export default function LiveMode({ navData: initialNavData, investment = 2000 }) {
-  const [navData, setNavData] = useState(initialNavData || null);
+  const { customStrategies } = usePortfolioStore();
+
+  // Filter all strategies that have isRealMoney === true (Dinero Real)
+  const realStrategies = useMemo(() => {
+    return (customStrategies || []).filter((s) => s.isRealMoney);
+  }, [customStrategies]);
+
+  // Selected portfolio: 'titanes' (default) or a custom strategy ID with real money
+  const [selectedRealId, setSelectedRealId] = useState("titanes");
+
+  const currentStrat = useMemo(() => {
+    if (selectedRealId === "titanes") return null;
+    return realStrategies.find((s) => s.id === selectedRealId) || null;
+  }, [selectedRealId, realStrategies]);
+
+  const activeStrategyName = currentStrat?.name || (selectedRealId === "titanes" ? "Titanes" : selectedRealId);
+  const activeInvestment = currentStrat?.capital || investment;
+  const activeNumSlots = currentStrat?.numSlots || 15;
+
+  const [navData, setNavData] = useState(selectedRealId === "titanes" ? initialNavData : null);
   const [quotes, setQuotes] = useState([]);
   const [intradayChart, setIntradayChart] = useState([]);
-  const [loading, setLoading] = useState(!initialNavData);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [marketOpen, setMarketOpen] = useState(false);
@@ -31,12 +51,17 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
     marketOpenRef.current = marketOpen;
   }, [marketOpen]);
 
-  // Synchronize internal navData if parent passes new navData
+  // Reset navData & intraday chart when user switches portfolio
   useEffect(() => {
-    if (initialNavData) {
+    if (selectedRealId === "titanes" && initialNavData) {
       setNavData(initialNavData);
+    } else {
+      setNavData(null);
     }
-  }, [initialNavData]);
+    setIntradayChart([]);
+    setQuotes([]);
+    setLoading(true);
+  }, [selectedRealId, initialNavData]);
 
   const load = useCallback(
     async (isManual = false) => {
@@ -45,12 +70,23 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
       try {
         setError(null);
 
-        // 1. Ensure navData is available
+        // 1. Ensure navData is available for the selected portfolio
         let currentNav = navData;
         if (!currentNav || !currentNav.holdings || currentNav.holdings.length === 0) {
           try {
-            currentNav = await fetchNAV({ period: "1Y", investment, numSlots: 15 });
-            setNavData(currentNav);
+            if (selectedRealId === "titanes") {
+              currentNav = await fetchNAV({ period: "1Y", investment: activeInvestment, numSlots: activeNumSlots });
+            } else {
+              currentNav = await fetchNAV({
+                period: "1Y",
+                investment: activeInvestment,
+                numSlots: activeNumSlots,
+                strategyId: selectedRealId,
+              });
+            }
+            if (currentNav) {
+              setNavData(currentNav);
+            }
           } catch (navErr) {
             console.warn("[LIVE MODE] No se pudo cargar NAV inicial:", navErr);
           }
@@ -105,8 +141,8 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
                 intradayResults.forEach((series, i) => {
                   const ticker = activeTickers[i];
                   const holding = activeHoldings.find((h) => h.ticker === ticker);
-                  const numSlots = navData?.summary?.total_slots || 15;
-                  const slotValue = investment / numSlots;
+                  const numSlots = currentNav?.summary?.total_slots || activeNumSlots;
+                  const slotValue = activeInvestment / numSlots;
                   const shares =
                     holding && holding.start_price > 0
                       ? slotValue / holding.start_price
@@ -148,7 +184,7 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
               const q = quotesData?.find((qq) => qq.ticker === h.ticker);
               const price = q?.price ?? q?.previous_close ?? h.current_price ?? 0;
               return sum + h.shares * price;
-            }, 0) || currentNav?.summary?.active_invested || investment;
+            }, 0) || currentNav?.summary?.active_invested || activeInvestment;
 
           setIntradayChart((prev) => {
             if (prev && prev.length > 0) return prev;
@@ -167,7 +203,7 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
         setRefreshing(false);
       }
     },
-    [navData, investment],
+    [navData, selectedRealId, activeInvestment, activeNumSlots],
   );
 
   useEffect(() => {
@@ -195,9 +231,10 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
   // Derived metrics — ONLY ACTIVE INVESTED CAPITAL (no flat uninvested cash)
   const holdings = navData?.holdings || [];
   const cashReserved = navData?.summary?.cash_reserved ?? 0;
+  const totalSlots = navData?.summary?.total_slots || activeNumSlots || 15;
   const activeInvested =
     navData?.summary?.active_invested ??
-    (holdings.length > 0 ? (investment * holdings.length) / 15 : investment);
+    (holdings.length > 0 ? (activeInvestment * holdings.length) / totalSlots : activeInvestment);
 
   // Live stock portfolio value (Pure active positions: sum of shares * current price)
   const liveStockValue = holdings.reduce((sum, h) => {
@@ -213,7 +250,6 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
 
   // ── DRIFT & REBALANCE CALCULATIONS ──
   const totalLivePortfolioValue = liveStockValue + cashReserved;
-  const totalSlots = navData?.summary?.total_slots || 15;
   const targetWeight = 100 / totalSlots; // Target Weight per position (e.g. 6.67%)
 
   const driftData = holdings.map((h) => {
@@ -265,7 +301,68 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
             "linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(0,212,255,0.03) 100%)",
         }}
       >
-        <div>
+        <div style={{ flex: "1 1 300px" }}>
+          {/* Portfolio Switcher (Titanes vs Real Custom Strategies) */}
+          {realStrategies.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                Cartera Real:
+              </span>
+              <div
+                style={{
+                  display: "inline-flex",
+                  background: "rgba(255, 255, 255, 0.05)",
+                  padding: "3px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--border)",
+                  gap: 4,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setSelectedRealId("titanes")}
+                  style={{
+                    background: selectedRealId === "titanes" ? "var(--accent-primary)" : "transparent",
+                    color: selectedRealId === "titanes" ? "#000" : "var(--text-secondary)",
+                    border: "none",
+                    borderRadius: "6px",
+                    padding: "4px 10px",
+                    fontSize: "0.76rem",
+                    fontWeight: selectedRealId === "titanes" ? 700 : 500,
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  ⚡ Titanes (Base)
+                </button>
+                {realStrategies.map((strat) => (
+                  <button
+                    key={strat.id}
+                    type="button"
+                    onClick={() => setSelectedRealId(strat.id)}
+                    style={{
+                      background: selectedRealId === strat.id ? "var(--gain)" : "transparent",
+                      color: selectedRealId === strat.id ? "#000" : "var(--text-secondary)",
+                      border: "none",
+                      borderRadius: "6px",
+                      padding: "4px 10px",
+                      fontSize: "0.76rem",
+                      fontWeight: selectedRealId === strat.id ? 700 : 500,
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    <span>💵</span>
+                    <span>{strat.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div
             style={{
               fontSize: "0.75rem",
@@ -278,7 +375,7 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
               gap: 6,
             }}
           >
-            <span>⚡ Capital Activo en Acciones (Live)</span>
+            <span>⚡ Capital Activo en Acciones — {activeStrategyName} (Live)</span>
           </div>
           <div
             className="mono"
@@ -291,13 +388,13 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
           >
             ${displayStockValue.toFixed(2)}
           </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6, flexWrap: "wrap" }}>
             <span className={`badge ${isGain ? "gain" : "loss"}`} style={{ fontSize: "0.85rem" }}>
               {isGain ? "▲" : "▼"} ${Math.abs(totalReturn).toFixed(2)} (
               {Math.abs(totalReturnPct).toFixed(2)}%)
             </span>
             <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-              base: ${activeInvested.toFixed(2)} ({holdings.length} posiciones activas de 15)
+              base: ${activeInvested.toFixed(2)} ({holdings.length} posiciones activas de {totalSlots})
             </span>
           </div>
         </div>
@@ -455,8 +552,10 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
             <NavChart
               navData={intradayChart}
               investment={activeInvested}
+              numSlots={totalSlots}
               chartHeight={300}
               isLiveMode={true}
+              strategyName={activeStrategyName}
             />
           </div>
         </div>
@@ -811,8 +910,7 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
             const changePct = q?.change_pct ?? h.return_pct ?? 0;
             const isChangeGain = change >= 0;
 
-            const numSlots = navData?.summary?.total_slots || 15;
-            const slotValue = investment / numSlots;
+            const slotValue = activeInvestment / totalSlots;
             const cardShares = h.start_price > 0 ? slotValue / h.start_price : h.shares;
             const initialInvested = slotValue;
             const currentVal = cardShares * currentP;
@@ -1076,7 +1174,7 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
                 ${cashReserved.toFixed(2)}
               </div>
               <div style={{ fontSize: "0.72rem", color: "#64748b" }}>
-                {15 - holdings.length} slots de liquidez no expuesta al mercado
+                {Math.max(0, totalSlots - holdings.length)} slots de liquidez no expuesta al mercado
               </div>
             </div>
           )}

@@ -32,6 +32,7 @@ export default function NavChart({
   chartHeight = 400,
   isLiveMode = false,
   period = "3M",
+  strategyName = null,
 }) {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
@@ -722,7 +723,7 @@ export default function NavChart({
                 opacity: visibleSeries?.nav ? 1 : 0.3,
               }}
             />
-            <strong>{isLiveMode ? "Portafolio En Vivo" : "Titanes"}</strong>
+            <strong>{isLiveMode ? (strategyName ? `En Vivo: ${strategyName}` : "Portafolio En Vivo") : (strategyName || "Titanes")}</strong>
             <InfoTooltip conceptKey="nav" />
             {currentNav != null && (
               <span className="mono" style={{ color: chartColors.nav, fontWeight: 700 }}>
@@ -1434,7 +1435,7 @@ export default function NavChart({
               <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", fontWeight: 700 }}>
                 <span style={{ width: 7, height: 7, borderRadius: "50%", background: chartColors.nav, flexShrink: 0 }} />
                 <span style={{ color: isLight ? "#0f172a" : "#f8fafc", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {isLiveMode ? "En Vivo" : "Titanes"}
+                  {isLiveMode ? (strategyName ? `En Vivo (${strategyName})` : "En Vivo") : (strategyName || "Titanes")}
                 </span>
               </div>
             )}
