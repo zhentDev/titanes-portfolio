@@ -389,7 +389,7 @@ export default function StrategyChart({
       lineStyle: LineStyle.Dashed,
       priceLineVisible: false,
       lastValueVisible: false,
-      title: isMobile ? "" : "Capital Invertido",
+      title: "",
       priceFormat: isMobile
         ? { type: "price", precision: 0, minMove: 1 }
         : { type: "price", precision: 2, minMove: 0.01 },
@@ -400,7 +400,7 @@ export default function StrategyChart({
       lineWidth: 1.5,
       priceLineVisible: false,
       lastValueVisible: false,
-      title: isMobile ? "" : (strategy?.benchmark || "S&P 500"),
+      title: "",
       priceFormat: isMobile
         ? { type: "price", precision: 0, minMove: 1 }
         : { type: "price", precision: 2, minMove: 0.01 },
@@ -411,7 +411,7 @@ export default function StrategyChart({
       lineWidth: 1.5,
       priceLineVisible: false,
       lastValueVisible: false,
-      title: isMobile ? "" : "NASDAQ",
+      title: "",
       priceFormat: isMobile
         ? { type: "price", precision: 0, minMove: 1 }
         : { type: "price", precision: 2, minMove: 0.01 },
@@ -421,8 +421,8 @@ export default function StrategyChart({
       color: strategy?.color || COLORS.mm20,
       lineWidth: 2.5,
       priceLineVisible: false,
-      lastValueVisible: !isMobile,
-      title: isMobile ? "" : (strategy?.name || "Estrategia"),
+      lastValueVisible: false,
+      title: "",
       priceFormat: isMobile
         ? { type: "price", precision: 0, minMove: 1 }
         : { type: "price", precision: 2, minMove: 0.01 },
@@ -696,7 +696,66 @@ export default function StrategyChart({
         </button>
       </div>
 
-      <div ref={containerRef} style={{ width: "100%", height: "320px", position: "relative" }} />
+      <div style={{ width: "100%", position: "relative" }}>
+        <div ref={containerRef} style={{ width: "100%", height: "320px", position: "relative" }} />
+        
+        {/* Floating Top-Right Series Indicators (Hidden on small/mobile screens) */}
+        {!isMobile && (
+          <div
+            style={{
+              position: "absolute",
+              top: 10,
+              right: 14,
+              display: "flex",
+              flexDirection: "column",
+              gap: 4,
+              background: "rgba(15, 23, 42, 0.85)",
+              backdropFilter: "blur(6px)",
+              WebkitBackdropFilter: "blur(6px)",
+              border: "1px solid rgba(255, 255, 255, 0.12)",
+              borderRadius: 6,
+              padding: "6px 10px",
+              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.35)",
+              pointerEvents: "none",
+              zIndex: 10,
+              maxWidth: 150,
+            }}
+          >
+            {visibleSeries.strat && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", fontWeight: 700 }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: strategy?.color || COLORS.mm20, flexShrink: 0 }} />
+                <span style={{ color: "#f8fafc", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {strategy?.name ? (strategy.name.length > 12 ? strategy.name.slice(0, 11) + "…" : strategy.name) : "Estrategia"}
+                </span>
+              </div>
+            )}
+            {visibleSeries.sp500 && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", fontWeight: 600 }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: chartColors.sp500, flexShrink: 0 }} />
+                <span style={{ color: "#cbd5e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {benchmarkName === "S&P 500" ? "S&P 500" : benchmarkName}
+                </span>
+              </div>
+            )}
+            {visibleSeries.nasdaq && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", fontWeight: 600 }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: chartColors.nasdaq, flexShrink: 0 }} />
+                <span style={{ color: "#cbd5e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  NASDAQ
+                </span>
+              </div>
+            )}
+            {visibleSeries.baseLine && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.7rem", opacity: 0.75 }}>
+                <span style={{ width: 7, height: 2, background: "rgba(255,255,255,0.4)", flexShrink: 0 }} />
+                <span style={{ color: "#94a3b8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  Base
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

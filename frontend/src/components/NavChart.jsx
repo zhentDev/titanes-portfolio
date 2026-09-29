@@ -285,8 +285,8 @@ export default function NavChart({
       bottomColor: chartColors.navAreaBottom,
       lineWidth: 2,
       priceLineVisible: false,
-      lastValueVisible: !isMobile,
-      title: isMobile ? "" : isLiveMode ? "Portafolio En Vivo" : "Titanes",
+      lastValueVisible: false,
+      title: "",
       priceFormat: isMobile
         ? { type: "price", precision: 0, minMove: 1 }
         : { type: "price", precision: 2, minMove: 0.01 },
@@ -300,8 +300,8 @@ export default function NavChart({
       lineWidth: 2,
       lineStyle: LineStyle.Dashed,
       priceLineVisible: false,
-      lastValueVisible: !isMobile,
-      title: isMobile ? "" : "S&P 500",
+      lastValueVisible: false,
+      title: "",
       priceFormat: isMobile
         ? { type: "price", precision: 0, minMove: 1 }
         : { type: "price", precision: 2, minMove: 0.01 },
@@ -315,8 +315,8 @@ export default function NavChart({
       lineWidth: 2,
       lineStyle: LineStyle.Dotted,
       priceLineVisible: false,
-      lastValueVisible: !isMobile,
-      title: isMobile ? "" : "NASDAQ",
+      lastValueVisible: false,
+      title: "",
       priceFormat: isMobile
         ? { type: "price", precision: 0, minMove: 1 }
         : { type: "price", precision: 2, minMove: 0.01 },
@@ -332,8 +332,8 @@ export default function NavChart({
           lineWidth: 2,
           lineStyle: LineStyle.Solid,
           priceLineVisible: false,
-          lastValueVisible: !isMobile,
-          title: isMobile ? "" : strat.name,
+          lastValueVisible: false,
+          title: "",
           priceFormat: isMobile
             ? { type: "price", precision: 0, minMove: 1 }
             : { type: "price", precision: 2, minMove: 0.01 },
@@ -350,7 +350,7 @@ export default function NavChart({
       lineStyle: LineStyle.Dashed,
       priceLineVisible: false,
       lastValueVisible: false,
-      title: isMobile ? "" : "Base",
+      title: "",
       priceFormat: isMobile
         ? { type: "price", precision: 0, minMove: 1 }
         : { type: "price", precision: 2, minMove: 0.01 },
@@ -474,8 +474,8 @@ export default function NavChart({
           lineWidth: 2,
           lineStyle: LineStyle.Solid,
           priceLineVisible: false,
-          lastValueVisible: !isMobile,
-          title: isMobile ? "" : strat.name,
+          lastValueVisible: false,
+          title: "",
           priceFormat: isMobile
             ? { type: "price", precision: 0, minMove: 1 }
             : { type: "price", precision: 2, minMove: 0.01 },
@@ -1387,18 +1387,100 @@ export default function NavChart({
         </div>
       )}
 
-      {/* ── Main Canvas ─── */}
+      {/* ── Main Canvas & Floating Top-Right Indicator Box ─── */}
       <div
-        ref={containerRef}
         style={{
           width: "100%",
-          height: `${typeof window !== "undefined" && window.innerWidth <= 640 ? 290 : typeof window !== "undefined" && window.innerWidth <= 1024 ? 350 : chartHeight}px`,
-          minHeight: "260px",
           position: "relative",
           borderRadius: "calc(var(--radius) - 4px)",
           overflow: "hidden",
         }}
-      />
+      >
+        <div
+          ref={containerRef}
+          style={{
+            width: "100%",
+            height: `${typeof window !== "undefined" && window.innerWidth <= 640 ? 290 : typeof window !== "undefined" && window.innerWidth <= 1024 ? 350 : chartHeight}px`,
+            minHeight: "260px",
+            position: "relative",
+          }}
+        />
+
+        {/* Floating Top-Right Series Indicators (Hidden on small/mobile screens) */}
+        {!isMobile && (
+          <div
+            style={{
+              position: "absolute",
+              top: 10,
+              right: 14,
+              display: "flex",
+              flexDirection: "column",
+              gap: 4,
+              background: isLight ? "rgba(255, 255, 255, 0.88)" : "rgba(15, 23, 42, 0.82)",
+              backdropFilter: "blur(6px)",
+              WebkitBackdropFilter: "blur(6px)",
+              border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.12)"}`,
+              borderRadius: 6,
+              padding: "6px 10px",
+              boxShadow: isLight
+                ? "0 4px 12px rgba(0, 0, 0, 0.06)"
+                : "0 4px 12px rgba(0, 0, 0, 0.35)",
+              pointerEvents: "none",
+              zIndex: 10,
+              maxWidth: 160,
+            }}
+          >
+            {visibleSeries?.nav !== false && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", fontWeight: 700 }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: chartColors.nav, flexShrink: 0 }} />
+                <span style={{ color: isLight ? "#0f172a" : "#f8fafc", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {isLiveMode ? "En Vivo" : "Titanes"}
+                </span>
+              </div>
+            )}
+            {visibleSeries?.sp500 !== false && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", fontWeight: 600 }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: chartColors.sp500, flexShrink: 0 }} />
+                <span style={{ color: isLight ? "#475569" : "#cbd5e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  S&P 500
+                </span>
+              </div>
+            )}
+            {visibleSeries?.nasdaq !== false && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", fontWeight: 600 }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: chartColors.nasdaq, flexShrink: 0 }} />
+                <span style={{ color: isLight ? "#475569" : "#cbd5e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  NASDAQ
+                </span>
+              </div>
+            )}
+            {!isLiveMode &&
+              (customStrategies || []).map((strat) => {
+                if (visibleSeries?.[strat.id] === false) return null;
+                // Simplify strategy name (e.g. "MM20 Mid-caps PRO" -> "MM20", "Mejores acciones..." -> "Mejores...")
+                const shortName = strat.name.length > 14
+                  ? strat.name.split(" ")[0] + (strat.name.split(" ")[1] ? " " + strat.name.split(" ")[1].slice(0, 5) : "")
+                  : strat.name;
+                return (
+                  <div key={strat.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", fontWeight: 600 }}>
+                    <span style={{ width: 7, height: 7, borderRadius: "50%", background: strat.color || "#10b981", flexShrink: 0 }} />
+                    <span style={{ color: isLight ? "#475569" : "#cbd5e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {shortName}
+                    </span>
+                  </div>
+                );
+              })}
+            {visibleSeries?.base !== false && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.7rem", opacity: 0.75 }}>
+                <span style={{ width: 7, height: 2, background: isLight ? "#94a3b8" : "rgba(255,255,255,0.4)", flexShrink: 0 }} />
+                <span style={{ color: isLight ? "#64748b" : "#94a3b8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  Base
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
