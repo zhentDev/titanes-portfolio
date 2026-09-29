@@ -699,13 +699,13 @@ export default function StrategyChart({
       <div style={{ width: "100%", position: "relative" }}>
         <div ref={containerRef} style={{ width: "100%", height: "320px", position: "relative" }} />
         
-        {/* Floating Top-Right Series Indicators (Hidden on small/mobile screens) */}
+        {/* Floating Top-Left Series Indicators (Hidden on small/mobile screens) */}
         {!isMobile && (
           <div
             style={{
               position: "absolute",
               top: 10,
-              right: 14,
+              left: 14,
               display: "flex",
               flexDirection: "column",
               gap: 4,

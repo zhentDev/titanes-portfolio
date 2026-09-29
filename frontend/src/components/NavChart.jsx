@@ -1406,13 +1406,13 @@ export default function NavChart({
           }}
         />
 
-        {/* Floating Top-Right Series Indicators (Hidden on small/mobile screens) */}
+        {/* Floating Top-Left Series Indicators (Hidden on small/mobile screens) */}
         {!isMobile && (
           <div
             style={{
               position: "absolute",
               top: 10,
-              right: 14,
+              left: !isLiveMode && (customStrategies || []).some((s) => visibleSeries?.[s.id] !== false) ? 70 : 14,
               display: "flex",
               flexDirection: "column",
               gap: 4,
