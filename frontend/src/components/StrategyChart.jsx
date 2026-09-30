@@ -721,14 +721,31 @@ export default function StrategyChart({
               maxWidth: 150,
             }}
           >
-            {visibleSeries.strat && (
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", fontWeight: 700 }}>
-                <span style={{ width: 7, height: 7, borderRadius: "50%", background: strategy?.color || COLORS.mm20, flexShrink: 0 }} />
-                <span style={{ color: "#f8fafc", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {strategy?.name ? (strategy.name.length > 12 ? strategy.name.slice(0, 11) + "…" : strategy.name) : "Estrategia"}
-                </span>
-              </div>
-            )}
+            {visibleSeries.strat && (() => {
+              const isReal = strategy?.isRealMoney === true;
+              return (
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", fontWeight: 700 }}>
+                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: strategy?.color || (isReal ? "#10b981" : COLORS.mm20), flexShrink: 0 }} />
+                  <span style={{ color: "#f8fafc", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {strategy?.name ? (strategy.name.length > 12 ? strategy.name.slice(0, 11) + "…" : strategy.name) : "Estrategia"}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "0.55rem",
+                      padding: "1px 3px",
+                      borderRadius: 3,
+                      lineHeight: 1,
+                      background: isReal ? "rgba(16, 185, 129, 0.25)" : "rgba(168, 85, 247, 0.25)",
+                      color: isReal ? "#34d399" : "#c084fc",
+                      fontWeight: 700,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {isReal ? "REAL" : "SIM"}
+                  </span>
+                </div>
+              );
+            })()}
             {visibleSeries.sp500 && (
               <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", fontWeight: 600 }}>
                 <span style={{ width: 7, height: 7, borderRadius: "50%", background: chartColors.sp500, flexShrink: 0 }} />

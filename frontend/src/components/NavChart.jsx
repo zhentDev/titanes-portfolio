@@ -1428,7 +1428,7 @@ export default function NavChart({
                 : "0 4px 12px rgba(0, 0, 0, 0.35)",
               pointerEvents: "none",
               zIndex: 10,
-              maxWidth: 160,
+              maxWidth: 185,
             }}
           >
             {visibleSeries?.nav !== false && (
@@ -1458,15 +1458,34 @@ export default function NavChart({
             {!isLiveMode &&
               (customStrategies || []).map((strat) => {
                 if (visibleSeries?.[strat.id] === false) return null;
-                // Simplify strategy name (e.g. "MM20 Mid-caps PRO" -> "MM20", "Mejores acciones..." -> "Mejores...")
-                const shortName = strat.name.length > 14
-                  ? strat.name.split(" ")[0] + (strat.name.split(" ")[1] ? " " + strat.name.split(" ")[1].slice(0, 5) : "")
+                const isReal = strat.isRealMoney === true;
+                // Simplify strategy name
+                const shortName = strat.name.length > 13
+                  ? strat.name.split(" ")[0] + (strat.name.split(" ")[1] ? " " + strat.name.split(" ")[1].slice(0, 4) : "")
                   : strat.name;
                 return (
-                  <div key={strat.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", fontWeight: 600 }}>
-                    <span style={{ width: 7, height: 7, borderRadius: "50%", background: strat.color || "#10b981", flexShrink: 0 }} />
+                  <div key={strat.id} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.72rem", fontWeight: 600 }}>
+                    <span style={{ width: 7, height: 7, borderRadius: "50%", background: strat.color || (isReal ? "#10b981" : "#a855f7"), flexShrink: 0 }} />
                     <span style={{ color: isLight ? "#475569" : "#cbd5e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {shortName}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.55rem",
+                        padding: "1px 3px",
+                        borderRadius: 3,
+                        lineHeight: 1,
+                        background: isReal
+                          ? isLight ? "rgba(16, 185, 129, 0.2)" : "rgba(16, 185, 129, 0.25)"
+                          : isLight ? "rgba(168, 85, 247, 0.2)" : "rgba(168, 85, 247, 0.25)",
+                        color: isReal
+                          ? isLight ? "#047857" : "#34d399"
+                          : isLight ? "#7e22ce" : "#c084fc",
+                        fontWeight: 700,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {isReal ? "REAL" : "SIM"}
                     </span>
                   </div>
                 );
