@@ -104,7 +104,11 @@ export default function NavChart({
       }
       return (sortedStratRebs[sortedStratRebs.length - 1].tickers?.length || 0) * slotVal;
     }
-    return strat.activeInvested || strat.capital || 500;
+    // If strategy has activeInvested configured, use it, else default to capital or 0 if slots are empty
+    if (strat.activeInvested != null && strat.activeInvested > 0) {
+      return strat.activeInvested;
+    }
+    return strat.capital || 1000;
   }, [strategyRebalances]);
 
   // Helper to extract pure normalized benchmark factor at index idx (immune to Titanes active capital injections)
@@ -1033,12 +1037,20 @@ export default function NavChart({
                     if (stratBase > 0) {
                       stratPct = ((stratUsd - stratBase) / stratBase) * 100;
                     }
-                  } else if (backendSumm) {
-                    stratUsd =
-                      backendSumm.active_stock_value ??
-                      backendSumm.end_value ??
-                      backendSumm.invested_value;
-                    stratPct = backendSumm.active_return_pct ?? backendSumm.total_return_pct;
+                  } else if (backendSumm && backendSumm.active_stock_value != null) {
+                    stratUsd = backendSumm.active_stock_value;
+                    stratPct = backendSumm.active_return_pct ?? (stratBase > 0 ? ((stratUsd - stratBase) / stratBase) * 100 : 0);
+                  } else if (backendSumm && (backendSumm.end_value != null || backendSumm.invested_value != null)) {
+                    stratUsd = backendSumm.end_value ?? backendSumm.invested_value;
+                    stratPct = backendSumm.total_return_pct ?? (stratBase > 0 ? ((stratUsd - stratBase) / stratBase) * 100 : 0);
+                  } else if (stratLastValues[strat.id] != null) {
+                    stratUsd = stratLastValues[strat.id];
+                    if (stratBase > 0) {
+                      stratPct = ((stratUsd - stratBase) / stratBase) * 100;
+                    }
+                  } else {
+                    stratUsd = stratBase;
+                    stratPct = 0;
                   }
 
                   return (
@@ -1171,12 +1183,20 @@ export default function NavChart({
                     if (stratBase > 0) {
                       stratPct = ((stratUsd - stratBase) / stratBase) * 100;
                     }
-                  } else if (backendSumm) {
-                    stratUsd =
-                      backendSumm.active_stock_value ??
-                      backendSumm.end_value ??
-                      backendSumm.invested_value;
-                    stratPct = backendSumm.active_return_pct ?? backendSumm.total_return_pct;
+                  } else if (backendSumm && backendSumm.active_stock_value != null) {
+                    stratUsd = backendSumm.active_stock_value;
+                    stratPct = backendSumm.active_return_pct ?? (stratBase > 0 ? ((stratUsd - stratBase) / stratBase) * 100 : 0);
+                  } else if (backendSumm && (backendSumm.end_value != null || backendSumm.invested_value != null)) {
+                    stratUsd = backendSumm.end_value ?? backendSumm.invested_value;
+                    stratPct = backendSumm.total_return_pct ?? (stratBase > 0 ? ((stratUsd - stratBase) / stratBase) * 100 : 0);
+                  } else if (stratLastValues[strat.id] != null) {
+                    stratUsd = stratLastValues[strat.id];
+                    if (stratBase > 0) {
+                      stratPct = ((stratUsd - stratBase) / stratBase) * 100;
+                    }
+                  } else {
+                    stratUsd = stratBase;
+                    stratPct = 0;
                   }
 
                   return (

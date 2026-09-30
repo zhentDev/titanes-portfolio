@@ -374,10 +374,10 @@ export default function CreateStrategyModal({
               </label>
               <input
                 type="number"
-                min={10}
-                step={100}
+                min={1}
+                step="any"
                 value={capital}
-                onChange={(e) => setCapital(Number(e.target.value) || 1000)}
+                onChange={(e) => setCapital(e.target.value === "" ? "" : Number(e.target.value))}
                 style={{
                   width: "100%",
                   padding: "8px 12px",

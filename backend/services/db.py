@@ -906,15 +906,6 @@ def add_rebalance(
 
 
 def get_all_rebalances(strategy_id: str = "historical", user_id: Optional[str] = None) -> list[dict]:
-    is_system_strat = strategy_id in ("historical", "strat_mm20")
-    # Non-system custom strategies require an authenticated PRO user
-    if not is_system_strat:
-        if not user_id:
-            return []
-        user = get_user_by_id(user_id)
-        if not user or not user.get("is_pro"):
-            return []
-
     with get_connection() as con:
         if user_id:
             results = con.execute("""

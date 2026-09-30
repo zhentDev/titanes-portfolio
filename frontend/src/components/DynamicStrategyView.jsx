@@ -724,10 +724,10 @@ export default function DynamicStrategyView({
             <span style={{ color: strategy.isRealMoney ? "#10b981" : strategy.color, fontWeight: 700 }}>$</span>
             <input
               type="number"
-              min={10}
-              step={100}
+              min={1}
+              step="any"
               value={simulatedCapital}
-              onChange={(e) => setLocalSimulatedCapital(Number(e.target.value))}
+              onChange={(e) => setLocalSimulatedCapital(e.target.value === "" ? "" : Number(e.target.value))}
               style={{
                 width: 90,
                 background: "rgba(0,0,0,0.25)",
