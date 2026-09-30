@@ -417,9 +417,11 @@ export default function StrategyChart({
         : { type: "price", precision: 2, minMove: 0.01 },
     });
 
+    const isStratReal = strategy?.isRealMoney === true;
     seriesRef.current.strat = chartRef.current.addLineSeries({
-      color: strategy?.color || COLORS.mm20,
-      lineWidth: 2.5,
+      color: strategy?.color || (isStratReal ? "#10b981" : COLORS.mm20),
+      lineWidth: isStratReal ? 2.5 : 2,
+      lineStyle: isStratReal ? LineStyle.Solid : LineStyle.Dashed,
       priceLineVisible: false,
       lastValueVisible: false,
       title: "",
@@ -645,18 +647,45 @@ export default function StrategyChart({
             fontSize: "0.75rem",
           }}
         >
-          <span
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              background: strategy?.color || COLORS.mm20,
-              opacity: visibleSeries.strat ? 1 : 0.3,
-            }}
-          />
+          {strategy?.isRealMoney ? (
+            <span
+              style={{
+                width: 10,
+                height: 3,
+                borderRadius: 2,
+                background: strategy?.color || "#10b981",
+                opacity: visibleSeries.strat ? 1 : 0.3,
+                flexShrink: 0,
+              }}
+            />
+          ) : (
+            <span
+              style={{
+                width: 10,
+                height: 0,
+                borderTop: `2.5px dashed ${strategy?.color || COLORS.mm20}`,
+                opacity: visibleSeries.strat ? 1 : 0.35,
+                flexShrink: 0,
+              }}
+            />
+          )}
           <strong>
             {strategy?.name || "Estrategia"} {strategy?.isSystem ? "PRO" : ""}
           </strong>
+          <span
+            style={{
+              fontSize: "0.6rem",
+              padding: "1px 4px",
+              borderRadius: 3,
+              background: strategy?.isRealMoney
+                ? "rgba(16, 185, 129, 0.2)"
+                : "rgba(168, 85, 247, 0.2)",
+              color: strategy?.isRealMoney ? "#34d399" : "#c084fc",
+              fontWeight: 700,
+            }}
+          >
+            {strategy?.isRealMoney ? "REAL" : "SIM"}
+          </span>
           <span className="mono" style={{ color: strategy?.color || COLORS.mm20, fontWeight: 700 }}>
             ${currentStrat?.toFixed(2)}
           </span>
@@ -725,7 +754,11 @@ export default function StrategyChart({
               const isReal = strategy?.isRealMoney === true;
               return (
                 <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", fontWeight: 700 }}>
-                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: strategy?.color || (isReal ? "#10b981" : COLORS.mm20), flexShrink: 0 }} />
+                  {isReal ? (
+                    <span style={{ width: 10, height: 3, borderRadius: 2, background: strategy?.color || "#10b981", flexShrink: 0 }} />
+                  ) : (
+                    <span style={{ width: 10, height: 0, borderTop: `2px dashed ${strategy?.color || COLORS.mm20}`, flexShrink: 0 }} />
+                  )}
                   <span style={{ color: "#f8fafc", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {strategy?.name ? (strategy.name.length > 12 ? strategy.name.slice(0, 11) + "…" : strategy.name) : "Estrategia"}
                   </span>

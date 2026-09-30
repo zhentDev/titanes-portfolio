@@ -326,12 +326,14 @@ export default function NavChart({
     });
 
     // Custom Strategies curves (Bound to LEFT Axis for Dual Scale separation!)
+    // Real money strategies use Solid line; Simulated strategies use Dashed line for clear visual distinction
     if (!isLiveMode) {
       (customStrategies || []).forEach((strat) => {
+        const isReal = strat.isRealMoney === true;
         seriesRef.current[strat.id] = chart.addLineSeries({
-          color: strat.color || "#10b981",
-          lineWidth: 2,
-          lineStyle: LineStyle.Solid,
+          color: strat.color || (isReal ? "#10b981" : "#a855f7"),
+          lineWidth: isReal ? 2.5 : 2,
+          lineStyle: isReal ? LineStyle.Solid : LineStyle.Dashed,
           priceLineVisible: false,
           lastValueVisible: false,
           title: "",
@@ -1080,11 +1082,12 @@ export default function NavChart({
                     >
                       <span
                         style={{
-                          width: 7,
-                          height: 7,
-                          borderRadius: "50%",
+                          width: 10,
+                          height: 3,
+                          borderRadius: 2,
                           background: "#10b981",
                           opacity: isVisible ? 1 : 0.3,
+                          flexShrink: 0,
                         }}
                       />
                       <span style={{ fontSize: "0.68rem" }}>{strat.country || "💵"}</span>
@@ -1217,11 +1220,11 @@ export default function NavChart({
                     >
                       <span
                         style={{
-                          width: 7,
-                          height: 7,
-                          borderRadius: "50%",
-                          background: strat.color,
-                          opacity: isVisible ? 1 : 0.3,
+                          width: 10,
+                          height: 0,
+                          borderTop: `2.5px dashed ${strat.color || "#a855f7"}`,
+                          opacity: isVisible ? 1 : 0.35,
+                          flexShrink: 0,
                         }}
                       />
                       <span style={{ fontSize: "0.68rem" }}>{strat.country || "🌎"}</span>
@@ -1465,7 +1468,11 @@ export default function NavChart({
                   : strat.name;
                 return (
                   <div key={strat.id} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.72rem", fontWeight: 600 }}>
-                    <span style={{ width: 7, height: 7, borderRadius: "50%", background: strat.color || (isReal ? "#10b981" : "#a855f7"), flexShrink: 0 }} />
+                    {isReal ? (
+                      <span style={{ width: 10, height: 3, borderRadius: 2, background: strat.color || "#10b981", flexShrink: 0 }} />
+                    ) : (
+                      <span style={{ width: 10, height: 0, borderTop: `2px dashed ${strat.color || "#a855f7"}`, flexShrink: 0 }} />
+                    )}
                     <span style={{ color: isLight ? "#475569" : "#cbd5e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {shortName}
                     </span>
