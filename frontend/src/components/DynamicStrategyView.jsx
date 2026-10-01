@@ -198,7 +198,7 @@ export default function DynamicStrategyView({
     "1Y": 180,
     "3Y": 365,
     "5Y": 1095,
-    MAX: 0,
+    MAX: 90,
   };
   const maxHistoryDaysRef = useRef(0);
   const periodEnabled = useMemo(() => {

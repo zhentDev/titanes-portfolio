@@ -341,7 +341,7 @@ export default function App() {
     "1Y": 180,
     "3Y": 365,
     "5Y": 1095,
-    MAX: 0,
+    MAX: 90,
   };
 
   // Track maximum known days of history for each portfolio mode so zooming into 1W never shrinks available period buttons
@@ -349,18 +349,13 @@ export default function App() {
 
   const periodEnabled = useMemo(() => {
     const map = {};
-    if (mode === "historical") {
-      // Titanes flagship has full multi-year history across all periods
-      for (const p of PERIODS) map[p] = true;
-      return map;
-    }
 
     // Earliest recorded rebalance date for this custom strategy or portfolio
     const localRebs = strategyRebalances[mode] || [];
     const navRebs = baseNavData?.rebalances || [];
     const allRebs = [...localRebs, ...navRebs];
     const rebDates = allRebs.map((r) => r.rebalance_date || r.date).filter(Boolean).sort();
-    const earliestRebDate = rebDates[0];
+    const earliestRebDate = rebDates[0] || (mode === "historical" ? "2026-08-03" : null);
 
     const candidateDate = earliestRebDate || baseNavData?.nav?.[0]?.date;
     if (candidateDate) {
@@ -373,7 +368,7 @@ export default function App() {
       }
     }
 
-    const availableDays = maxHistoryDaysRef.current[mode] ?? Infinity;
+    const availableDays = maxHistoryDaysRef.current[mode] ?? (mode === "historical" ? 60 : Infinity);
     for (const p of PERIODS) {
       map[p] = UNLOCK_DAYS[p] <= availableDays;
     }
@@ -2208,12 +2203,12 @@ export default function App() {
             </div>
 
             {/* ── Main Chart Card ─────────────────────────────── */}
-            <div className="card chart-card fade-up" style={{ minHeight: 400 }}>
+            <div className="card chart-card fade-up" style={{ minHeight: 480 }}>
               {loading ? (
                 <QuantumOrbitalLoader
                   message={`Cargando simulación para período ${period}…`}
                   submessage="Transición cuántica de Schrödinger (orbitales 1s ➔ 2s ➔ 2p ➔ 3d ➔ 4f)"
-                  height={400}
+                  height={480}
                 />
               ) : error ? (
                 <div

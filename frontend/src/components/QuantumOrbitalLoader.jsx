@@ -258,9 +258,11 @@ export default function QuantumOrbitalLoader({
       rotX = 0.35 + Math.sin(elapsedSec * 0.8) * 0.1;
 
       const cx = width / 2;
-      const cy = currentH / 2;
-      const baseScale = Math.max(30, Math.min(width, currentH) * 0.16);
-      const fov = 350;
+      // Position center slightly above midpoint to give generous room for bottom HUD
+      const cy = currentH * 0.44;
+      // Scale carefully: max orbital radius is ~4.5, so 4.5 * baseScale should stay safely within half-height
+      const baseScale = Math.max(30, Math.min(width * 0.095, currentH * 0.092));
+      const fov = 380;
 
       const fromPts = statesData[fromIdx];
       const toPts = statesData[toIdx];
