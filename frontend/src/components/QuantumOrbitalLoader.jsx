@@ -166,6 +166,37 @@ export default function QuantumOrbitalLoader({
 
     let animationFrameId;
     let isRunning = true;
+    let canvasWidth = canvas.clientWidth || 600;
+    let canvasHeight = canvas.clientHeight || height || 360;
+
+    // Handle canvas dimensions safely using ResizeObserver
+    const updateDimensions = (w, h) => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const safeW = Math.max(280, Math.floor(w || canvas.clientWidth || 600));
+      const safeH = Math.max(200, Math.floor(h || canvas.clientHeight || height || 360));
+      canvasWidth = safeW;
+      canvasHeight = safeH;
+
+      if (canvas.width !== safeW * dpr || canvas.height !== safeH * dpr) {
+        canvas.width = safeW * dpr;
+        canvas.height = safeH * dpr;
+      }
+    };
+
+    updateDimensions(canvas.clientWidth, canvas.clientHeight);
+
+    let resizeObserver = null;
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const { width: w, height: h } = entry.contentRect;
+          if (w > 0 && h > 0) {
+            updateDimensions(w, h);
+          }
+        }
+      });
+      resizeObserver.observe(canvas);
+    }
 
     // Precompute cloud positions for each orbital state
     const statesData = ORBITALS.map((orb) => {
@@ -183,6 +214,7 @@ export default function QuantumOrbitalLoader({
     let startTime = performance.now();
     let rotY = 0;
     let rotX = 0.25;
+    let lastUiUpdate = 0;
 
     const render = (now) => {
       if (!isRunning) return;
@@ -198,8 +230,9 @@ export default function QuantumOrbitalLoader({
       // Smooth cosine easing
       const ease = 0.5 - 0.5 * Math.cos(t * Math.PI);
 
-      // Periodically update React state for UI readout
-      if (Math.random() < 0.1) {
+      // Throttled UI state updates (every 100ms) without interfering with 60fps render
+      if (now - lastUiUpdate > 100) {
+        lastUiUpdate = now;
         setCurrentInfo({
           from: ORBITALS[fromIdx],
           to: ORBITALS[toIdx],
@@ -207,28 +240,26 @@ export default function QuantumOrbitalLoader({
         });
       }
 
-      // Responsive canvas size handling
-      const dpr = window.devicePixelRatio || 1;
-      const rect = canvas.getBoundingClientRect();
-      const width = rect.width;
-      const height = rect.height;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const width = canvasWidth;
+      const currentH = canvasHeight;
 
-      if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
-        canvas.width = width * dpr;
-        canvas.height = height * dpr;
-      }
+      // Reset canvas context transformation and blend state cleanly
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = 1.0;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      ctx.save();
-      ctx.scale(dpr, dpr);
-      ctx.clearRect(0, 0, width, height);
+      // Apply DPR scaling
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       // Rotation angles
       rotY += 0.012;
       rotX = 0.35 + Math.sin(elapsedSec * 0.8) * 0.1;
 
       const cx = width / 2;
-      const cy = height / 2;
-      const baseScale = Math.min(width, height) * 0.16;
+      const cy = currentH / 2;
+      const baseScale = Math.max(30, Math.min(width, currentH) * 0.16);
       const fov = 350;
 
       const fromPts = statesData[fromIdx];
@@ -241,14 +272,15 @@ export default function QuantumOrbitalLoader({
 
       // Render quantum core / nucleus glow
       const nucleusPulse = 1 + Math.sin(elapsedSec * 4) * 0.2;
-      const radGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 28 * nucleusPulse);
+      const coreR = Math.max(15, 28 * nucleusPulse);
+      const radGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR);
       radGrad.addColorStop(0, "rgba(255, 255, 255, 0.95)");
-      radGrad.addColorStop(0.25, "rgba(0, 229, 255, 0.6)");
-      radGrad.addColorStop(0.7, "rgba(168, 85, 247, 0.2)");
+      radGrad.addColorStop(0.25, "rgba(0, 229, 255, 0.7)");
+      radGrad.addColorStop(0.7, "rgba(168, 85, 247, 0.25)");
       radGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
       ctx.fillStyle = radGrad;
       ctx.beginPath();
-      ctx.arc(cx, cy, 28 * nucleusPulse, 0, Math.PI * 2);
+      ctx.arc(cx, cy, coreR, 0, Math.PI * 2);
       ctx.fill();
 
       // Project and render all particles
@@ -274,25 +306,25 @@ export default function QuantumOrbitalLoader({
         const yRot = y * cosX - zRot * sinX;
         const zFinal = y * sinX + zRot * cosX;
 
-        // Perspective projection
-        const pScale = fov / (fov + zFinal * baseScale * 0.7);
+        // Perspective projection with safe denominator
+        const denom = Math.max(30, fov + zFinal * baseScale * 0.7);
+        const pScale = fov / denom;
         const screenX = cx + xRot * baseScale * pScale;
         const screenY = cy + yRot * baseScale * pScale;
 
         // Particle size & depth fade
-        const depthAlpha = Math.max(0.12, Math.min(0.9, (zFinal + 4) / 8));
-        const radius = Math.max(0.8, 1.8 * pScale);
+        const depthAlpha = Math.max(0.18, Math.min(0.95, (zFinal + 4) / 8));
+        const radius = Math.max(1.0, 1.8 * pScale);
 
         // Phase color blend
         ctx.fillStyle = i % 2 === 0 ? fromColor : toColor;
-        ctx.globalAlpha = depthAlpha * 0.75;
+        ctx.globalAlpha = depthAlpha * 0.85;
 
         ctx.beginPath();
         ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      ctx.restore();
       animationFrameId = requestAnimationFrame(render);
     };
 
@@ -300,9 +332,10 @@ export default function QuantumOrbitalLoader({
 
     return () => {
       isRunning = false;
-      cancelAnimationFrame(animationFrameId);
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      if (resizeObserver) resizeObserver.disconnect();
     };
-  }, []);
+  }, [height]);
 
   return (
     <div
