@@ -4406,7 +4406,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                     </label>
                     <input
                       type="number"
-                      step="1"
+                      step="any"
                       className="input input-bordered input-sm"
                       value={editInvested}
                       onChange={(e) => setEditInvested(Number(e.target.value))}

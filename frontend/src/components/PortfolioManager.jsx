@@ -66,7 +66,7 @@ export default function PortfolioManager({ onRefresh }) {
             type="number"
             value={investment}
             min={1}
-            step={100}
+            step="any"
             onChange={(e) => {
               setInvestment(e.target.value);
               onRefresh?.();

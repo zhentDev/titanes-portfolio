@@ -18,7 +18,7 @@ export default function NavChart({
   navData,
   sp500Data,
   nasdaqData,
-  investment,
+  investment = 2000,
   numSlots = 15,
   rebalances = [],
   summary = null,

@@ -261,12 +261,15 @@ export async function fetchRebalances(strategyId = "historical") {
 
 /** POST /api/rebalances */
 export async function createRebalance({ rebalance_date, cash_added, tickers, strategy_id = "historical" }) {
-  const res = await fetch(`${BASE}/rebalances`, {
+  const res = await safeFetch(`${BASE}/rebalances`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ rebalance_date, cash_added, tickers, strategy_id }),
   });
-  if (!res.ok) throw new Error("Error al registrar rebalanceo");
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.detail || "Error al registrar rebalanceo");
+  }
   invalidateApiCache("/nav");
   invalidateApiCache("/rebalances");
   return res.json();
@@ -275,10 +278,13 @@ export async function createRebalance({ rebalance_date, cash_added, tickers, str
 /** DELETE /api/rebalances/:date */
 export async function deleteRebalance(date, strategyId = "historical") {
   const query = strategyId ? `?strategy_id=${encodeURIComponent(strategyId)}` : "";
-  const res = await fetch(`${BASE}/rebalances/${date}${query}`, {
+  const res = await safeFetch(`${BASE}/rebalances/${date}${query}`, {
     method: "DELETE",
   });
-  if (!res.ok) throw new Error("Error al eliminar rebalanceo");
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.detail || "Error al eliminar rebalanceo");
+  }
   invalidateApiCache("/nav");
   invalidateApiCache("/rebalances");
   return res.json();
@@ -286,12 +292,15 @@ export async function deleteRebalance(date, strategyId = "historical") {
 
 /** PUT /api/rebalances/date */
 export async function updateRebalanceDateApi(oldDate, newDate, strategyId = "historical") {
-  const res = await fetch(`${BASE}/rebalances/date`, {
+  const res = await safeFetch(`${BASE}/rebalances/date`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ old_date: oldDate, new_date: newDate, strategy_id: strategyId }),
   });
-  if (!res.ok) throw new Error("Error al actualizar fecha de rebalanceo");
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.detail || "Error al actualizar fecha de rebalanceo");
+  }
   invalidateApiCache("/nav");
   invalidateApiCache("/rebalances");
   return res.json();

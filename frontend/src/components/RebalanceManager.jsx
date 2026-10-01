@@ -178,7 +178,7 @@ export default function RebalanceManager({ onRefresh }) {
             type="number"
             value={localInvestment}
             min={1}
-            step={100}
+            step="any"
             onChange={(e) => setLocalInvestment(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
