@@ -42,7 +42,7 @@ export default function NavChart({
   const [manualScaleMode, setManualScaleMode] = useState(null); // null = auto, 'log' = force log, 'normal' = force normal
   const [chartReady, setChartReady] = useState(0);
 
-  const { visibleSeries, toggleSeries, customStrategies, strategyRebalances } = usePortfolioStore();
+  const { visibleSeries, toggleSeries, setMultipleSeries, customStrategies, strategyRebalances } = usePortfolioStore();
   const { theme } = useTheme();
   const isLight = theme === "light";
 
@@ -80,6 +80,20 @@ export default function NavChart({
 
   const handleToggle = (key) => {
     toggleSeries(key);
+  };
+
+  const handleToggleStrategiesPanel = () => {
+    const nextState = !showStrategiesPanel;
+    setShowStrategiesPanel(nextState);
+
+    // Si se abre, se activan todas las estrategias; si se cierra, se ocultan todas en el gráfico de golpe
+    if ((customStrategies || []).length > 0) {
+      const updates = {};
+      customStrategies.forEach((strat) => {
+        updates[strat.id] = nextState;
+      });
+      setMultipleSeries(updates);
+    }
   };
 
   // State to store real NAV results and live ticker quotes for custom strategies
@@ -835,7 +849,7 @@ export default function NavChart({
           {/* Toggle Estrategias Adicionales */}
           {!isLiveMode && (customStrategies || []).length > 0 && (
             <button
-              onClick={() => setShowStrategiesPanel((prev) => !prev)}
+              onClick={handleToggleStrategiesPanel}
               style={{
                 display: "flex",
                 alignItems: "center",

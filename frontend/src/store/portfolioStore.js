@@ -539,6 +539,14 @@ export const usePortfolioStore = create(
           },
         })),
 
+      setMultipleSeries: (updates) =>
+        set((s) => ({
+          visibleSeries: {
+            ...s.visibleSeries,
+            ...updates,
+          },
+        })),
+
       addCustomStrategy: async ({
         name,
         country,
