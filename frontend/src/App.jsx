@@ -236,46 +236,21 @@ export default function App() {
     const baseND0 = baseNavData.nasdaq?.[0]?.value || baseFirstVal;
 
     // Rescaled Portfolio NAV using exact individual ticker price action per tranche
-    const tickerSeriesMap = baseNavData.ticker_series || {};
     const datePoints = baseNavData.nav || [];
-    const rebalancesList = baseNavData.rebalances || [];
+    const defaultActiveInvested = baseNavData.summary?.active_invested || activeInvested;
+    const filterRatio = defaultActiveInvested > 0 ? activeInvested / defaultActiveInvested : 1;
+    const isAllSelected = !selectedTickers || activeList.length === allHoldings.length;
 
-    // Helper to get active capital and active tickers for a given date
-    const getActiveCapitalForDate = (ptDate) => {
-      let activeCountOnDate = 0;
-      for (const h of activeList) {
-        const entry = h.entry_date || (rebalancesList[0]?.date || "");
-        if (!entry || ptDate >= entry) {
-          activeCountOnDate++;
-        }
-      }
-      return activeCountOnDate * slotValue;
-    };
-
-    const scaledNav = datePoints.map((pt, idx) => {
-      const ptDate = pt.date || pt.time;
-      let totalStockVal = 0;
-      for (const h of activeList) {
-        const entry = h.entry_date || (rebalancesList[0]?.date || "");
-        // Only include ticker if it was active on ptDate
-        if (entry && ptDate < entry) {
-          continue;
-        }
-        const seriesForT = tickerSeriesMap[h.ticker];
-        const factor = seriesForT?.[idx]?.factor ?? 1 + (h.return_pct || 0) / 100;
-        totalStockVal += slotValue * factor;
-      }
-      return {
-        ...pt,
-        value: Number(totalStockVal.toFixed(4)),
-      };
-    });
+    const scaledNav = isAllSelected
+      ? datePoints
+      : datePoints.map((pt) => ({
+          ...pt,
+          value: Number((pt.value * filterRatio).toFixed(4)),
+        }));
 
     // Rescaled S&P 500 and NASDAQ:
     // baseNavData.sp500 / nasdaq from backend already scale to daily active capital ($666.67 -> $800.00).
     // If the user unchecks holdings in UI, scale proportionally by activeInvested / defaultActiveInvested.
-    const defaultActiveInvested = baseNavData.summary?.active_invested || activeInvested;
-    const filterRatio = defaultActiveInvested > 0 ? activeInvested / defaultActiveInvested : 1;
 
     const scaledSP500 = (baseNavData.sp500 || []).map((pt) => ({
       ...pt,

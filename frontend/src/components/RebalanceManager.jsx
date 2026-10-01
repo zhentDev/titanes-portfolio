@@ -35,7 +35,7 @@ export default function RebalanceManager({ onRefresh }) {
   const loadRebalances = async () => {
     setLoading(true);
     try {
-      const data = await fetchRebalances();
+      const data = await fetchRebalances("historical", { bypassCache: true });
       setRebalances(data);
       if (data.length > 0) {
         // Pre-fill form with the last rebalance tickers

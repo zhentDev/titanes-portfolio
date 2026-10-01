@@ -253,10 +253,10 @@ export async function searchTickersMultiple(q) {
 }
 
 /** GET /api/rebalances */
-export async function fetchRebalances(strategyId = "historical") {
+export async function fetchRebalances(strategyId = "historical", options = {}) {
   const query = strategyId ? `?strategy_id=${encodeURIComponent(strategyId)}` : "";
   const staticFile = (!strategyId || strategyId === "historical") ? "rebalances.json" : null;
-  return fetchWithFallback(`/rebalances${query}`, staticFile);
+  return fetchWithFallback(`/rebalances${query}`, staticFile, options);
 }
 
 /** POST /api/rebalances */
