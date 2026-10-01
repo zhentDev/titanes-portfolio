@@ -23,13 +23,17 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
     return (customStrategies || []).filter((s) => s.isRealMoney);
   }, [customStrategies]);
 
-  // Selected portfolio: 'titanes' (default) or a custom strategy ID with real money
+  const simulatedStrategies = useMemo(() => {
+    return (customStrategies || []).filter((s) => !s.isRealMoney && s.id !== "historical");
+  }, [customStrategies]);
+
+  // Selected portfolio: 'titanes' (default) or any custom strategy ID
   const [selectedRealId, setSelectedRealId] = useState("titanes");
 
   const currentStrat = useMemo(() => {
     if (selectedRealId === "titanes") return null;
-    return realStrategies.find((s) => s.id === selectedRealId) || null;
-  }, [selectedRealId, realStrategies]);
+    return (customStrategies || []).find((s) => s.id === selectedRealId) || null;
+  }, [selectedRealId, customStrategies]);
 
   const activeStrategyName = currentStrat?.name || (selectedRealId === "titanes" ? "Titanes" : selectedRealId);
   const activeInvestment = currentStrat?.capital || investment;
@@ -105,14 +109,15 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
 
         // 2. Fetch live quotes for active positions only
         const quotesData = await fetchLiveQuotes(activeTickers);
-        if (Array.isArray(quotesData) && quotesData.length > 0) {
-          setQuotes(quotesData);
-          setMarketOpen(quotesData[0]?.market_open ?? false);
+        const safeQuotesData = Array.isArray(quotesData) ? quotesData : [];
+        if (safeQuotesData.length > 0) {
+          setQuotes(safeQuotesData);
+          setMarketOpen(safeQuotesData[0]?.market_open ?? false);
         }
         setLastUpdate(new Date());
 
         // 3. Intraday chart: Only build if market is actively open and data is consistent
-        const isLiveTrading = quotesData?.[0]?.market_open;
+        const isLiveTrading = safeQuotesData[0]?.market_open;
         if (isLiveTrading) {
           try {
             const intradayPromises = activeTickers.map((t) => fetchIntraday(t).catch(() => []));
@@ -126,9 +131,11 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
             if (allHaveData) {
               const allTimes = new Set();
               intradayResults.forEach((series) => {
-                series.forEach((p) => {
-                  if (p && p.time) allTimes.add(p.time);
-                });
+                if (Array.isArray(series)) {
+                  series.forEach((p) => {
+                    if (p && p.time) allTimes.add(p.time);
+                  });
+                }
               });
 
               const sortedTimes = Array.from(allTimes).sort((a, b) => a - b);
@@ -150,8 +157,9 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
                         ? holding.shares
                         : 0;
 
-                  const point = series.find((p) => p.time === t);
-                  const price = point?.value ?? quotesData?.find((q) => q.ticker === ticker)?.price;
+                  const safeSeries = Array.isArray(series) ? series : [];
+                  const point = safeSeries.find((p) => p && p.time === t);
+                  const price = point?.value ?? safeQuotesData.find((q) => q.ticker === ticker)?.price;
 
                   if (price && !isNaN(price)) {
                     stockValue += price * shares;
@@ -181,7 +189,7 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
           // Market closed: keep the curve always visible as a flat constant (no API needed here).
           const baseline =
             activeHoldings.reduce((sum, h) => {
-              const q = quotesData?.find((qq) => qq.ticker === h.ticker);
+              const q = safeQuotesData.find((qq) => qq.ticker === h.ticker);
               const price = q?.price ?? q?.previous_close ?? h.current_price ?? 0;
               return sum + h.shares * price;
             }, 0) || currentNav?.summary?.active_invested || activeInvestment;
@@ -237,8 +245,9 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
     (holdings.length > 0 ? (activeInvestment * holdings.length) / totalSlots : activeInvestment);
 
   // Live stock portfolio value (Pure active positions: sum of shares * current price)
+  const safeQuotesList = Array.isArray(quotes) ? quotes : [];
   const liveStockValue = holdings.reduce((sum, h) => {
-    const q = quotes.find((quote) => quote.ticker === h.ticker);
+    const q = safeQuotesList.find((quote) => quote && quote.ticker === h.ticker);
     const price = q?.price ?? q?.previous_close ?? h.current_price ?? 0;
     return sum + h.shares * price;
   }, 0);
@@ -253,7 +262,7 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
   const targetWeight = 100 / totalSlots; // Target Weight per position (e.g. 6.67%)
 
   const driftData = holdings.map((h) => {
-    const q = quotes.find((quote) => quote.ticker === h.ticker);
+    const q = safeQuotesList.find((quote) => quote && quote.ticker === h.ticker);
     const price = q?.price ?? q?.previous_close ?? h.current_price ?? 0;
     const currentValue = h.shares * price;
     const currentWeight =
@@ -302,66 +311,90 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
         }}
       >
         <div style={{ flex: "1 1 300px" }}>
-          {/* Portfolio Switcher (Titanes vs Real Custom Strategies) */}
-          {realStrategies.length > 0 && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600 }}>
-                Cartera Real:
-              </span>
-              <div
+          {/* Portfolio Switcher (Titanes vs Real & Custom Strategies) */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600 }}>
+              Estrategia en Vivo:
+            </span>
+            <div
+              style={{
+                display: "inline-flex",
+                background: "rgba(255, 255, 255, 0.05)",
+                padding: "3px",
+                borderRadius: "8px",
+                border: "1px solid var(--border)",
+                gap: 4,
+                flexWrap: "wrap",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setSelectedRealId("titanes")}
                 style={{
-                  display: "inline-flex",
-                  background: "rgba(255, 255, 255, 0.05)",
-                  padding: "3px",
-                  borderRadius: "8px",
-                  border: "1px solid var(--border)",
-                  gap: 4,
+                  background: selectedRealId === "titanes" ? "var(--accent-primary)" : "transparent",
+                  color: selectedRealId === "titanes" ? "#000" : "var(--text-secondary)",
+                  border: "none",
+                  borderRadius: "6px",
+                  padding: "4px 10px",
+                  fontSize: "0.76rem",
+                  fontWeight: selectedRealId === "titanes" ? 700 : 500,
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
                 }}
               >
+                ⚡ Titanes (Base Real)
+              </button>
+              {realStrategies.map((strat) => (
                 <button
+                  key={strat.id}
                   type="button"
-                  onClick={() => setSelectedRealId("titanes")}
+                  onClick={() => setSelectedRealId(strat.id)}
                   style={{
-                    background: selectedRealId === "titanes" ? "var(--accent-primary)" : "transparent",
-                    color: selectedRealId === "titanes" ? "#000" : "var(--text-secondary)",
+                    background: selectedRealId === strat.id ? "var(--gain)" : "transparent",
+                    color: selectedRealId === strat.id ? "#000" : "var(--text-secondary)",
                     border: "none",
                     borderRadius: "6px",
                     padding: "4px 10px",
                     fontSize: "0.76rem",
-                    fontWeight: selectedRealId === "titanes" ? 700 : 500,
+                    fontWeight: selectedRealId === strat.id ? 700 : 500,
                     cursor: "pointer",
                     transition: "all 0.15s ease",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
                   }}
                 >
-                  ⚡ Titanes (Base)
+                  <span>💵</span>
+                  <span>{strat.name}</span>
                 </button>
-                {realStrategies.map((strat) => (
-                  <button
-                    key={strat.id}
-                    type="button"
-                    onClick={() => setSelectedRealId(strat.id)}
-                    style={{
-                      background: selectedRealId === strat.id ? "var(--gain)" : "transparent",
-                      color: selectedRealId === strat.id ? "#000" : "var(--text-secondary)",
-                      border: "none",
-                      borderRadius: "6px",
-                      padding: "4px 10px",
-                      fontSize: "0.76rem",
-                      fontWeight: selectedRealId === strat.id ? 700 : 500,
-                      cursor: "pointer",
-                      transition: "all 0.15s ease",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 4,
-                    }}
-                  >
-                    <span>💵</span>
-                    <span>{strat.name}</span>
-                  </button>
-                ))}
-              </div>
+              ))}
+              {simulatedStrategies.map((strat) => (
+                <button
+                  key={strat.id}
+                  type="button"
+                  onClick={() => setSelectedRealId(strat.id)}
+                  style={{
+                    background: selectedRealId === strat.id ? "rgba(168, 85, 247, 0.25)" : "transparent",
+                    color: selectedRealId === strat.id ? "#c084fc" : "var(--text-muted)",
+                    border: selectedRealId === strat.id ? "1px solid #a855f7" : "none",
+                    borderRadius: "6px",
+                    padding: "4px 10px",
+                    fontSize: "0.76rem",
+                    fontWeight: selectedRealId === strat.id ? 700 : 500,
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                  title="Estrategia Simulada"
+                >
+                  <span>🧪</span>
+                  <span>{strat.name}</span>
+                </button>
+              ))}
             </div>
-          )}
+          </div>
 
           <div
             style={{
@@ -904,7 +937,7 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
           }}
         >
           {holdings.map((h) => {
-            const q = quotes.find((quote) => quote.ticker === h.ticker);
+            const q = safeQuotesList.find((quote) => quote && quote.ticker === h.ticker);
             const currentP = q?.price ?? q?.previous_close ?? h.current_price ?? 0;
             const change = q?.change ?? h.current_price - h.start_price;
             const changePct = q?.change_pct ?? h.return_pct ?? 0;

@@ -207,12 +207,12 @@ export async function fetchNAV({
 /** GET /api/prices/live */
 export async function fetchLiveQuotes(tickers) {
   const params = new URLSearchParams({ tickers: tickers.join(",") });
-  return fetchWithFallback(`/prices/live?${params}`, "nav_1W.json");
+  return fetchWithFallback(`/prices/live?${params}`, null);
 }
 
 /** GET /api/prices/intraday/:ticker */
 export async function fetchIntraday(ticker) {
-  return fetchWithFallback(`/prices/intraday/${ticker}`, "nav_1W.json");
+  return fetchWithFallback(`/prices/intraday/${ticker}`, null);
 }
 
 /** GET /api/prices/indices_history?start_date=YYYY-MM-DD */

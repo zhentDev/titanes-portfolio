@@ -66,6 +66,21 @@ def pg_session():
         release_pg_connection(conn)
 
 
+def pg_execute(sql: str, params: Optional[list | tuple] = None) -> bool:
+    """Executes a SQL query on PostgreSQL if DATABASE_URL is configured."""
+    if not DATABASE_URL:
+        return False
+    try:
+        with pg_session() as conn:
+            if conn:
+                with conn.cursor() as cur:
+                    cur.execute(sql, params or [])
+                return True
+    except Exception as e:
+        print(f"[POSTGRES] pg_execute error: {e}")
+    return False
+
+
 def get_connection():
     return duckdb.connect(DB_PATH)
 
@@ -358,13 +373,96 @@ def init_db():
                                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                                 );
                             """)
-                        print("[POSTGRES] Initialized users, user_fixed_income and user_cash_flow tables in PostgreSQL.")
+                            cur.execute("""
+                                CREATE TABLE IF NOT EXISTS custom_strategies (
+                                    id VARCHAR(64) PRIMARY KEY,
+                                    name VARCHAR(255),
+                                    country VARCHAR(32) DEFAULT '🌎',
+                                    num_slots INTEGER DEFAULT 20,
+                                    capital DOUBLE PRECISION DEFAULT 1000.0,
+                                    active_invested DOUBLE PRECISION DEFAULT 1000.0,
+                                    benchmark VARCHAR(255) DEFAULT 'S&P 500',
+                                    color VARCHAR(32) DEFAULT '#a855f7',
+                                    is_system BOOLEAN DEFAULT FALSE,
+                                    is_real_money BOOLEAN DEFAULT FALSE,
+                                    user_id VARCHAR(64),
+                                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                                );
+                            """)
+                            cur.execute("""
+                                CREATE TABLE IF NOT EXISTS rebalances (
+                                    rebalance_date DATE,
+                                    cash_added DOUBLE PRECISION DEFAULT 0.0,
+                                    strategy_id VARCHAR(64) DEFAULT 'historical',
+                                    user_id VARCHAR(64),
+                                    PRIMARY KEY (rebalance_date, strategy_id)
+                                );
+                            """)
+                            cur.execute("""
+                                CREATE TABLE IF NOT EXISTS rebalance_tickers (
+                                    rebalance_date DATE,
+                                    ticker VARCHAR(32),
+                                    strategy_id VARCHAR(64) DEFAULT 'historical',
+                                    user_id VARCHAR(64)
+                                );
+                            """)
+                            cur.execute("""
+                                CREATE TABLE IF NOT EXISTS purchase_portfolios (
+                                    id VARCHAR(64) PRIMARY KEY,
+                                    name VARCHAR(255),
+                                    is_plan BOOLEAN DEFAULT FALSE,
+                                    plan_config TEXT,
+                                    asset_currency VARCHAR(32) DEFAULT 'USD',
+                                    local_currency VARCHAR(32) DEFAULT 'COP',
+                                    annual_inflation_rate DOUBLE PRECISION DEFAULT 0.0,
+                                    use_auto_col_inflation BOOLEAN DEFAULT FALSE,
+                                    user_id VARCHAR(64),
+                                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                                );
+                            """)
+                            cur.execute("""
+                                CREATE TABLE IF NOT EXISTS individual_purchases (
+                                    id VARCHAR(64) PRIMARY KEY,
+                                    portfolio_id VARCHAR(64),
+                                    ticker VARCHAR(32),
+                                    date DATE,
+                                    purchase_price DOUBLE PRECISION,
+                                    shares DOUBLE PRECISION,
+                                    manual_current_price DOUBLE PRECISION,
+                                    purchase_time VARCHAR(32),
+                                    commission_amount DOUBLE PRECISION DEFAULT 0.0,
+                                    notes TEXT,
+                                    user_id VARCHAR(64),
+                                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                                );
+                            """)
+                            cur.execute("""
+                                CREATE TABLE IF NOT EXISTS purchase_sales (
+                                    id VARCHAR(64) PRIMARY KEY,
+                                    lot_id VARCHAR(64),
+                                    portfolio_id VARCHAR(64),
+                                    ticker VARCHAR(32),
+                                    sale_date DATE,
+                                    sale_time VARCHAR(32),
+                                    sale_price DOUBLE PRECISION,
+                                    shares DOUBLE PRECISION,
+                                    sale_commission DOUBLE PRECISION DEFAULT 0.0,
+                                    realized_pnl DOUBLE PRECISION DEFAULT 0.0,
+                                    notes TEXT,
+                                    user_id VARCHAR(64),
+                                    purchase_date DATE,
+                                    cost_basis DOUBLE PRECISION DEFAULT 0.0,
+                                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                                );
+                            """)
+                        print("[POSTGRES] Initialized all application tables in PostgreSQL.")
                         _migrate_users_to_postgres_if_empty(pg_conn)
+                        _migrate_data_to_postgres_if_empty(pg_conn, con)
             except Exception as e:
                 print(f"[POSTGRES] init_db error: {e}")
 
-            # Auto-sync PostgreSQL users into local DuckDB so local joins continue working
-            _sync_postgres_users_to_duckdb(con)
+            # Auto-sync PostgreSQL users and strategies into local DuckDB so local joins continue working
+            _sync_postgres_data_to_duckdb(con)
 
         # Print all registered users to logs for easy verification in Render
         try:
@@ -506,8 +604,98 @@ def _migrate_users_to_postgres_if_empty(conn):
         print(f"[POSTGRES] Migration error: {e}")
 
 
-def _sync_postgres_users_to_duckdb(duck_con):
-    """Sync all users from PostgreSQL into DuckDB so local joins work."""
+def _migrate_data_to_postgres_if_empty(pg_conn, duck_con):
+    """If PostgreSQL tables are empty on first run, auto-seed them from local DuckDB."""
+    try:
+        with pg_conn.cursor() as cur:
+            # 1. custom_strategies
+            cur.execute("SELECT COUNT(*) FROM custom_strategies")
+            if cur.fetchone()[0] == 0:
+                rows = duck_con.execute("""
+                    SELECT id, name, country, num_slots, capital, active_invested, benchmark, color, is_system, is_real_money, user_id, created_at
+                    FROM custom_strategies
+                """).fetchall()
+                for r in rows:
+                    cur.execute("""
+                        INSERT INTO custom_strategies (id, name, country, num_slots, capital, active_invested, benchmark, color, is_system, is_real_money, user_id, created_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (id) DO NOTHING
+                    """, list(r))
+                print(f"[POSTGRES] Migrated {len(rows)} custom strategies from DuckDB.")
+
+            # 2. rebalances
+            cur.execute("SELECT COUNT(*) FROM rebalances")
+            if cur.fetchone()[0] == 0:
+                rows = duck_con.execute("SELECT rebalance_date, cash_added, strategy_id, user_id FROM rebalances").fetchall()
+                for r in rows:
+                    cur.execute("""
+                        INSERT INTO rebalances (rebalance_date, cash_added, strategy_id, user_id)
+                        VALUES (%s, %s, %s, %s)
+                        ON CONFLICT (rebalance_date, strategy_id) DO NOTHING
+                    """, list(r))
+                print(f"[POSTGRES] Migrated {len(rows)} rebalances from DuckDB.")
+
+            # 3. rebalance_tickers
+            cur.execute("SELECT COUNT(*) FROM rebalance_tickers")
+            if cur.fetchone()[0] == 0:
+                rows = duck_con.execute("SELECT rebalance_date, ticker, strategy_id, user_id FROM rebalance_tickers").fetchall()
+                for r in rows:
+                    cur.execute("""
+                        INSERT INTO rebalance_tickers (rebalance_date, ticker, strategy_id, user_id)
+                        VALUES (%s, %s, %s, %s)
+                    """, list(r))
+                print(f"[POSTGRES] Migrated {len(rows)} rebalance tickers from DuckDB.")
+
+            # 4. purchase_portfolios
+            cur.execute("SELECT COUNT(*) FROM purchase_portfolios")
+            if cur.fetchone()[0] == 0:
+                rows = duck_con.execute("""
+                    SELECT id, name, is_plan, plan_config, asset_currency, local_currency, annual_inflation_rate, use_auto_col_inflation, user_id, created_at
+                    FROM purchase_portfolios
+                """).fetchall()
+                for r in rows:
+                    cur.execute("""
+                        INSERT INTO purchase_portfolios (id, name, is_plan, plan_config, asset_currency, local_currency, annual_inflation_rate, use_auto_col_inflation, user_id, created_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (id) DO NOTHING
+                    """, list(r))
+                print(f"[POSTGRES] Migrated {len(rows)} purchase portfolios from DuckDB.")
+
+            # 5. individual_purchases
+            cur.execute("SELECT COUNT(*) FROM individual_purchases")
+            if cur.fetchone()[0] == 0:
+                rows = duck_con.execute("""
+                    SELECT id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price, purchase_time, commission_amount, notes, user_id, created_at
+                    FROM individual_purchases
+                """).fetchall()
+                for r in rows:
+                    cur.execute("""
+                        INSERT INTO individual_purchases (id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price, purchase_time, commission_amount, notes, user_id, created_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (id) DO NOTHING
+                    """, list(r))
+                print(f"[POSTGRES] Migrated {len(rows)} individual purchases from DuckDB.")
+
+            # 6. purchase_sales
+            cur.execute("SELECT COUNT(*) FROM purchase_sales")
+            if cur.fetchone()[0] == 0:
+                rows = duck_con.execute("""
+                    SELECT id, lot_id, portfolio_id, ticker, sale_date, sale_time, sale_price, shares, sale_commission, realized_pnl, notes, user_id, purchase_date, cost_basis, created_at
+                    FROM purchase_sales
+                """).fetchall()
+                for r in rows:
+                    cur.execute("""
+                        INSERT INTO purchase_sales (id, lot_id, portfolio_id, ticker, sale_date, sale_time, sale_price, shares, sale_commission, realized_pnl, notes, user_id, purchase_date, cost_basis, created_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (id) DO NOTHING
+                    """, list(r))
+                print(f"[POSTGRES] Migrated {len(rows)} purchase sales from DuckDB.")
+    except Exception as e:
+        print(f"[POSTGRES] _migrate_data_to_postgres_if_empty error: {e}")
+
+
+def _sync_postgres_data_to_duckdb(duck_con):
+    """Sync persistent state from PostgreSQL into local DuckDB so local joins and calculations succeed."""
     if not DATABASE_URL:
         return
     try:
@@ -515,33 +703,156 @@ def _sync_postgres_users_to_duckdb(duck_con):
             if not conn:
                 return
             with conn.cursor() as cur:
+                # 1. Users
                 cur.execute("""
                     SELECT id, email, name, password_hash, provider, provider_id, avatar_url, created_at, is_pro
                     FROM users
                 """)
                 pg_users = cur.fetchall()
-            for r in pg_users:
-                duck_con.execute("""
-                    INSERT INTO users (id, email, name, password_hash, provider, provider_id, avatar_url, created_at, is_pro)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT (email) DO UPDATE SET
-                        name = COALESCE(EXCLUDED.name, users.name),
-                        password_hash = COALESCE(EXCLUDED.password_hash, users.password_hash),
-                        is_pro = COALESCE(EXCLUDED.is_pro, users.is_pro)
-                """, [
-                    r[0],
-                    r[1].lower().strip() if r[1] else "",
-                    r[2],
-                    r[3],
-                    r[4] or "local",
-                    r[5],
-                    r[6],
-                    r[7],
-                    bool(r[8]),
-                ])
-            print(f"[POSTGRES->DUCKDB] Synchronized {len(pg_users)} user(s) from PostgreSQL to DuckDB.")
+                for r in pg_users:
+                    duck_con.execute("""
+                        INSERT INTO users (id, email, name, password_hash, provider, provider_id, avatar_url, created_at, is_pro)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT (email) DO UPDATE SET
+                            name = COALESCE(EXCLUDED.name, users.name),
+                            password_hash = COALESCE(EXCLUDED.password_hash, users.password_hash),
+                            is_pro = COALESCE(EXCLUDED.is_pro, users.is_pro)
+                    """, [
+                        r[0],
+                        r[1].lower().strip() if r[1] else "",
+                        r[2],
+                        r[3],
+                        r[4] or "local",
+                        r[5],
+                        r[6],
+                        r[7],
+                        bool(r[8]),
+                    ])
+
+                # 2. Custom Strategies
+                cur.execute("""
+                    SELECT id, name, country, num_slots, capital, active_invested, benchmark, color, is_system, is_real_money, user_id
+                    FROM custom_strategies
+                """)
+                pg_strats = cur.fetchall()
+                for r in pg_strats:
+                    duck_con.execute("""
+                        INSERT INTO custom_strategies (id, name, country, num_slots, capital, active_invested, benchmark, color, is_system, is_real_money, user_id)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT (id) DO UPDATE SET
+                            name = EXCLUDED.name,
+                            country = EXCLUDED.country,
+                            num_slots = EXCLUDED.num_slots,
+                            capital = EXCLUDED.capital,
+                            active_invested = EXCLUDED.active_invested,
+                            benchmark = EXCLUDED.benchmark,
+                            color = EXCLUDED.color,
+                            is_system = EXCLUDED.is_system,
+                            is_real_money = EXCLUDED.is_real_money,
+                            user_id = COALESCE(EXCLUDED.user_id, custom_strategies.user_id)
+                    """, [r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], bool(r[8]), bool(r[9]), r[10]])
+
+                # 3. Rebalances
+                cur.execute("SELECT rebalance_date, cash_added, strategy_id, user_id FROM rebalances")
+                pg_rebs = cur.fetchall()
+                for r in pg_rebs:
+                    duck_con.execute("""
+                        INSERT INTO rebalances (rebalance_date, cash_added, strategy_id, user_id)
+                        VALUES (?, ?, ?, ?)
+                        ON CONFLICT (rebalance_date, strategy_id) DO UPDATE SET
+                            cash_added = EXCLUDED.cash_added,
+                            user_id = COALESCE(EXCLUDED.user_id, rebalances.user_id)
+                    """, [r[0], r[1], r[2], r[3]])
+
+                # 4. Rebalance Tickers
+                cur.execute("SELECT rebalance_date, ticker, strategy_id, user_id FROM rebalance_tickers")
+                pg_reb_tickers = cur.fetchall()
+                if pg_reb_tickers:
+                    duck_con.execute("DELETE FROM rebalance_tickers")
+                    for r in pg_reb_tickers:
+                        duck_con.execute("""
+                            INSERT INTO rebalance_tickers (rebalance_date, ticker, strategy_id, user_id)
+                            VALUES (?, ?, ?, ?)
+                        """, [r[0], r[1], r[2], r[3]])
+
+                # 5. Purchase Portfolios
+                cur.execute("""
+                    SELECT id, name, is_plan, plan_config, asset_currency, local_currency, annual_inflation_rate, use_auto_col_inflation, user_id
+                    FROM purchase_portfolios
+                """)
+                pg_ports = cur.fetchall()
+                for r in pg_ports:
+                    duck_con.execute("""
+                        INSERT INTO purchase_portfolios (id, name, is_plan, plan_config, asset_currency, local_currency, annual_inflation_rate, use_auto_col_inflation, user_id)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT (id) DO UPDATE SET
+                            name = EXCLUDED.name,
+                            is_plan = EXCLUDED.is_plan,
+                            plan_config = EXCLUDED.plan_config,
+                            asset_currency = EXCLUDED.asset_currency,
+                            local_currency = EXCLUDED.local_currency,
+                            annual_inflation_rate = EXCLUDED.annual_inflation_rate,
+                            use_auto_col_inflation = EXCLUDED.use_auto_col_inflation,
+                            user_id = COALESCE(EXCLUDED.user_id, purchase_portfolios.user_id)
+                    """, [r[0], r[1], bool(r[2]), r[3], r[4], r[5], r[6], bool(r[7]), r[8]])
+
+                # 6. Individual Purchases
+                cur.execute("""
+                    SELECT id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price, purchase_time, commission_amount, notes, user_id
+                    FROM individual_purchases
+                """)
+                pg_lots = cur.fetchall()
+                for r in pg_lots:
+                    duck_con.execute("""
+                        INSERT INTO individual_purchases (id, portfolio_id, ticker, date, purchase_price, shares, manual_current_price, purchase_time, commission_amount, notes, user_id)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT (id) DO UPDATE SET
+                            portfolio_id = EXCLUDED.portfolio_id,
+                            ticker = EXCLUDED.ticker,
+                            date = EXCLUDED.date,
+                            purchase_price = EXCLUDED.purchase_price,
+                            shares = EXCLUDED.shares,
+                            manual_current_price = EXCLUDED.manual_current_price,
+                            purchase_time = EXCLUDED.purchase_time,
+                            commission_amount = EXCLUDED.commission_amount,
+                            notes = EXCLUDED.notes,
+                            user_id = COALESCE(EXCLUDED.user_id, individual_purchases.user_id)
+                    """, [r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8], r[9], r[10]])
+
+                # 7. Purchase Sales
+                cur.execute("""
+                    SELECT id, lot_id, portfolio_id, ticker, sale_date, sale_time, sale_price, shares, sale_commission, realized_pnl, notes, user_id, purchase_date, cost_basis
+                    FROM purchase_sales
+                """)
+                pg_sales = cur.fetchall()
+                for r in pg_sales:
+                    duck_con.execute("""
+                        INSERT INTO purchase_sales (id, lot_id, portfolio_id, ticker, sale_date, sale_time, sale_price, shares, sale_commission, realized_pnl, notes, user_id, purchase_date, cost_basis)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT (id) DO UPDATE SET
+                            lot_id = EXCLUDED.lot_id,
+                            portfolio_id = EXCLUDED.portfolio_id,
+                            ticker = EXCLUDED.ticker,
+                            sale_date = EXCLUDED.sale_date,
+                            sale_time = EXCLUDED.sale_time,
+                            sale_price = EXCLUDED.sale_price,
+                            shares = EXCLUDED.shares,
+                            sale_commission = EXCLUDED.sale_commission,
+                            realized_pnl = EXCLUDED.realized_pnl,
+                            notes = EXCLUDED.notes,
+                            user_id = COALESCE(EXCLUDED.user_id, purchase_sales.user_id),
+                            purchase_date = EXCLUDED.purchase_date,
+                            cost_basis = EXCLUDED.cost_basis
+                    """, [r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8], r[9], r[10], r[11], r[12], r[13]])
+
+            print(f"[POSTGRES->DUCKDB] Synchronized users, custom strategies, rebalances, and purchases from PostgreSQL to DuckDB.")
     except Exception as e:
         print(f"[POSTGRES->DUCKDB] Sync error: {e}")
+
+
+def _sync_postgres_users_to_duckdb(duck_con):
+    """Legacy alias: calls _sync_postgres_data_to_duckdb."""
+    _sync_postgres_data_to_duckdb(duck_con)
 
 
 # ── User Operations ───────────────────────────────────────────────────────────
@@ -870,6 +1181,17 @@ def add_rebalance(
     strategy_id: str = "historical",
     user_id: Optional[str] = None,
 ):
+    if DATABASE_URL:
+        if user_id:
+            pg_execute("DELETE FROM rebalance_tickers WHERE rebalance_date = %s AND strategy_id = %s AND (user_id = %s OR user_id IS NULL)", [rebalance_date, strategy_id, user_id])
+            pg_execute("DELETE FROM rebalances WHERE rebalance_date = %s AND strategy_id = %s AND (user_id = %s OR user_id IS NULL)", [rebalance_date, strategy_id, user_id])
+        else:
+            pg_execute("DELETE FROM rebalance_tickers WHERE rebalance_date = %s AND strategy_id = %s", [rebalance_date, strategy_id])
+            pg_execute("DELETE FROM rebalances WHERE rebalance_date = %s AND strategy_id = %s", [rebalance_date, strategy_id])
+        pg_execute("INSERT INTO rebalances (rebalance_date, cash_added, strategy_id, user_id) VALUES (%s, %s, %s, %s)", [rebalance_date, cash_added, strategy_id, user_id])
+        for ticker in tickers:
+            pg_execute("INSERT INTO rebalance_tickers (rebalance_date, ticker, strategy_id, user_id) VALUES (%s, %s, %s, %s)", [rebalance_date, ticker, strategy_id, user_id])
+
     with get_connection() as con:
         if user_id:
             con.execute(
@@ -940,6 +1262,14 @@ def get_all_rebalances(strategy_id: str = "historical", user_id: Optional[str] =
 
 
 def delete_rebalance(rebalance_date: date, strategy_id: str = "historical", user_id: Optional[str] = None):
+    if DATABASE_URL:
+        if user_id:
+            pg_execute("DELETE FROM rebalance_tickers WHERE rebalance_date = %s AND strategy_id = %s AND (user_id = %s OR user_id IS NULL)", [rebalance_date, strategy_id, user_id])
+            pg_execute("DELETE FROM rebalances WHERE rebalance_date = %s AND strategy_id = %s AND (user_id = %s OR user_id IS NULL)", [rebalance_date, strategy_id, user_id])
+        else:
+            pg_execute("DELETE FROM rebalance_tickers WHERE rebalance_date = %s AND strategy_id = %s", [rebalance_date, strategy_id])
+            pg_execute("DELETE FROM rebalances WHERE rebalance_date = %s AND strategy_id = %s", [rebalance_date, strategy_id])
+
     with get_connection() as con:
         if user_id:
             con.execute(
@@ -956,10 +1286,18 @@ def delete_rebalance(rebalance_date: date, strategy_id: str = "historical", user
 
 
 def update_rebalance_date(old_date: date, new_date: date, strategy_id: str = "historical", user_id: Optional[str] = None):
+    if old_date == new_date:
+        return
+    delete_rebalance(new_date, strategy_id, user_id)
+    if DATABASE_URL:
+        if user_id:
+            pg_execute("UPDATE rebalance_tickers SET rebalance_date = %s WHERE rebalance_date = %s AND strategy_id = %s AND (user_id = %s OR user_id IS NULL)", [new_date, old_date, strategy_id, user_id])
+            pg_execute("UPDATE rebalances SET rebalance_date = %s WHERE rebalance_date = %s AND strategy_id = %s AND (user_id = %s OR user_id IS NULL)", [new_date, old_date, strategy_id, user_id])
+        else:
+            pg_execute("UPDATE rebalance_tickers SET rebalance_date = %s WHERE rebalance_date = %s AND strategy_id = %s", [new_date, old_date, strategy_id])
+            pg_execute("UPDATE rebalances SET rebalance_date = %s WHERE rebalance_date = %s AND strategy_id = %s", [new_date, old_date, strategy_id])
+
     with get_connection() as con:
-        if old_date == new_date:
-            return
-        delete_rebalance(new_date, strategy_id, user_id)
         if user_id:
             con.execute(
                 "UPDATE rebalance_tickers SET rebalance_date = ? WHERE rebalance_date = ? AND strategy_id = ? AND (user_id = ? OR user_id IS NULL)",
@@ -1027,6 +1365,35 @@ def get_custom_strategies(user_id: Optional[str] = None) -> list[dict]:
 
 
 def save_custom_strategy(strat: dict, user_id: Optional[str] = None):
+    if DATABASE_URL:
+        pg_execute("""
+            INSERT INTO custom_strategies (id, name, country, num_slots, capital, active_invested, benchmark, color, is_system, is_real_money, user_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (id) DO UPDATE SET
+                name = EXCLUDED.name,
+                country = EXCLUDED.country,
+                num_slots = EXCLUDED.num_slots,
+                capital = EXCLUDED.capital,
+                active_invested = EXCLUDED.active_invested,
+                benchmark = EXCLUDED.benchmark,
+                color = EXCLUDED.color,
+                is_system = EXCLUDED.is_system,
+                is_real_money = EXCLUDED.is_real_money,
+                user_id = COALESCE(EXCLUDED.user_id, custom_strategies.user_id)
+        """, [
+            strat["id"],
+            strat.get("name", "Nueva Estrategia"),
+            strat.get("country", "🌎"),
+            int(strat.get("numSlots", 20)),
+            float(strat.get("capital", 1000.0)),
+            float(strat.get("activeInvested", 1000.0)),
+            strat.get("benchmark", "S&P 500"),
+            strat.get("color", "#a855f7"),
+            bool(strat.get("isSystem", False)),
+            bool(strat.get("isRealMoney", strat.get("is_real_money", False))),
+            user_id,
+        ])
+
     with get_connection() as con:
         con.execute("""
             INSERT INTO custom_strategies (id, name, country, num_slots, capital, active_invested, benchmark, color, is_system, is_real_money, user_id)
@@ -1058,6 +1425,16 @@ def save_custom_strategy(strat: dict, user_id: Optional[str] = None):
 
 
 def delete_custom_strategy(strategy_id: str, user_id: Optional[str] = None):
+    if DATABASE_URL:
+        if user_id:
+            pg_execute("DELETE FROM custom_strategies WHERE id = %s AND is_system = FALSE AND (user_id = %s OR user_id IS NULL)", [strategy_id, user_id])
+            pg_execute("DELETE FROM rebalance_tickers WHERE strategy_id = %s AND (user_id = %s OR user_id IS NULL)", [strategy_id, user_id])
+            pg_execute("DELETE FROM rebalances WHERE strategy_id = %s AND (user_id = %s OR user_id IS NULL)", [strategy_id, user_id])
+        else:
+            pg_execute("DELETE FROM custom_strategies WHERE id = %s AND is_system = FALSE", [strategy_id])
+            pg_execute("DELETE FROM rebalance_tickers WHERE strategy_id = %s", [strategy_id])
+            pg_execute("DELETE FROM rebalances WHERE strategy_id = %s", [strategy_id])
+
     with get_connection() as con:
         if user_id:
             con.execute(

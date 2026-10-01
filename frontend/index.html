@@ -130,6 +130,41 @@
           activeAdEl = null;
         }
       }, { passive: true });
+
+      // 3. Limitar a un SOLO anuncio en pantalla a la vez (evita apilamiento múltiple)
+      function limitToOneAd() {
+        const adSelector = 'iframe[src*="nap5k"], iframe[src*="n6wxm"], [id*="monetag"], .monetag, .in-page-push, [class*="in-page-push"], div[id*="zone_"], div[data-zone]';
+        const ads = Array.from(document.querySelectorAll(adSelector)).filter(el => {
+          // Filtrar tags de script o contenedores ocultos/destruidos
+          return el.tagName !== 'SCRIPT' && (el.offsetWidth > 0 || el.offsetHeight > 0 || window.getComputedStyle(el).display !== 'none');
+        });
+
+        // Si hay más de 1 anuncio visible o inyectado, eliminar o esconder los subsiguientes
+        if (ads.length > 1) {
+          for (let i = 1; i < ads.length; i++) {
+            try {
+              if (ads[i].parentNode) {
+                ads[i].parentNode.removeChild(ads[i]);
+              } else {
+                ads[i].style.setProperty('display', 'none', 'important');
+              }
+            } catch (e) {}
+          }
+        }
+      }
+
+      const adObserver = new MutationObserver(() => {
+        limitToOneAd();
+      });
+
+      if (document.body) {
+        adObserver.observe(document.body, { childList: true, subtree: true });
+      } else {
+        document.addEventListener('DOMContentLoaded', () => {
+          adObserver.observe(document.body, { childList: true, subtree: true });
+        });
+      }
+      setInterval(limitToOneAd, 1500);
     })();
     </script>
     <style>
@@ -138,6 +173,16 @@
       touch-action: pan-y !important;
       user-select: none !important;
       -webkit-user-select: none !important;
+    }
+
+    /* Ocultar cualquier anuncio secundario si se generan múltiples contenedores */
+    iframe[src*="nap5k"]:nth-of-type(n+2),
+    iframe[src*="n6wxm"]:nth-of-type(n+2),
+    .in-page-push:nth-of-type(n+2),
+    [class*="in-page-push"]:nth-of-type(n+2),
+    div[id*="zone_"]:nth-of-type(n+2),
+    div[data-zone]:nth-of-type(n+2) {
+      display: none !important;
     }
 
     /* Adaptación para pantallas pequeñas / móviles (<= 640px) */
