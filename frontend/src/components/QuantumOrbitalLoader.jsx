@@ -1,0 +1,381 @@
+import { useEffect, useRef, useState } from "react";
+
+/**
+ * Quantum Orbital States Definition: (n, l, m)
+ * Sampled probability density clouds |ψ_nlm|^2
+ */
+const ORBITALS = [
+  {
+    name: "1s (Estado Fundamental)",
+    formula: "n=1, l=0, m=0",
+    colorA: "#ffd166",
+    colorB: "#f77f00",
+    energy: "-13.60 eV",
+    sampler: (u1, u2, u3) => {
+      // Exponential distribution for 1s: P(r) ~ r^2 e^(-2r)
+      const r = -Math.log(1 - u1 * 0.99) * 0.9;
+      const theta = Math.acos(2 * u2 - 1);
+      const phi = 2 * Math.PI * u3;
+      return [
+        r * Math.sin(theta) * Math.cos(phi),
+        r * Math.cos(theta),
+        r * Math.sin(theta) * Math.sin(phi),
+        1, // phase
+      ];
+    },
+  },
+  {
+    name: "2s (Primer Nivel Excitado)",
+    formula: "n=2, l=0, m=0",
+    colorA: "#06d6a0",
+    colorB: "#118ab2",
+    energy: "-3.40 eV",
+    sampler: (u1, u2, u3) => {
+      // 2s has radial node: (2 - r) e^(-r/2). Two concentric shells
+      const isInner = u1 < 0.25;
+      const r = isInner ? 0.6 + u1 * 1.4 : 2.2 + u1 * 2.8;
+      const theta = Math.acos(2 * u2 - 1);
+      const phi = 2 * Math.PI * u3;
+      return [
+        r * Math.sin(theta) * Math.cos(phi),
+        r * Math.cos(theta),
+        r * Math.sin(theta) * Math.sin(phi),
+        isInner ? 1 : -1,
+      ];
+    },
+  },
+  {
+    name: "2p_z (Orbital Lobular)",
+    formula: "n=2, l=1, m=0",
+    colorA: "#00f5d4",
+    colorB: "#7b2cbf",
+    energy: "-3.40 eV",
+    sampler: (u1, u2, u3) => {
+      // 2p_z ~ z * e^(-r/2). Two lobes along Z (up and down)
+      const r = (1.2 + u1 * 2.8);
+      const sign = u2 > 0.5 ? 1 : -1;
+      const cosTheta = sign * Math.sqrt(Math.abs(2 * u2 - 1));
+      const sinTheta = Math.sqrt(Math.max(0, 1 - cosTheta * cosTheta));
+      const phi = 2 * Math.PI * u3;
+      return [
+        r * sinTheta * Math.cos(phi) * 0.85,
+        r * cosTheta * 1.3,
+        r * sinTheta * Math.sin(phi) * 0.85,
+        sign,
+      ];
+    },
+  },
+  {
+    name: "3d_z² (Orbital Toroide)",
+    formula: "n=3, l=2, m=0",
+    colorA: "#ff006e",
+    colorB: "#ffbe0b",
+    energy: "-1.51 eV",
+    sampler: (u1, u2, u3) => {
+      // 3d_z^2 has two polar lobes along Z and a torus in xy plane
+      const isRing = u1 < 0.45;
+      if (isRing) {
+        const ringR = 2.0 + u2 * 1.5;
+        const ringPhi = 2 * Math.PI * u3;
+        const ringZ = (Math.random() - 0.5) * 0.6;
+        return [
+          ringR * Math.cos(ringPhi),
+          ringZ,
+          ringR * Math.sin(ringPhi),
+          -1,
+        ];
+      }
+      const r = 1.4 + u2 * 3.2;
+      const sign = u3 > 0.5 ? 1 : -1;
+      const cosTheta = sign * Math.pow(Math.abs(2 * u3 - 1), 0.35);
+      const sinTheta = Math.sqrt(Math.max(0, 1 - cosTheta * cosTheta));
+      const phi = 2 * Math.PI * Math.random();
+      return [
+        r * sinTheta * Math.cos(phi) * 0.65,
+        r * cosTheta * 1.4,
+        r * sinTheta * Math.sin(phi) * 0.65,
+        1,
+      ];
+    },
+  },
+  {
+    name: "3d_xy (Orbital Trébol Cuádruple)",
+    formula: "n=3, l=2, m=2",
+    colorA: "#3a86ff",
+    colorB: "#ffbe0b",
+    energy: "-1.51 eV",
+    sampler: (u1, u2, u3) => {
+      // Cloverleaf: 4 lobes in xy plane: sin^2(2*phi)
+      const r = 1.2 + u1 * 3.0;
+      const lobe = Math.floor(u2 * 4);
+      const lobeCenter = (lobe * Math.PI) / 2 + Math.PI / 4;
+      const dPhi = (Math.random() - 0.5) * 0.65;
+      const phi = lobeCenter + dPhi;
+      const z = (Math.random() - 0.5) * 0.8;
+      const sign = lobe % 2 === 0 ? 1 : -1;
+      return [
+        r * Math.cos(phi) * 1.2,
+        z,
+        r * Math.sin(phi) * 1.2,
+        sign,
+      ];
+    },
+  },
+  {
+    name: "4f (Roseta Cuántica)",
+    formula: "n=4, l=3, m=1",
+    colorA: "#c77dff",
+    colorB: "#00b4d8",
+    energy: "-0.85 eV",
+    sampler: (u1, u2, u3) => {
+      // 6 or 8 rosette lobes
+      const r = 1.4 + u1 * 3.2;
+      const lobe = Math.floor(u2 * 6);
+      const phi = (lobe * Math.PI) / 3 + (Math.random() - 0.5) * 0.5;
+      const theta = Math.PI / 2 + (u3 > 0.5 ? 0.45 : -0.45) + (Math.random() - 0.5) * 0.3;
+      const sign = (lobe + (u3 > 0.5 ? 1 : 0)) % 2 === 0 ? 1 : -1;
+      return [
+        r * Math.sin(theta) * Math.cos(phi) * 1.1,
+        r * Math.cos(theta) * 1.2,
+        r * Math.sin(theta) * Math.sin(phi) * 1.1,
+        sign,
+      ];
+    },
+  },
+];
+
+const NUM_PARTICLES = 1400;
+
+export default function QuantumOrbitalLoader({
+  message = "Cargando simulación cuántica…",
+  height = 360,
+  submessage = null,
+}) {
+  const canvasRef = useRef(null);
+  const [currentInfo, setCurrentInfo] = useState({
+    from: ORBITALS[0],
+    to: ORBITALS[1],
+    progress: 0,
+  });
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let animationFrameId;
+    let isRunning = true;
+
+    // Precompute cloud positions for each orbital state
+    const statesData = ORBITALS.map((orb) => {
+      const pts = [];
+      for (let i = 0; i < NUM_PARTICLES; i++) {
+        const u1 = Math.random();
+        const u2 = Math.random();
+        const u3 = Math.random();
+        const [x, y, z, phase] = orb.sampler(u1, u2, u3);
+        pts.push({ x, y, z, phase });
+      }
+      return pts;
+    });
+
+    let startTime = performance.now();
+    let rotY = 0;
+    let rotX = 0.25;
+
+    const render = (now) => {
+      if (!isRunning) return;
+
+      const elapsedSec = (now - startTime) / 1000;
+      const CYCLE_DURATION = 1.5; // Every 1.5 seconds transition
+      const totalStates = ORBITALS.length;
+      const cycleIndex = Math.floor(elapsedSec / CYCLE_DURATION);
+      const fromIdx = cycleIndex % totalStates;
+      const toIdx = (cycleIndex + 1) % totalStates;
+      const t = (elapsedSec % CYCLE_DURATION) / CYCLE_DURATION;
+
+      // Smooth cosine easing
+      const ease = 0.5 - 0.5 * Math.cos(t * Math.PI);
+
+      // Periodically update React state for UI readout
+      if (Math.random() < 0.1) {
+        setCurrentInfo({
+          from: ORBITALS[fromIdx],
+          to: ORBITALS[toIdx],
+          progress: Math.floor(t * 100),
+        });
+      }
+
+      // Responsive canvas size handling
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      const width = rect.width;
+      const height = rect.height;
+
+      if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+      }
+
+      ctx.save();
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, width, height);
+
+      // Rotation angles
+      rotY += 0.012;
+      rotX = 0.35 + Math.sin(elapsedSec * 0.8) * 0.1;
+
+      const cx = width / 2;
+      const cy = height / 2;
+      const baseScale = Math.min(width, height) * 0.16;
+      const fov = 350;
+
+      const fromPts = statesData[fromIdx];
+      const toPts = statesData[toIdx];
+      const fromColor = ORBITALS[fromIdx].colorA;
+      const toColor = ORBITALS[toIdx].colorA;
+
+      // Enable additive blending for brilliant quantum glow
+      ctx.globalCompositeOperation = "lighter";
+
+      // Render quantum core / nucleus glow
+      const nucleusPulse = 1 + Math.sin(elapsedSec * 4) * 0.2;
+      const radGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 28 * nucleusPulse);
+      radGrad.addColorStop(0, "rgba(255, 255, 255, 0.95)");
+      radGrad.addColorStop(0.25, "rgba(0, 229, 255, 0.6)");
+      radGrad.addColorStop(0.7, "rgba(168, 85, 247, 0.2)");
+      radGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
+      ctx.fillStyle = radGrad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 28 * nucleusPulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Project and render all particles
+      for (let i = 0; i < NUM_PARTICLES; i++) {
+        const p1 = fromPts[i];
+        const p2 = toPts[i];
+
+        // Quantum transition flutter: micro-vibration during jump
+        const flutter = Math.sin(now * 0.01 + i) * Math.sin(t * Math.PI) * 0.15;
+
+        const x = p1.x * (1 - ease) + p2.x * ease + flutter;
+        const y = p1.y * (1 - ease) + p2.y * ease + flutter;
+        const z = p1.z * (1 - ease) + p2.z * ease + flutter;
+
+        // 3D rotation around Y and X
+        const cosY = Math.cos(rotY);
+        const sinY = Math.sin(rotY);
+        const xRot = x * cosY - z * sinY;
+        const zRot = x * sinY + z * cosY;
+
+        const cosX = Math.cos(rotX);
+        const sinX = Math.sin(rotX);
+        const yRot = y * cosX - zRot * sinX;
+        const zFinal = y * sinX + zRot * cosX;
+
+        // Perspective projection
+        const pScale = fov / (fov + zFinal * baseScale * 0.7);
+        const screenX = cx + xRot * baseScale * pScale;
+        const screenY = cy + yRot * baseScale * pScale;
+
+        // Particle size & depth fade
+        const depthAlpha = Math.max(0.12, Math.min(0.9, (zFinal + 4) / 8));
+        const radius = Math.max(0.8, 1.8 * pScale);
+
+        // Phase color blend
+        ctx.fillStyle = i % 2 === 0 ? fromColor : toColor;
+        ctx.globalAlpha = depthAlpha * 0.75;
+
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+      animationFrameId = requestAnimationFrame(render);
+    };
+
+    animationFrameId = requestAnimationFrame(render);
+
+    return () => {
+      isRunning = false;
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, []);
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        width: "100%",
+        minHeight: height,
+        background: "radial-gradient(ellipse at center, rgba(13, 17, 23, 0.95) 0%, rgba(5, 7, 12, 0.98) 100%)",
+        borderRadius: "var(--radius-lg, 12px)",
+        overflow: "hidden",
+        border: "1px solid rgba(0, 229, 255, 0.15)",
+        boxShadow: "inset 0 0 40px rgba(0, 229, 255, 0.05)",
+      }}
+    >
+      <canvas
+        ref={canvasRef}
+        style={{
+          width: "100%",
+          height: height,
+          display: "block",
+        }}
+      />
+
+      {/* Futuristic HUD overlay */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 16,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 6,
+          background: "rgba(10, 15, 25, 0.8)",
+          backdropFilter: "blur(8px)",
+          padding: "8px 18px",
+          borderRadius: "20px",
+          border: "1px solid rgba(0, 229, 255, 0.25)",
+          boxShadow: "0 4px 15px rgba(0, 0, 0, 0.4)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: "0.82rem" }}>
+          <span
+            style={{
+              display: "inline-block",
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              backgroundColor: "#00e5ff",
+              boxShadow: "0 0 8px #00e5ff",
+              animation: "pulse 1s infinite alternate",
+            }}
+          />
+          <span style={{ color: "#e2e8f0", fontWeight: 600, letterSpacing: "0.02em" }}>
+            {message}
+          </span>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.72rem", color: "var(--text-muted)" }}>
+          <span style={{ color: "#ffd166", fontFamily: "var(--font-mono, monospace)" }}>
+            {currentInfo.from.formula} ({currentInfo.from.name.split(" ")[0]})
+          </span>
+          <span style={{ color: "#00e5ff" }}>➔</span>
+          <span style={{ color: "#06d6a0", fontFamily: "var(--font-mono, monospace)" }}>
+            {currentInfo.to.formula} ({currentInfo.to.name.split(" ")[0]})
+          </span>
+          <span style={{ color: "rgba(255,255,255,0.4)" }}>•</span>
+          <span style={{ color: "rgba(255,255,255,0.6)" }}>Transición de Schrödinger</span>
+        </div>
+      </div>
+    </div>
+  );
+}

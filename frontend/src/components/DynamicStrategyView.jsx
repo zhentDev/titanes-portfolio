@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import {
   createRebalance,
@@ -17,6 +17,7 @@ import CreateStrategyModal from "./CreateStrategyModal";
 import InflationExplorerModal from "./InflationExplorerModal";
 import StrategyChart, { SYNTHETIC_RETURNS } from "./StrategyChart";
 import { InfoTooltip } from "./Common";
+import QuantumOrbitalLoader from "./QuantumOrbitalLoader";
 
 const PERIODS = ["1D", "1W", "1M", "3M", "6M", "1Y", "3Y", "5Y", "MAX"];
 
@@ -199,16 +200,21 @@ export default function DynamicStrategyView({
     "5Y": 1095,
     MAX: 0,
   };
+  const maxHistoryDaysRef = useRef(0);
   const periodEnabled = useMemo(() => {
     const map = {};
-    const availableDays = effectiveFirstInvestDate
-      ? Math.max(
-          0,
-          Math.floor(
-            (Date.now() - new Date(`${effectiveFirstInvestDate}T00:00:00Z`).getTime()) / 86400000,
-          ),
-        )
-      : Infinity;
+    if (effectiveFirstInvestDate) {
+      const days = Math.max(
+        0,
+        Math.floor(
+          (Date.now() - new Date(`${effectiveFirstInvestDate}T00:00:00Z`).getTime()) / 86400000,
+        ),
+      );
+      if (days > maxHistoryDaysRef.current) {
+        maxHistoryDaysRef.current = days;
+      }
+    }
+    const availableDays = maxHistoryDaysRef.current > 0 ? maxHistoryDaysRef.current : Infinity;
     for (const p of PERIODS) map[p] = !effectiveFirstInvestDate || UNLOCK_DAYS[p] <= availableDays;
     return map;
   }, [effectiveFirstInvestDate]);
@@ -1697,16 +1703,24 @@ export default function DynamicStrategyView({
             ))}
           </div>
         </div>
-        <StrategyChart
-          strategy={strategy}
-          activeInvested={activeInvested}
-          period={period}
-          firstInvestDate={effectiveFirstInvestDate}
-          rebalances={rebalances}
-          slotValue={slotValue}
-          targetReturns={currentReturns}
-          navData={navData}
-        />
+        {isNavLoading && !navData ? (
+          <QuantumOrbitalLoader
+            message={`Cargando modelo cuantitativo (${period})…`}
+            submessage="Transición cuántica de Schrödinger (orbitales 1s ➔ 2s ➔ 2p ➔ 3d ➔ 4f)"
+            height={420}
+          />
+        ) : (
+          <StrategyChart
+            strategy={strategy}
+            activeInvested={activeInvested}
+            period={period}
+            firstInvestDate={effectiveFirstInvestDate}
+            rebalances={rebalances}
+            slotValue={slotValue}
+            targetReturns={currentReturns}
+            navData={navData}
+          />
+        )}
       </div>
 
       {/* ── Constellation Grid Visualizer (Slots) ────── */}

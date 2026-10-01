@@ -22,6 +22,7 @@ import AffiliateBanner from "./components/Common/AffiliateBanner";
 import AuthModal from "./components/AuthModal";
 import AuthWall from "./components/AuthWall";
 import StrategyPaywall from "./components/StrategyPaywall";
+import QuantumOrbitalLoader from "./components/QuantumOrbitalLoader";
 import { useAuthStore } from "./store/authStore";
 import { usePortfolioStore } from "./store/portfolioStore";
 import { exportPortfolioCSV } from "./utils/exportReport";
@@ -343,21 +344,41 @@ export default function App() {
     MAX: 0,
   };
 
-  const firstInvestDate = baseNavData?.nav?.[0]?.date || baseNavData?.rebalances?.[0]?.date;
+  // Track maximum known days of history for each portfolio mode so zooming into 1W never shrinks available period buttons
+  const maxHistoryDaysRef = useRef({});
 
   const periodEnabled = useMemo(() => {
     const map = {};
-    const availableDays = firstInvestDate
-      ? Math.max(
-          0,
-          Math.floor(
-            (Date.now() - new Date(`${firstInvestDate}T00:00:00Z`).getTime()) / 86400000,
-          ),
-        )
-      : Infinity;
-    for (const p of PERIODS) map[p] = !firstInvestDate || UNLOCK_DAYS[p] <= availableDays;
+    if (mode === "historical") {
+      // Titanes flagship has full multi-year history across all periods
+      for (const p of PERIODS) map[p] = true;
+      return map;
+    }
+
+    // Earliest recorded rebalance date for this custom strategy or portfolio
+    const localRebs = strategyRebalances[mode] || [];
+    const navRebs = baseNavData?.rebalances || [];
+    const allRebs = [...localRebs, ...navRebs];
+    const rebDates = allRebs.map((r) => r.rebalance_date || r.date).filter(Boolean).sort();
+    const earliestRebDate = rebDates[0];
+
+    const candidateDate = earliestRebDate || baseNavData?.nav?.[0]?.date;
+    if (candidateDate) {
+      const days = Math.max(
+        0,
+        Math.floor((Date.now() - new Date(`${candidateDate}T00:00:00Z`).getTime()) / 86400000),
+      );
+      if (!maxHistoryDaysRef.current[mode] || days > maxHistoryDaysRef.current[mode]) {
+        maxHistoryDaysRef.current[mode] = days;
+      }
+    }
+
+    const availableDays = maxHistoryDaysRef.current[mode] ?? Infinity;
+    for (const p of PERIODS) {
+      map[p] = UNLOCK_DAYS[p] <= availableDays;
+    }
     return map;
-  }, [firstInvestDate]);
+  }, [mode, strategyRebalances, baseNavData]);
 
   // Si el periodo actual seleccionado no está habilitado para el historial disponible,
   // retroceder al periodo más alto que sí esté habilitado (o "1W").
@@ -2187,22 +2208,13 @@ export default function App() {
             </div>
 
             {/* ── Main Chart Card ─────────────────────────────── */}
-            <div className="card chart-card fade-up">
-              {loading && !navData ? (
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    height: 360,
-                    gap: 14,
-                    color: "var(--text-muted)",
-                  }}
-                >
-                  <div className="spinner" />
-                  <span>Calculando simulación interactiva…</span>
-                </div>
+            <div className="card chart-card fade-up" style={{ minHeight: 400 }}>
+              {loading ? (
+                <QuantumOrbitalLoader
+                  message={`Cargando simulación para período ${period}…`}
+                  submessage="Transición cuántica de Schrödinger (orbitales 1s ➔ 2s ➔ 2p ➔ 3d ➔ 4f)"
+                  height={400}
+                />
               ) : error ? (
                 <div
                   className="chart-error"
