@@ -384,7 +384,7 @@ export default function App() {
     }
   }, [period, periodEnabled, setPeriod]);
 
-  // Si la sesión aún se está verificando, mostrar pantalla de carga suave
+  // Si la sesión aún se está verificando, mostrar pantalla de carga suave con la animación cuántica
   if (!isInitialized) {
     return (
       <div
@@ -395,10 +395,16 @@ export default function App() {
           alignItems: "center",
           justifyContent: "center",
           backgroundColor: "var(--bg-main)",
-          color: "var(--text-primary)",
+          padding: 20,
         }}
       >
-        <div className="spinner" style={{ width: 36, height: 36, borderWidth: 3 }} />
+        <div style={{ width: "100%", maxWidth: 860 }}>
+          <QuantumOrbitalLoader
+            message="Iniciando Terminal Cuantitativa…"
+            submessage="Verificando sesión segura y sincronizando modelos estocásticos"
+            height={500}
+          />
+        </div>
       </div>
     );
   }

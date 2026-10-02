@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchIntraday, fetchLiveQuotes, fetchNAV } from "../api/client";
 import { usePortfolioStore } from "../store/portfolioStore";
 import NavChart from "./NavChart";
+import QuantumOrbitalLoader from "./QuantumOrbitalLoader";
 
 const POLL_INTERVAL = 60_000;
 
@@ -287,11 +288,12 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
 
   if (loading && holdings.length === 0) {
     return (
-      <div className="card fade-up" style={{ textAlign: "center", padding: "60px 20px" }}>
-        <div className="spinner" style={{ margin: "0 auto 16px" }} />
-        <div style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
-          Conectando con Yahoo Finance y cargando posiciones en vivo…
-        </div>
+      <div className="card fade-up" style={{ padding: "10px" }}>
+        <QuantumOrbitalLoader
+          message="Conectando con Yahoo Finance y cargando posiciones en vivo…"
+          submessage="Transición cuántica de Schrödinger (orbitales 1s ➔ 2s ➔ 2p ➔ 3d ➔ 4f)"
+          height={460}
+        />
       </div>
     );
   }
