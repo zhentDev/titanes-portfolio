@@ -627,12 +627,35 @@ def get_fx_data(currency_str: str) -> dict:
 # Inflation Data
 # ──────────────────────────────────────────────
 import io
+from pathlib import Path
+
+# Official DANE monthly variations (MoM %) to supplement FRED series when FRED has data lag
+DANE_CPI_EXTENSIONS: list[tuple[str, float]] = [
+    ("2025-05-01", 0.32),
+    ("2025-06-01", 0.10),
+    ("2025-07-01", 0.28),
+    ("2025-08-01", 0.19),
+    ("2025-09-01", 0.32),
+    ("2025-10-01", 0.18),
+    ("2025-11-01", 0.07),
+    ("2025-12-01", 0.27),
+    ("2026-01-01", 1.18),
+    ("2026-02-01", 1.08),
+    ("2026-03-01", 0.78),
+    ("2026-04-01", 0.78),
+    ("2026-05-01", 0.47),
+    ("2026-06-01", 0.39),
+    ("2026-07-01", 0.17),
+    ("2026-08-01", 0.39),
+]
 
 
 def get_colombia_cpi_history() -> dict:
     """
     Fetch Colombian CPI (Consumer Price Index) from FRED (Federal Reserve Economic Data).
     Series: COLCPALTT01IXOBM
+    Supplements recent official DANE releases (2025-2026) to ensure the index is always
+    current (up to 1-2 months ago) rather than lagging behind FRED releases.
     Returns a dictionary of date strings to CPI values, latest summary, and monthly rates.
     """
     cache_key = "inflation:colombia"
@@ -641,15 +664,37 @@ def get_colombia_cpi_history() -> dict:
         return cached
 
     url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=COLCPALTT01IXOBM"
+    df = None
+
+    # 1. Attempt download from FRED
     try:
         if _yf_session:
-            resp = _yf_session.get(url, timeout=10)
-            df = pd.read_csv(io.StringIO(resp.text))
-        else:
+            resp = _yf_session.get(url, timeout=12)
+            if resp.status_code == 200 and len(resp.text) > 100:
+                df = pd.read_csv(io.StringIO(resp.text))
+        if df is None:
             req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=10) as response:
+            with urllib.request.urlopen(req, timeout=12) as response:
                 df = pd.read_csv(response)
+    except Exception as e:
+        logging.warning(f"Could not fetch fresh FRED CPI online ({e}), trying local base fallback...")
 
+    # 2. Fallback to local base CSV if online request failed
+    base_file = Path(__file__).parent / "cpi_colombia_base.csv"
+    if df is None and base_file.exists():
+        try:
+            df = pd.read_csv(base_file)
+        except Exception as e:
+            logging.error(f"Error reading local cpi_colombia_base.csv: {e}")
+
+    if df is None or df.empty:
+        return {
+            "history": {},
+            "latest": {"date": "", "cpi": 0, "mom": 0, "yoy": 0},
+            "monthly_rates": [],
+        }
+
+    try:
         # Detect column names dynamically
         date_col = (
             "observation_date"
@@ -667,6 +712,20 @@ def get_colombia_cpi_history() -> dict:
             except (ValueError, TypeError):
                 pass
 
+        # 3. Append official DANE monthly variations for any missing newer months
+        if history_dict:
+            sorted_existing = sorted(history_dict.keys())
+            last_date = sorted_existing[-1]
+            last_val = history_dict[last_date]
+
+            for d_str, mom_pct in DANE_CPI_EXTENSIONS:
+                if d_str not in history_dict:
+                    last_val = round(last_val * (1.0 + mom_pct / 100.0), 4)
+                    history_dict[d_str] = last_val
+                else:
+                    last_val = history_dict[d_str]
+
+        # 4. Compute MoM and YoY rates
         sorted_dates = sorted(history_dict.keys())
         monthly_rates = []
         for i, d in enumerate(sorted_dates):
@@ -694,7 +753,7 @@ def get_colombia_cpi_history() -> dict:
         _cache_set(cache_key, result, ttl=86400)
         return result
     except Exception as e:
-        logging.error(f"Error fetching Colombian CPI data: {e}")
+        logging.error(f"Error processing Colombian CPI data: {e}")
         return {
             "history": {},
             "latest": {"date": "", "cpi": 0, "mom": 0, "yoy": 0},

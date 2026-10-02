@@ -4547,6 +4547,11 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
           isOpen={showInflationExplorer}
           onClose={() => setShowInflationExplorer(false)}
           inflationData={colInflationData}
+          startDate={
+            currentPurchases.length > 0
+              ? currentPurchases.reduce((min, p) => (p.date < min ? p.date : min), currentPurchases[0].date)
+              : undefined
+          }
         />
         <ChangeTickerModal
           isOpen={Boolean(changingTickerGroup)}

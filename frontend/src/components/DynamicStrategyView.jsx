@@ -313,6 +313,7 @@ export default function DynamicStrategyView({
   const [navData, setNavData] = useState(null);
   const [isNavLoading, setIsNavLoading] = useState(false);
   const [lastRefreshedAt, setLastRefreshedAt] = useState(null);
+  const [navRefreshKey, setNavRefreshKey] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -355,7 +356,7 @@ export default function DynamicStrategyView({
       isMounted = false;
       clearInterval(intervalId);
     };
-  }, [strategy?.id, period, simulatedCapital, numSlots, activeTickers.join(",")]);
+  }, [strategy?.id, period, simulatedCapital, numSlots, activeTickers.join(","), navRefreshKey]);
 
   // Compute real market returns instead of hardcoded percentages
   const currentReturns = useMemo(() => {
@@ -504,6 +505,9 @@ export default function DynamicStrategyView({
     } catch (e) {
       console.warn("Backend save failed, saved locally", e);
       toast.success(`Rebalanceo del ${date} guardado localmente (${formTickers.length} posiciones)`);
+    } finally {
+      // Refrescar inmediatamente los cálculos de NAV y la gráfica sin recargar la página
+      setNavRefreshKey((prev) => prev + 1);
     }
   };
 
@@ -530,6 +534,8 @@ export default function DynamicStrategyView({
     } catch (e) {
       console.warn("Backend date update failed, updated locally", e);
       toast.success(`Fecha actualizada localmente a ${newDate}`);
+    } finally {
+      setNavRefreshKey((prev) => prev + 1);
     }
   };
 
@@ -546,6 +552,8 @@ export default function DynamicStrategyView({
     } catch (e) {
       console.warn("Backend delete failed, deleted locally", e);
       toast.success(`Rebalanceo del ${delDate} eliminado localmente`);
+    } finally {
+      setNavRefreshKey((prev) => prev + 1);
     }
   };
 
@@ -1653,6 +1661,7 @@ export default function DynamicStrategyView({
         isOpen={showInflationExplorer}
         onClose={() => setShowInflationExplorer(false)}
         inflationData={colInflationData}
+        startDate={effectiveFirstInvestDate}
       />
 
       <div className="card fade-up" style={{ padding: "20px" }}>

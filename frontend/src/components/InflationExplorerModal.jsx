@@ -2,10 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { fetchColInflationHistory } from "../api/client";
 import { useTheme } from "../context/ThemeContext";
 
-export default function InflationExplorerModal({ isOpen, onClose, inflationData }) {
+export default function InflationExplorerModal({ isOpen, onClose, inflationData, startDate }) {
   const { theme } = useTheme();
   const isLight = theme === "light";
 
+  // Por defecto, mostrar únicamente desde que comenzó a invertir/ahorrar (aprox. 2024 o fecha recibida)
+  const defaultCutoff = startDate ? startDate.slice(0, 7) : "2024-01";
+  const [showFullHistory, setShowFullHistory] = useState(false);
   const [filterYear, setFilterYear] = useState("ALL");
   const [searchTerm, setSearchTerm] = useState("");
   const [internalData, setInternalData] = useState(null);
@@ -30,21 +33,26 @@ export default function InflationExplorerModal({ isOpen, onClose, inflationData 
   const monthlyRates = activeData?.monthly_rates || [];
   const latest = activeData?.latest || {};
 
+  const visibleBaseRates = useMemo(() => {
+    if (showFullHistory) return monthlyRates;
+    return monthlyRates.filter((r) => !r.date || r.date.slice(0, 7) >= defaultCutoff);
+  }, [monthlyRates, showFullHistory, defaultCutoff]);
+
   const years = useMemo(() => {
     const ySet = new Set();
-    monthlyRates.forEach((r) => {
+    visibleBaseRates.forEach((r) => {
       if (r.date) ySet.add(r.date.slice(0, 4));
     });
     return ["ALL", ...Array.from(ySet).sort().reverse()];
-  }, [monthlyRates]);
+  }, [visibleBaseRates]);
 
   const filteredRates = useMemo(() => {
-    return monthlyRates.filter((r) => {
+    return visibleBaseRates.filter((r) => {
       const matchYear = filterYear === "ALL" || r.date.startsWith(filterYear);
       const matchSearch = !searchTerm || r.date.includes(searchTerm);
       return matchYear && matchSearch;
     });
-  }, [monthlyRates, filterYear, searchTerm]);
+  }, [visibleBaseRates, filterYear, searchTerm]);
 
   if (!isOpen) return null;
 
@@ -313,9 +321,34 @@ export default function InflationExplorerModal({ isOpen, onClose, inflationData 
             }}
           />
 
-          <span style={{ fontSize: "0.75rem", color: isLight ? "#64748b" : "var(--text-muted)", fontWeight: 500 }}>
-            {filteredRates.length} meses listados
-          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <button
+              type="button"
+              onClick={() => setShowFullHistory(!showFullHistory)}
+              style={{
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                padding: "5px 10px",
+                borderRadius: 6,
+                border: isLight ? "1px solid rgba(0,0,0,0.15)" : "1px solid rgba(255,255,255,0.15)",
+                background: showFullHistory
+                  ? (isLight ? "#e0e7ff" : "rgba(99, 102, 241, 0.25)")
+                  : (isLight ? "#f1f5f9" : "rgba(255,255,255,0.06)"),
+                color: showFullHistory
+                  ? (isLight ? "#4338ca" : "#818cf8")
+                  : (isLight ? "#475569" : "#94a3b8"),
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                transition: "all 0.15s ease",
+              }}
+              title={showFullHistory ? "Hacer clic para ver solo desde que comenzaste a invertir" : "Hacer clic para ver todas las décadas"}
+            >
+              {showFullHistory ? "📜 Histórico Completo" : `🌱 Desde tu inicio (${defaultCutoff})`}
+            </button>
+            <span style={{ fontSize: "0.75rem", color: isLight ? "#64748b" : "var(--text-muted)", fontWeight: 500, whiteSpace: "nowrap" }}>
+              ({filteredRates.length} meses)
+            </span>
+          </div>
         </div>
 
         {/* Explanation & Formula Banner */}
