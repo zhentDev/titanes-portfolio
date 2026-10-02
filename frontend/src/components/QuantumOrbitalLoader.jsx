@@ -1,4 +1,3 @@
-```jsx
 import { useEffect, useRef, useState } from "react";
 
 /**
@@ -222,21 +221,25 @@ export default function QuantumOrbitalLoader({
 
       const elapsedSec = (now - startTime) / 1000;
       const CYCLE_DURATION = 1.5; // Every 1.5 seconds transition
-      const totalStates = ORBITALS.length;
-      const cycleIndex = Math.floor(elapsedSec / CYCLE_DURATION);
-      const fromIdx = cycleIndex % totalStates;
-      const toIdx = (cycleIndex + 1) % totalStates;
+      const totalStates = ORBITALS.length || 1;
+      const rawCycle = Math.floor(elapsedSec / CYCLE_DURATION);
+      const cycleIndex = Math.max(0, isNaN(rawCycle) ? 0 : rawCycle);
+      const fromIdx = Math.abs(cycleIndex) % totalStates;
+      const toIdx = (Math.abs(cycleIndex) + 1) % totalStates;
       const t = (elapsedSec % CYCLE_DURATION) / CYCLE_DURATION;
 
       // Smooth cosine easing
       const ease = 0.5 - 0.5 * Math.cos(t * Math.PI);
 
+      const fromOrb = ORBITALS[fromIdx] || ORBITALS[0];
+      const toOrb = ORBITALS[toIdx] || ORBITALS[1] || ORBITALS[0];
+
       // Throttled UI state updates (every 100ms) without interfering with 60fps render
       if (now - lastUiUpdate > 100) {
         lastUiUpdate = now;
         setCurrentInfo({
-          from: ORBITALS[fromIdx],
-          to: ORBITALS[toIdx],
+          from: fromOrb,
+          to: toOrb,
           progress: Math.floor(t * 100),
         });
       }
@@ -265,10 +268,10 @@ export default function QuantumOrbitalLoader({
       const baseScale = Math.max(30, Math.min(width * 0.095, currentH * 0.092));
       const fov = 380;
 
-      const fromPts = statesData[fromIdx];
-      const toPts = statesData[toIdx];
-      const fromColor = ORBITALS[fromIdx].colorA;
-      const toColor = ORBITALS[toIdx].colorA;
+      const fromPts = statesData[fromIdx] || statesData[0];
+      const toPts = statesData[toIdx] || statesData[0];
+      const fromColor = fromOrb.colorA || "#ffd166";
+      const toColor = toOrb.colorA || "#06d6a0";
 
       // Enable additive blending for brilliant quantum glow
       ctx.globalCompositeOperation = "lighter";
@@ -395,4 +398,23 @@ export default function QuantumOrbitalLoader({
               animation: "pulse 1s infinite alternate",
             }}
           />
-          <span style={{ color: "#e2e8f0", fontWeight:
+          <span style={{ color: "#e2e8f0", fontWeight: 600, letterSpacing: "0.02em" }}>
+            {message}
+          </span>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.72rem", color: "var(--text-muted)" }}>
+          <span style={{ color: "#ffd166", fontFamily: "var(--font-mono, monospace)" }}>
+            {currentInfo?.from?.formula || "n=1, l=0, m=0"} ({(currentInfo?.from?.name || "1s").split(" ")[0]})
+          </span>
+          <span style={{ color: "#00e5ff" }}>➔</span>
+          <span style={{ color: "#06d6a0", fontFamily: "var(--font-mono, monospace)" }}>
+            {currentInfo?.to?.formula || "n=2, l=0, m=0"} ({(currentInfo?.to?.name || "2s").split(" ")[0]})
+          </span>
+          <span style={{ color: "rgba(255,255,255,0.4)" }}>•</span>
+          <span style={{ color: "rgba(255,255,255,0.6)" }}>Transición de Schrödinger</span>
+        </div>
+      </div>
+    </div>
+  );
+}
