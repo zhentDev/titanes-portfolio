@@ -10,6 +10,7 @@ export default function HoldingsTable({
   onToggleTicker,
   unit = "pct",
   onToggleUnit,
+  isRealMoney = false,
 }) {
   const [activeTab, setActiveTab] = useState("active"); // 'active' | 'closed'
   const [mobileViewMode, setMobileViewMode] = useState("auto"); // 'auto' | 'card' | 'table'
@@ -246,9 +247,11 @@ export default function HoldingsTable({
                     </div>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>Simulación</div>
+                    <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
+                      {isRealMoney ? "Estado Real" : "Simulación"}
+                    </div>
                     <span style={{ fontSize: "0.7rem", fontWeight: 700, color: isSelected ? "var(--gain)" : "var(--text-muted)" }}>
-                      {isSelected ? "Activa ✓" : "Excluida ✗"}
+                      {isSelected ? (isRealMoney ? "Comprada ✓" : "Activa ✓") : "Excluida ✗"}
                     </span>
                   </div>
                 </div>
@@ -262,7 +265,7 @@ export default function HoldingsTable({
           <thead>
             <tr style={{ borderBottom: "1px solid var(--border)" }}>
               {[
-                "Simulación",
+                isRealMoney ? "Posición Real" : "Simulación",
                 "Empresa / Ticker",
                 "Sector",
                 "Peso",
@@ -355,7 +358,7 @@ export default function HoldingsTable({
                           fontWeight: 600,
                         }}
                       >
-                        {isSelected ? "Activa" : "Excluida"}
+                        {isSelected ? (isRealMoney ? "Comprada" : "Activa") : "Excluida"}
                       </span>
                     </div>
                   </td>

@@ -1754,6 +1754,22 @@ export default function DynamicStrategyView({
         )}
       </div>
 
+      {/* ── Detalle de Posiciones Activas y Cerradas (Holdings & Realized Trades) ── */}
+      {(navData?.holdings?.length > 0 || navData?.closed_holdings?.length > 0) && (
+        <div className="card fade-up" style={{ padding: "20px" }}>
+          <HoldingsTable
+            holdings={navData?.holdings || []}
+            closedHoldings={navData?.closed_holdings || []}
+            summary={navData?.summary || {}}
+            investment={simulatedCapital}
+            numSlots={numSlots}
+            unit={unit}
+            onToggleUnit={() => setUnit((u) => (u === "pct" ? "usd" : "pct"))}
+            isRealMoney={Boolean(strategy.isRealMoney)}
+          />
+        </div>
+      )}
+
       {/* ── Constellation Grid Visualizer (Slots) ────── */}
       <div className="card fade-up" style={{ padding: "20px" }}>
         <div
@@ -1915,21 +1931,6 @@ export default function DynamicStrategyView({
           })}
         </div>
       </div>
-
-      {/* ── Detalle de Posiciones Activas y Cerradas (Holdings & Realized Trades) ── */}
-      {(navData?.holdings?.length > 0 || navData?.closed_holdings?.length > 0) && (
-        <div className="card fade-up" style={{ padding: "20px", marginBottom: "20px" }}>
-          <HoldingsTable
-            holdings={navData?.holdings || []}
-            closedHoldings={navData?.closed_holdings || []}
-            summary={navData?.summary || {}}
-            investment={simulatedCapital}
-            numSlots={numSlots}
-            unit={unit}
-            onToggleUnit={() => setUnit((u) => (u === "pct" ? "usd" : "pct"))}
-          />
-        </div>
-      )}
 
       {/* ── Rebalance Manager Grid ────────────────────── */}
       <div className="bottom-grid">
@@ -2373,7 +2374,7 @@ export default function DynamicStrategyView({
                   <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: 8 }}>
                     {reb.tickers?.length || 0} acciones asignadas ($
                     {(((reb.tickers?.length || 0) / numSlots) * simulatedCapital).toFixed(2)}{" "}
-                    simulado)
+                    {strategy.isRealMoney ? "invertido" : "simulado"})
                   </div>
 
                   <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
