@@ -16,6 +16,7 @@ import {
   deleteFixedIncomeEntityApi,
   fetchFixedIncomeData,
   fetchHistoricalRates,
+  getAuthHeaders,
   syncFixedIncomeStateApi,
   updateFixedIncomeAccountApi,
   updateFixedIncomeCDTApi,
@@ -56,15 +57,29 @@ export const useFixedIncomeStore = create(
 
           // Estado actual en localStorage (Zustand persist)
           const localState = get();
+          const isAuthenticated = Boolean(getAuthHeaders().Authorization);
 
-          // Source of truth: prefer fetched vitrina/backend data if it contains accounts or cdts
-          const hasFetchedData = (res?.accounts && res.accounts.length > 0) || (res?.cdts && res.cdts.length > 0);
-          const finalEntities = (hasFetchedData && res.entities?.length > 0) ? res.entities : ((localState.entities && localState.entities.length > 0) ? localState.entities : (res?.entities || []));
-          const finalAccounts = (hasFetchedData && res.accounts?.length > 0) ? res.accounts : (localState.accounts || []);
-          const finalCDTs = (hasFetchedData && res.cdts?.length > 0) ? res.cdts : (localState.cdts || []);
-          const finalTransactions = (hasFetchedData && res.transactions?.length > 0)
-            ? res.transactions
-            : (localState.transactions || []);
+          // Si el usuario está autenticado, la respuesta del backend (DuckDB / Postgres) es la única fuente de verdad.
+          // Si es una sesión pública (no autenticada), se prioriza la vitrina fetched o el cache de demo.
+          let finalEntities = [];
+          let finalAccounts = [];
+          let finalCDTs = [];
+          let finalTransactions = [];
+
+          if (isAuthenticated) {
+            finalEntities = Array.isArray(res?.entities) && res.entities.length > 0 ? res.entities : (localState.entities || []);
+            finalAccounts = Array.isArray(res?.accounts) ? res.accounts : [];
+            finalCDTs = Array.isArray(res?.cdts) ? res.cdts : [];
+            finalTransactions = Array.isArray(res?.transactions) ? res.transactions : [];
+          } else {
+            const hasFetchedData = (res?.accounts && res.accounts.length > 0) || (res?.cdts && res.cdts.length > 0);
+            finalEntities = (hasFetchedData && res.entities?.length > 0) ? res.entities : ((localState.entities && localState.entities.length > 0) ? localState.entities : (res?.entities || []));
+            finalAccounts = (hasFetchedData && res.accounts?.length > 0) ? res.accounts : (localState.accounts || []);
+            finalCDTs = (hasFetchedData && res.cdts?.length > 0) ? res.cdts : (localState.cdts || []);
+            finalTransactions = (hasFetchedData && res.transactions?.length > 0)
+              ? res.transactions
+              : (localState.transactions || []);
+          }
 
           set({
             entities: finalEntities,
@@ -75,26 +90,14 @@ export const useFixedIncomeStore = create(
             isInitialized: true,
           });
 
-          // Si el backend tiene menos datos que localStorage, sincronizar
+          // Solo sincronizar a backend si es un usuario autenticado que ya tenía datos legítimos locales antes de la creación
+          // o si deliberadamente hay un delta sin pisar carteras vacías.
           const backendNeedsSync =
-            (!res?.accounts?.length && localState.accounts.length > 0) ||
-            (!res?.cdts?.length && localState.cdts.length > 0) ||
-            (!res?.transactions?.length && localState.transactions.length > 0);
-
-          if (backendNeedsSync) {
-// console.log removed: Backend sync start
-            try {
-              await syncFixedIncomeStateApi({
-                entities: finalEntities,
-                accounts: finalAccounts,
-                cdts: finalCDTs,
-                transactions: finalTransactions,
-              });
-              // Sync localStorage → Backend completado
-            } catch (syncErr) {
-              console.warn("[FixedIncome] ⚠️ Sync falló (datos solo en localStorage):", syncErr);
-            }
-          }
+            isAuthenticated &&
+            !res?.accounts?.length &&
+            !res?.cdts?.length &&
+            (localState.accounts?.length > 0 || localState.cdts?.length > 0) &&
+            false; // Safeguard: nunca subir ciegamente cuentas residuales de localStorage al registrarse
         } catch (e) {
           console.error("[FixedIncome] Backend offline, usando localStorage:", e);
           set({ isInitialized: true });

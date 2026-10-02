@@ -78,7 +78,7 @@ DEFAULT_FIXED_INCOME_DATA = {
 }
 
 
-from services.auth import get_current_user_id
+from services.auth import get_current_user_id, get_optional_current_user
 from services.db import get_user_fixed_income_db, save_user_fixed_income_db
 
 
@@ -238,14 +238,18 @@ class SyncStateModel(BaseModel):
 # --- Endpoints ---
 
 @router.get("/data")
-def get_all_fixed_income_data():
+def get_all_fixed_income_data(request: Request):
     """Retrieve full fixed income state."""
-    return load_fixed_income_db()
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    return load_fixed_income_db(user_id)
 
 
 @router.post("/entities")
-def create_entity(entity: EntityModel):
-    db = load_fixed_income_db()
+def create_entity(entity: EntityModel, request: Request):
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    db = load_fixed_income_db(user_id)
     new_id = entity.id or f"ent_{int(datetime.now().timestamp() * 1000)}"
     item = {
         "id": new_id,
@@ -256,13 +260,15 @@ def create_entity(entity: EntityModel):
         "createdAt": entity.createdAt or datetime.now().isoformat()
     }
     db["entities"].append(item)
-    save_fixed_income_db(db)
+    save_fixed_income_db(db, user_id)
     return item
 
 
 @router.put("/entities/{entity_id}")
-def update_entity(entity_id: str, entity: EntityModel):
-    db = load_fixed_income_db()
+def update_entity(entity_id: str, entity: EntityModel, request: Request):
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    db = load_fixed_income_db(user_id)
     for idx, e in enumerate(db["entities"]):
         if e["id"] == entity_id:
             db["entities"][idx] = {
@@ -272,24 +278,28 @@ def update_entity(entity_id: str, entity: EntityModel):
                 "color": entity.color,
                 "icon": entity.icon
             }
-            save_fixed_income_db(db)
+            save_fixed_income_db(db, user_id)
             return db["entities"][idx]
     raise HTTPException(status_code=404, detail="Entity not found")
 
 
 @router.delete("/entities/{entity_id}")
-def delete_entity(entity_id: str):
-    db = load_fixed_income_db()
+def delete_entity(entity_id: str, request: Request):
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    db = load_fixed_income_db(user_id)
     db["entities"] = [e for e in db["entities"] if e["id"] != entity_id]
     db["accounts"] = [a for a in db["accounts"] if a["entityId"] != entity_id]
     db["cdts"] = [c for c in db["cdts"] if c["entityId"] != entity_id]
-    save_fixed_income_db(db)
+    save_fixed_income_db(db, user_id)
     return {"success": True, "deleted": entity_id}
 
 
 @router.post("/accounts")
-def create_account(account: AccountModel):
-    db = load_fixed_income_db()
+def create_account(account: AccountModel, request: Request):
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    db = load_fixed_income_db(user_id)
     new_id = account.id or f"acc_{int(datetime.now().timestamp() * 1000)}"
     item = {
         "id": new_id,
@@ -304,13 +314,15 @@ def create_account(account: AccountModel):
         "createdAt": account.createdAt or datetime.now().isoformat()
     }
     db["accounts"].append(item)
-    save_fixed_income_db(db)
+    save_fixed_income_db(db, user_id)
     return item
 
 
 @router.put("/accounts/{account_id}")
-def update_account(account_id: str, account: AccountModel):
-    db = load_fixed_income_db()
+def update_account(account_id: str, account: AccountModel, request: Request):
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    db = load_fixed_income_db(user_id)
     for idx, a in enumerate(db["accounts"]):
         if a["id"] == account_id:
             db["accounts"][idx] = {
@@ -323,23 +335,27 @@ def update_account(account_id: str, account: AccountModel):
                 "isTaxExemptGMF": account.isTaxExemptGMF,
                 "rateHistory": account.rateHistory or a.get("rateHistory", [])
             }
-            save_fixed_income_db(db)
+            save_fixed_income_db(db, user_id)
             return db["accounts"][idx]
     raise HTTPException(status_code=404, detail="Account not found")
 
 
 @router.delete("/accounts/{account_id}")
-def delete_account(account_id: str):
-    db = load_fixed_income_db()
+def delete_account(account_id: str, request: Request):
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    db = load_fixed_income_db(user_id)
     db["accounts"] = [a for a in db["accounts"] if a["id"] != account_id]
     db["transactions"] = [t for t in db["transactions"] if t.get("accountId") != account_id]
-    save_fixed_income_db(db)
+    save_fixed_income_db(db, user_id)
     return {"success": True, "deleted": account_id}
 
 
 @router.post("/cdts")
-def create_cdt(cdt: CDTModel):
-    db = load_fixed_income_db()
+def create_cdt(cdt: CDTModel, request: Request):
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    db = load_fixed_income_db(user_id)
     new_id = cdt.id or f"cdt_{int(datetime.now().timestamp() * 1000)}"
     item = {
         "id": new_id,
@@ -356,13 +372,15 @@ def create_cdt(cdt: CDTModel):
         "createdAt": cdt.createdAt or datetime.now().isoformat()
     }
     db["cdts"].append(item)
-    save_fixed_income_db(db)
+    save_fixed_income_db(db, user_id)
     return item
 
 
 @router.put("/cdts/{cdt_id}")
-def update_cdt(cdt_id: str, cdt: CDTModel):
-    db = load_fixed_income_db()
+def update_cdt(cdt_id: str, cdt: CDTModel, request: Request):
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    db = load_fixed_income_db(user_id)
     for idx, c in enumerate(db["cdts"]):
         if c["id"] == cdt_id:
             db["cdts"][idx] = {
@@ -377,16 +395,18 @@ def update_cdt(cdt_id: str, cdt: CDTModel):
                 "reteFuentePct": float(cdt.reteFuentePct),
                 "isAutoRenew": cdt.isAutoRenew
             }
-            save_fixed_income_db(db)
+            save_fixed_income_db(db, user_id)
             return db["cdts"][idx]
     raise HTTPException(status_code=404, detail="CDT not found")
 
 
 @router.delete("/cdts/{cdt_id}")
-def delete_cdt(cdt_id: str):
-    db = load_fixed_income_db()
+def delete_cdt(cdt_id: str, request: Request):
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    db = load_fixed_income_db(user_id)
     db["cdts"] = [c for c in db["cdts"] if c["id"] != cdt_id]
-    save_fixed_income_db(db)
+    save_fixed_income_db(db, user_id)
     return {"success": True, "deleted": cdt_id}
 
 
@@ -582,9 +602,11 @@ def calculate_compound_history(payload: CompoundHistoryRequest):
 
 
 @router.post("/sync")
-def sync_full_state(payload: SyncStateModel):
+def sync_full_state(payload: SyncStateModel, request: Request):
     """Batch sync entire fixed income state from frontend store."""
-    db = load_fixed_income_db()
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    db = load_fixed_income_db(user_id)
     if payload.entities is not None:
         db["entities"] = payload.entities
     if payload.accounts is not None:
@@ -593,7 +615,7 @@ def sync_full_state(payload: SyncStateModel):
         db["cdts"] = payload.cdts
     if payload.transactions is not None:
         db["transactions"] = payload.transactions
-    save_fixed_income_db(db)
+    save_fixed_income_db(db, user_id)
     return {"success": True, "timestamp": datetime.now().isoformat()}
 
 
@@ -635,9 +657,11 @@ class ConfirmImportRequest(BaseModel):
 
 
 @router.post("/confirm-import")
-def confirm_statement_import(payload: ConfirmImportRequest):
+def confirm_statement_import(payload: ConfirmImportRequest, request: Request):
     """Batch import approved accounts, CDTs, and transactions extracted from PDF."""
-    db = load_fixed_income_db()
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    db = load_fixed_income_db(user_id)
     
     # 1. Ensure entity exists
     existing_entities = {e["id"]: e for e in db.get("entities", [])}
@@ -903,7 +927,7 @@ def confirm_statement_import(payload: ConfirmImportRequest):
             
     db["transactions"] = existing_transactions
 
-    save_fixed_income_db(db)
+    save_fixed_income_db(db, user_id)
     return {
         "success": True,
         "importedAccounts": created_accounts,

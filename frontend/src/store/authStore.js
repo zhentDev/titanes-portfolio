@@ -40,6 +40,8 @@ export const useAuthStore = create((set, get) => ({
     try {
       const res = await loginApi(email, password);
       localStorage.setItem("titanes_auth_token", res.token);
+      localStorage.removeItem("titanes_fixed_income_store");
+      localStorage.removeItem("titanes-portfolio");
       set({ token: res.token, user: res.user, isAuthModalOpen: false });
       toast.success(`¡Bienvenido de nuevo, ${res.user.name || res.user.email}!`, { icon: "👋" });
       if (typeof window !== "undefined") {
@@ -61,6 +63,8 @@ export const useAuthStore = create((set, get) => ({
     try {
       const res = await registerApi(email, password, name);
       localStorage.setItem("titanes_auth_token", res.token);
+      localStorage.removeItem("titanes_fixed_income_store");
+      localStorage.removeItem("titanes-portfolio");
       set({ token: res.token, user: res.user, isAuthModalOpen: false });
       if (res.claimed_legacy_data) {
         toast.success(`¡Cuenta creada! Tu información previa fue vinculada exitosamente.`, {
@@ -89,6 +93,8 @@ export const useAuthStore = create((set, get) => ({
     try {
       const res = await oauthLoginApi(idToken, profile);
       localStorage.setItem("titanes_auth_token", res.token);
+      localStorage.removeItem("titanes_fixed_income_store");
+      localStorage.removeItem("titanes-portfolio");
       set({ token: res.token, user: res.user, isAuthModalOpen: false });
       toast.success(`Conectado vía Google: ${res.user.name || res.user.email}`, { icon: "🌐" });
       return true;
