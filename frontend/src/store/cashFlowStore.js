@@ -103,40 +103,49 @@ export const useCashFlowStore = create(
     isInitialized: false,
     isSyncing: false,
 
-    // ── Initialization directly from Local Backend Database (SSOT) ──
+    // ── Initialization directly from Local Backend Database (SSOT) + Offline Cache ──
     initFetchCashFlow: async () => {
       try {
+        let cachedLocal = null;
+        try {
+          const raw = localStorage.getItem("titanes_cash_flow_store_v2");
+          if (raw) cachedLocal = JSON.parse(raw);
+        } catch {}
+
         const res = await fetchCashFlowData({ bypassCache: true });
-        if (!res) {
+        const source = res || cachedLocal;
+        if (!source) {
           set({ isInitialized: true });
           return;
         }
 
-        const startP = res.startPeriod || getCurrentPeriod();
-        let activeP = res.activePeriod || getCurrentPeriod();
+        const payDay = source.payrollAccount?.payDay || 25;
+        // Default start period is 2026-10 (starting from October 25 / nearest business day)
+        const startP = source.startPeriod || "2026-10";
+        let activeP = source.activePeriod || getCurrentPeriod(payDay);
         if (activeP < startP) {
           activeP = startP;
         }
 
         const resolvedRatios =
-          res.customRatios?.needs !== undefined && res.customRatios?.needs !== null
-            ? res.customRatios
+          source.customRatios?.needs !== undefined && source.customRatios?.needs !== null
+            ? source.customRatios
             : DEFAULT_RATIOS;
 
-        set({
+        const resolvedState = {
           startPeriod: startP,
           activePeriod: activeP,
-          currency: res.currency || "COP",
-          allocationModel: res.allocationModel || "custom",
+          currency: source.currency || "COP",
+          allocationModel: source.allocationModel || "custom",
           customRatios: resolvedRatios,
-          emergencyFundTargetMonths: res.emergencyFundTargetMonths ?? 6,
-          payrollAccount: res.payrollAccount || DEFAULT_PAYROLL_ACCOUNT,
-          creditCards: Array.isArray(res.creditCards) && res.creditCards.length > 0 ? res.creditCards : DEFAULT_CREDIT_CARDS,
-          creditPurchases: res.creditPurchases || [],
-          creditCardPayments: res.creditCardPayments || [],
-          expensesLog: Array.isArray(res.expensesLog) ? res.expensesLog : [],
+          emergencyFundTargetMonths: source.emergencyFundTargetMonths ?? 6,
+          payrollAccount: source.payrollAccount || DEFAULT_PAYROLL_ACCOUNT,
+          creditCards: Array.isArray(source.creditCards) && source.creditCards.length > 0 ? source.creditCards : DEFAULT_CREDIT_CARDS,
+          creditPurchases: source.creditPurchases || [],
+          creditCardPayments: source.creditCardPayments || [],
+          expensesLog: Array.isArray(source.expensesLog) ? source.expensesLog : [],
           inflows: (() => {
-            let infs = Array.isArray(res.inflows) && res.inflows.length > 0 ? res.inflows : DEFAULT_INFLOWS;
+            let infs = Array.isArray(source.inflows) && source.inflows.length > 0 ? source.inflows : DEFAULT_INFLOWS;
             if (!infs.some((i) => i.id === "in_stock_div" || i.category === "passive_equity")) {
               const defaultStockDiv = DEFAULT_INFLOWS.find((i) => i.id === "in_stock_div");
               if (defaultStockDiv) {
@@ -145,13 +154,20 @@ export const useCashFlowStore = create(
             }
             return infs;
           })(),
-          needs: Array.isArray(res.needs) && res.needs.length > 0 ? res.needs : DEFAULT_NEEDS,
-          wants: Array.isArray(res.wants) && res.wants.length > 0 ? res.wants : DEFAULT_WANTS,
-          wealth: Array.isArray(res.wealth) && res.wealth.length > 0 ? res.wealth : DEFAULT_WEALTH,
-          salaryHistory: res.salaryHistory || [],
-          periodsData: res.periodsData || {},
+          needs: Array.isArray(source.needs) && source.needs.length > 0 ? source.needs : DEFAULT_NEEDS,
+          wants: Array.isArray(source.wants) && source.wants.length > 0 ? source.wants : DEFAULT_WANTS,
+          wealth: Array.isArray(source.wealth) && source.wealth.length > 0 ? source.wealth : DEFAULT_WEALTH,
+          salaryHistory: source.salaryHistory || [],
+          periodsData: source.periodsData || {},
           isInitialized: true,
-        });
+        };
+
+        set(resolvedState);
+
+        // Also save to localStorage as instant offline backup
+        try {
+          localStorage.setItem("titanes_cash_flow_store_v2", JSON.stringify(resolvedState));
+        } catch {}
       } catch (err) {
         console.error("[CashFlow] Failed to load data from backend database:", err);
         set({ isInitialized: true });
@@ -165,6 +181,13 @@ export const useCashFlowStore = create(
           return;
         }
 
+        // 1. Immediately persist to localStorage so no edits are ever lost on client
+        try {
+          localStorage.setItem("titanes_cash_flow_store_v2", JSON.stringify(state));
+        } catch (e) {
+          console.warn("[CashFlow] Local cache save error:", e);
+        }
+
         // Cancel previous pending sync timer to debounce rapid updates
         if (syncDebounceTimer) {
           clearTimeout(syncDebounceTimer);
@@ -175,6 +198,7 @@ export const useCashFlowStore = create(
           try {
             const currentState = get();
             await syncCashFlowStateApi({
+              startPeriod: currentState.startPeriod,
               activePeriod: currentState.activePeriod,
               currency: currentState.currency,
               allocationModel: currentState.allocationModel,

@@ -5,7 +5,7 @@ import { useCashFlowStore } from "../../store/cashFlowStore";
 import { useFixedIncomeStore } from "../../store/fixedIncomeStore";
 import { usePortfolioStore } from "../../store/portfolioStore";
 import { formatCashFlowMoneyWithCode, formatCashFlowMoney } from "../../utils/cashFlowFormatters";
-import { formatPeriodName, getNextPeriod, getPrevPeriod } from "../../utils/periodUtils";
+import { formatPeriodName, formatPeriodWithCycleRange, getNextPeriod, getPrevPeriod } from "../../utils/periodUtils";
 import CashFlowAllocationModal from "./CashFlowAllocationModal";
 import CashFlowRuleSelector from "./CashFlowRuleSelector";
 import CashFlowSankey from "./CashFlowSankey";
@@ -390,15 +390,14 @@ export default function CashFlowHub() {
                 fontWeight: 700,
                 color: "#f8fafc",
                 letterSpacing: "0.3px",
-                width: "160px",
+                minWidth: "180px",
                 textAlign: "center",
                 whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
                 display: "inline-block",
               }}
+              title={`Ciclo salarial financiado por la nómina de ${payrollAccount?.name || "Nómina"}`}
             >
-              📅 {formatPeriodName(activePeriod)}
+              📅 {formatPeriodWithCycleRange(activePeriod, payrollAccount?.payDay || 25, payrollAccount?.customPayDate)}
             </span>
 
             <button

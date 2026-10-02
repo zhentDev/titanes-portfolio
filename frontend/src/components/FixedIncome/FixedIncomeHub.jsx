@@ -1597,62 +1597,64 @@ export default function FixedIncomeHub() {
                   })()}
 
                   {/* Direct Add Object Buttons for this Entity */}
-                  <button
-                    onClick={() => {
-                      setSelectedModalEntityId(entity.id);
-                      setEditItem(null);
-                      setEditType(null);
-                      setModalTab("account");
-                      setModalOpen(true);
-                    }}
-                    style={{
-                      background: "rgba(16, 185, 129, 0.18)",
-                      border: "1px solid rgba(16, 185, 129, 0.4)",
-                      color: "#10b981",
-                      borderRadius: 6,
-                      padding: "4px 8px",
-                      fontSize: "0.72rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                    title={`Crear nueva cuenta / bolsillo en ${entity.name}`}
-                  >
-                    + Cuenta
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSelectedModalEntityId(entity.id);
-                      setEditItem(null);
-                      setEditType(null);
-                      setModalTab("cdt");
-                      setModalOpen(true);
-                    }}
-                    style={{
-                      background: "rgba(245, 158, 11, 0.18)",
-                      border: "1px solid rgba(245, 158, 11, 0.4)",
-                      color: "#f59e0b",
-                      borderRadius: 6,
-                      padding: "4px 8px",
-                      fontSize: "0.72rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                    title={`Registrar nuevo CDT en ${entity.name}`}
-                  >
-                    + CDT
-                  </button>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <button
+                      onClick={() => {
+                        setSelectedModalEntityId(entity.id);
+                        setEditItem(null);
+                        setEditType(null);
+                        setModalTab("account");
+                        setModalOpen(true);
+                      }}
+                      style={{
+                        background: "rgba(16, 185, 129, 0.18)",
+                        border: "1px solid rgba(16, 185, 129, 0.4)",
+                        color: "#10b981",
+                        borderRadius: 6,
+                        padding: "5px 10px",
+                        fontSize: "0.78rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                      title={`Crear nueva cuenta / bolsillo en ${entity.name}`}
+                    >
+                      + Cuenta
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedModalEntityId(entity.id);
+                        setEditItem(null);
+                        setEditType(null);
+                        setModalTab("cdt");
+                        setModalOpen(true);
+                      }}
+                      style={{
+                        background: "rgba(245, 158, 11, 0.18)",
+                        border: "1px solid rgba(245, 158, 11, 0.4)",
+                        color: "#f59e0b",
+                        borderRadius: 6,
+                        padding: "5px 10px",
+                        fontSize: "0.78rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                      title={`Registrar nuevo CDT en ${entity.name}`}
+                    >
+                      + CDT
+                    </button>
+                  </div>
 
-                  <div style={{ textAlign: "right", marginLeft: 4 }}>
+                  <div style={{ textAlign: "right", marginLeft: 8, minWidth: 150 }}>
                     <div
                       className="mono"
-                      style={{ fontWeight: 800, color: "#10b981", fontSize: "1.05rem" }}
+                      style={{ fontWeight: 800, color: "#10b981", fontSize: "1.15rem", letterSpacing: "0.2px" }}
                       title={`Líquido Cajitas ($${accountsLiquidTotal.toLocaleString()}) + Rendimiento Devengado CDTs ($${activeCDTsAccruedYield.toLocaleString()})`}
                     >
                       {entCurrSymbol}{" "}
                       {entityTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                     {activeEntityCDTs.length > 0 && (
-                      <div style={{ fontSize: "0.68rem", color: "#f59e0b", marginTop: 2 }}>
+                      <div style={{ fontSize: "0.72rem", color: "#f59e0b", marginTop: 2 }}>
                         + {entCurrSymbol}{activeCDTsCapitalTotal.toLocaleString("en-US", { maximumFractionDigits: 0 })} en {activeEntityCDTs.length} CDT(s)
                         {activeCDTsAccruedYield > 0 && (
                           <span style={{ color: "#34d399", marginLeft: 4, fontWeight: 600 }}>
@@ -1670,7 +1672,8 @@ export default function FixedIncomeHub() {
                       border: "none",
                       color: "#64748b",
                       cursor: "pointer",
-                      fontSize: "0.85rem",
+                      fontSize: "0.95rem",
+                      padding: "4px",
                     }}
                     title="Eliminar Entidad"
                   >
@@ -1811,30 +1814,32 @@ export default function FixedIncomeHub() {
                     >
                       <div
                         style={{
-                          padding: "12px 14px",
+                          padding: "14px 16px",
                           display: "flex",
                           flexWrap: "wrap",
                           justifyContent: "space-between",
                           alignItems: "center",
-                          gap: 12,
+                          gap: 14,
                         }}
                       >
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        {/* Left: Expand button + Account Name + Rate info */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 12, flex: "1 1 240px", minWidth: 220 }}>
                           <button
                             type="button"
                             onClick={() => toggleAccountExpand(acc.id)}
                             style={{
                               background: isExpanded ? "rgba(16, 185, 129, 0.2)" : "rgba(255, 255, 255, 0.06)",
-                              border: `1px solid ${isExpanded ? "#10b981" : "rgba(255, 255, 255, 0.1)"}`,
-                              borderRadius: 6,
-                              color: isExpanded ? "#10b981" : "#94a3b8",
+                              border: `1px solid ${isExpanded ? "#10b981" : "rgba(255, 255, 255, 0.12)"}`,
+                              borderRadius: 8,
+                              color: isExpanded ? "#10b981" : "#cbd5e1",
                               cursor: "pointer",
-                              padding: "5px 9px",
-                              fontSize: "0.68rem",
-                              fontWeight: 600,
-                              display: "flex",
+                              padding: "6px 11px",
+                              fontSize: "0.76rem",
+                              fontWeight: 700,
+                              display: "inline-flex",
                               alignItems: "center",
-                              gap: 4,
+                              gap: 6,
+                              flexShrink: 0,
                             }}
                             title="Ver / Ocultar movimientos y desglose de rentabilidad"
                           >
@@ -1842,14 +1847,14 @@ export default function FixedIncomeHub() {
                             <span>Movimientos {accTx.length > 0 ? `(${accTx.length})` : ""}</span>
                           </button>
 
-                          <div>
-                            <div style={{ fontWeight: 600, color: "var(--text-primary)", fontSize: "0.88rem" }}>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, color: "var(--text-primary)", fontSize: "1.02rem", letterSpacing: "0.2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                               {acc.name}
                             </div>
-                            <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginTop: 2, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                            <div style={{ fontSize: "0.76rem", color: "var(--text-secondary)", marginTop: 3, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                               <span>
                                 {acc.type === "crypto" ? "Tasa Staking:" : "Tasa actual:"}{" "}
-                                <span style={{ color: "#10b981", fontWeight: 600 }}>
+                                <span style={{ color: "#10b981", fontWeight: 700, fontSize: "0.78rem" }}>
                                   {Number(
                                     (acc.type === "crypto" || acc.interestRateEA)
                                       ? (acc.interestRateEA || historicalRates?.entities?.[acc.entityId]?.savings_rates?.slice(-1)[0]?.rateEA || 8.00)
@@ -1858,55 +1863,55 @@ export default function FixedIncomeHub() {
                                 </span>
                               </span>
                               {acc.type === "crypto" && (
-                                <span style={{ color: "#f59e0b", fontSize: "0.65rem", fontWeight: 600, background: "rgba(245, 158, 11, 0.15)", padding: "1px 5px", borderRadius: 4, border: "1px solid rgba(245, 158, 11, 0.3)" }}>
-                                  🪙 Inversión / Renta Variable
+                                <span style={{ color: "#f59e0b", fontSize: "0.68rem", fontWeight: 700, background: "rgba(245, 158, 11, 0.15)", padding: "2px 6px", borderRadius: 4, border: "1px solid rgba(245, 158, 11, 0.3)" }}>
+                                  🪙 Inversión
                                 </span>
                               )}
                               {acc.isTaxExemptGMF && acc.type !== "crypto" && (
-                                <span style={{ color: "#38bdf8", fontSize: "0.65rem" }}>
-                                  • Exenta 4x1000
+                                <span style={{ color: "#38bdf8", fontSize: "0.7rem", fontWeight: 600 }}>
+                                  • Exenta 4×1000
                                 </span>
                               )}
                               {yieldData.activeCDTsCount > 0 && (
-                                <span style={{ color: "#f59e0b", fontSize: "0.65rem", fontWeight: 600 }}>
-                                  • ⏳ {yieldData.activeCDTsCount} CDT(s) activo(s)
+                                <span style={{ color: "#f59e0b", fontSize: "0.7rem", fontWeight: 700 }}>
+                                  • ⏳ {yieldData.activeCDTsCount} CDT(s)
                                 </span>
                               )}
                             </div>
                           </div>
                         </div>
 
-                        {/* 3 Core Values: Aportes Netos, Rendimientos, Saldo Total */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--bg-surface)", padding: "4px 8px", borderRadius: 8, border: "1px solid var(--border)" }}>
+                        {/* Right: 3 Metric Badges + Actions */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--bg-surface)", padding: "6px 12px", borderRadius: 10, border: "1px solid var(--border)" }}>
                             {/* 1. Ingresado Neto Líquido */}
                             <div style={{ textAlign: "right" }} title="Capital neto depositado líquido en la cajita">
-                              <span style={{ color: "var(--text-muted)", fontSize: "0.6rem", display: "block" }}>📥 Aportado Neto</span>
-                              <span className="mono" style={{ color: "var(--text-secondary)", fontWeight: 600, fontSize: "0.78rem" }}>
+                              <span style={{ color: "var(--text-muted)", fontSize: "0.68rem", display: "block" }}>📥 Aportado Neto</span>
+                              <span className="mono" style={{ color: "var(--text-secondary)", fontWeight: 700, fontSize: "0.85rem" }}>
                                 ${yieldData.liquidNetCapital.toLocaleString("en-US", { maximumFractionDigits: 2 })}
                               </span>
                             </div>
 
                             {/* 2. Rendimientos Líquidos */}
-                            <div style={{ textAlign: "right" }} title="Rendimientos diarios ganados en la cajita">
-                              <span style={{ color: "var(--text-muted)", fontSize: "0.6rem", display: "block" }}>📈 Rentabilidad</span>
-                              <span className="mono" style={{ color: "#10b981", fontWeight: 600, fontSize: "0.78rem" }}>
+                            <div style={{ textAlign: "right", paddingLeft: 8, borderLeft: "1px solid var(--border)" }} title="Rendimientos diarios ganados en la cajita">
+                              <span style={{ color: "var(--text-muted)", fontSize: "0.68rem", display: "block" }}>📈 Rentabilidad</span>
+                              <span className="mono" style={{ color: "#10b981", fontWeight: 700, fontSize: "0.85rem" }}>
                                 +${yieldData.liquidEarnedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })}
                               </span>
                             </div>
 
                             {/* 3. Saldo Total Líquido */}
-                            <div style={{ textAlign: "right", paddingLeft: 8, borderLeft: "1px solid var(--border)" }} title="Saldo líquido actual en la cajita">
-                              <span style={{ color: "#0284c7", fontSize: "0.6rem", display: "block", fontWeight: 600 }}>💰 Saldo Líquido</span>
-                              <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: "0.92rem" }}>
+                            <div style={{ textAlign: "right", paddingLeft: 10, borderLeft: "1px solid var(--border)" }} title="Saldo líquido actual en la cajita">
+                              <span style={{ color: "#0284c7", fontSize: "0.68rem", display: "block", fontWeight: 700 }}>💰 Saldo Líquido</span>
+                              <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 800, fontSize: "1.05rem" }}>
                                 ${yieldData.liquidTotalBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })}{" "}
-                                <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>{acc.currency}</span>
+                                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{acc.currency}</span>
                               </span>
                             </div>
                           </div>
 
                           {/* Action Buttons */}
-                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                             {Math.abs(acc.balance - yieldData.liquidTotalBalance) > 1 && (
                               <button
                                 type="button"
@@ -1919,13 +1924,13 @@ export default function FixedIncomeHub() {
                                   border: "1px solid rgba(16, 185, 129, 0.4)",
                                   borderRadius: 6,
                                   color: "#10b981",
-                                  fontSize: "0.65rem",
+                                  fontSize: "0.72rem",
                                   fontWeight: 700,
                                   cursor: "pointer",
-                                  padding: "3px 6px",
+                                  padding: "4px 8px",
                                   display: "inline-flex",
                                   alignItems: "center",
-                                  gap: 2,
+                                  gap: 4,
                                 }}
                                 title="Sincronizar el saldo oficial de la cajita con el valor real calculado"
                               >
@@ -1941,13 +1946,13 @@ export default function FixedIncomeHub() {
                                   border: "1px solid rgba(56, 189, 248, 0.4)",
                                   borderRadius: 6,
                                   color: "#38bdf8",
-                                  fontSize: "0.65rem",
+                                  fontSize: "0.72rem",
                                   fontWeight: 700,
                                   cursor: "pointer",
-                                  padding: "3px 6px",
+                                  padding: "4px 8px",
                                   display: "inline-flex",
                                   alignItems: "center",
-                                  gap: 2,
+                                  gap: 4,
                                 }}
                                 title="Auto-generar y agregar al historial todas las transacciones de rendimientos mensuales devengados mes a mes"
                               >
@@ -1958,12 +1963,13 @@ export default function FixedIncomeHub() {
                             <button
                               onClick={() => handleEdit(acc, "account")}
                               style={{
-                                background: "transparent",
-                                border: "none",
-                                color: "#64748b",
+                                background: "rgba(255, 255, 255, 0.04)",
+                                border: "1px solid rgba(255, 255, 255, 0.1)",
+                                borderRadius: 6,
+                                color: "#94a3b8",
                                 cursor: "pointer",
-                                fontSize: "0.75rem",
-                                padding: "2px 4px",
+                                fontSize: "0.85rem",
+                                padding: "4px 7px",
                               }}
                               title="Editar Cuenta"
                             >
@@ -1972,12 +1978,13 @@ export default function FixedIncomeHub() {
                             <button
                               onClick={() => handleDeleteAccount(acc)}
                               style={{
-                                background: "transparent",
-                                border: "none",
-                                color: "#64748b",
+                                background: "rgba(244, 63, 94, 0.08)",
+                                border: "1px solid rgba(244, 63, 94, 0.2)",
+                                borderRadius: 6,
+                                color: "#f43f5e",
                                 cursor: "pointer",
-                                fontSize: "0.75rem",
-                                padding: "2px 4px",
+                                fontSize: "0.85rem",
+                                padding: "4px 7px",
                               }}
                               title="Eliminar Cuenta"
                             >
@@ -2045,43 +2052,43 @@ export default function FixedIncomeHub() {
                                 style={{
                                   background: "rgba(245, 158, 11, 0.08)",
                                   borderRadius: 8,
-                                  padding: "8px 12px",
-                                  marginBottom: 10,
+                                  padding: "10px 14px",
+                                  marginBottom: 12,
                                   border: "1px solid rgba(245, 158, 11, 0.25)",
                                 }}
                               >
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 6 }}>
-                                  <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#f59e0b", display: "flex", alignItems: "center", gap: 4 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 6 }}>
+                                  <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#f59e0b", display: "flex", alignItems: "center", gap: 6 }}>
                                     <span>⏳ CDTs Vinculados a {acc.name}:</span>
                                   </span>
-                                  <span style={{ fontSize: "0.68rem", color: "#34d399", fontWeight: 700 }}>
+                                  <span style={{ fontSize: "0.78rem", color: "#34d399", fontWeight: 700 }}>
                                     {yieldData.activeCDTsList.length > 0 && `Activos: $${yieldData.activeCDTsCapital.toLocaleString("en-US", { maximumFractionDigits: 0 })} COP (+$${yieldData.activeCDTsAccruedInterest.toLocaleString("en-US", { maximumFractionDigits: 0 })} rend.)`}
                                     {yieldData.activeCDTsList.length > 0 && yieldData.maturedCDTsList.length > 0 && " • "}
                                     {yieldData.maturedCDTsList.length > 0 && `📦 ${yieldData.maturedCDTsList.length} Cerrados (+$${yieldData.maturedCDTsTotalProfit.toLocaleString("en-US", { maximumFractionDigits: 0 })} cobrados)`}
                                   </span>
                                 </div>
 
-                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 6 }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 8 }}>
                                   {/* CDTs Activos */}
                                   {yieldData.activeCDTsList.map((c, cIdx) => (
                                     <div
                                       key={`act_cdt_${cIdx}`}
                                       style={{
                                         background: "rgba(0,0,0,0.35)",
-                                        padding: "6px 8px",
+                                        padding: "8px 10px",
                                         borderRadius: 6,
                                         border: "1px solid rgba(245, 158, 11, 0.2)",
                                       }}
                                     >
-                                      <div style={{ display: "flex", justifyContent: "space-between", color: "#f8fafc", fontSize: "0.68rem", fontWeight: 600 }}>
+                                      <div style={{ display: "flex", justifyContent: "space-between", color: "#f8fafc", fontSize: "0.78rem", fontWeight: 600 }}>
                                         <span>⏳ {c.name || c.category}</span>
-                                        <span style={{ color: "#f59e0b" }}>{c.interestRateEA}% E.A.</span>
+                                        <span style={{ color: "#f59e0b", fontWeight: 700 }}>{c.interestRateEA}% E.A.</span>
                                       </div>
-                                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2, fontSize: "0.62rem", color: "#94a3b8" }}>
+                                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: "0.72rem", color: "#94a3b8" }}>
                                         <span>Capital: ${Number(c.capital || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
                                         <span>{c.daysElapsed} de {c.termDays}d</span>
                                       </div>
-                                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2, fontSize: "0.65rem" }}>
+                                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: "0.75rem" }}>
                                         <span style={{ color: "#64748b" }}>Rend. a hoy:</span>
                                         <span style={{ color: "#34d399", fontWeight: 700, fontFamily: "JetBrains Mono" }}>
                                           +${Number(c.accruedYield || 0).toLocaleString("en-US", { maximumFractionDigits: 2 })} COP
@@ -2096,16 +2103,16 @@ export default function FixedIncomeHub() {
                                       key={`mat_cdt_${cIdx}`}
                                       style={{
                                         background: "rgba(0,0,0,0.25)",
-                                        padding: "6px 8px",
+                                        padding: "8px 10px",
                                         borderRadius: 6,
                                         border: "1px solid rgba(148, 163, 184, 0.15)",
                                       }}
                                     >
-                                      <div style={{ display: "flex", justifyContent: "space-between", color: "#94a3b8", fontSize: "0.68rem", fontWeight: 600 }}>
+                                      <div style={{ display: "flex", justifyContent: "space-between", color: "#94a3b8", fontSize: "0.78rem", fontWeight: 600 }}>
                                         <span>📦 {c.name || c.category} (Cerrado)</span>
                                         <span style={{ color: "#94a3b8" }}>{c.interestRateEA}% E.A.</span>
                                       </div>
-                                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2, fontSize: "0.65rem" }}>
+                                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: "0.75rem" }}>
                                         <span style={{ color: "#64748b" }}>Ganancia cobrada:</span>
                                         <span style={{ color: "#10b981", fontWeight: 700, fontFamily: "JetBrains Mono" }}>
                                           +${Number(c.finalProfit || 0).toLocaleString("en-US", { maximumFractionDigits: 2 })} {c.currency || acc.currency || "COP"}
@@ -2123,35 +2130,35 @@ export default function FixedIncomeHub() {
                                 style={{
                                   background: "rgba(15, 23, 42, 0.7)",
                                   borderRadius: 8,
-                                  padding: "8px 12px",
-                                  marginBottom: 10,
+                                  padding: "10px 14px",
+                                  marginBottom: 12,
                                   border: "1px solid rgba(56, 189, 248, 0.2)",
                                 }}
                               >
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                                  <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#38bdf8" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 6 }}>
+                                  <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#38bdf8" }}>
                                     📊 Rentabilidad Compuesta en Cajita por Períodos de Tasa:
                                   </span>
-                                  <span style={{ fontSize: "0.68rem", color: "#10b981", fontWeight: 700 }}>
+                                  <span style={{ fontSize: "0.78rem", color: "#10b981", fontWeight: 700 }}>
                                     Total Ganado en Cajita: +${yieldData.liquidEarnedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })} {acc.currency || "COP"}
                                   </span>
                                 </div>
-                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 6 }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 8 }}>
                                   {yieldData.periodBreakdown.map((p, pIdx) => (
                                     <div
                                       key={pIdx}
                                       style={{
                                         background: "rgba(0,0,0,0.3)",
-                                        padding: "6px 8px",
+                                        padding: "8px 10px",
                                         borderRadius: 6,
                                         border: "1px solid rgba(255,255,255,0.05)",
                                       }}
                                     >
-                                      <div style={{ display: "flex", justifyContent: "space-between", color: "#94a3b8", fontSize: "0.62rem" }}>
+                                      <div style={{ display: "flex", justifyContent: "space-between", color: "#94a3b8", fontSize: "0.72rem" }}>
                                         <span>{p.startDate} al {p.endDate}</span>
                                         <span style={{ color: "#38bdf8", fontWeight: 700 }}>{p.rateEA}% E.A.</span>
                                       </div>
-                                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3, fontSize: "0.65rem" }}>
+                                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: "0.75rem" }}>
                                         <span style={{ color: "#64748b" }}>{p.days} días activos</span>
                                         <span style={{ color: "#10b981", fontWeight: 700, fontFamily: "JetBrains Mono" }}>
                                           +${p.interestEarned.toLocaleString("en-US", { maximumFractionDigits: 2 })} {acc.currency || "COP"}
@@ -2169,12 +2176,12 @@ export default function FixedIncomeHub() {
                                 flexWrap: "wrap",
                                 alignItems: "center",
                                 justifyContent: "space-between",
-                                gap: 8,
-                                marginBottom: 10,
+                                gap: 10,
+                                marginBottom: 12,
                               }}
                             >
                               {/* Filter buttons (Tipo) */}
-                              <div style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(255,255,255,0.04)", padding: 2, borderRadius: 6 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(255,255,255,0.04)", padding: "3px 4px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)" }}>
                                 {[
                                   { id: "all", label: "Todos" },
                                   { id: "credit", label: "+ Depósitos" },
@@ -2188,9 +2195,9 @@ export default function FixedIncomeHub() {
                                       background: currentType === t.id ? (t.id === "credit" ? "#10b981" : t.id === "debit" ? "#f43f5e" : "rgba(255,255,255,0.18)") : "transparent",
                                       color: currentType === t.id ? (t.id === "credit" || t.id === "debit" ? "#000" : "#fff") : "#94a3b8",
                                       border: "none",
-                                      borderRadius: 4,
-                                      padding: "3px 8px",
-                                      fontSize: "0.65rem",
+                                      borderRadius: 5,
+                                      padding: "4px 10px",
+                                      fontSize: "0.78rem",
                                       fontWeight: currentType === t.id ? 700 : 500,
                                       cursor: "pointer",
                                     }}
@@ -2206,11 +2213,11 @@ export default function FixedIncomeHub() {
                                 onChange={(e) => setMovementYear((prev) => ({ ...prev, [acc.id]: e.target.value }))}
                                 style={{
                                   background: "rgba(15, 23, 42, 0.8)",
-                                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                                  border: "1px solid rgba(255, 255, 255, 0.12)",
                                   borderRadius: 6,
                                   color: "#e2e8f0",
-                                  fontSize: "0.68rem",
-                                  padding: "3px 6px",
+                                  fontSize: "0.78rem",
+                                  padding: "5px 8px",
                                   cursor: "pointer",
                                 }}
                               >
@@ -2221,7 +2228,7 @@ export default function FixedIncomeHub() {
                               </select>
 
                               {/* Search Box */}
-                              <div style={{ flex: 1, minWidth: 140 }}>
+                              <div style={{ flex: 1, minWidth: 160 }}>
                                 <input
                                   type="text"
                                   placeholder="🔍 Buscar concepto o valor..."
@@ -2230,11 +2237,11 @@ export default function FixedIncomeHub() {
                                   style={{
                                     width: "100%",
                                     background: "rgba(15, 23, 42, 0.8)",
-                                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                                    border: "1px solid rgba(255, 255, 255, 0.12)",
                                     borderRadius: 6,
                                     color: "#f8fafc",
-                                    fontSize: "0.68rem",
-                                    padding: "4px 8px",
+                                    fontSize: "0.78rem",
+                                    padding: "5px 10px",
                                     outline: "none",
                                   }}
                                 />
@@ -2252,13 +2259,13 @@ export default function FixedIncomeHub() {
                                 style={{
                                   display: "flex",
                                   alignItems: "center",
-                                  gap: 4,
+                                  gap: 6,
                                   background: "rgba(56, 189, 248, 0.15)",
                                   border: "1px solid rgba(56, 189, 248, 0.3)",
                                   color: "#38bdf8",
                                   borderRadius: 6,
-                                  padding: "4px 10px",
-                                  fontSize: "0.68rem",
+                                  padding: "5px 12px",
+                                  fontSize: "0.78rem",
                                   fontWeight: 700,
                                   cursor: "pointer",
                                 }}
@@ -2285,17 +2292,17 @@ export default function FixedIncomeHub() {
                                         gap: 8,
                                         background: "rgba(59, 130, 246, 0.15)",
                                         border: "1px solid rgba(59, 130, 246, 0.35)",
-                                        padding: "6px 10px",
+                                        padding: "8px 12px",
                                         borderRadius: 8,
-                                        marginBottom: 8,
-                                        fontSize: "0.72rem",
+                                        marginBottom: 10,
+                                        fontSize: "0.78rem",
                                       }}
                                     >
                                       <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#60a5fa", fontWeight: 700 }}>
                                         <span>✓ {selectedInAcc.length} seleccionados</span>
                                       </div>
 
-                                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                                         {/* Year Change Batch */}
                                         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                                           <select
@@ -2306,8 +2313,8 @@ export default function FixedIncomeHub() {
                                               border: "1px solid rgba(255,255,255,0.2)",
                                               borderRadius: 4,
                                               color: "#f8fafc",
-                                              padding: "2px 6px",
-                                              fontSize: "0.68rem",
+                                              padding: "3px 8px",
+                                              fontSize: "0.75rem",
                                             }}
                                           >
                                             <option value="2026">2026</option>
@@ -2324,8 +2331,8 @@ export default function FixedIncomeHub() {
                                               borderRadius: 4,
                                               color: "#000",
                                               fontWeight: 700,
-                                              padding: "3px 8px",
-                                              fontSize: "0.68rem",
+                                              padding: "4px 10px",
+                                              fontSize: "0.75rem",
                                               cursor: "pointer",
                                             }}
                                             title="Cambiar el año de todos los movimientos seleccionados"
@@ -2344,8 +2351,8 @@ export default function FixedIncomeHub() {
                                             borderRadius: 4,
                                             color: "#fff",
                                             fontWeight: 700,
-                                            padding: "3px 8px",
-                                            fontSize: "0.68rem",
+                                            padding: "4px 10px",
+                                            fontSize: "0.75rem",
                                             cursor: "pointer",
                                           }}
                                           title="Eliminar todos los movimientos seleccionados"
@@ -2368,8 +2375,8 @@ export default function FixedIncomeHub() {
                                             border: "1px solid rgba(255,255,255,0.2)",
                                             borderRadius: 4,
                                             color: "#94a3b8",
-                                            padding: "2px 6px",
-                                            fontSize: "0.65rem",
+                                            padding: "4px 8px",
+                                            fontSize: "0.75rem",
                                             cursor: "pointer",
                                           }}
                                         >
@@ -2378,7 +2385,7 @@ export default function FixedIncomeHub() {
                                       </div>
                                     </div>
                                   ) : (
-                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 12, fontSize: "0.64rem", color: "#94a3b8", marginBottom: 8 }}>
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 14, fontSize: "0.76rem", color: "#94a3b8", marginBottom: 10 }}>
                                       <span>Mostrando: <strong style={{ color: "#f1f5f9" }}>{filteredTx.length}</strong> de {accTx.length}</span>
                                       <span>•</span>
                                       <span>Total Entradas: <strong style={{ color: "#10b981" }}>+${totalCredits.toLocaleString("en-US", { maximumFractionDigits: 0 })}</strong></span>
@@ -2391,16 +2398,16 @@ export default function FixedIncomeHub() {
                             })()}
 
                             {/* Table Container with Scroll */}
-                            <div style={{ maxHeight: "220px", overflowY: "auto" }}>
+                            <div style={{ maxHeight: "260px", overflowY: "auto" }}>
                               {filteredTx.length === 0 ? (
-                                <div style={{ fontSize: "0.72rem", color: "#64748b", textAlign: "center", padding: "14px 0" }}>
+                                <div style={{ fontSize: "0.8rem", color: "#64748b", textAlign: "center", padding: "16px 0" }}>
                                   No se encontraron movimientos con los filtros aplicados.
                                 </div>
                               ) : (
-                                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.68rem" }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
                                   <thead>
-                                    <tr style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.08)", color: "#64748b", textAlign: "left", position: "sticky", top: 0, background: "#0b1120", zIndex: 1 }}>
-                                      <th style={{ padding: "5px 4px", width: 22, textAlign: "center" }}>
+                                    <tr style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.1)", color: "#94a3b8", textAlign: "left", position: "sticky", top: 0, background: "#0b1120", zIndex: 1 }}>
+                                      <th style={{ padding: "8px 6px", width: 28, textAlign: "center" }}>
                                         <input
                                           type="checkbox"
                                           checked={filteredTx.length > 0 && filteredTx.every((t) => selectedTxIds.has(t.id))}
@@ -2409,11 +2416,11 @@ export default function FixedIncomeHub() {
                                           style={{ cursor: "pointer" }}
                                         />
                                       </th>
-                                      <th style={{ padding: "5px 4px", fontWeight: 600 }}>Fecha</th>
-                                      <th style={{ padding: "5px 4px", fontWeight: 600 }}>Descripción / Concepto</th>
-                                      <th style={{ padding: "5px 4px", fontWeight: 600, textAlign: "center" }}>Tipo</th>
-                                      <th style={{ padding: "5px 4px", fontWeight: 600, textAlign: "right" }}>Monto</th>
-                                      <th style={{ padding: "5px 4px", width: 44, textAlign: "right" }}></th>
+                                      <th style={{ padding: "8px 6px", fontWeight: 700, width: 100 }}>Fecha</th>
+                                      <th style={{ padding: "8px 6px", fontWeight: 700 }}>Descripción / Concepto</th>
+                                      <th style={{ padding: "8px 6px", fontWeight: 700, textAlign: "center", width: 90 }}>Tipo</th>
+                                      <th style={{ padding: "8px 6px", fontWeight: 700, textAlign: "right", width: 130 }}>Monto</th>
+                                      <th style={{ padding: "8px 6px", width: 55, textAlign: "right" }}></th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -2432,12 +2439,12 @@ export default function FixedIncomeHub() {
                                         <tr
                                           key={tx.id || `tx_${txIdx}`}
                                           style={{
-                                            borderBottom: "1px solid rgba(255, 255, 255, 0.03)",
-                                            background: isSelected ? "rgba(59, 130, 246, 0.1)" : "transparent",
+                                            borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+                                            background: isSelected ? "rgba(59, 130, 246, 0.12)" : "transparent",
                                             transition: "background 0.15s ease",
                                           }}
                                         >
-                                          <td style={{ padding: "5px 4px", textAlign: "center" }}>
+                                          <td style={{ padding: "8px 6px", textAlign: "center" }}>
                                             <input
                                               type="checkbox"
                                               checked={isSelected}
@@ -2445,13 +2452,13 @@ export default function FixedIncomeHub() {
                                               style={{ cursor: "pointer" }}
                                             />
                                           </td>
-                                          <td style={{ padding: "5px 4px", color: "#94a3b8", fontFamily: "JetBrains Mono" }}>{tx.date}</td>
-                                          <td style={{ padding: "5px 4px", color: "#e2e8f0" }}>{tx.description || "Movimiento"}</td>
-                                          <td style={{ padding: "5px 4px", textAlign: "center" }}>
+                                          <td style={{ padding: "8px 6px", color: "#94a3b8", fontFamily: "JetBrains Mono", fontSize: "0.78rem" }}>{tx.date}</td>
+                                          <td style={{ padding: "8px 6px", color: "#e2e8f0", fontWeight: 500 }}>{tx.description || "Movimiento"}</td>
+                                          <td style={{ padding: "8px 6px", textAlign: "center" }}>
                                             <span style={{
-                                              padding: "1px 6px",
+                                              padding: "3px 8px",
                                               borderRadius: 4,
-                                              fontSize: "0.6rem",
+                                              fontSize: "0.72rem",
                                               fontWeight: 700,
                                               background: isCredit ? "rgba(16, 185, 129, 0.15)" : "rgba(244, 63, 94, 0.15)",
                                               color: isCredit ? "#10b981" : "#f43f5e",
@@ -2460,15 +2467,16 @@ export default function FixedIncomeHub() {
                                             </span>
                                           </td>
                                           <td style={{
-                                            padding: "5px 4px",
+                                            padding: "8px 6px",
                                             textAlign: "right",
                                             fontFamily: "JetBrains Mono",
-                                            fontWeight: 600,
+                                            fontWeight: 700,
+                                            fontSize: "0.85rem",
                                             color: isCredit ? "#10b981" : "#f43f5e",
                                           }}>
                                             {isCredit ? "+" : "-"}${Math.abs(Number(tx.amount || 0)).toLocaleString("en-US", { maximumFractionDigits: 2 })}
                                           </td>
-                                          <td style={{ padding: "5px 4px", textAlign: "right", whiteSpace: "nowrap" }}>
+                                          <td style={{ padding: "8px 6px", textAlign: "right", whiteSpace: "nowrap" }}>
                                             <button
                                               type="button"
                                               onClick={() => {
@@ -2481,12 +2489,14 @@ export default function FixedIncomeHub() {
                                                 setModalOpen(true);
                                               }}
                                               style={{
-                                                background: "transparent",
+                                                background: "rgba(255, 255, 255, 0.04)",
                                                 border: "none",
-                                                color: "#64748b",
+                                                borderRadius: 4,
+                                                color: "#94a3b8",
                                                 cursor: "pointer",
-                                                fontSize: "0.7rem",
-                                                padding: "0 4px",
+                                                fontSize: "0.82rem",
+                                                padding: "3px 6px",
+                                                marginRight: 4,
                                               }}
                                               title="Editar este movimiento"
                                             >
@@ -2496,12 +2506,13 @@ export default function FixedIncomeHub() {
                                               type="button"
                                               onClick={() => handleDeleteTransaction(tx)}
                                               style={{
-                                                background: "transparent",
+                                                background: "rgba(244, 63, 94, 0.08)",
                                                 border: "none",
-                                                color: "#475569",
+                                                borderRadius: 4,
+                                                color: "#f43f5e",
                                                 cursor: "pointer",
-                                                fontSize: "0.65rem",
-                                                padding: "0 2px",
+                                                fontSize: "0.78rem",
+                                                padding: "3px 6px",
                                               }}
                                               title="Eliminar movimiento"
                                             >

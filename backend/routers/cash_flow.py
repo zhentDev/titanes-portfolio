@@ -210,6 +210,7 @@ class CustomRatiosModel(BaseModel):
 
 class CashFlowSyncPayload(BaseModel):
     model_config = {"extra": "allow"}
+    startPeriod: str | None = None
     activePeriod: str | None = None
     currency: str | None = None
     allocationModel: str | None = None
@@ -249,6 +250,8 @@ def sync_cash_flow_state(payload: CashFlowSyncPayload, request: Request):
             return v.model_dump()
         return v
 
+    if payload.startPeriod is not None:
+        db["startPeriod"] = payload.startPeriod
     if payload.activePeriod is not None:
         db["activePeriod"] = payload.activePeriod
     if payload.currency is not None:

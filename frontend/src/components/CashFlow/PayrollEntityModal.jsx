@@ -22,6 +22,7 @@ export default function PayrollEntityModal({
   const [accountType, setAccountType] = useState(currentAccount.accountType || "Ahorros / Débito");
   const [accountNumber, setAccountNumber] = useState(currentAccount.accountNumber || "");
   const [payDay, setPayDay] = useState(currentAccount.payDay !== undefined ? currentAccount.payDay : 25);
+  const [customPayDate, setCustomPayDate] = useState(currentAccount.customPayDate || "");
   const [targetCycle, setTargetCycle] = useState(currentAccount.targetCycle || "next_month");
   const [paymentFrequency, setPaymentFrequency] = useState(currentAccount.paymentFrequency || "monthly");
 
@@ -41,6 +42,7 @@ export default function PayrollEntityModal({
       color: preset?.color || "#820ad1",
       icon: preset?.icon || "🏦",
       payDay: Number(payDay) || 25,
+      customPayDate: customPayDate || null,
       targetCycle,
       paymentFrequency,
     };
@@ -202,7 +204,7 @@ export default function PayrollEntityModal({
             <div className="cashflow-form-row">
               <div>
                 <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: 4 }}>
-                  Día del Mes (1 al 31)
+                  Día Habitual de Nómina (1 al 31)
                 </label>
                 <input
                   type="number"
@@ -239,6 +241,44 @@ export default function PayrollEntityModal({
                   <option value="monthly">Mensual (1 Pago / Mes)</option>
                   <option value="biweekly">Quincenal (2 Pagos / Mes)</option>
                 </select>
+              </div>
+            </div>
+
+            {/* Business Day Rule Notice */}
+            <div style={{ background: "rgba(56, 189, 248, 0.1)", border: "1px solid rgba(56, 189, 248, 0.25)", borderRadius: "8px", padding: "8px 12px", fontSize: "0.74rem", color: "#7dd3fc" }}>
+              ⚖️ <strong>Regla de Día Hábil Bancario:</strong> Si el día {payDay} cae sábado o domingo, el sistema calcula automáticamente tu pago el <strong>viernes anterior hábil</strong> (ej. si 25 es sábado, calcula 24 viernes).
+            </div>
+
+            {/* Optional Manual Date Override */}
+            <div>
+              <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: 4 }}>
+                ¿Te consignaron en una fecha especial este mes? (Opcional - Reemplazar fecha de pago):
+              </label>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input
+                  type="date"
+                  style={{
+                    flex: 1,
+                    background: "rgba(13, 18, 38, 0.7)",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    borderRadius: "8px",
+                    padding: "7px 12px",
+                    color: "#f8fafc",
+                    fontSize: "0.82rem",
+                  }}
+                  value={customPayDate}
+                  onChange={(e) => setCustomPayDate(e.target.value)}
+                />
+                {customPayDate && (
+                  <button
+                    type="button"
+                    onClick={() => setCustomPayDate("")}
+                    style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6, color: "#94a3b8", fontSize: "0.72rem", padding: "6px 10px", cursor: "pointer" }}
+                    title="Restablecer a día automático de nómina"
+                  >
+                    ✕ Limpiar
+                  </button>
+                )}
               </div>
             </div>
 
