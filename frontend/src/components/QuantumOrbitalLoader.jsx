@@ -1,3 +1,4 @@
+```jsx
 import { useEffect, useRef, useState } from "react";
 
 /**
@@ -394,23 +395,4 @@ export default function QuantumOrbitalLoader({
               animation: "pulse 1s infinite alternate",
             }}
           />
-          <span style={{ color: "#e2e8f0", fontWeight: 600, letterSpacing: "0.02em" }}>
-            {message}
-          </span>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.72rem", color: "var(--text-muted)" }}>
-          <span style={{ color: "#ffd166", fontFamily: "var(--font-mono, monospace)" }}>
-            {currentInfo.from.formula} ({currentInfo.from.name.split(" ")[0]})
-          </span>
-          <span style={{ color: "#00e5ff" }}>➔</span>
-          <span style={{ color: "#06d6a0", fontFamily: "var(--font-mono, monospace)" }}>
-            {currentInfo.to.formula} ({currentInfo.to.name.split(" ")[0]})
-          </span>
-          <span style={{ color: "rgba(255,255,255,0.4)" }}>•</span>
-          <span style={{ color: "rgba(255,255,255,0.6)" }}>Transición de Schrödinger</span>
-        </div>
-      </div>
-    </div>
-  );
-}
+          <span style={{ color: "#e2e8f0", fontWeight:
