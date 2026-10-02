@@ -117,77 +117,87 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
         }
         setLastUpdate(new Date());
 
-        // 3. Intraday chart: Only build if market is actively open and data is consistent
-        const isLiveTrading = safeQuotesData[0]?.market_open;
-        if (isLiveTrading) {
-          try {
-            const intradayPromises = activeTickers.map((t) => fetchIntraday(t).catch(() => []));
-            const intradayResults = await Promise.all(intradayPromises);
+        // 3. Intraday chart: Carga la trayectoria completa de la sesión más reciente (tanto abierta como cerrada)
+        let chartLoaded = false;
+        try {
+          const intradayPromises = activeTickers.map((t) => fetchIntraday(t).catch(() => []));
+          const intradayResults = await Promise.all(intradayPromises);
 
-            // Only plot if all active tickers returned intraday points
-            const allHaveData = intradayResults.every(
-              (res) => Array.isArray(res) && res.length > 2,
-            );
+          // Verificar si hay datos intradía válidos en al menos una parte de los tickers
+          const validResults = intradayResults.filter(
+            (res) => Array.isArray(res) && res.length > 2,
+          );
 
-            if (allHaveData) {
-              const allTimes = new Set();
-              intradayResults.forEach((series) => {
-                if (Array.isArray(series)) {
-                  series.forEach((p) => {
-                    if (p && p.time) allTimes.add(p.time);
-                  });
+          if (validResults.length > 0) {
+            const allTimes = new Set();
+            intradayResults.forEach((series) => {
+              if (Array.isArray(series)) {
+                series.forEach((p) => {
+                  if (p && p.time) allTimes.add(p.time);
+                });
+              }
+            });
+
+            const sortedTimes = Array.from(allTimes).sort((a, b) => a - b);
+            const chartSeries = [];
+
+            for (const t of sortedTimes) {
+              let stockValue = 0;
+              let validPoint = true;
+
+              intradayResults.forEach((series, i) => {
+                const ticker = activeTickers[i];
+                const holding = activeHoldings.find((h) => h.ticker === ticker);
+                const numSlots = currentNav?.summary?.total_slots || activeNumSlots;
+                const slotValue = activeInvestment / numSlots;
+                const shares =
+                  holding && holding.start_price > 0
+                    ? slotValue / holding.start_price
+                    : holding
+                      ? holding.shares
+                      : 0;
+
+                const safeSeries = Array.isArray(series) ? series : [];
+                // Buscar el punto exacto o el precio más cercano anterior (stepwise holding)
+                let point = safeSeries.find((p) => p && p.time === t);
+                if (!point) {
+                  // Fallback: punto más cercano previo para activos con menor liquidez
+                  for (let idx = safeSeries.length - 1; idx >= 0; idx--) {
+                    if (safeSeries[idx]?.time <= t) {
+                      point = safeSeries[idx];
+                      break;
+                    }
+                  }
+                }
+                const price = point?.value ?? safeQuotesData.find((q) => q.ticker === ticker)?.price;
+
+                if (price && !isNaN(price)) {
+                  stockValue += price * shares;
+                } else {
+                  validPoint = false;
                 }
               });
 
-              const sortedTimes = Array.from(allTimes).sort((a, b) => a - b);
-              const chartSeries = [];
-
-              for (const t of sortedTimes) {
-                let stockValue = 0;
-                let validPoint = true;
-
-                intradayResults.forEach((series, i) => {
-                  const ticker = activeTickers[i];
-                  const holding = activeHoldings.find((h) => h.ticker === ticker);
-                  const numSlots = currentNav?.summary?.total_slots || activeNumSlots;
-                  const slotValue = activeInvestment / numSlots;
-                  const shares =
-                    holding && holding.start_price > 0
-                      ? slotValue / holding.start_price
-                      : holding
-                        ? holding.shares
-                        : 0;
-
-                  const safeSeries = Array.isArray(series) ? series : [];
-                  const point = safeSeries.find((p) => p && p.time === t);
-                  const price = point?.value ?? safeQuotesData.find((q) => q.ticker === ticker)?.price;
-
-                  if (price && !isNaN(price)) {
-                    stockValue += price * shares;
-                  } else {
-                    validPoint = false;
-                  }
+              // Strictly active equity only
+              if (validPoint && stockValue > 0) {
+                chartSeries.push({
+                  time: t,
+                  value: round2(stockValue),
                 });
-
-                // Strictly active equity only (no uninvested cash added)
-                if (validPoint && stockValue > 0) {
-                  chartSeries.push({
-                    time: t,
-                    value: round2(stockValue),
-                  });
-                }
-              }
-
-              if (chartSeries.length > 1) {
-                setIntradayChart(chartSeries);
               }
             }
-          } catch (intradayErr) {
-            console.warn("[LIVE MODE] Velas intradía no disponibles:", intradayErr);
-            // keep previous chart to avoid flicker/disappearance
+
+            if (chartSeries.length > 1) {
+              setIntradayChart(chartSeries);
+              chartLoaded = true;
+            }
           }
-        } else {
-          // Market closed: keep the curve always visible as a flat constant (no API needed here).
+        } catch (intradayErr) {
+          console.warn("[LIVE MODE] Velas intradía no disponibles:", intradayErr);
+        }
+
+        // Si fallaron las velas intradía o no hubo puntos, usar línea base de último cierre
+        if (!chartLoaded) {
           const baseline =
             activeHoldings.reduce((sum, h) => {
               const q = safeQuotesData.find((qq) => qq.ticker === h.ticker);
@@ -196,10 +206,10 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
             }, 0) || currentNav?.summary?.active_invested || activeInvestment;
 
           setIntradayChart((prev) => {
-            if (prev && prev.length > 0) return prev;
+            if (prev && prev.length > 1) return prev;
             const now = Math.floor(Date.now() / 1000);
             return [
-              { time: now - 60, value: round2(baseline) },
+              { time: now - 3600, value: round2(baseline) },
               { time: now, value: round2(baseline) },
             ];
           });
@@ -221,17 +231,8 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
       if (marketOpenRef.current) {
         load(false);
       } else if (nyseIsOpenNow()) {
-        // Client believes the market should be open: verify with the server (covers holidays)
+        // El cliente detecta horario de apertura: verificar con el servidor y refrescar/limpiar
         load(false);
-      } else {
-        // Market closed & outside NYSE hours: advance the curve as a flat constant, no API calls
-        setIntradayChart((prev) => {
-          if (!prev || prev.length === 0) return prev;
-          const last = prev[prev.length - 1];
-          const now = Math.floor(Date.now() / 1000);
-          if (now - last.time < 45) return prev;
-          return [...prev, { time: now, value: last.value }];
-        });
       }
     }, POLL_INTERVAL);
     return () => clearInterval(interval);
@@ -566,7 +567,7 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
             }}
           >
             <span>
-              {marketOpen ? "Gráfica Intradía de Hoy (5m)" : "Curva de Capital (Último Cierre)"}
+              {marketOpen ? "Gráfica Intradía de Hoy (5m)" : "Trayectoria Intradía (Última Sesión Cerrada)"}
             </span>
             {!marketOpen && (
               <span
@@ -574,12 +575,13 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
                   fontSize: "0.68rem",
                   padding: "2px 8px",
                   borderRadius: 4,
-                  background: "rgba(255,255,255,0.06)",
+                  background: "rgba(148, 163, 184, 0.12)",
                   color: "#94a3b8",
                   fontWeight: 600,
+                  border: "1px solid rgba(148, 163, 184, 0.2)",
                 }}
               >
-                Mercado Cerrado — línea constante, sin consultas a la API
+                Mercado Cerrado — Historial de la sesión preservado
               </span>
             )}
           </h3>
