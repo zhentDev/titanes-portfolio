@@ -66,6 +66,58 @@ const ORBITALS = [
     },
   },
   {
+    name: "3s (Nivel con Doble Nodo Radial)",
+    formula: "n=3, l=0, m=0",
+    colorA: "#ff7b00",
+    colorB: "#ffd166",
+    energy: "-1.51 eV",
+    sampler: (u1, u2, u3) => {
+      // 3s has two spherical radial nodes: 3 concentric spherical shells
+      let r;
+      let phase;
+      if (u1 < 0.15) {
+        r = 0.5 + u1 * 1.5; // inner shell
+        phase = 1;
+      } else if (u1 < 0.55) {
+        r = 1.6 + (u1 - 0.15) * 2.8; // middle shell
+        phase = -1;
+      } else {
+        r = 3.0 + (u1 - 0.55) * 2.4; // outer diffuse shell
+        phase = 1;
+      }
+      const theta = Math.acos(2 * u2 - 1);
+      const phi = 2 * Math.PI * u3;
+      return [
+        r * Math.sin(theta) * Math.cos(phi),
+        r * Math.cos(theta),
+        r * Math.sin(theta) * Math.sin(phi),
+        phase,
+      ];
+    },
+  },
+  {
+    name: "3p_z (Lóbulo con Capa Radial Interna)",
+    formula: "n=3, l=1, m=0",
+    colorA: "#06d6a0",
+    colorB: "#a78bfa",
+    energy: "-1.51 eV",
+    sampler: (u1, u2, u3) => {
+      // 3p has 1 radial node: inner small dumbbell + outer large dumbbell
+      const isInner = u1 < 0.22;
+      const r = isInner ? 0.7 + u1 * 2.2 : 2.2 + u1 * 2.6;
+      const sign = u2 > 0.5 ? 1 : -1;
+      const cosTheta = sign * Math.sqrt(Math.abs(2 * u2 - 1));
+      const sinTheta = Math.sqrt(Math.max(0, 1 - cosTheta * cosTheta));
+      const phi = 2 * Math.PI * u3;
+      return [
+        r * sinTheta * Math.cos(phi) * 0.8,
+        r * cosTheta * 1.25,
+        r * sinTheta * Math.sin(phi) * 0.8,
+        isInner ? -sign : sign,
+      ];
+    },
+  },
+  {
     name: "3d_z² (Orbital Toroide)",
     formula: "n=3, l=2, m=0",
     colorA: "#ff006e",
@@ -122,13 +174,64 @@ const ORBITALS = [
     },
   },
   {
+    name: "4d_xz (Lóbulos Diagonales 3D)",
+    formula: "n=4, l=2, m=1",
+    colorA: "#38bdf8",
+    colorB: "#ec4899",
+    energy: "-0.85 eV",
+    sampler: (u1, u2, u3) => {
+      // 4 lobes pointing along x=z and x=-z diagonals
+      const r = 1.3 + u1 * 3.0;
+      const quadrant = Math.floor(u2 * 4);
+      const angle = (quadrant * Math.PI) / 2 + Math.PI / 4 + (Math.random() - 0.5) * 0.5;
+      const y = (u3 - 0.5) * 0.7;
+      const sign = quadrant % 2 === 0 ? 1 : -1;
+      return [
+        r * Math.cos(angle) * 1.15,
+        y,
+        r * Math.sin(angle) * 1.15,
+        sign,
+      ];
+    },
+  },
+  {
+    name: "4f_xyz (Octaedro Cúbico 8 Lóbulos)",
+    formula: "n=4, l=3, m=2",
+    colorA: "#f43f5e",
+    colorB: "#8b5cf6",
+    energy: "-0.85 eV",
+    sampler: (u1, u2, u3) => {
+      // 8 lobes located in each of the 8 octants: xyz > 0, etc.
+      const r = 1.4 + u1 * 2.8;
+      const octant = Math.floor(u2 * 8);
+      const sx = (octant & 1) ? 1 : -1;
+      const sy = (octant & 2) ? 1 : -1;
+      const sz = (octant & 4) ? 1 : -1;
+      const spread = 0.55;
+      const dx = (Math.random() - 0.5) * spread;
+      const dy = (Math.random() - 0.5) * spread;
+      const dz = (Math.random() - 0.5) * spread;
+      const vx = sx + dx;
+      const vy = sy + dy;
+      const vz = sz + dz;
+      const norm = Math.sqrt(vx * vx + vy * vy + vz * vz) || 1;
+      const sign = (sx * sy * sz) > 0 ? 1 : -1;
+      return [
+        (vx / norm) * r * 1.25,
+        (vy / norm) * r * 1.25,
+        (vz / norm) * r * 1.25,
+        sign,
+      ];
+    },
+  },
+  {
     name: "4f (Roseta Cuántica)",
     formula: "n=4, l=3, m=1",
     colorA: "#c77dff",
     colorB: "#00b4d8",
     energy: "-0.85 eV",
     sampler: (u1, u2, u3) => {
-      // 6 or 8 rosette lobes
+      // 6 rosette lobes in alternating directions
       const r = 1.4 + u1 * 3.2;
       const lobe = Math.floor(u2 * 6);
       const phi = (lobe * Math.PI) / 3 + (Math.random() - 0.5) * 0.5;
@@ -139,6 +242,75 @@ const ORBITALS = [
         r * Math.cos(theta) * 1.2,
         r * Math.sin(theta) * Math.sin(phi) * 1.1,
         sign,
+      ];
+    },
+  },
+  {
+    name: "5g_z⁴ (Hexadecapolo Cuántico Exótico)",
+    formula: "n=5, l=4, m=0",
+    colorA: "#00f0ff",
+    colorB: "#ff007f",
+    energy: "-0.54 eV",
+    sampler: (u1, u2, u3) => {
+      // 5g state has multi-toroidal ring structure with 2 polar lobes and 2 concentric rings
+      const mode = Math.floor(u1 * 3);
+      if (mode === 0) {
+        // High-latitude torus rings
+        const ringR = 1.6 + u2 * 1.2;
+        const ringPhi = 2 * Math.PI * u3;
+        const ringZ = (u3 > 0.5 ? 1 : -1) * (0.9 + Math.random() * 0.4);
+        return [ringR * Math.cos(ringPhi), ringZ, ringR * Math.sin(ringPhi), -1];
+      } else if (mode === 1) {
+        // Outer equatorial torus
+        const ringR = 2.8 + u2 * 1.5;
+        const ringPhi = 2 * Math.PI * u3;
+        const ringZ = (Math.random() - 0.5) * 0.4;
+        return [ringR * Math.cos(ringPhi), ringZ, ringR * Math.sin(ringPhi), 1];
+      } else {
+        // Extreme polar sharp lobes
+        const r = 1.8 + u2 * 2.8;
+        const sign = u3 > 0.5 ? 1 : -1;
+        const cosTheta = sign * Math.pow(Math.abs(2 * u3 - 1), 0.2);
+        const sinTheta = Math.sqrt(Math.max(0, 1 - cosTheta * cosTheta));
+        const phi = 2 * Math.PI * Math.random();
+        return [
+          r * sinTheta * Math.cos(phi) * 0.5,
+          r * cosTheta * 1.45,
+          r * sinTheta * Math.sin(phi) * 0.5,
+          1,
+        ];
+      }
+    },
+  },
+  {
+    name: "sp³ Híbrido (Superposición Coherente)",
+    formula: "|ψ⟩ = ½(|2s⟩ + |2px⟩ + |2py⟩ + |2pz⟩)",
+    colorA: "#10b981",
+    colorB: "#f59e0b",
+    energy: "Enlace Tetraédrico",
+    sampler: (u1, u2, u3) => {
+      // 4 directional tetrahedral lobes pointing to vertices of a regular tetrahedron
+      const r = 1.0 + u1 * 3.2;
+      const lobe = Math.floor(u2 * 4);
+      // Vertices of tetrahedron
+      const dirs = [
+        [1, 1, 1],
+        [-1, -1, 1],
+        [-1, 1, -1],
+        [1, -1, -1],
+      ];
+      const d = dirs[lobe];
+      const norm = Math.sqrt(3);
+      const spread = 0.5;
+      const vx = d[0] / norm + (Math.random() - 0.5) * spread;
+      const vy = d[1] / norm + (Math.random() - 0.5) * spread;
+      const vz = d[2] / norm + (Math.random() - 0.5) * spread;
+      const vLen = Math.sqrt(vx * vx + vy * vy + vz * vz) || 1;
+      return [
+        (vx / vLen) * r * 1.25,
+        (vy / vLen) * r * 1.25,
+        (vz / vLen) * r * 1.25,
+        lobe % 2 === 0 ? 1 : -1,
       ];
     },
   },
@@ -220,7 +392,7 @@ export default function QuantumOrbitalLoader({
       if (!isRunning) return;
 
       const elapsedSec = (now - startTime) / 1000;
-      const CYCLE_DURATION = 1.5; // Every 1.5 seconds transition
+      const CYCLE_DURATION = 1.8; // 1.8s per transition gives time to appreciate the geometry
       const totalStates = ORBITALS.length || 1;
       const rawCycle = Math.floor(elapsedSec / CYCLE_DURATION);
       const cycleIndex = Math.max(0, isNaN(rawCycle) ? 0 : rawCycle);
@@ -403,16 +575,16 @@ export default function QuantumOrbitalLoader({
           </span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.72rem", color: "var(--text-muted)" }}>
-          <span style={{ color: "#ffd166", fontFamily: "var(--font-mono, monospace)" }}>
-            {currentInfo?.from?.formula || "n=1, l=0, m=0"} ({(currentInfo?.from?.name || "1s").split(" ")[0]})
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.72rem", color: "var(--text-muted)", flexWrap: "wrap", justifyContent: "center" }}>
+          <span style={{ color: currentInfo?.from?.colorA || "#ffd166", fontFamily: "var(--font-mono, monospace)", fontWeight: 700 }}>
+            {currentInfo?.from?.name || "1s"} [{currentInfo?.from?.energy || "-13.6 eV"}]
           </span>
-          <span style={{ color: "#00e5ff" }}>➔</span>
-          <span style={{ color: "#06d6a0", fontFamily: "var(--font-mono, monospace)" }}>
-            {currentInfo?.to?.formula || "n=2, l=0, m=0"} ({(currentInfo?.to?.name || "2s").split(" ")[0]})
+          <span style={{ color: "#00e5ff", fontWeight: 800 }}>➔</span>
+          <span style={{ color: currentInfo?.to?.colorA || "#06d6a0", fontFamily: "var(--font-mono, monospace)", fontWeight: 700 }}>
+            {currentInfo?.to?.name || "2s"} [{currentInfo?.to?.energy || "-3.4 eV"}]
           </span>
           <span style={{ color: "rgba(255,255,255,0.4)" }}>•</span>
-          <span style={{ color: "rgba(255,255,255,0.6)" }}>Transición de Schrödinger</span>
+          <span style={{ color: "rgba(255,255,255,0.7)" }}>Salto Cuántico de Schrödinger</span>
         </div>
       </div>
     </div>
