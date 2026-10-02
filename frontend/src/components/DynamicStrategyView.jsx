@@ -1754,20 +1754,39 @@ export default function DynamicStrategyView({
         )}
       </div>
 
-      {/* ── Detalle de Posiciones Activas y Cerradas (Holdings & Realized Trades) ── */}
-      {(navData?.holdings?.length > 0 || navData?.closed_holdings?.length > 0) && (
-        <div className="card fade-up" style={{ padding: "20px" }}>
-          <HoldingsTable
-            holdings={navData?.holdings || []}
-            closedHoldings={navData?.closed_holdings || []}
-            summary={navData?.summary || {}}
-            investment={simulatedCapital}
-            numSlots={numSlots}
-            unit={unit}
-            onToggleUnit={() => setUnit((u) => (u === "pct" ? "usd" : "pct"))}
-            isRealMoney={Boolean(strategy.isRealMoney)}
-          />
-        </div>
+      {/* ── Detalle de Posiciones (Posiciones Reales vs Ganancias Cerradas en Simuladas) ── */}
+      {strategy.isRealMoney ? (
+        (navData?.holdings?.length > 0 || navData?.closed_holdings?.length > 0) && (
+          <div className="card fade-up" style={{ padding: "20px" }}>
+            <HoldingsTable
+              holdings={navData?.holdings || []}
+              closedHoldings={navData?.closed_holdings || []}
+              summary={navData?.summary || {}}
+              investment={simulatedCapital}
+              numSlots={numSlots}
+              unit={unit}
+              onToggleUnit={() => setUnit((u) => (u === "pct" ? "usd" : "pct"))}
+              isRealMoney={true}
+              closedOnly={false}
+            />
+          </div>
+        )
+      ) : (
+        navData?.closed_holdings?.length > 0 && (
+          <div className="card fade-up" style={{ padding: "20px" }}>
+            <HoldingsTable
+              holdings={[]}
+              closedHoldings={navData?.closed_holdings || []}
+              summary={navData?.summary || {}}
+              investment={simulatedCapital}
+              numSlots={numSlots}
+              unit={unit}
+              onToggleUnit={() => setUnit((u) => (u === "pct" ? "usd" : "pct"))}
+              isRealMoney={false}
+              closedOnly={true}
+            />
+          </div>
+        )
       )}
 
       {/* ── Constellation Grid Visualizer (Slots) ────── */}

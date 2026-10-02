@@ -11,11 +11,15 @@ export default function HoldingsTable({
   unit = "pct",
   onToggleUnit,
   isRealMoney = false,
+  closedOnly = false,
 }) {
-  const [activeTab, setActiveTab] = useState("active"); // 'active' | 'closed'
+  const [activeTab, setActiveTab] = useState(closedOnly ? "closed" : "active"); // 'active' | 'closed'
   const [mobileViewMode, setMobileViewMode] = useState("auto"); // 'auto' | 'card' | 'table'
 
+  if (closedOnly && !closedHoldings?.length) return null;
   if (!holdings?.length && !closedHoldings?.length) return null;
+
+  const currentTab = closedOnly ? "closed" : activeTab;
 
   const slotValue = investment / numSlots;
 
@@ -50,86 +54,117 @@ export default function HoldingsTable({
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           {/* Tab Switcher: Activas vs Cerradas */}
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-              background: "rgba(0, 0, 0, 0.25)",
-              border: "1px solid var(--border)",
-              borderRadius: "12px",
-              padding: "3px",
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setActiveTab("active")}
+          {closedOnly ? (
+            <div
               style={{
-                padding: "4px 10px",
-                borderRadius: "8px",
-                border: "none",
-                fontSize: "0.78rem",
-                fontWeight: 700,
-                cursor: "pointer",
-                background: activeTab === "active" ? "var(--accent-primary)" : "transparent",
-                color: activeTab === "active" ? "#000" : "var(--text-muted)",
-                transition: "all 0.15s ease",
-                display: "flex",
+                display: "inline-flex",
                 alignItems: "center",
-                gap: 5,
+                gap: 6,
+                background: "rgba(16, 185, 129, 0.12)",
+                border: "1px solid rgba(16, 185, 129, 0.3)",
+                borderRadius: "10px",
+                padding: "4px 10px",
+                fontSize: "0.8rem",
+                fontWeight: 700,
+                color: "#34d399",
               }}
             >
-              <span>🟢 Activas</span>
+              <span>💼 Ganancias / Pérdidas en Ventas Realizadas</span>
               <span
                 style={{
                   fontSize: "0.7rem",
-                  padding: "1px 5px",
+                  padding: "1px 6px",
                   borderRadius: 10,
-                  background: activeTab === "active" ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.08)",
-                }}
-              >
-                {holdings.length}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("closed")}
-              style={{
-                padding: "4px 10px",
-                borderRadius: "8px",
-                border: "none",
-                fontSize: "0.78rem",
-                fontWeight: 700,
-                cursor: "pointer",
-                background: activeTab === "closed" ? "#10b981" : "transparent",
-                color:
-                  activeTab === "closed"
-                    ? "#000"
-                    : closedHoldings.length > 0
-                    ? "#34d399"
-                    : "var(--text-muted)",
-                transition: "all 0.15s ease",
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-              }}
-              title="Ver el historial y rentabilidad acumulada de las acciones que has vendido o cerrado"
-            >
-              <span>💼 Cerradas</span>
-              <span
-                style={{
-                  fontSize: "0.7rem",
-                  padding: "1px 5px",
-                  borderRadius: 10,
-                  background: activeTab === "closed" ? "rgba(0,0,0,0.2)" : "rgba(16,185,129,0.15)",
-                  color: activeTab === "closed" ? "#000" : "#10b981",
+                  background: "rgba(16, 185, 129, 0.25)",
+                  color: "#10b981",
+                  fontWeight: 800,
                 }}
               >
                 {closedHoldings.length}
               </span>
-            </button>
-          </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                background: "rgba(0, 0, 0, 0.25)",
+                border: "1px solid var(--border)",
+                borderRadius: "12px",
+                padding: "3px",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setActiveTab("active")}
+                style={{
+                  padding: "4px 10px",
+                  borderRadius: "8px",
+                  border: "none",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  background: currentTab === "active" ? "var(--accent-primary)" : "transparent",
+                  color: currentTab === "active" ? "#000" : "var(--text-muted)",
+                  transition: "all 0.15s ease",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 5,
+                }}
+              >
+                <span>🟢 Activas</span>
+                <span
+                  style={{
+                    fontSize: "0.7rem",
+                    padding: "1px 5px",
+                    borderRadius: 10,
+                    background: currentTab === "active" ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.08)",
+                  }}
+                >
+                  {holdings.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("closed")}
+                style={{
+                  padding: "4px 10px",
+                  borderRadius: "8px",
+                  border: "none",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  background: currentTab === "closed" ? "#10b981" : "transparent",
+                  color:
+                    currentTab === "closed"
+                      ? "#000"
+                      : closedHoldings.length > 0
+                      ? "#34d399"
+                      : "var(--text-muted)",
+                  transition: "all 0.15s ease",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 5,
+                }}
+                title="Ver el historial y rentabilidad acumulada de las acciones que has vendido o cerrado"
+              >
+                <span>💼 Cerradas</span>
+                <span
+                  style={{
+                    fontSize: "0.7rem",
+                    padding: "1px 5px",
+                    borderRadius: 10,
+                    background: currentTab === "closed" ? "rgba(0,0,0,0.2)" : "rgba(16,185,129,0.15)",
+                    color: currentTab === "closed" ? "#000" : "#10b981",
+                  }}
+                >
+                  {closedHoldings.length}
+                </span>
+              </button>
+            </div>
+          )}
 
           <InfoTooltip conceptKey="active_invested" />
         </div>
@@ -180,7 +215,7 @@ export default function HoldingsTable({
       </div>
 
       {/* ── CONDITIONAL RENDER: POSICIONES ACTIVAS VS CERRADAS ── */}
-      {activeTab === "active" ? (
+      {currentTab === "active" ? (
         mobileViewMode === "card" ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
           {holdings.map((h) => {
