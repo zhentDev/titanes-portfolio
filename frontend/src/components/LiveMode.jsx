@@ -6,14 +6,68 @@ import QuantumOrbitalLoader from "./QuantumOrbitalLoader";
 
 const POLL_INTERVAL = 60_000;
 
-// Client-side NYSE hours check (no API): Mon–Fri 09:30–16:00 ET.
-function nyseIsOpenNow() {
-  const now = new Date();
-  const et = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
-  const day = et.getDay();
-  if (day === 0 || day === 6) return false;
-  const mins = et.getHours() * 60 + et.getMinutes();
-  return mins >= 570 && mins <= 960;
+// Helper dinámico para verificar el horario de mercado de cualquier acción según su exchange o ticker
+function isStockMarketOpen(ticker, exchange) {
+  const tClean = (ticker || "").trim().toUpperCase();
+  const exClean = (exchange || "").trim().toUpperCase();
+
+  try {
+    // Criptomonedas: 24/7
+    if (
+      ["CRYPTO", "CRYPTOCURRENCY", "CCC"].includes(exClean) ||
+      (tClean.endsWith("-USD") && ["BTC", "ETH", "XAUT", "PAXG", "SOL", "ADA", "BNB"].some((c) => tClean.includes(c)))
+    ) {
+      return true;
+    }
+
+    // Hong Kong (HKEX, .HK): Mon-Fri 09:30-12:00 y 13:00-16:00 HKT
+    if (tClean.endsWith(".HK") || ["HKG", "HKEX", "HONG KONG"].includes(exClean)) {
+      const hkt = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Hong_Kong" }));
+      const day = hkt.getDay();
+      if (day === 0 || day === 6) return false;
+      const mins = hkt.getHours() * 60 + hkt.getMinutes();
+      return (mins >= 570 && mins <= 720) || (mins >= 780 && mins <= 960);
+    }
+
+    // Londres (LSE, .L): Mon-Fri 08:00-16:30 GMT/BST
+    if (tClean.endsWith(".L") || ["LSE", "LON", "LONDON", "FTSE"].includes(exClean)) {
+      const lon = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/London" }));
+      const day = lon.getDay();
+      if (day === 0 || day === 6) return false;
+      const mins = lon.getHours() * 60 + lon.getMinutes();
+      return mins >= 480 && mins <= 990;
+    }
+
+    // Europa (Euronext, XETRA, etc.): Mon-Fri 09:00-17:30 CET
+    if (
+      [".PA", ".DE", ".AS", ".MI", ".MC", ".F"].some((sfx) => tClean.endsWith(sfx)) ||
+      ["EURONEXT", "XETRA", "PAR", "GER", "FRA"].includes(exClean)
+    ) {
+      const par = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Paris" }));
+      const day = par.getDay();
+      if (day === 0 || day === 6) return false;
+      const mins = par.getHours() * 60 + par.getMinutes();
+      return mins >= 540 && mins <= 1050;
+    }
+
+    // Colombia (BVC, .CL): Mon-Fri 09:30-16:00 COT
+    if (tClean.endsWith(".CL") || ["BVC", "COLOMBIA"].includes(exClean)) {
+      const cot = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
+      const day = cot.getDay();
+      if (day === 0 || day === 6) return false;
+      const mins = cot.getHours() * 60 + cot.getMinutes();
+      return mins >= 570 && mins <= 960;
+    }
+
+    // Por defecto bolsas de EE.UU. (NYSE, NASDAQ, AMEX): Mon-Fri 09:30-16:00 ET
+    const et = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
+    const day = et.getDay();
+    if (day === 0 || day === 6) return false;
+    const mins = et.getHours() * 60 + et.getMinutes();
+    return mins >= 570 && mins <= 960;
+  } catch {
+    return false;
+  }
 }
 
 export default function LiveMode({ navData: initialNavData, investment = 2000 }) {
@@ -113,7 +167,9 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
         const safeQuotesData = Array.isArray(quotesData) ? quotesData : [];
         if (safeQuotesData.length > 0) {
           setQuotes(safeQuotesData);
-          setMarketOpen(safeQuotesData[0]?.market_open ?? false);
+          // Si cualquiera de las acciones de la estrategia está abierta (ej. 8:30 AM en su mercado), se activa el modo en vivo
+          const anyStockOpen = safeQuotesData.some((q) => q.market_open === true);
+          setMarketOpen(anyStockOpen);
         }
         setLastUpdate(new Date());
 
@@ -228,15 +284,24 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
   useEffect(() => {
     load();
     const interval = setInterval(() => {
+      // 1. Si el mercado ya está abierto según cotizaciones previas, consultar actualización
       if (marketOpenRef.current) {
         load(false);
-      } else if (nyseIsOpenNow()) {
-        // El cliente detecta horario de apertura: verificar con el servidor y refrescar/limpiar
-        load(false);
+      } else {
+        // 2. Si alguna de las acciones de la cartera activa entra en su horario de negociación, despertar y cargar
+        const activeHoldings = (navData?.holdings || []).filter(
+          (h) => h.selected !== false && h.shares > 0,
+        );
+        const shouldAwake = activeHoldings.some((h) =>
+          isStockMarketOpen(h.ticker, h.exchange),
+        );
+        if (shouldAwake) {
+          load(false);
+        }
       }
     }, POLL_INTERVAL);
     return () => clearInterval(interval);
-  }, [load]);
+  }, [load, navData]);
 
   // Derived metrics — ONLY ACTIVE INVESTED CAPITAL (no flat uninvested cash)
   const holdings = navData?.holdings || [];
