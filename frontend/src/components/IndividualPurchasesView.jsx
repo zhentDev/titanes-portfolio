@@ -3677,65 +3677,82 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                                 })()}
                               </div>
 
-                              <div style={{ display: "flex", gap: 4, marginLeft: 16 }}>
-                                <button
-                                  className="btn btn-sm btn-ghost"
-                                  onClick={() => {
-                                    const curPrice = p.currentPrice || p.purchasePrice;
-                                    const totalValUSD = (p.shares * curPrice);
-                                    setSellingLot(p);
-                                    setSaleMode("shares");
-                                    setSaleShares(p.shares);
-                                    setSaleAmountUSD(Number(totalValUSD.toFixed(2)));
-                                    setSalePrice(curPrice);
-                                    setSaleCommission(0);
-                                    setSaleDate(new Date().toISOString().split("T")[0]);
-                                    setSaleTime(new Date().toTimeString().slice(0, 5));
-                                    setSaleNotes("");
-                                  }}
-                                  title="Registrar venta o liquidación de este lote"
-                                  style={{ color: "#10b981", fontWeight: 700 }}
-                                >
-                                  💰
-                                </button>
-                                <button
-                                  className="btn btn-sm btn-ghost"
-                                  onClick={() => {
-                                    setEditingPurchase(p);
-                                    setEditTicker(p.ticker);
-                                    setEditInvested(p.investedAmount || p.invested);
-                                    setEditPrice(p.purchasePrice);
-                                    setEditCommissionAmount(p.commissionAmount || p.commission || 0);
-                                    setEditDate(p.date);
-                                    setEditPurchaseTime(p.purchaseTime || getMarketOpenTime(p.ticker, p.exchange));
-                                  }}
-                                  title="Editar"
-                                >
-                                  ✏️
-                                </button>
-                                <button
-                                  className="btn btn-sm btn-ghost"
-                                  onClick={async () => {
-                                    const newPrice = await toastPrompt(
-                                      `Precio actual de mercado para ${p.ticker} (ej. XTB):`,
-                                      p.currentPrice,
-                                    );
-                                    if (newPrice !== null && !isNaN(Number(newPrice))) {
-                                      handleSaveManualPrice(p, newPrice);
-                                    }
-                                  }}
-                                  title="Corregir precio actual si Yahoo Finance no coincide con XTB"
-                                >
-                                  ⚙️
-                                </button>
-                                <button
-                                  className="btn btn-sm btn-ghost"
-                                  onClick={() => removePurchase(p.id)}
-                                  title="Eliminar lote"
-                                >
-                                  🗑️
-                                </button>
-                              </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 16 }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const curPrice = p.currentPrice || p.purchasePrice;
+                                      const totalValUSD = (p.shares * curPrice);
+                                      setSellingLot(p);
+                                      setSaleMode("shares");
+                                      setSaleShares(p.shares);
+                                      setSaleAmountUSD(Number(totalValUSD.toFixed(2)));
+                                      setSalePrice(curPrice);
+                                      setSaleCommission(0);
+                                      setSaleDate(new Date().toISOString().split("T")[0]);
+                                      setSaleTime(new Date().toTimeString().slice(0, 5));
+                                      setSaleNotes("");
+                                    }}
+                                    title="Registrar venta o liquidación de este lote para acumular ganancia/pérdida"
+                                    style={{
+                                      background: "rgba(16, 185, 129, 0.15)",
+                                      border: "1px solid rgba(16, 185, 129, 0.35)",
+                                      color: "#10b981",
+                                      fontWeight: 700,
+                                      padding: "3px 8px",
+                                      borderRadius: 6,
+                                      fontSize: "0.75rem",
+                                      cursor: "pointer",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: 3,
+                                    }}
+                                  >
+                                    💰 Vender / Cerrar
+                                  </button>
+                                  <button
+                                    className="btn btn-sm btn-ghost"
+                                    onClick={() => {
+                                      setEditingPurchase(p);
+                                      setEditTicker(p.ticker);
+                                      setEditInvested(p.investedAmount || p.invested);
+                                      setEditPrice(p.purchasePrice);
+                                      setEditCommissionAmount(p.commissionAmount || p.commission || 0);
+                                      setEditDate(p.date);
+                                      setEditPurchaseTime(p.purchaseTime || getMarketOpenTime(p.ticker, p.exchange));
+                                    }}
+                                    title="Editar"
+                                  >
+                                    ✏️
+                                  </button>
+                                  <button
+                                    className="btn btn-sm btn-ghost"
+                                    onClick={async () => {
+                                      const newPrice = await toastPrompt(
+                                        `Precio actual de mercado para ${p.ticker} (ej. XTB):`,
+                                        p.currentPrice,
+                                      );
+                                      if (newPrice !== null && !isNaN(Number(newPrice))) {
+                                        handleSaveManualPrice(p, newPrice);
+                                      }
+                                    }}
+                                    title="Corregir precio actual si Yahoo Finance no coincide con XTB"
+                                  >
+                                    ⚙️
+                                  </button>
+                                  <button
+                                    className="btn btn-sm btn-ghost"
+                                    onClick={async () => {
+                                      const ok = await toastConfirm(
+                                        `¿Seguro que deseas eliminar definitivamente este lote de ${p.ticker}?\n\nTip: Si lo vendiste en tu broker, usa el botón "💰 Vender / Cerrar" para guardar tu ganancia o pérdida acumulada.`
+                                      );
+                                      if (ok) removePurchase(p.id);
+                                    }}
+                                    title="Eliminar lote definitivamente"
+                                  >
+                                    🗑️
+                                  </button>
+                                </div>
                             </div>
                           ))}
                         </div>

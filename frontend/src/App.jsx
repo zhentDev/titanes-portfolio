@@ -2404,9 +2404,11 @@ export default function App() {
             <div className="bottom-grid">
               {/* Holdings table */}
               <div className="card fade-up" style={{ animationDelay: "100ms" }}>
-                {navData?.holdings?.length > 0 ? (
+                {navData?.holdings?.length > 0 || navData?.closed_holdings?.length > 0 ? (
                   <HoldingsTable
-                    holdings={navData.holdings}
+                    holdings={navData.holdings || []}
+                    closedHoldings={navData.closed_holdings || []}
+                    summary={navData.summary || {}}
                     investment={investment}
                     numSlots={numSlots}
                     onToggleTicker={toggleTicker}

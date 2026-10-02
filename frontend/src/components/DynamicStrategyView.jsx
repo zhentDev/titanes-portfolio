@@ -18,6 +18,7 @@ import InflationExplorerModal from "./InflationExplorerModal";
 import StrategyChart, { SYNTHETIC_RETURNS } from "./StrategyChart";
 import { InfoTooltip } from "./Common";
 import QuantumOrbitalLoader from "./QuantumOrbitalLoader";
+import HoldingsTable from "./HoldingsTable";
 
 const PERIODS = ["1D", "1W", "1M", "3M", "6M", "1Y", "3Y", "5Y", "MAX"];
 
@@ -1047,6 +1048,27 @@ export default function DynamicStrategyView({
                 {(slotValue * (stratYieldViewMode !== "USD" ? fxMult : 1.0)).toFixed(2)})
               </div>
             </div>
+
+            {navData?.summary?.total_realized_pnl !== undefined && (navData.summary.closed_count > 0 || navData.summary.total_realized_pnl !== 0) && (
+              <>
+                <div className="summary-divider" />
+                <div className="summary-item">
+                  <div className="summary-label">
+                    Ganancia Realizada ({navData.summary.closed_count} Cerradas)
+                  </div>
+                  <div
+                    className="summary-value mono"
+                    style={{
+                      color: (navData.summary.total_realized_pnl || 0) >= 0 ? "#10b981" : "#f43f5e",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {(navData.summary.total_realized_pnl || 0) >= 0 ? "+" : ""}$
+                    {(Number(navData.summary.total_realized_pnl || 0) * (stratYieldViewMode !== "USD" ? fxMult : 1.0)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         );
       })()}
@@ -1884,6 +1906,21 @@ export default function DynamicStrategyView({
           })}
         </div>
       </div>
+
+      {/* ── Detalle de Posiciones Activas y Cerradas (Holdings & Realized Trades) ── */}
+      {(navData?.holdings?.length > 0 || navData?.closed_holdings?.length > 0) && (
+        <div className="card fade-up" style={{ padding: "20px", marginBottom: "20px" }}>
+          <HoldingsTable
+            holdings={navData?.holdings || []}
+            closedHoldings={navData?.closed_holdings || []}
+            summary={navData?.summary || {}}
+            investment={simulatedCapital}
+            numSlots={numSlots}
+            unit={unit}
+            onToggleUnit={() => setUnit((u) => (u === "pct" ? "usd" : "pct"))}
+          />
+        </div>
+      )}
 
       {/* ── Rebalance Manager Grid ────────────────────── */}
       <div className="bottom-grid">

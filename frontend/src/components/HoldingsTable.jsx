@@ -2,18 +2,38 @@ import { useState } from "react";
 import { InfoTooltip, MarketScheduleBadge } from "./Common";
 
 export default function HoldingsTable({
-  holdings,
+  holdings = [],
+  closedHoldings = [],
+  summary = {},
   investment,
   numSlots,
   onToggleTicker,
   unit = "pct",
   onToggleUnit,
 }) {
+  const [activeTab, setActiveTab] = useState("active"); // 'active' | 'closed'
   const [mobileViewMode, setMobileViewMode] = useState("auto"); // 'auto' | 'card' | 'table'
 
-  if (!holdings?.length) return null;
+  if (!holdings?.length && !closedHoldings?.length) return null;
 
   const slotValue = investment / numSlots;
+
+  const totalRealized = Number(
+    summary.total_realized_pnl ??
+      closedHoldings.reduce((sum, c) => sum + Number(c.realized_pnl || 0), 0)
+  );
+  const winRateClosed = Number(
+    summary.win_rate_closed_pct ??
+      (closedHoldings.length > 0
+        ? (
+            (closedHoldings.filter((c) => Number(c.realized_pnl || 0) >= 0).length /
+              closedHoldings.length) *
+            100
+          ).toFixed(1)
+        : 0)
+  );
+  const activeReturn = Number(summary.active_return ?? 0);
+  const totalStratPnl = Number(summary.total_strategy_pnl ?? activeReturn + totalRealized);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minWidth: 0 }}>
@@ -23,23 +43,96 @@ export default function HoldingsTable({
           justifyContent: "space-between",
           alignItems: "center",
           flexWrap: "wrap",
-          gap: 8,
+          gap: 10,
           marginBottom: "14px",
         }}
       >
-        <h3
-          style={{
-            margin: 0,
-            fontSize: "1rem",
-            fontWeight: 600,
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
-          <span>Detalle de Posiciones Activas</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          {/* Tab Switcher: Activas vs Cerradas */}
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              background: "rgba(0, 0, 0, 0.25)",
+              border: "1px solid var(--border)",
+              borderRadius: "12px",
+              padding: "3px",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setActiveTab("active")}
+              style={{
+                padding: "4px 10px",
+                borderRadius: "8px",
+                border: "none",
+                fontSize: "0.78rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                background: activeTab === "active" ? "var(--accent-primary)" : "transparent",
+                color: activeTab === "active" ? "#000" : "var(--text-muted)",
+                transition: "all 0.15s ease",
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+              }}
+            >
+              <span>🟢 Activas</span>
+              <span
+                style={{
+                  fontSize: "0.7rem",
+                  padding: "1px 5px",
+                  borderRadius: 10,
+                  background: activeTab === "active" ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.08)",
+                }}
+              >
+                {holdings.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("closed")}
+              style={{
+                padding: "4px 10px",
+                borderRadius: "8px",
+                border: "none",
+                fontSize: "0.78rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                background: activeTab === "closed" ? "#10b981" : "transparent",
+                color:
+                  activeTab === "closed"
+                    ? "#000"
+                    : closedHoldings.length > 0
+                    ? "#34d399"
+                    : "var(--text-muted)",
+                transition: "all 0.15s ease",
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+              }}
+              title="Ver el historial y rentabilidad acumulada de las acciones que has vendido o cerrado"
+            >
+              <span>💼 Cerradas</span>
+              <span
+                style={{
+                  fontSize: "0.7rem",
+                  padding: "1px 5px",
+                  borderRadius: 10,
+                  background: activeTab === "closed" ? "rgba(0,0,0,0.2)" : "rgba(16,185,129,0.15)",
+                  color: activeTab === "closed" ? "#000" : "#10b981",
+                }}
+              >
+                {closedHoldings.length}
+              </span>
+            </button>
+          </div>
+
           <InfoTooltip conceptKey="active_invested" />
-        </h3>
+        </div>
+
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Unidad:</span>
           <div
@@ -85,8 +178,9 @@ export default function HoldingsTable({
         </div>
       </div>
 
-      {/* ── Vista de Tarjetas Táctiles (Mobile Card View) ─── */}
-      {mobileViewMode === "card" ? (
+      {/* ── CONDITIONAL RENDER: POSICIONES ACTIVAS VS CERRADAS ── */}
+      {activeTab === "active" ? (
+        mobileViewMode === "card" ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
           {holdings.map((h) => {
             const isSelected = h.selected !== false;
@@ -463,6 +557,364 @@ export default function HoldingsTable({
           </tbody>
         </table>
       </div>
+    )
+  ) : (
+    /* ── SECCIÓN DE POSICIONES CERRADAS / REALIZADAS ── */
+        <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
+          {/* Banner de Ganancia Realizada Acumulada */}
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 14,
+              alignItems: "center",
+              justifyContent: "space-between",
+              background: totalRealized >= 0 ? "rgba(16, 185, 129, 0.08)" : "rgba(244, 63, 94, 0.08)",
+              border: `1px solid ${totalRealized >= 0 ? "rgba(16, 185, 129, 0.25)" : "rgba(244, 63, 94, 0.25)"}`,
+              borderRadius: "10px",
+              padding: "12px 16px",
+              marginBottom: "14px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+              <div>
+                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block" }}>
+                  💰 Beneficio Realizado Acumulado (Ventas)
+                </span>
+                <span
+                  className="mono"
+                  style={{
+                    fontSize: "1.15rem",
+                    fontWeight: 800,
+                    color: totalRealized >= 0 ? "#10b981" : "#f43f5e",
+                  }}
+                >
+                  {totalRealized >= 0 ? "+" : ""}${totalRealized.toFixed(2)} USD
+                </span>
+              </div>
+              <div style={{ borderLeft: "1px solid var(--border)", paddingLeft: 14 }}>
+                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block" }}>
+                  🎯 Tasa de Acierto en Ventas
+                </span>
+                <span className="mono" style={{ fontSize: "1.05rem", fontWeight: 700, color: "#38bdf8" }}>
+                  {winRateClosed}%
+                </span>
+              </div>
+              <div style={{ borderLeft: "1px solid var(--border)", paddingLeft: 14 }}>
+                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block" }}>
+                  📦 Posiciones Liquidadas
+                </span>
+                <span className="mono" style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                  {closedHoldings.length}
+                </span>
+              </div>
+            </div>
+
+            <div style={{ textAlign: "right" }}>
+              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block" }}>
+                Total Estrategia (Activo + Realizado)
+              </span>
+              <span
+                className="mono"
+                style={{
+                  fontSize: "1.05rem",
+                  fontWeight: 800,
+                  color: totalStratPnl >= 0 ? "#10b981" : "#f43f5e",
+                }}
+              >
+                {totalStratPnl >= 0 ? "+" : ""}${totalStratPnl.toFixed(2)} USD
+              </span>
+            </div>
+          </div>
+
+          {closedHoldings.length === 0 ? (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "36px 16px",
+                color: "var(--text-muted)",
+                fontSize: "0.85rem",
+                background: "rgba(255, 255, 255, 0.02)",
+                borderRadius: "8px",
+                border: "1px dashed var(--border)",
+              }}
+            >
+              No has cerrado ni vendido posiciones en los rebalanceos registrados de esta estrategia.
+              <br />
+              <span style={{ fontSize: "0.75rem", opacity: 0.8, marginTop: 4, display: "inline-block" }}>
+                Cuando rebalanceas y sustituyes una acción, su rentabilidad de venta queda aquí registrada acumulativamente.
+              </span>
+            </div>
+          ) : mobileViewMode === "card" ? (
+            /* Vista de Tarjetas Táctiles para Cerradas */
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
+              {closedHoldings.map((c, idx) => {
+                const pnl = Number(c.realized_pnl || 0);
+                const retPct = Number(c.realized_return_pct || 0);
+                const isGain = pnl >= 0;
+
+                return (
+                  <div
+                    key={`closed_card_${c.ticker}_${idx}`}
+                    style={{
+                      padding: "12px 14px",
+                      background: "var(--bg-surface)",
+                      border: "1px solid var(--border)",
+                      borderLeft: `4px solid ${isGain ? "var(--gain)" : "var(--loss)"}`,
+                      borderRadius: "var(--radius-md)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <strong style={{ fontSize: "1rem", color: "var(--text-primary)" }}>
+                            {c.ticker}
+                          </strong>
+                          {c.exchange && (
+                            <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", background: "rgba(255,255,255,0.05)", padding: "1px 5px", borderRadius: 4 }}>
+                              {c.exchange}
+                            </span>
+                          )}
+                          <span
+                            style={{
+                              fontSize: "0.65rem",
+                              fontWeight: 700,
+                              color: "#10b981",
+                              background: "rgba(16, 185, 129, 0.12)",
+                              padding: "1px 6px",
+                              borderRadius: 4,
+                            }}
+                          >
+                            Vendida ✓
+                          </span>
+                        </div>
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
+                          {c.name || c.ticker} · <span style={{ color: "var(--accent-primary)" }}>{c.sector || "Tecnología"}</span>
+                        </div>
+                      </div>
+
+                      <span
+                        className={`badge ${isGain ? "gain" : "loss"}`}
+                        style={{ fontSize: "0.85rem", padding: "4px 8px" }}
+                      >
+                        {isGain ? "▲" : "▼"}{" "}
+                        {unit === "pct"
+                          ? `${Math.abs(retPct).toFixed(2)}%`
+                          : `$${Math.abs(pnl).toFixed(2)}`}
+                      </span>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, paddingTop: 6, borderTop: "1px solid var(--border)" }}>
+                      <div>
+                        <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>Compra ({c.entry_date})</div>
+                        <div className="mono" style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--text-secondary)" }}>
+                          ${Number(c.entry_price || 0).toFixed(2)}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>Venta ({c.exit_date})</div>
+                        <div className="mono" style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                          ${Number(c.exit_price || 0).toFixed(2)}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>Días en Cartera</div>
+                        <span className="mono" style={{ fontSize: "0.8rem", fontWeight: 600, color: "#38bdf8" }}>
+                          {c.holding_days}d
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 4, fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                      <span>Invertido: <strong className="mono" style={{ color: "var(--text-secondary)" }}>${Number(c.cost_basis || 0).toFixed(2)}</strong></span>
+                      <span>Cobrado: <strong className="mono" style={{ color: isGain ? "#10b981" : "#f43f5e" }}>${Number(c.exit_value || 0).toFixed(2)}</strong></span>
+                      <span style={{ fontWeight: 700, color: isGain ? "#10b981" : "#f43f5e" }}>
+                        {isGain ? "+" : ""}${pnl.toFixed(2)} ({isGain ? "+" : ""}{retPct.toFixed(2)}%)
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            /* Vista de Tabla para Cerradas */
+            <div style={{ overflowX: "auto", minWidth: 0, width: "100%", WebkitOverflowScrolling: "touch" }}>
+              <table style={{ width: "100%", minWidth: "820px", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                    {[
+                      "Empresa / Ticker",
+                      "Sector",
+                      "Fecha Compra",
+                      "Precio Compra",
+                      "Fecha Venta",
+                      "Precio Venta",
+                      "Tiempo",
+                      "Capital Invertido",
+                      "Monto Liquidado",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        style={{
+                          padding: "10px 12px",
+                          textAlign: h.startsWith("Empresa") || h === "Sector" ? "left" : "right",
+                          color: "var(--text-muted)",
+                          fontWeight: 500,
+                          fontSize: "0.72rem",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.04em",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {h}
+                      </th>
+                    ))}
+                    <th
+                      style={{
+                        padding: "10px 12px",
+                        textAlign: "right",
+                        color: "var(--accent-primary)",
+                        fontWeight: 600,
+                        fontSize: "0.72rem",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.04em",
+                        whiteSpace: "nowrap",
+                        cursor: "pointer",
+                      }}
+                      onClick={onToggleUnit}
+                      title="Haz clic para alternar entre % y $"
+                    >
+                      PnL Realizado ({unit === "pct" ? "%" : "$"}) ⇄
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {closedHoldings.map((c, i) => {
+                    const pnl = Number(c.realized_pnl || 0);
+                    const retPct = Number(c.realized_return_pct || 0);
+                    const isGain = pnl >= 0;
+
+                    return (
+                      <tr
+                        key={`closed_row_${c.ticker}_${i}`}
+                        style={{
+                          borderBottom: "1px solid var(--border)",
+                          transition: "all var(--duration) var(--ease)",
+                          animation: `fadeUp 0.3s ${i * 25}ms both`,
+                          background: "rgba(255,255,255,0.01)",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-card-hover)")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.01)")}
+                      >
+                        {/* Ticker & Name */}
+                        <td style={{ padding: "10px 12px" }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              <span style={{ fontWeight: 700, color: "var(--text-primary)", fontSize: "0.875rem" }}>
+                                {c.ticker}
+                              </span>
+                              {c.exchange && (
+                                <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", background: "rgba(255,255,255,0.05)", padding: "1px 6px", borderRadius: "4px" }}>
+                                  {c.exchange}
+                                </span>
+                              )}
+                              <span style={{ fontSize: "0.65rem", fontWeight: 700, color: "#10b981", background: "rgba(16, 185, 129, 0.12)", padding: "1px 6px", borderRadius: 4 }}>
+                                Vendida
+                              </span>
+                            </div>
+                            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "160px" }}>
+                              {c.name || c.ticker}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Sector */}
+                        <td style={{ padding: "10px 12px", color: "#94a3b8", fontSize: "0.75rem" }}>
+                          <span
+                            style={{
+                              display: "inline-block",
+                              padding: "2px 7px",
+                              borderRadius: "12px",
+                              background: "rgba(0, 229, 255, 0.05)",
+                              border: "1px solid rgba(0, 229, 255, 0.12)",
+                              color: "var(--accent-primary)",
+                              fontWeight: 500,
+                              fontSize: "0.7rem",
+                            }}
+                          >
+                            {c.sector || "Tecnología"}
+                          </span>
+                        </td>
+
+                        {/* Entry Date */}
+                        <td style={{ padding: "10px 12px", textAlign: "right" }}>
+                          <span className="mono" style={{ color: "var(--text-muted)", fontSize: "0.78rem" }}>
+                            {c.entry_date}
+                          </span>
+                        </td>
+
+                        {/* Entry Price */}
+                        <td style={{ padding: "10px 12px", textAlign: "right" }}>
+                          <span className="mono" style={{ color: "var(--text-secondary)" }}>
+                            ${Number(c.entry_price || 0).toFixed(2)}
+                          </span>
+                        </td>
+
+                        {/* Exit Date */}
+                        <td style={{ padding: "10px 12px", textAlign: "right" }}>
+                          <span className="mono" style={{ color: "#38bdf8", fontSize: "0.78rem", fontWeight: 600 }}>
+                            {c.exit_date}
+                          </span>
+                        </td>
+
+                        {/* Exit Price */}
+                        <td style={{ padding: "10px 12px", textAlign: "right" }}>
+                          <span className="mono" style={{ fontWeight: 700, color: "var(--text-primary)" }}>
+                            ${Number(c.exit_price || 0).toFixed(2)}
+                          </span>
+                        </td>
+
+                        {/* Holding Days */}
+                        <td style={{ padding: "10px 12px", textAlign: "right" }}>
+                          <span className="mono" style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>
+                            {c.holding_days}d
+                          </span>
+                        </td>
+
+                        {/* Cost Basis */}
+                        <td style={{ padding: "10px 12px", textAlign: "right" }}>
+                          <span className="mono" style={{ color: "var(--text-secondary)" }}>
+                            ${Number(c.cost_basis || 0).toFixed(2)}
+                          </span>
+                        </td>
+
+                        {/* Exit Value */}
+                        <td style={{ padding: "10px 12px", textAlign: "right" }}>
+                          <span className="mono" style={{ fontWeight: 600, color: "var(--text-primary)" }}>
+                            ${Number(c.exit_value || 0).toFixed(2)}
+                          </span>
+                        </td>
+
+                        {/* Realized Return Badge */}
+                        <td style={{ padding: "10px 12px", textAlign: "right" }}>
+                          <span className={`badge ${isGain ? "gain" : "loss"}`} style={{ fontSize: "0.78rem" }}>
+                            {isGain ? "▲" : "▼"}{" "}
+                            {unit === "pct"
+                              ? `${Math.abs(retPct).toFixed(2)}%`
+                              : `$${Math.abs(pnl).toFixed(2)}`}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

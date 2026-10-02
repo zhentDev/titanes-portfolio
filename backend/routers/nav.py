@@ -64,8 +64,8 @@ def nav_endpoint(
         period_delta = _PERIOD_DELTAS.get(period.upper(), _PERIOD_DELTAS["1Y"])
         period_start_str = (date.today() - period_delta).isoformat()
         if earliest_rebal:
-            # Use whichever is MORE recent: earliest_rebal or period-implied start
-            effective_start = max(earliest_rebal, period_start_str)
+            # Always simulate from earliest_rebal so trades, cost bases, and closed positions are 100% accurate
+            effective_start = earliest_rebal
         else:
             effective_start = period_start_str
 
@@ -78,6 +78,7 @@ def nav_endpoint(
         selected_tickers=selected_list,
         strategy_id=strategy_id,
         user_id=user_id,
+        period=period,
     )
     return result
 

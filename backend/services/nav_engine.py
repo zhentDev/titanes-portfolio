@@ -19,10 +19,12 @@ def calculate_nav(
     selected_tickers: list[str] | None = None,
     strategy_id: str = "historical",
     user_id: str | None = None,
+    period: str = "1Y",
 ) -> dict:
     """
     Calculate portfolio NAV using DuckDB rebalance history.
     Supports dynamic ticker selection / what-if simulations.
+    Tracks both active and closed/liquidated positions with cumulative realized P&L.
     """
     if prices_df is None:
         return _empty_response(investment)
@@ -40,6 +42,7 @@ def calculate_nav(
     current_shares = {}
     rebalance_prices = {}
     ticker_entry_dates = {}
+    closed_positions = []
     current_cash = 0.0
     current_value = 0.0
     total_invested = investment
@@ -88,6 +91,24 @@ def calculate_nav(
                 if str(_d)[:10] >= first_rb_date:
                     series_start = str(_d)[:10]
                     break
+
+    # Determine display start date based on requested period, without truncating the simulation
+    if not is_intraday and period and period.upper() != "MAX":
+        from datetime import date as dt_date, timedelta
+        _DELTAS = {
+            "1W": timedelta(weeks=1),
+            "1M": timedelta(days=30),
+            "3M": timedelta(days=90),
+            "6M": timedelta(days=180),
+            "1Y": timedelta(days=365),
+            "3Y": timedelta(days=365 * 3),
+            "5Y": timedelta(days=365 * 5),
+        }
+        delta = _DELTAS.get(period.upper(), timedelta(days=365))
+        period_cutoff = (dt_date.today() - delta).isoformat()
+        display_start = max(series_start, period_cutoff)
+    else:
+        display_start = series_start
 
     # We will simulate step by step (day by day or hour by hour)
     rebalance_idx = 0
@@ -157,7 +178,57 @@ def calculate_nav(
 
             # 1. Liquidate tickers no longer in new valid_tickers
             liquidated_tickers = [t for t in list(current_shares.keys()) if t not in valid_tickers]
+            from datetime import date as dt_date
+            from services.market_data import get_ticker_meta
+
             for t in liquidated_tickers:
+                shares = current_shares.get(t, 0.0)
+                entry_price = float(rebalance_prices.get(t, 0.0))
+                raw_exit = row.get(t)
+                exit_price = (
+                    float(raw_exit)
+                    if raw_exit is not None and not str(raw_exit) == "nan"
+                    else entry_price
+                )
+                entry_date_str = str(ticker_entry_dates.get(t, series_start))
+                exit_date_str = str(date_str)
+
+                cost_basis = round(shares * entry_price, 2)
+                exit_value = round(shares * exit_price, 2)
+                realized_pnl = round(exit_value - cost_basis, 2)
+                realized_return_pct = (
+                    round(((exit_price - entry_price) / entry_price * 100), 2)
+                    if entry_price > 0
+                    else 0.0
+                )
+
+                try:
+                    d_in = dt_date.fromisoformat(entry_date_str[:10])
+                    d_out = dt_date.fromisoformat(exit_date_str[:10])
+                    holding_days = max(1, (d_out - d_in).days)
+                except Exception:
+                    holding_days = 0
+
+                meta = get_ticker_meta(t)
+                closed_positions.append(
+                    {
+                        "ticker": t,
+                        "name": meta.get("name", t),
+                        "sector": meta.get("sector", "Tecnología"),
+                        "exchange": meta.get("exchange", "NASDAQ"),
+                        "shares": round(shares, 6),
+                        "entry_date": entry_date_str,
+                        "entry_price": round(entry_price, 4),
+                        "exit_date": exit_date_str,
+                        "exit_price": round(exit_price, 4),
+                        "cost_basis": cost_basis,
+                        "exit_value": exit_value,
+                        "realized_pnl": realized_pnl,
+                        "realized_return_pct": realized_return_pct,
+                        "holding_days": holding_days,
+                    }
+                )
+
                 del current_shares[t]
                 if t in rebalance_prices:
                     del rebalance_prices[t]
@@ -195,7 +266,7 @@ def calculate_nav(
         # Active invested capital on this day
         day_active_invested = len(current_shares) * (investment / num_slots) if num_slots > 0 else investment
         eod_total_value = eod_stock_value + current_cash
-        if date_str >= series_start:
+        if date_str >= display_start:
             nav_series.append(
                 {
                     "date": str(date_str),
@@ -237,7 +308,7 @@ def calculate_nav(
             bdf = prices_df.select(["date", col]).drop_nulls()
         else:
             bdf = (
-                prices_df.filter(pl.col("date").cast(pl.String) >= str(series_start))
+                prices_df.filter(pl.col("date").cast(pl.String) >= str(display_start))
                 .select(["date", col])
                 .drop_nulls()
             )
@@ -598,6 +669,19 @@ def calculate_nav(
                         for r in s_t.iter_rows(named=True)
                     ]
 
+    total_realized_pnl = round(sum(p["realized_pnl"] for p in closed_positions), 2)
+    unrealized_pnl = round(active_return, 2)
+    total_strategy_pnl = round(total_realized_pnl + unrealized_pnl, 2)
+    total_strategy_return_pct = (
+        round((total_strategy_pnl / active_invested * 100), 2)
+        if active_invested > 0
+        else round(active_return_pct, 2)
+    )
+    win_closed = len([p for p in closed_positions if p["realized_pnl"] >= 0])
+    win_rate_closed_pct = (
+        round((win_closed / len(closed_positions) * 100), 1) if closed_positions else 0.0
+    )
+
     return {
         "nav": nav_series,
         "sp500": sp500_series,
@@ -606,6 +690,7 @@ def calculate_nav(
         "ticker_series": ticker_series,
         "rebalances": effective_rebalances,
         "holdings": sorted(holdings, key=lambda h: h["current_value"], reverse=True),
+        "closed_holdings": sorted(closed_positions, key=lambda p: p["exit_date"], reverse=True),
         "correlations": {
             "tickers": matrix_tickers,
             "matrix": corr_matrix,
@@ -622,6 +707,12 @@ def calculate_nav(
             "active_stock_value": round(current_stock_value, 2),
             "active_return": round(active_return, 2),
             "active_return_pct": round(active_return_pct, 2),
+            "total_realized_pnl": total_realized_pnl,
+            "unrealized_pnl": unrealized_pnl,
+            "total_strategy_pnl": total_strategy_pnl,
+            "total_strategy_return_pct": total_strategy_return_pct,
+            "closed_count": len(closed_positions),
+            "win_rate_closed_pct": win_rate_closed_pct,
             "sp500_return": round(sp500_return, 2),
             "sp500_return_pct": round(sp500_return_pct, 2),
             "nasdaq_return": round(nasdaq_return, 2),
@@ -659,6 +750,7 @@ def _empty_response(investment: float) -> dict:
         "sp500": [],
         "nasdaq": [],
         "holdings": [],
+        "closed_holdings": [],
         "summary": {
             "start_value": investment,
             "end_value": investment,
@@ -666,6 +758,12 @@ def _empty_response(investment: float) -> dict:
             "cash_reserved": 0.0,
             "total_return": 0.0,
             "total_return_pct": 0.0,
+            "total_realized_pnl": 0.0,
+            "unrealized_pnl": 0.0,
+            "total_strategy_pnl": 0.0,
+            "total_strategy_return_pct": 0.0,
+            "closed_count": 0,
+            "win_rate_closed_pct": 0.0,
             "num_holdings": 0,
             "num_slots": 15,
             "unallocated_slots": 15,
