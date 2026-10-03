@@ -31,7 +31,7 @@ export default function FloatingInput({
       style={style}
       onClick={() => inputRef.current?.focus()}
     >
-      <div className={`floating-input-container ${hasValue ? "has-value" : ""}`}>
+      <div className={`floating-input-container ${hasValue ? "has-value" : ""} ${!label ? "no-label" : ""}`}>
         {prefix && <span style={{ marginRight: 8, color: "#94a3b8", fontSize: "0.85rem" }}>{prefix}</span>}
         <input
           ref={inputRef}

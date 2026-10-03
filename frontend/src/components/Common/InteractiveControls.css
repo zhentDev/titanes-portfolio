@@ -350,8 +350,8 @@ input[type="number"] {
   border-radius: 10px;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
-  padding: 0 12px;
-  min-height: 42px;
+  padding: 0 14px;
+  min-height: 52px;
 }
 
 .floating-input-container:hover {
@@ -370,13 +370,19 @@ input[type="number"] {
   border: none;
   outline: none;
   color: #f8fafc;
-  font-size: 0.88rem;
-  padding: 14px 0 4px 0;
+  font-size: 0.92rem;
+  padding: 20px 0 6px 0;
   font-family: inherit;
+  line-height: 1.25;
+}
+
+.floating-input-container.no-label .floating-input-field {
+  padding: 12px 0;
 }
 
 .floating-input-field::placeholder {
-  color: #475569;
+  color: #64748b;
+  font-size: 0.84rem;
   transition: color 0.2s ease;
 }
 
@@ -386,11 +392,11 @@ input[type="number"] {
 
 .floating-label-text {
   position: absolute;
-  left: 12px;
+  left: 14px;
   top: 50%;
   transform: translateY(-50%);
   color: #64748b;
-  font-size: 0.82rem;
+  font-size: 0.84rem;
   font-weight: 500;
   pointer-events: none;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -399,8 +405,8 @@ input[type="number"] {
 
 .floating-input-container:focus-within .floating-label-text,
 .floating-input-container.has-value .floating-label-text {
-  top: 6px;
-  transform: translateY(0) scale(0.76);
+  top: 7px;
+  transform: translateY(0) scale(0.74);
   color: #38bdf8;
   font-weight: 700;
 }
@@ -836,5 +842,218 @@ input[type="number"] {
 
 [data-theme="light"] .hourglass-track {
   background: #e2e8f0;
+}
+
+/* ── Light Mode: Floating Input ───────────────────────────── */
+[data-theme="light"] .floating-input-container {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .floating-input-container:hover {
+  border-color: rgba(0, 0, 0, 0.28);
+}
+
+[data-theme="light"] .floating-input-container:focus-within {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+  background: #ffffff;
+}
+
+[data-theme="light"] .floating-input-field {
+  color: #0f172a;
+}
+
+[data-theme="light"] .floating-input-field::placeholder {
+  color: #94a3b8;
+}
+
+[data-theme="light"] .floating-label-text {
+  color: #475569;
+}
+
+[data-theme="light"] .floating-input-container:focus-within .floating-label-text,
+[data-theme="light"] .floating-input-container.has-value .floating-label-text {
+  color: #0284c7;
+}
+
+[data-theme="light"] .floating-suffix {
+  color: #64748b;
+}
+
+/* ── Light Mode: Custom Select Dropdown ───────────────────── */
+[data-theme="light"] .custom-select-trigger {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  color: #0f172a;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="light"] .custom-select-trigger:hover {
+  border-color: rgba(0, 0, 0, 0.28);
+  background: #ffffff;
+}
+
+[data-theme="light"] .custom-select-trigger.is-open {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+}
+
+[data-theme="light"] .select-label-text {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+[data-theme="light"] .select-chevron {
+  color: #64748b;
+}
+
+[data-theme="light"] .custom-select-trigger.is-open .select-chevron {
+  color: #0284c7;
+}
+
+[data-theme="light"] .custom-select-menu {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.14);
+}
+
+[data-theme="light"] .select-search-box {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .select-search-input {
+  background: #f8fafc;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  color: #0f172a;
+}
+
+[data-theme="light"] .select-search-input::placeholder {
+  color: #94a3b8;
+}
+
+[data-theme="light"] .select-search-input:focus {
+  border-color: #0284c7;
+}
+
+[data-theme="light"] .select-option-item {
+  color: #1e293b;
+}
+
+[data-theme="light"] .select-option-item:hover {
+  background: #f1f5f9;
+  color: #0284c7;
+}
+
+[data-theme="light"] .select-option-item.selected {
+  background: rgba(2, 132, 199, 0.1);
+  color: #0284c7;
+  font-weight: 700;
+}
+
+[data-theme="light"] .select-option-name {
+  color: #1e293b;
+}
+
+[data-theme="light"] .select-option-badge {
+  background: #f1f5f9;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: #0284c7;
+}
+
+/* ── Light Mode: Dynamic Date Picker ──────────────────────── */
+[data-theme="light"] .dynamic-datepicker-input-group {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="light"] .dynamic-datepicker-input-group:hover {
+  border-color: rgba(0, 0, 0, 0.28);
+}
+
+[data-theme="light"] .dynamic-datepicker-input-group:focus-within,
+[data-theme="light"] .dynamic-datepicker-input-group.active {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+}
+
+[data-theme="light"] .dynamic-datepicker-field {
+  color: #0f172a;
+}
+
+[data-theme="light"] .dynamic-datepicker-field::placeholder {
+  color: #94a3b8;
+}
+
+[data-theme="light"] .dynamic-datepicker-trigger-btn {
+  color: #0284c7;
+}
+
+[data-theme="light"] .dynamic-datepicker-popover {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.14);
+}
+
+[data-theme="light"] .datepicker-header-nav {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .datepicker-select-control {
+  background: #f8fafc;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  color: #0f172a;
+}
+
+[data-theme="light"] .datepicker-select-control option {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+[data-theme="light"] .datepicker-nav-btn {
+  background: #f1f5f9;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: #475569;
+}
+
+[data-theme="light"] .datepicker-nav-btn:hover {
+  background: rgba(2, 132, 199, 0.12);
+  color: #0284c7;
+  border-color: rgba(2, 132, 199, 0.3);
+}
+
+[data-theme="light"] .datepicker-weekday-cell {
+  color: #64748b;
+}
+
+[data-theme="light"] .datepicker-day-btn {
+  color: #1e293b;
+}
+
+[data-theme="light"] .datepicker-day-btn:hover:not(:disabled) {
+  background: rgba(2, 132, 199, 0.12);
+  color: #0284c7;
+}
+
+[data-theme="light"] .datepicker-day-btn.other-month {
+  color: #94a3b8;
+  opacity: 0.6;
+}
+
+[data-theme="light"] .datepicker-presets-container {
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .datepicker-preset-chip {
+  background: #f1f5f9;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: #475569;
+}
+
+[data-theme="light"] .datepicker-preset-chip:hover {
+  background: rgba(2, 132, 199, 0.15);
+  color: #0284c7;
 }
 

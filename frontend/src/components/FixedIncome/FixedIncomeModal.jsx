@@ -1,6 +1,7 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
+import { animate } from "animejs";
 import { calculateCompoundHistory, suggestFixedIncomeRate } from "../../api/client";
 import { useFixedIncomeStore } from "../../store/fixedIncomeStore";
 import { BANK_PRESETS, getBankPreset, svgToDataUri } from "../../utils/bankPresets";
@@ -10,6 +11,7 @@ import {
   FloatingInput,
   CustomSelectDropdown,
 } from "../Common";
+import "./FixedIncomeModal.css";
 
 export default function FixedIncomeModal({
   isOpen,
@@ -18,6 +20,10 @@ export default function FixedIncomeModal({
   initialEntityId = null,
   editItem = null,
 }) {
+  const modalRef = useRef(null);
+  const backdropRef = useRef(null);
+  const bodyRef = useRef(null);
+
   const { entities, accounts, addEntity, updateEntity, addAccount, updateAccount, addCDT, updateCDT, addTransaction, updateTransaction } =
     useFixedIncomeStore();
   const [activeTab, setActiveTab] = useState(initialTab); // 'entity' | 'account' | 'cdt' | 'calculator' | 'transaction'
@@ -114,6 +120,22 @@ export default function FixedIncomeModal({
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
+      if (modalRef.current) {
+        animate(modalRef.current, {
+          scale: [0.94, 1],
+          opacity: [0, 1],
+          translateY: [16, 0],
+          duration: 320,
+          ease: "out(3)",
+        });
+      }
+      if (backdropRef.current) {
+        animate(backdropRef.current, {
+          opacity: [0, 1],
+          duration: 240,
+          ease: "out(2)",
+        });
+      }
     } else {
       document.body.style.overflow = "";
     }
@@ -121,6 +143,17 @@ export default function FixedIncomeModal({
       document.body.style.overflow = "";
     };
   }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && bodyRef.current) {
+      animate(bodyRef.current, {
+        opacity: [0.35, 1],
+        translateY: [6, 0],
+        duration: 220,
+        ease: "out(2)",
+      });
+    }
+  }, [activeTab, isOpen]);
 
   useEffect(() => {
     setActiveTab(initialTab);
@@ -499,149 +532,59 @@ export default function FixedIncomeModal({
 
   return createPortal(
     <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        width: "100vw",
-        height: "100vh",
-        zIndex: 999999,
-        background: "rgba(8, 12, 24, 0.82)",
-        backdropFilter: "blur(16px)",
-        WebkitBackdropFilter: "blur(16px)",
-        display: "flex",
-        alignItems: "flex-start",
-        justifyContent: "center",
-        padding: "76px 16px 24px 16px",
-        overflowY: "auto",
-      }}
+      ref={backdropRef}
+      className="fi-modal-backdrop"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       {/* Container with FIXED Height and Width so switching tabs NEVER shifts position */}
       <div
+        ref={modalRef}
+        className="fi-modal-container"
         onClick={(e) => e.stopPropagation()}
-        style={{
-          background: "rgba(13, 18, 38, 0.95)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-          border: "1px solid rgba(255, 255, 255, 0.12)",
-          borderRadius: 18,
-          width: "100%",
-          maxWidth: 620,
-          height: 570,
-          maxHeight: "calc(100vh - 96px)",
-          display: "flex",
-          flexDirection: "column",
-          boxShadow: "0 30px 60px -12px rgba(0, 0, 0, 0.9), 0 0 35px rgba(56, 189, 248, 0.08)",
-          overflow: "hidden",
-          flexShrink: 0,
-        }}
       >
         {/* Header Tabs */}
-        <div
-          style={{
-            display: "flex",
-            borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-            background: "rgba(255, 255, 255, 0.02)",
-            flexShrink: 0,
-          }}
-        >
+        <div className="fi-modal-header-tabs">
           <button
+            type="button"
             onClick={() => setActiveTab("account")}
-            style={{
-              flex: 1,
-              padding: "14px 6px",
-              background: activeTab === "account" ? "rgba(16, 185, 129, 0.12)" : "transparent",
-              color: activeTab === "account" ? "#10b981" : "#94a3b8",
-              border: "none",
-              borderBottom: activeTab === "account" ? "2px solid #10b981" : "none",
-              fontWeight: 600,
-              fontSize: "0.8rem",
-              cursor: "pointer",
-            }}
+            className={`fi-modal-tab-btn ${activeTab === "account" ? "active-account" : ""}`}
           >
             💰 Cuenta / Bolsillo
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab("cdt")}
-            style={{
-              flex: 1,
-              padding: "14px 6px",
-              background: activeTab === "cdt" ? "rgba(245, 158, 11, 0.12)" : "transparent",
-              color: activeTab === "cdt" ? "#f59e0b" : "#94a3b8",
-              border: "none",
-              borderBottom: activeTab === "cdt" ? "2px solid #f59e0b" : "none",
-              fontWeight: 600,
-              fontSize: "0.8rem",
-              cursor: "pointer",
-            }}
+            className={`fi-modal-tab-btn ${activeTab === "cdt" ? "active-cdt" : ""}`}
           >
             📜 CDT / Plazo Fijo
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab("calculator")}
-            style={{
-              flex: 1,
-              padding: "14px 6px",
-              background: activeTab === "calculator" ? "rgba(192, 132, 252, 0.12)" : "transparent",
-              color: activeTab === "calculator" ? "#c084fc" : "#94a3b8",
-              border: "none",
-              borderBottom: activeTab === "calculator" ? "2px solid #c084fc" : "none",
-              fontWeight: 600,
-              fontSize: "0.8rem",
-              cursor: "pointer",
-            }}
+            className={`fi-modal-tab-btn ${activeTab === "calculator" ? "active-calculator" : ""}`}
           >
             🧮 Aportes por Fecha
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab("transaction")}
-            style={{
-              flex: 1,
-              padding: "14px 6px",
-              background: activeTab === "transaction" ? "rgba(56, 189, 248, 0.12)" : "transparent",
-              color: activeTab === "transaction" ? "#38bdf8" : "#94a3b8",
-              border: "none",
-              borderBottom: activeTab === "transaction" ? "2px solid #38bdf8" : "none",
-              fontWeight: 600,
-              fontSize: "0.8rem",
-              cursor: "pointer",
-            }}
+            className={`fi-modal-tab-btn ${activeTab === "transaction" ? "active-transaction" : ""}`}
           >
             💸 + Movimiento
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab("entity")}
-            style={{
-              flex: 1,
-              padding: "14px 6px",
-              background: activeTab === "entity" ? "rgba(0, 229, 255, 0.12)" : "transparent",
-              color: activeTab === "entity" ? "#00e5ff" : "#94a3b8",
-              border: "none",
-              borderBottom: activeTab === "entity" ? "2px solid #00e5ff" : "none",
-              fontWeight: 600,
-              fontSize: "0.8rem",
-              cursor: "pointer",
-            }}
+            className={`fi-modal-tab-btn ${activeTab === "entity" ? "active-entity" : ""}`}
           >
             🏦 + Entidad
           </button>
         </div>
 
         {/* Content Body */}
-        <div
-          style={{
-            padding: 20,
-            overflowY: "auto",
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
+        <div ref={bodyRef} className="fi-modal-body">
           {/* TAB 1: CUENTA / BOLSILLO */}
           {activeTab === "account" && (
             <form
@@ -649,14 +592,7 @@ export default function FixedIncomeModal({
               style={{ display: "flex", flexDirection: "column", gap: 14, height: "100%" }}
             >
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.75rem",
-                    color: "#94a3b8",
-                    marginBottom: 4,
-                  }}
-                >
+                <label className="fi-form-label">
                   Entidad Bancaria
                 </label>
                 <CustomSelectDropdown
@@ -679,28 +615,13 @@ export default function FixedIncomeModal({
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.75rem",
-                      color: "#94a3b8",
-                      marginBottom: 4,
-                    }}
-                  >
+                  <label className="fi-form-label">
                     Tipo
                   </label>
                   <select
                     value={accountType}
                     onChange={(e) => setAccountType(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      background: "#1e293b",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      color: "#f1f5f9",
-                      fontSize: "0.85rem",
-                    }}
+                    className="fi-select"
                   >
                     <option value="pocket">⚡ Bolsillo / Cajita</option>
                     <option value="savings">💳 Cuenta de Ahorro</option>
@@ -708,28 +629,13 @@ export default function FixedIncomeModal({
                   </select>
                 </div>
                 <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.75rem",
-                      color: "#94a3b8",
-                      marginBottom: 4,
-                    }}
-                  >
+                  <label className="fi-form-label">
                     Divisa
                   </label>
                   <select
                     value={accountCurrency}
                     onChange={(e) => setAccountCurrency(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      background: "#1e293b",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      color: "#f1f5f9",
-                      fontSize: "0.85rem",
-                    }}
+                    className="fi-select"
                   >
                     <option value="COP">COP ($)</option>
                     <option value="USD">USD ($)</option>
@@ -741,14 +647,7 @@ export default function FixedIncomeModal({
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.75rem",
-                      color: "#94a3b8",
-                      marginBottom: 4,
-                    }}
-                  >
+                  <label className="fi-form-label">
                     Saldo Actual
                   </label>
                   <CurrencyInput
@@ -759,14 +658,7 @@ export default function FixedIncomeModal({
                   />
                 </div>
                 <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.75rem",
-                      color: "#94a3b8",
-                      marginBottom: 4,
-                    }}
-                  >
+                  <label className="fi-form-label">
                     Tasa Efectiva Anual (E.A. %)
                   </label>
                   <FloatingInput
@@ -783,14 +675,7 @@ export default function FixedIncomeModal({
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.75rem",
-                      color: "#94a3b8",
-                      marginBottom: 4,
-                    }}
-                  >
+                  <label className="fi-form-label">
                     Fecha Apertura / Inicio
                   </label>
                   <DynamicDatePicker
@@ -799,47 +684,23 @@ export default function FixedIncomeModal({
                   />
                 </div>
                 <div style={{ display: "flex", alignItems: "center", paddingTop: 16 }}>
-                  <label
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      fontSize: "0.75rem",
-                      color: "#94a3b8",
-                      cursor: "pointer",
-                    }}
-                  >
+                  <label className="fi-checkbox-label">
                     <input
                       type="checkbox"
                       checked={accountTaxExempt}
                       onChange={(e) => setAccountTaxExempt(e.target.checked)}
                     />
-                    Exenta de 4x1000 (GMF)
+                    <span>Exenta de 4x1000 (GMF)</span>
                   </label>
                 </div>
               </div>
 
               {/* Pinned Footer at Bottom */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: 10,
-                  marginTop: "auto",
-                  paddingTop: 10,
-                }}
-              >
+              <div className="fi-modal-footer">
                 <button
                   type="button"
                   onClick={onClose}
-                  style={{
-                    padding: "8px 16px",
-                    borderRadius: 8,
-                    background: "transparent",
-                    border: "1px solid rgba(255,255,255,0.15)",
-                    color: "#94a3b8",
-                    cursor: "pointer",
-                  }}
+                  className="fi-btn-cancel"
                 >
                   Cancelar
                 </button>
@@ -868,14 +729,7 @@ export default function FixedIncomeModal({
               style={{ display: "flex", flexDirection: "column", gap: 14, height: "100%" }}
             >
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.75rem",
-                    color: "#94a3b8",
-                    marginBottom: 4,
-                  }}
-                >
+                <label className="fi-form-label">
                   Entidad Emisora
                 </label>
                 <CustomSelectDropdown
@@ -889,7 +743,7 @@ export default function FixedIncomeModal({
               {/* Nu/Bank Term Chips for Instant Plazo & Rate Selection */}
               {cdtAvailableTiers.length > 0 && (
                 <div>
-                  <div style={{ fontSize: "0.72rem", color: "#94a3b8", marginBottom: 6 }}>
+                  <div className="fi-form-label" style={{ fontSize: "0.74rem", marginBottom: 6 }}>
                     Plazos y Tasas Sugeridas para esta Entidad:
                   </div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -908,18 +762,7 @@ export default function FixedIncomeModal({
                             setCdtTermDays(discreteDays);
                             setCdtRateEA(String(tier.rateEA));
                           }}
-                          style={{
-                            background: isSelected
-                              ? "rgba(245, 158, 11, 0.25)"
-                              : "rgba(255, 255, 255, 0.04)",
-                            border: `1px solid ${isSelected ? "#f59e0b" : "rgba(255, 255, 255, 0.1)"}`,
-                            color: isSelected ? "#f59e0b" : "#94a3b8",
-                            padding: "4px 8px",
-                            borderRadius: 6,
-                            fontSize: "0.72rem",
-                            fontWeight: 600,
-                            cursor: "pointer",
-                          }}
+                          className={`fi-tier-chip ${isSelected ? "selected" : ""}`}
                         >
                           {tier.label}: {tier.rateEA}% E.A.
                         </button>
@@ -941,14 +784,7 @@ export default function FixedIncomeModal({
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.75rem",
-                      color: "#94a3b8",
-                      marginBottom: 4,
-                    }}
-                  >
+                  <label className="fi-form-label">
                     Capital Invertido
                   </label>
                   <CurrencyInput
@@ -959,14 +795,7 @@ export default function FixedIncomeModal({
                   />
                 </div>
                 <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.75rem",
-                      color: "#94a3b8",
-                      marginBottom: 4,
-                    }}
-                  >
+                  <label className="fi-form-label">
                     Tasa Pactada (E.A. %)
                   </label>
                   <FloatingInput
@@ -1001,14 +830,7 @@ export default function FixedIncomeModal({
                   />
                 </div>
                 <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.75rem",
-                      color: "#94a3b8",
-                      marginBottom: 4,
-                    }}
-                  >
+                  <label className="fi-form-label">
                     Fecha Apertura
                   </label>
                   <DynamicDatePicker
@@ -1017,14 +839,7 @@ export default function FixedIncomeModal({
                   />
                 </div>
                 <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.75rem",
-                      color: "#94a3b8",
-                      marginBottom: 4,
-                    }}
-                  >
+                  <label className="fi-form-label">
                     Vencimiento (Auto)
                   </label>
                   <DynamicDatePicker
@@ -1038,14 +853,7 @@ export default function FixedIncomeModal({
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.75rem",
-                      color: "#94a3b8",
-                      marginBottom: 4,
-                    }}
-                  >
+                  <label className="fi-form-label">
                     Retención en la Fuente (%)
                   </label>
                   <FloatingInput
@@ -1057,22 +865,13 @@ export default function FixedIncomeModal({
                   />
                 </div>
                 <div style={{ display: "flex", alignItems: "center", paddingTop: 18 }}>
-                  <label
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                      fontSize: "0.75rem",
-                      color: "#94a3b8",
-                      cursor: "pointer",
-                    }}
-                  >
+                  <label className="fi-checkbox-label">
                     <input
                       type="checkbox"
                       checked={cdtAutoRenew}
                       onChange={(e) => setCdtAutoRenew(e.target.checked)}
                     />
-                    Auto-Renovable al Vencer
+                    <span>Auto-Renovable al Vencer</span>
                   </label>
                 </div>
               </div>
@@ -1082,17 +881,16 @@ export default function FixedIncomeModal({
                 <>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                     <div>
-                      <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: 4 }}>
+                      <label className="fi-form-label">
                         Estado
                       </label>
                       <select
                         value={cdtStatus}
                         onChange={(e) => setCdtStatus(e.target.value)}
+                        className="fi-select"
                         style={{
-                          width: "100%", padding: "8px 12px", borderRadius: 8,
-                          background: "#1e293b", border: "1px solid rgba(255,255,255,0.1)",
                           color: cdtStatus === "matured" ? "#f59e0b" : "#10b981",
-                          fontSize: "0.85rem", fontWeight: 600,
+                          fontWeight: 600,
                         }}
                       >
                         <option value="active">🟢 Activo</option>
@@ -1113,7 +911,7 @@ export default function FixedIncomeModal({
                   {cdtStatus === "matured" && (
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                       <div>
-                        <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: 4 }}>
+                        <label className="fi-form-label">
                           Monto de Salida ($)
                         </label>
                         <CurrencyInput
@@ -1124,7 +922,7 @@ export default function FixedIncomeModal({
                         />
                       </div>
                       <div>
-                        <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: 4 }}>
+                        <label className="fi-form-label">
                           Fecha Liquidación
                         </label>
                         <DynamicDatePicker
@@ -1139,26 +937,11 @@ export default function FixedIncomeModal({
               )}
 
               {/* Pinned Footer at Bottom */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: 10,
-                  marginTop: "auto",
-                  paddingTop: 10,
-                }}
-              >
+              <div className="fi-modal-footer">
                 <button
                   type="button"
                   onClick={onClose}
-                  style={{
-                    padding: "8px 16px",
-                    borderRadius: 8,
-                    background: "transparent",
-                    border: "1px solid rgba(255,255,255,0.15)",
-                    color: "#94a3b8",
-                    cursor: "pointer",
-                  }}
+                  className="fi-btn-cancel"
                 >
                   Cancelar
                 </button>
@@ -1184,14 +967,7 @@ export default function FixedIncomeModal({
           {activeTab === "calculator" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 14, height: "100%" }}>
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.75rem",
-                    color: "#94a3b8",
-                    marginBottom: 4,
-                  }}
-                >
+                <label className="fi-form-label">
                   Entidad Bancaria
                 </label>
                 <CustomSelectDropdown
@@ -1220,7 +996,7 @@ export default function FixedIncomeModal({
                     marginBottom: 6,
                   }}
                 >
-                  <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                  <span className="fi-form-label" style={{ marginBottom: 0 }}>
                     Aportes Realizados (Fecha y Monto):
                   </span>
                   <button
@@ -1307,20 +1083,14 @@ export default function FixedIncomeModal({
 
               {/* Calculated Result Box */}
               {calcResult && (
-                <div
-                  style={{
-                    background: "rgba(16, 185, 129, 0.08)",
-                    border: "1px solid rgba(16, 185, 129, 0.25)",
-                    borderRadius: 10,
-                    padding: 12,
-                  }}
-                >
+                <div className="fi-info-box">
                   <div
                     style={{
                       fontSize: "0.75rem",
-                      color: "#94a3b8",
+                      fontWeight: 700,
                       textTransform: "uppercase",
                       letterSpacing: 0.5,
+                      marginBottom: 6,
                     }}
                   >
                     Resultado Crecimiento:
@@ -1330,20 +1100,19 @@ export default function FixedIncomeModal({
                       display: "grid",
                       gridTemplateColumns: "repeat(3, 1fr)",
                       gap: 8,
-                      marginTop: 6,
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: "0.68rem", color: "#64748b" }}>Capital:</div>
+                      <div style={{ fontSize: "0.68rem", opacity: 0.8 }}>Capital:</div>
                       <div
                         className="mono"
-                        style={{ fontSize: "0.85rem", fontWeight: 700, color: "#f1f5f9" }}
+                        style={{ fontSize: "0.85rem", fontWeight: 700 }}
                       >
                         ${calcResult.totalContributedCapital.toLocaleString("en-US")}
                       </div>
                     </div>
                     <div>
-                      <div style={{ fontSize: "0.68rem", color: "#64748b" }}>Intereses:</div>
+                      <div style={{ fontSize: "0.68rem", opacity: 0.8 }}>Intereses:</div>
                       <div
                         className="mono"
                         style={{ fontSize: "0.85rem", fontWeight: 700, color: "#10b981" }}
@@ -1352,7 +1121,7 @@ export default function FixedIncomeModal({
                       </div>
                     </div>
                     <div>
-                      <div style={{ fontSize: "0.68rem", color: "#64748b" }}>Saldo Actual:</div>
+                      <div style={{ fontSize: "0.68rem", opacity: 0.8 }}>Saldo Actual:</div>
                       <div
                         className="mono"
                         style={{ fontSize: "0.9rem", fontWeight: 800, color: "#38bdf8" }}
@@ -1365,26 +1134,11 @@ export default function FixedIncomeModal({
               )}
 
               {/* Pinned Footer at Bottom */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: 10,
-                  marginTop: "auto",
-                  paddingTop: 10,
-                }}
-              >
+              <div className="fi-modal-footer">
                 <button
                   type="button"
                   onClick={onClose}
-                  style={{
-                    padding: "8px 16px",
-                    borderRadius: 8,
-                    background: "transparent",
-                    border: "1px solid rgba(255,255,255,0.15)",
-                    color: "#94a3b8",
-                    cursor: "pointer",
-                  }}
+                  className="fi-btn-cancel"
                 >
                   Cancelar
                 </button>
@@ -1417,15 +1171,7 @@ export default function FixedIncomeModal({
             >
               {/* Selector desplegable de Bancos y Plataformas Sugeridas */}
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.75rem",
-                    color: "#38bdf8",
-                    fontWeight: 700,
-                    marginBottom: 6,
-                  }}
-                >
+                <label className="fi-form-label" style={{ color: "var(--accent-primary, #0284c7)" }}>
                   💡 Seleccionar Banco o Plataforma (Auto-completar datos):
                 </label>
                 <CustomSelectDropdown
@@ -1457,28 +1203,13 @@ export default function FixedIncomeModal({
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
                 <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.75rem",
-                      color: "#94a3b8",
-                      marginBottom: 4,
-                    }}
-                  >
+                  <label className="fi-form-label">
                     País
                   </label>
                   <select
                     value={entityCountry}
                     onChange={(e) => setEntityCountry(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      background: "#1e293b",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      color: "#f1f5f9",
-                      fontSize: "0.85rem",
-                    }}
+                    className="fi-select"
                   >
                     <option value="🇨🇴">🇨🇴 Colombia</option>
                     <option value="🇺🇸">🇺🇸 USA</option>
@@ -1495,14 +1226,7 @@ export default function FixedIncomeModal({
                   />
                 </div>
                 <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.75rem",
-                      color: "#94a3b8",
-                      marginBottom: 4,
-                    }}
-                  >
+                  <label className="fi-form-label">
                     Color Distintivo
                   </label>
                   <input
@@ -1514,35 +1238,20 @@ export default function FixedIncomeModal({
                       height: 42,
                       padding: 2,
                       borderRadius: 8,
-                      background: "#1e293b",
-                      border: "1px solid rgba(255,255,255,0.1)",
+                      border: "1px solid rgba(125,125,125,0.2)",
                       cursor: "pointer",
+                      background: "transparent",
                     }}
                   />
                 </div>
               </div>
 
               {/* Pinned Footer at Bottom */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: 10,
-                  marginTop: "auto",
-                  paddingTop: 10,
-                }}
-              >
+              <div className="fi-modal-footer">
                 <button
                   type="button"
                   onClick={onClose}
-                  style={{
-                    padding: "8px 16px",
-                    borderRadius: 8,
-                    background: "transparent",
-                    border: "1px solid rgba(255,255,255,0.15)",
-                    color: "#94a3b8",
-                    cursor: "pointer",
-                  }}
+                  className="fi-btn-cancel"
                 >
                   Cancelar
                 </button>
@@ -1571,14 +1280,7 @@ export default function FixedIncomeModal({
               style={{ display: "flex", flexDirection: "column", gap: 14, height: "100%" }}
             >
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.75rem",
-                    color: "#94a3b8",
-                    marginBottom: 4,
-                  }}
-                >
+                <label className="fi-form-label">
                   Cajita o Cuenta Destino
                 </label>
                 <CustomSelectDropdown
@@ -1591,46 +1293,21 @@ export default function FixedIncomeModal({
 
               {/* Tipo: Depósito o Retiro */}
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.75rem",
-                    color: "#94a3b8",
-                    marginBottom: 6,
-                  }}
-                >
+                <label className="fi-form-label">
                   Tipo de Movimiento
                 </label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   <button
                     type="button"
                     onClick={() => setTxType("credit")}
-                    style={{
-                      padding: "10px",
-                      borderRadius: 8,
-                      border: `1px solid ${txType === "credit" ? "#10b981" : "rgba(255,255,255,0.1)"}`,
-                      background: txType === "credit" ? "rgba(16, 185, 129, 0.2)" : "rgba(255,255,255,0.03)",
-                      color: txType === "credit" ? "#10b981" : "#94a3b8",
-                      fontWeight: 700,
-                      fontSize: "0.85rem",
-                      cursor: "pointer",
-                    }}
+                    className={`fi-movement-type-btn ${txType === "credit" ? "active-credit" : ""}`}
                   >
                     + Depósito (Entrada)
                   </button>
                   <button
                     type="button"
                     onClick={() => setTxType("debit")}
-                    style={{
-                      padding: "10px",
-                      borderRadius: 8,
-                      border: `1px solid ${txType === "debit" ? "#f43f5e" : "rgba(255,255,255,0.1)"}`,
-                      background: txType === "debit" ? "rgba(244, 63, 94, 0.2)" : "rgba(255,255,255,0.03)",
-                      color: txType === "debit" ? "#f43f5e" : "#94a3b8",
-                      fontWeight: 700,
-                      fontSize: "0.85rem",
-                      cursor: "pointer",
-                    }}
+                    className={`fi-movement-type-btn ${txType === "debit" ? "active-debit" : ""}`}
                   >
                     - Retiro (Salida)
                   </button>
@@ -1639,14 +1316,7 @@ export default function FixedIncomeModal({
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.75rem",
-                      color: "#94a3b8",
-                      marginBottom: 4,
-                    }}
-                  >
+                  <label className="fi-form-label">
                     Monto ({accounts.find((a) => a.id === txAccountId)?.currency || "COP"})
                   </label>
                   <CurrencyInput
@@ -1658,14 +1328,7 @@ export default function FixedIncomeModal({
                 </div>
 
                 <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.75rem",
-                      color: "#94a3b8",
-                      marginBottom: 4,
-                    }}
-                  >
+                  <label className="fi-form-label">
                     Fecha del Movimiento
                   </label>
                   <DynamicDatePicker
@@ -1686,17 +1349,7 @@ export default function FixedIncomeModal({
               </div>
 
               {/* Checkbox: Actualizar saldo actual de la cuenta */}
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  fontSize: "0.8rem",
-                  color: "#cbd5e1",
-                  cursor: "pointer",
-                  marginTop: 4,
-                }}
-              >
+              <label className="fi-checkbox-label" style={{ marginTop: 4 }}>
                 <input
                   type="checkbox"
                   checked={txUpdateAccountBalance}
@@ -1706,34 +1359,19 @@ export default function FixedIncomeModal({
               </label>
 
               {/* Pinned Footer at Bottom */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: 10,
-                  marginTop: "auto",
-                  paddingTop: 10,
-                }}
-              >
+              <div className="fi-modal-footer">
                 <button
                   type="button"
                   onClick={onClose}
-                  style={{
-                    padding: "8px 16px",
-                    borderRadius: 8,
-                    background: "transparent",
-                    border: "1px solid rgba(255,255,255,0.15)",
-                    color: "#94a3b8",
-                    cursor: "pointer",
-                  }}
+                  className="fi-btn-cancel"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   style={{
-                    padding: "8px 20px",
-                    borderRadius: 8,
+                    padding: "10px 22px",
+                    borderRadius: 10,
                     background: txType === "credit" ? "#10b981" : "#f43f5e",
                     border: "none",
                     color: "#fff",

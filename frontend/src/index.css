@@ -264,8 +264,19 @@
 
 /* Muted secondary text */
 [data-theme="light"] [style*="color: #94a3b8"],
-[data-theme="light"] [style*="color: \"#94a3b8\""] {
-  color: #475569 !important;
+[data-theme="light"] [style*="color: \"#94a3b8\""],
+[data-theme="light"] [style*="color: #cbd5e1"],
+[data-theme="light"] [style*="color: \"#cbd5e1\""] {
+  color: #334155 !important;
+}
+
+/* Inner inputs inside custom control wrappers */
+[data-theme="light"] .floating-input-field,
+[data-theme="light"] .currency-native-input,
+[data-theme="light"] .dynamic-datepicker-field {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 /* Table rows with dark border in light mode */
