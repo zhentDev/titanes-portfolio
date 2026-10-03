@@ -51,19 +51,50 @@
   flex-wrap: wrap;
 }
 
-.cashflow-quantum-atom-box {
-  transition: all 0.25s ease;
+/* ── Quantum Orbital Visualizer Side Panel ──────────────────────────── */
+.cashflow-sankey-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 350px;
+  gap: 20px;
+  align-items: stretch;
+  width: 100%;
 }
 
-.cashflow-quantum-atom-box:hover {
-  border-color: rgba(0, 229, 255, 0.5) !important;
-  box-shadow: 0 4px 25px rgba(0, 229, 255, 0.15), inset 0 0 20px rgba(0, 229, 255, 0.08) !important;
-  transform: translateY(-1px);
+.cashflow-quantum-sidepanel {
+  background: rgba(13, 18, 38, 0.75);
+  border: 1px solid rgba(0, 229, 255, 0.22);
+  border-radius: 20px;
+  padding: 16px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), inset 0 0 25px rgba(0, 229, 255, 0.04);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@media (max-width: 900px) {
-  .cashflow-quantum-atom-box {
-    display: none !important;
+.cashflow-quantum-sidepanel:hover {
+  border-color: rgba(0, 229, 255, 0.45);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55), inset 0 0 30px rgba(0, 229, 255, 0.08);
+}
+
+.cashflow-quantum-sidepanel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+@media (max-width: 1100px) {
+  .cashflow-sankey-row {
+    grid-template-columns: 1fr;
+  }
+  .cashflow-quantum-sidepanel {
+    min-height: 380px;
   }
 }
 

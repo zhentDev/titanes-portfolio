@@ -327,58 +327,6 @@ export default function CashFlowHub() {
           </p>
         </div>
 
-        {/* Miniature Quantum Atom Orbital Box */}
-        <div
-          className="cashflow-quantum-atom-box"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            background: "rgba(10, 15, 30, 0.65)",
-            border: "1px solid rgba(0, 229, 255, 0.25)",
-            borderRadius: "14px",
-            padding: "6px 12px",
-            backdropFilter: "blur(10px)",
-            boxShadow: "0 4px 20px rgba(0, 0, 0, 0.35), inset 0 0 15px rgba(0, 229, 255, 0.05)",
-          }}
-          title="Simulación cuántica en tiempo real: Estados orbitales |ψ_nlm|² de la función de onda de Schrödinger"
-        >
-          <QuantumOrbitalLoader
-            height={74}
-            width={100}
-            compact={true}
-            showHud={false}
-            style={{
-              borderRadius: "10px",
-              border: "1px solid rgba(0, 229, 255, 0.3)",
-              boxShadow: "0 0 12px rgba(0, 229, 255, 0.15)",
-            }}
-          />
-          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span
-                style={{
-                  display: "inline-block",
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  backgroundColor: "#00e5ff",
-                  boxShadow: "0 0 8px #00e5ff",
-                  animation: "pulse 1.2s infinite alternate",
-                }}
-              />
-              <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "#f8fafc", letterSpacing: "0.2px" }}>
-                Modelo Cuántico
-              </span>
-            </div>
-            <span style={{ fontSize: "0.68rem", color: "#38bdf8", fontFamily: "var(--font-mono, monospace)" }}>
-              Ψ(r,θ,φ) Dinámico
-            </span>
-            <span style={{ fontSize: "0.62rem", color: "var(--text-muted)" }}>
-              Función de Onda Activa
-            </span>
-          </div>
-        </div>
 
         {/* Primary Call-to-Action Buttons */}
         <div className="cashflow-header-actions">
@@ -626,17 +574,97 @@ export default function CashFlowHub() {
         </div>
       </div>
 
-      {/* ── 4. Native SVG Sankey / Cash Waterfall Flow Chart (HERO SUMMARY) ── */}
-      <CashFlowSankey
-        inflows={periodInflows}
-        needs={periodNeeds}
-        wants={periodWants}
-        wealth={periodWealth}
-        currency={currency}
-        fxRate={fxRate}
-        customRatios={customRatios}
-        onEditNode={(item, type) => handleOpenEditModal(item, type)}
-      />
+      {/* ── 4. Native SVG Sankey Flow Chart + Quantum Atom Visualizer Side Panel ── */}
+      <div className="cashflow-sankey-row">
+        <CashFlowSankey
+          inflows={periodInflows}
+          needs={periodNeeds}
+          wants={periodWants}
+          wealth={periodWealth}
+          currency={currency}
+          fxRate={fxRate}
+          customRatios={customRatios}
+          onEditNode={(item, type) => handleOpenEditModal(item, type)}
+        />
+
+        <div className="cashflow-quantum-sidepanel">
+          <div className="cashflow-quantum-sidepanel-header">
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span
+                style={{
+                  display: "inline-block",
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  backgroundColor: "#00e5ff",
+                  boxShadow: "0 0 8px #00e5ff",
+                  animation: "pulse 1.2s infinite alternate",
+                }}
+              />
+              <span style={{ fontSize: "0.88rem", fontWeight: 800, color: "#f8fafc", letterSpacing: "0.2px" }}>
+                Modelo Cuántico Atómico
+              </span>
+            </div>
+            <span
+              style={{
+                fontSize: "0.68rem",
+                color: "#38bdf8",
+                background: "rgba(56, 189, 248, 0.12)",
+                padding: "2px 8px",
+                borderRadius: 8,
+                border: "1px solid rgba(56, 189, 248, 0.25)",
+                fontFamily: "var(--font-mono, monospace)",
+              }}
+            >
+              Ψ_nlm(r,θ,φ)
+            </span>
+          </div>
+
+          <div
+            style={{
+              flex: 1,
+              minHeight: 280,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              position: "relative",
+              borderRadius: "14px",
+              overflow: "hidden",
+              border: "1px solid rgba(0, 229, 255, 0.18)",
+              background: "radial-gradient(circle at center, rgba(14, 28, 54, 0.7) 0%, rgba(5, 10, 20, 0.95) 100%)",
+            }}
+          >
+            <QuantumOrbitalLoader
+              height={290}
+              width="100%"
+              compact={false}
+              showHud={true}
+              message="Densidad de Probabilidad |Ψ|²"
+              style={{
+                borderRadius: "12px",
+              }}
+            />
+          </div>
+
+          <div
+            style={{
+              marginTop: 12,
+              paddingTop: 10,
+              borderTop: "1px solid rgba(255, 255, 255, 0.07)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              fontSize: "0.72rem",
+              color: "var(--text-muted)",
+            }}
+          >
+            <span>Transiciones Cuánticas Activas</span>
+            <span style={{ color: "#00e5ff", fontFamily: "var(--font-mono, monospace)", fontWeight: 700 }}>
+              1s ➔ 5g / sp³
+            </span>
+          </div>
+        </div>
+      </div>
 
       {/* ── 5. Real Liquid Cash & Funds Availability Card (COLLAPSIBLE) ──────────── */}
       <div

@@ -75,9 +75,41 @@
       let touchStartY = 0;
       let activeAdEl = null;
 
+      function isAdElement(el) {
+        if (!el || el.nodeType !== 1 || el.tagName === 'SCRIPT' || el.tagName === 'STYLE') return false;
+        // Check standard Monetag/ad patterns
+        if (el.matches && el.matches('iframe[src*="nap5k"], iframe[src*="n6wxm"], [id*="monetag"], .monetag, .in-page-push, [class*="in-page-push"], div[id*="zone_"], div[data-zone]')) {
+          return true;
+        }
+        // Direct child of body with fixed/absolute position and high z-index
+        if (el.parentNode === document.body || el.parentNode === document.documentElement) {
+          try {
+            const cs = window.getComputedStyle(el);
+            const z = parseInt(cs.zIndex, 10);
+            if ((cs.position === 'fixed' || cs.position === 'absolute') && z > 5000) {
+              // Confirm it's not a modal or dropdown by checking text or ad indicators or top-right positioning
+              const hasAdText = el.innerText && (el.innerText.includes('Ad') || el.innerText.includes('Anuncio') || el.innerText.includes('push') || el.querySelector('svg, a, img'));
+              if (hasAdText || el.id.startsWith('zone_') || cs.top === '0px' || parseInt(cs.top, 10) < 150) {
+                return true;
+              }
+            }
+          } catch (e) {}
+        }
+        return false;
+      }
+
       function findAdContainer(target) {
         if (!target || !target.closest) return null;
-        return target.closest('iframe[src*="nap5k"], iframe[src*="n6wxm"], [id*="monetag"], .monetag, .in-page-push, [class*="in-page-push"], div[id*="zone_"], div[data-zone]');
+        let found = target.closest('iframe[src*="nap5k"], iframe[src*="n6wxm"], [id*="monetag"], .monetag, .in-page-push, [class*="in-page-push"], div[id*="zone_"], div[data-zone]');
+        if (found) return found;
+
+        // Traverse up to top-level fixed element
+        let curr = target;
+        while (curr && curr !== document.body && curr !== document.documentElement) {
+          if (isAdElement(curr)) return curr;
+          curr = curr.parentElement;
+        }
+        return null;
       }
 
       document.addEventListener('touchstart', function(e) {
@@ -131,28 +163,41 @@
         }
       }, { passive: true });
 
-      // 3. Limitar a un SOLO anuncio en pantalla a la vez (evita apilamiento múltiple)
+      // 3. Limitar a un SOLO anuncio en pantalla a la vez y posicionar abajo a la izquierda
       function limitToOneAd() {
         const adSelector = 'iframe[src*="nap5k"], iframe[src*="n6wxm"], [id*="monetag"], .monetag, .in-page-push, [class*="in-page-push"], div[id*="zone_"], div[data-zone]';
-        const ads = Array.from(document.querySelectorAll(adSelector)).filter(el => {
-          // Filtrar tags de script o contenedores ocultos/destruidos
-          return el.tagName !== 'SCRIPT' && (el.offsetWidth > 0 || el.offsetHeight > 0 || window.getComputedStyle(el).display !== 'none');
+        const foundList = Array.from(document.querySelectorAll(adSelector));
+        
+        // Also check direct children of body with fixed positioning and high z-index
+        if (document.body) {
+          for (let i = 0; i < document.body.children.length; i++) {
+            const child = document.body.children[i];
+            if (isAdElement(child) && !foundList.includes(child)) {
+              foundList.push(child);
+            }
+          }
+        }
+
+        const ads = foundList.filter(el => {
+          return el.tagName !== 'SCRIPT' && el.tagName !== 'STYLE' && (el.offsetWidth > 0 || el.offsetHeight > 0 || window.getComputedStyle(el).display !== 'none');
         });
 
-        // Si hay más de 1 anuncio visible o inyectado, eliminar o esconder los subsiguientes
+        // Si hay más de 1 anuncio visible o inyectado, eliminar inmediatamente los extras
         if (ads.length > 1) {
           for (let i = 1; i < ads.length; i++) {
             try {
               if (ads[i].parentNode) {
                 ads[i].parentNode.removeChild(ads[i]);
               } else {
-                ads[i].style.setProperty('display', 'none', 'important');
+                ads[i].remove();
               }
-            } catch (e) {}
+            } catch (e) {
+              ads[i].style.setProperty('display', 'none', 'important');
+            }
           }
         }
 
-        // Forzar posicionamiento en la esquina inferior izquierda
+        // Forzar estrictamente la posición en la esquina inferior izquierda
         if (ads.length > 0) {
           const mainAd = ads[0];
           try {
@@ -162,6 +207,8 @@
             mainAd.style.setProperty('bottom', '20px', 'important');
             mainAd.style.setProperty('left', '20px', 'important');
             mainAd.style.setProperty('z-index', '999999', 'important');
+            mainAd.style.setProperty('margin', '0', 'important');
+            mainAd.classList.add('monetag-bottom-left-pinned');
           } catch (e) {}
         }
       }
@@ -177,12 +224,20 @@
           adObserver.observe(document.body, { childList: true, subtree: true });
         });
       }
-      setInterval(limitToOneAd, 1500);
+      setInterval(limitToOneAd, 800);
     })();
     </script>
     <style>
-    /* Ubicación en la esquina inferior izquierda y diseño base de los anuncios */
-    iframe[src*="nap5k"], iframe[src*="n6wxm"], [id*="monetag"], .monetag, .in-page-push, [class*="in-page-push"], div[id*="zone_"], div[data-zone] {
+    /* Ubicación forzada en la esquina inferior izquierda para anuncios */
+    iframe[src*="nap5k"],
+    iframe[src*="n6wxm"],
+    [id*="monetag"],
+    .monetag,
+    .in-page-push,
+    [class*="in-page-push"],
+    div[id*="zone_"],
+    div[data-zone],
+    .monetag-bottom-left-pinned {
       touch-action: pan-y !important;
       user-select: none !important;
       -webkit-user-select: none !important;
@@ -192,6 +247,7 @@
       bottom: 20px !important;
       left: 20px !important;
       z-index: 999999 !important;
+      margin: 0 !important;
     }
 
     /* Ocultar cualquier anuncio secundario si se generan múltiples contenedores */
@@ -200,13 +256,22 @@
     .in-page-push:nth-of-type(n+2),
     [class*="in-page-push"]:nth-of-type(n+2),
     div[id*="zone_"]:nth-of-type(n+2),
-    div[data-zone]:nth-of-type(n+2) {
+    div[data-zone]:nth-of-type(n+2),
+    .monetag-bottom-left-pinned ~ .monetag-bottom-left-pinned {
       display: none !important;
     }
 
     /* Adaptación para pantallas pequeñas / móviles (<= 640px) */
     @media (max-width: 640px) {
-      iframe[src*="nap5k"], iframe[src*="n6wxm"], [id*="monetag"], .monetag, .in-page-push, [class*="in-page-push"], div[id*="zone_"], div[data-zone] {
+      iframe[src*="nap5k"],
+      iframe[src*="n6wxm"],
+      [id*="monetag"],
+      .monetag,
+      .in-page-push,
+      [class*="in-page-push"],
+      div[id*="zone_"],
+      div[data-zone],
+      .monetag-bottom-left-pinned {
         transform: scale(0.82) !important;
         transform-origin: bottom left !important;
         max-width: 90vw !important;
