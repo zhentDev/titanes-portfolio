@@ -52,7 +52,7 @@
         var target = document.body || document.head || document.documentElement;
         if (!target) return;
         var s1 = document.createElement('script');
-        s1.dataset.zone = '11837652';
+        s1.dataset.zone = '11837672';
         s1.src = 'https://nap5k.com/tag.min.js';
         target.appendChild(s1);
       }
@@ -151,6 +151,19 @@
             } catch (e) {}
           }
         }
+
+        // Forzar posicionamiento en la esquina inferior izquierda
+        if (ads.length > 0) {
+          const mainAd = ads[0];
+          try {
+            mainAd.style.setProperty('position', 'fixed', 'important');
+            mainAd.style.setProperty('top', 'auto', 'important');
+            mainAd.style.setProperty('right', 'auto', 'important');
+            mainAd.style.setProperty('bottom', '20px', 'important');
+            mainAd.style.setProperty('left', '20px', 'important');
+            mainAd.style.setProperty('z-index', '999999', 'important');
+          } catch (e) {}
+        }
       }
 
       const adObserver = new MutationObserver(() => {
@@ -168,11 +181,17 @@
     })();
     </script>
     <style>
-    /* Ubicación y diseño base de los anuncios */
+    /* Ubicación en la esquina inferior izquierda y diseño base de los anuncios */
     iframe[src*="nap5k"], iframe[src*="n6wxm"], [id*="monetag"], .monetag, .in-page-push, [class*="in-page-push"], div[id*="zone_"], div[data-zone] {
       touch-action: pan-y !important;
       user-select: none !important;
       -webkit-user-select: none !important;
+      position: fixed !important;
+      top: auto !important;
+      right: auto !important;
+      bottom: 20px !important;
+      left: 20px !important;
+      z-index: 999999 !important;
     }
 
     /* Ocultar cualquier anuncio secundario si se generan múltiples contenedores */
@@ -189,9 +208,11 @@
     @media (max-width: 640px) {
       iframe[src*="nap5k"], iframe[src*="n6wxm"], [id*="monetag"], .monetag, .in-page-push, [class*="in-page-push"], div[id*="zone_"], div[data-zone] {
         transform: scale(0.82) !important;
-        transform-origin: top center !important;
+        transform-origin: bottom left !important;
         max-width: 90vw !important;
-        margin: 0 auto !important;
+        left: 10px !important;
+        bottom: 15px !important;
+        margin: 0 !important;
         font-size: 13px !important;
       }
     }
