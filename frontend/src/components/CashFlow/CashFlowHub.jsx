@@ -623,25 +623,27 @@ export default function CashFlowHub() {
           <div
             style={{
               flex: 1,
-              minHeight: 280,
+              width: "100%",
+              minHeight: 380,
               display: "flex",
-              alignItems: "center",
+              alignItems: "stretch",
               justifyContent: "center",
               position: "relative",
               borderRadius: "14px",
               overflow: "hidden",
               border: "1px solid rgba(0, 229, 255, 0.18)",
-              background: "radial-gradient(circle at center, rgba(14, 28, 54, 0.7) 0%, rgba(5, 10, 20, 0.95) 100%)",
             }}
           >
             <QuantumOrbitalLoader
-              height={290}
+              height="100%"
               width="100%"
               compact={false}
               showHud={true}
               message="Densidad de Probabilidad |Ψ|²"
               style={{
                 borderRadius: "12px",
+                width: "100%",
+                height: "100%",
               }}
             />
           </div>
