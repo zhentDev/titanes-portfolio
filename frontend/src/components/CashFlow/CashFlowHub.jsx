@@ -639,6 +639,7 @@ export default function CashFlowHub() {
               width="100%"
               compact={false}
               showHud={true}
+              cycleDuration={5.0}
               message="Densidad de Probabilidad |Ψ|²"
               style={{
                 borderRadius: "12px",

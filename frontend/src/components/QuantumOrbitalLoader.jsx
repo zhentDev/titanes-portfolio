@@ -326,6 +326,7 @@ export default function QuantumOrbitalLoader({
   compact = false,
   showHud = true,
   style = {},
+  cycleDuration = 1.8,
 }) {
   const canvasRef = useRef(null);
   const [currentInfo, setCurrentInfo] = useState({
@@ -398,7 +399,7 @@ export default function QuantumOrbitalLoader({
       if (!isRunning) return;
 
       const elapsedSec = (now - startTime) / 1000;
-      const CYCLE_DURATION = 1.8; // 1.8s per transition gives time to appreciate the geometry
+      const CYCLE_DURATION = cycleDuration || 1.8;
       const totalStates = ORBITALS.length || 1;
       const rawCycle = Math.floor(elapsedSec / CYCLE_DURATION);
       const cycleIndex = Math.max(0, isNaN(rawCycle) ? 0 : rawCycle);
@@ -523,7 +524,7 @@ export default function QuantumOrbitalLoader({
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
       if (resizeObserver) resizeObserver.disconnect();
     };
-  }, [height]);
+  }, [height, cycleDuration]);
 
   return (
     <div

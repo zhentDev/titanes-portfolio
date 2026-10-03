@@ -13,6 +13,36 @@
     <meta name="author" content="Zhent" />
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://zhentdev.github.io/titanes-portfolio/" />
+    <meta name="monetag" content="ac9d41eba38546aa396a537066d4fcc6" />
+
+    <!-- Monetag Vignette Banner (Profitable tag - Zone 11837655) con control de frecuencia -->
+    <script>
+    (function() {
+      // Cooldown de 4 horas para no saturar al usuario
+      const COOLDOWN_MS = 4 * 60 * 60 * 1000;
+      const lastShown = localStorage.getItem('vignetteLastShown');
+      if (lastShown && Date.now() - Number(lastShown) < COOLDOWN_MS) {
+        return; // Aún en periodo de espera
+      }
+
+      function loadVignette() {
+        if (window.__vignetteLoaded) return;
+        window.__vignetteLoaded = true;
+        localStorage.setItem('vignetteLastShown', Date.now());
+
+        const s = document.createElement('script');
+        s.dataset.zone = '11837655';
+        s.src = 'https://nap5k.com/tag.min.js';
+        (document.body || document.head || document.documentElement).appendChild(s);
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadVignette, { once: true });
+      } else {
+        loadVignette();
+      }
+    })();
+    </script>
 
     <!-- Open Graph / Facebook / WhatsApp Preview -->
     <meta property="og:type" content="website" />
