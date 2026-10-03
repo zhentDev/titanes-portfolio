@@ -596,23 +596,23 @@ export default function CashFlowHub() {
                   width: 8,
                   height: 8,
                   borderRadius: "50%",
-                  backgroundColor: "#00e5ff",
-                  boxShadow: "0 0 8px #00e5ff",
+                  backgroundColor: "var(--accent-primary)",
+                  boxShadow: "0 0 8px var(--accent-primary)",
                   animation: "pulse 1.2s infinite alternate",
                 }}
               />
-              <span style={{ fontSize: "0.88rem", fontWeight: 800, color: "#f8fafc", letterSpacing: "0.2px" }}>
+              <span style={{ fontSize: "0.88rem", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "0.2px" }}>
                 Modelo Cuántico Atómico
               </span>
             </div>
             <span
               style={{
                 fontSize: "0.68rem",
-                color: "#38bdf8",
-                background: "rgba(56, 189, 248, 0.12)",
+                color: "var(--accent-primary)",
+                background: "var(--accent-glow)",
                 padding: "2px 8px",
                 borderRadius: 8,
-                border: "1px solid rgba(56, 189, 248, 0.25)",
+                border: "1px solid var(--border-accent)",
                 fontFamily: "var(--font-mono, monospace)",
               }}
             >
@@ -631,7 +631,7 @@ export default function CashFlowHub() {
               position: "relative",
               borderRadius: "14px",
               overflow: "hidden",
-              border: "1px solid rgba(0, 229, 255, 0.18)",
+              border: "1px solid var(--border)",
             }}
           >
             <QuantumOrbitalLoader
@@ -653,7 +653,7 @@ export default function CashFlowHub() {
             style={{
               marginTop: 12,
               paddingTop: 10,
-              borderTop: "1px solid rgba(255, 255, 255, 0.07)",
+              borderTop: "1px solid var(--border)",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
@@ -662,7 +662,7 @@ export default function CashFlowHub() {
             }}
           >
             <span>Transiciones Cuánticas Activas</span>
-            <span style={{ color: "#00e5ff", fontFamily: "var(--font-mono, monospace)", fontWeight: 700 }}>
+            <span style={{ color: "var(--accent-primary)", fontFamily: "var(--font-mono, monospace)", fontWeight: 700 }}>
               1s ➔ 5g / sp³
             </span>
           </div>

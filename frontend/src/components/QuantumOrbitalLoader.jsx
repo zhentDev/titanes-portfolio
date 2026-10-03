@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTheme } from "../context/ThemeContext";
 
 /**
  * Quantum Orbital States Definition: (n, l, m)
@@ -328,6 +329,8 @@ export default function QuantumOrbitalLoader({
   style = {},
   cycleDuration = 1.8,
 }) {
+  const { theme } = useTheme();
+  const isLight = theme === "light";
   const canvasRef = useRef(null);
   const [currentInfo, setCurrentInfo] = useState({
     from: ORBITALS[0],
@@ -454,8 +457,8 @@ export default function QuantumOrbitalLoader({
       const fromColor = fromOrb.colorA || "#ffd166";
       const toColor = toOrb.colorA || "#06d6a0";
 
-      // Enable additive blending for brilliant quantum glow
-      ctx.globalCompositeOperation = "lighter";
+      // Blending mode: lighter in dark mode for additive neon glow, multiply/source-over in light mode
+      ctx.globalCompositeOperation = isLight ? "multiply" : "lighter";
 
       // Render quantum core / nucleus glow
       const nucleusPulse = 1 + Math.sin(elapsedSec * 4) * 0.2;
@@ -463,10 +466,17 @@ export default function QuantumOrbitalLoader({
         ? Math.max(6, 12 * nucleusPulse)
         : Math.max(15, 28 * nucleusPulse);
       const radGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR);
-      radGrad.addColorStop(0, "rgba(255, 255, 255, 0.95)");
-      radGrad.addColorStop(0.25, "rgba(0, 229, 255, 0.7)");
-      radGrad.addColorStop(0.7, "rgba(168, 85, 247, 0.25)");
-      radGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
+      if (isLight) {
+        radGrad.addColorStop(0, "rgba(2, 132, 199, 0.95)");
+        radGrad.addColorStop(0.35, "rgba(56, 189, 248, 0.5)");
+        radGrad.addColorStop(0.75, "rgba(168, 85, 247, 0.2)");
+        radGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
+      } else {
+        radGrad.addColorStop(0, "rgba(255, 255, 255, 0.95)");
+        radGrad.addColorStop(0.25, "rgba(0, 229, 255, 0.7)");
+        radGrad.addColorStop(0.7, "rgba(168, 85, 247, 0.25)");
+        radGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
+      }
       ctx.fillStyle = radGrad;
       ctx.beginPath();
       ctx.arc(cx, cy, coreR, 0, Math.PI * 2);
@@ -502,12 +512,12 @@ export default function QuantumOrbitalLoader({
         const screenY = cy + yRot * baseScale * pScale;
 
         // Particle size & depth fade
-        const depthAlpha = Math.max(0.18, Math.min(0.95, (zFinal + 4) / 8));
-        const radius = Math.max(1.0, 1.8 * pScale);
+        const depthAlpha = Math.max(0.2, Math.min(0.95, (zFinal + 4) / 8));
+        const radius = Math.max(1.1, 1.8 * pScale);
 
-        // Phase color blend
+        // Phase color blend with contrast adjustment in light mode
         ctx.fillStyle = i % 2 === 0 ? fromColor : toColor;
-        ctx.globalAlpha = depthAlpha * 0.85;
+        ctx.globalAlpha = isLight ? Math.min(1.0, depthAlpha * 1.1) : depthAlpha * 0.85;
 
         ctx.beginPath();
         ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
@@ -524,7 +534,24 @@ export default function QuantumOrbitalLoader({
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
       if (resizeObserver) resizeObserver.disconnect();
     };
-  }, [height, cycleDuration]);
+  }, [height, cycleDuration, isLight]);
+
+  const bgStyle = isLight
+    ? "radial-gradient(ellipse at center, #ffffff 0%, #f1f5f9 100%)"
+    : "radial-gradient(ellipse at center, rgba(13, 17, 23, 0.95) 0%, rgba(5, 7, 12, 0.98) 100%)";
+
+  const borderColor = isLight ? "rgba(2, 132, 199, 0.25)" : "rgba(0, 229, 255, 0.2)";
+  const shadowColor = isLight
+    ? "inset 0 0 25px rgba(2, 132, 199, 0.06), 0 4px 16px rgba(0, 0, 0, 0.06)"
+    : compact
+    ? "inset 0 0 15px rgba(0, 229, 255, 0.1), 0 4px 12px rgba(0,0,0,0.3)"
+    : "inset 0 0 40px rgba(0, 229, 255, 0.05)";
+
+  const hudBg = isLight ? "rgba(255, 255, 255, 0.88)" : "rgba(10, 15, 25, 0.8)";
+  const hudBorder = isLight ? "1px solid rgba(2, 132, 199, 0.25)" : "1px solid rgba(0, 229, 255, 0.25)";
+  const hudShadow = isLight ? "0 4px 15px rgba(0, 0, 0, 0.08)" : "0 4px 15px rgba(0, 0, 0, 0.4)";
+  const titleColor = isLight ? "#0f172a" : "#e2e8f0";
+  const subTextColor = isLight ? "#475569" : "var(--text-muted)";
 
   return (
     <div
@@ -538,13 +565,11 @@ export default function QuantumOrbitalLoader({
         minHeight: typeof height === "number" ? height : 280,
         height: height === "100%" ? "100%" : (height || "100%"),
         flex: 1,
-        background: "radial-gradient(ellipse at center, rgba(13, 17, 23, 0.95) 0%, rgba(5, 7, 12, 0.98) 100%)",
+        background: bgStyle,
         borderRadius: compact ? "12px" : "var(--radius-lg, 12px)",
         overflow: "hidden",
-        border: "1px solid rgba(0, 229, 255, 0.2)",
-        boxShadow: compact
-          ? "inset 0 0 15px rgba(0, 229, 255, 0.1), 0 4px 12px rgba(0,0,0,0.3)"
-          : "inset 0 0 40px rgba(0, 229, 255, 0.05)",
+        border: `1px solid ${borderColor}`,
+        boxShadow: shadowColor,
         ...style,
       }}
     >
@@ -567,12 +592,12 @@ export default function QuantumOrbitalLoader({
             flexDirection: "column",
             alignItems: "center",
             gap: compact ? 2 : 6,
-            background: "rgba(10, 15, 25, 0.8)",
-            backdropFilter: "blur(8px)",
+            background: hudBg,
+            backdropFilter: "blur(10px)",
             padding: compact ? "4px 8px" : "8px 18px",
             borderRadius: compact ? "10px" : "20px",
-            border: "1px solid rgba(0, 229, 255, 0.25)",
-            boxShadow: "0 4px 15px rgba(0, 0, 0, 0.4)",
+            border: hudBorder,
+            boxShadow: hudShadow,
             pointerEvents: "none",
             maxWidth: "92%",
           }}
@@ -585,15 +610,15 @@ export default function QuantumOrbitalLoader({
                   width: 6,
                   height: 6,
                   borderRadius: "50%",
-                  backgroundColor: "#00e5ff",
-                  boxShadow: "0 0 6px #00e5ff",
+                  backgroundColor: isLight ? "#0284c7" : "#00e5ff",
+                  boxShadow: isLight ? "0 0 6px #0284c7" : "0 0 6px #00e5ff",
                 }}
               />
-              <span style={{ color: currentInfo?.to?.colorA || "#00e5ff", fontWeight: 700, fontFamily: "monospace" }}>
+              <span style={{ color: currentInfo?.to?.colorA || (isLight ? "#0284c7" : "#00e5ff"), fontWeight: 700, fontFamily: "monospace" }}>
                 {currentInfo?.to?.name?.split(" ")[0]}
               </span>
-              <span style={{ color: "rgba(255,255,255,0.4)" }}>•</span>
-              <span style={{ color: "#94a3b8", fontSize: "0.62rem" }}>{currentInfo?.to?.energy}</span>
+              <span style={{ color: isLight ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.4)" }}>•</span>
+              <span style={{ color: subTextColor, fontSize: "0.62rem" }}>{currentInfo?.to?.energy}</span>
             </div>
           ) : (
             <>
@@ -604,26 +629,26 @@ export default function QuantumOrbitalLoader({
                     width: 8,
                     height: 8,
                     borderRadius: "50%",
-                    backgroundColor: "#00e5ff",
-                    boxShadow: "0 0 8px #00e5ff",
+                    backgroundColor: isLight ? "#0284c7" : "#00e5ff",
+                    boxShadow: isLight ? "0 0 8px #0284c7" : "0 0 8px #00e5ff",
                     animation: "pulse 1s infinite alternate",
                   }}
                 />
-                <span style={{ color: "#e2e8f0", fontWeight: 600, letterSpacing: "0.02em" }}>
+                <span style={{ color: titleColor, fontWeight: 700, letterSpacing: "0.02em" }}>
                   {message}
                 </span>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.72rem", color: "var(--text-muted)", flexWrap: "wrap", justifyContent: "center" }}>
-                <span style={{ color: currentInfo?.from?.colorA || "#ffd166", fontFamily: "var(--font-mono, monospace)", fontWeight: 700 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.72rem", color: subTextColor, flexWrap: "wrap", justifyContent: "center" }}>
+                <span style={{ color: currentInfo?.from?.colorA || "#d97706", fontFamily: "var(--font-mono, monospace)", fontWeight: 700 }}>
                   {currentInfo?.from?.name || "1s"} [{currentInfo?.from?.energy || "-13.6 eV"}]
                 </span>
-                <span style={{ color: "#00e5ff", fontWeight: 800 }}>➔</span>
-                <span style={{ color: currentInfo?.to?.colorA || "#06d6a0", fontFamily: "var(--font-mono, monospace)", fontWeight: 700 }}>
+                <span style={{ color: isLight ? "#0284c7" : "#00e5ff", fontWeight: 800 }}>➔</span>
+                <span style={{ color: currentInfo?.to?.colorA || "#059669", fontFamily: "var(--font-mono, monospace)", fontWeight: 700 }}>
                   {currentInfo?.to?.name || "2s"} [{currentInfo?.to?.energy || "-3.4 eV"}]
                 </span>
-                <span style={{ color: "rgba(255,255,255,0.4)" }}>•</span>
-                <span style={{ color: "rgba(255,255,255,0.7)" }}>Salto Cuántico de Schrödinger</span>
+                <span style={{ color: isLight ? "rgba(0,0,0,0.25)" : "rgba(255,255,255,0.4)" }}>•</span>
+                <span style={{ color: subTextColor }}>Salto Cuántico de Schrödinger</span>
               </div>
             </>
           )}
