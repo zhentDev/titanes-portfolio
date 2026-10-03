@@ -321,7 +321,11 @@ const NUM_PARTICLES = 1400;
 export default function QuantumOrbitalLoader({
   message = "Cargando simulación cuántica…",
   height = 360,
+  width = "100%",
   submessage = null,
+  compact = false,
+  showHud = true,
+  style = {},
 }) {
   const canvasRef = useRef(null);
   const [currentInfo, setCurrentInfo] = useState({
@@ -338,14 +342,16 @@ export default function QuantumOrbitalLoader({
 
     let animationFrameId;
     let isRunning = true;
-    let canvasWidth = canvas.clientWidth || 600;
+    let canvasWidth = canvas.clientWidth || (typeof width === "number" ? width : 600);
     let canvasHeight = canvas.clientHeight || height || 360;
 
     // Handle canvas dimensions safely using ResizeObserver
     const updateDimensions = (w, h) => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const safeW = Math.max(280, Math.floor(w || canvas.clientWidth || 600));
-      const safeH = Math.max(200, Math.floor(h || canvas.clientHeight || height || 360));
+      const minW = compact ? 50 : 280;
+      const minH = compact ? 50 : 200;
+      const safeW = Math.max(minW, Math.floor(w || canvas.clientWidth || (typeof width === "number" ? width : 600)));
+      const safeH = Math.max(minH, Math.floor(h || canvas.clientHeight || height || 360));
       canvasWidth = safeW;
       canvasHeight = safeH;
 
@@ -434,11 +440,13 @@ export default function QuantumOrbitalLoader({
       rotX = 0.35 + Math.sin(elapsedSec * 0.8) * 0.1;
 
       const cx = width / 2;
-      // Position center slightly above midpoint to give generous room for bottom HUD
-      const cy = currentH * 0.44;
-      // Scale carefully: max orbital radius is ~4.5, so 4.5 * baseScale should stay safely within half-height
-      const baseScale = Math.max(30, Math.min(width * 0.095, currentH * 0.092));
-      const fov = 380;
+      // Position center slightly above midpoint to give generous room for bottom HUD (or center vertically in compact mode)
+      const cy = compact ? currentH * 0.5 : currentH * 0.44;
+      // Scale carefully: max orbital radius is ~4.5
+      const baseScale = compact
+        ? Math.max(8, Math.min(width * 0.11, currentH * 0.11))
+        : Math.max(30, Math.min(width * 0.095, currentH * 0.092));
+      const fov = compact ? 260 : 380;
 
       const fromPts = statesData[fromIdx] || statesData[0];
       const toPts = statesData[toIdx] || statesData[0];
@@ -450,7 +458,9 @@ export default function QuantumOrbitalLoader({
 
       // Render quantum core / nucleus glow
       const nucleusPulse = 1 + Math.sin(elapsedSec * 4) * 0.2;
-      const coreR = Math.max(15, 28 * nucleusPulse);
+      const coreR = compact
+        ? Math.max(6, 12 * nucleusPulse)
+        : Math.max(15, 28 * nucleusPulse);
       const radGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR);
       radGrad.addColorStop(0, "rgba(255, 255, 255, 0.95)");
       radGrad.addColorStop(0.25, "rgba(0, 229, 255, 0.7)");
@@ -523,70 +533,100 @@ export default function QuantumOrbitalLoader({
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        width: "100%",
+        width: width,
         minHeight: height,
+        height: height,
         background: "radial-gradient(ellipse at center, rgba(13, 17, 23, 0.95) 0%, rgba(5, 7, 12, 0.98) 100%)",
-        borderRadius: "var(--radius-lg, 12px)",
+        borderRadius: compact ? "12px" : "var(--radius-lg, 12px)",
         overflow: "hidden",
-        border: "1px solid rgba(0, 229, 255, 0.15)",
-        boxShadow: "inset 0 0 40px rgba(0, 229, 255, 0.05)",
+        border: "1px solid rgba(0, 229, 255, 0.2)",
+        boxShadow: compact
+          ? "inset 0 0 15px rgba(0, 229, 255, 0.1), 0 4px 12px rgba(0,0,0,0.3)"
+          : "inset 0 0 40px rgba(0, 229, 255, 0.05)",
+        ...style,
       }}
     >
       <canvas
         ref={canvasRef}
         style={{
           width: "100%",
-          height: height,
+          height: "100%",
           display: "block",
         }}
       />
 
       {/* Futuristic HUD overlay */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 16,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 6,
-          background: "rgba(10, 15, 25, 0.8)",
-          backdropFilter: "blur(8px)",
-          padding: "8px 18px",
-          borderRadius: "20px",
-          border: "1px solid rgba(0, 229, 255, 0.25)",
-          boxShadow: "0 4px 15px rgba(0, 0, 0, 0.4)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: "0.82rem" }}>
-          <span
-            style={{
-              display: "inline-block",
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              backgroundColor: "#00e5ff",
-              boxShadow: "0 0 8px #00e5ff",
-              animation: "pulse 1s infinite alternate",
-            }}
-          />
-          <span style={{ color: "#e2e8f0", fontWeight: 600, letterSpacing: "0.02em" }}>
-            {message}
-          </span>
-        </div>
+      {showHud && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: compact ? 6 : 16,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: compact ? 2 : 6,
+            background: "rgba(10, 15, 25, 0.8)",
+            backdropFilter: "blur(8px)",
+            padding: compact ? "4px 8px" : "8px 18px",
+            borderRadius: compact ? "10px" : "20px",
+            border: "1px solid rgba(0, 229, 255, 0.25)",
+            boxShadow: "0 4px 15px rgba(0, 0, 0, 0.4)",
+            pointerEvents: "none",
+            maxWidth: "92%",
+          }}
+        >
+          {compact ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.68rem" }}>
+              <span
+                style={{
+                  display: "inline-block",
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  backgroundColor: "#00e5ff",
+                  boxShadow: "0 0 6px #00e5ff",
+                }}
+              />
+              <span style={{ color: currentInfo?.to?.colorA || "#00e5ff", fontWeight: 700, fontFamily: "monospace" }}>
+                {currentInfo?.to?.name?.split(" ")[0]}
+              </span>
+              <span style={{ color: "rgba(255,255,255,0.4)" }}>•</span>
+              <span style={{ color: "#94a3b8", fontSize: "0.62rem" }}>{currentInfo?.to?.energy}</span>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: "0.82rem" }}>
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    backgroundColor: "#00e5ff",
+                    boxShadow: "0 0 8px #00e5ff",
+                    animation: "pulse 1s infinite alternate",
+                  }}
+                />
+                <span style={{ color: "#e2e8f0", fontWeight: 600, letterSpacing: "0.02em" }}>
+                  {message}
+                </span>
+              </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.72rem", color: "var(--text-muted)", flexWrap: "wrap", justifyContent: "center" }}>
-          <span style={{ color: currentInfo?.from?.colorA || "#ffd166", fontFamily: "var(--font-mono, monospace)", fontWeight: 700 }}>
-            {currentInfo?.from?.name || "1s"} [{currentInfo?.from?.energy || "-13.6 eV"}]
-          </span>
-          <span style={{ color: "#00e5ff", fontWeight: 800 }}>➔</span>
-          <span style={{ color: currentInfo?.to?.colorA || "#06d6a0", fontFamily: "var(--font-mono, monospace)", fontWeight: 700 }}>
-            {currentInfo?.to?.name || "2s"} [{currentInfo?.to?.energy || "-3.4 eV"}]
-          </span>
-          <span style={{ color: "rgba(255,255,255,0.4)" }}>•</span>
-          <span style={{ color: "rgba(255,255,255,0.7)" }}>Salto Cuántico de Schrödinger</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.72rem", color: "var(--text-muted)", flexWrap: "wrap", justifyContent: "center" }}>
+                <span style={{ color: currentInfo?.from?.colorA || "#ffd166", fontFamily: "var(--font-mono, monospace)", fontWeight: 700 }}>
+                  {currentInfo?.from?.name || "1s"} [{currentInfo?.from?.energy || "-13.6 eV"}]
+                </span>
+                <span style={{ color: "#00e5ff", fontWeight: 800 }}>➔</span>
+                <span style={{ color: currentInfo?.to?.colorA || "#06d6a0", fontFamily: "var(--font-mono, monospace)", fontWeight: 700 }}>
+                  {currentInfo?.to?.name || "2s"} [{currentInfo?.to?.energy || "-3.4 eV"}]
+                </span>
+                <span style={{ color: "rgba(255,255,255,0.4)" }}>•</span>
+                <span style={{ color: "rgba(255,255,255,0.7)" }}>Salto Cuántico de Schrödinger</span>
+              </div>
+            </>
+          )}
         </div>
-      </div>
+      )}
     </div>
   );
 }

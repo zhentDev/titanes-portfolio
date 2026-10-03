@@ -51,6 +51,22 @@
   flex-wrap: wrap;
 }
 
+.cashflow-quantum-atom-box {
+  transition: all 0.25s ease;
+}
+
+.cashflow-quantum-atom-box:hover {
+  border-color: rgba(0, 229, 255, 0.5) !important;
+  box-shadow: 0 4px 25px rgba(0, 229, 255, 0.15), inset 0 0 20px rgba(0, 229, 255, 0.08) !important;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 900px) {
+  .cashflow-quantum-atom-box {
+    display: none !important;
+  }
+}
+
 /* ── Floating Sub-Toolbar Bar ─────────────────────────────────────────── */
 .cashflow-sub-toolbar {
   display: flex;
@@ -79,18 +95,17 @@
   flex-wrap: wrap;
 }
 
-/* ── Month Period Navigator ─────────────────────────────────────────── */
 .cashflow-period-navigator {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 4px;
   background: rgba(17, 24, 41, 0.85);
   border: 1px solid rgba(0, 229, 255, 0.25);
   border-radius: 12px;
   padding: 4px 8px;
-  width: 240px;
   min-width: 240px;
-  maxWidth: 240px;
+  width: auto;
   box-sizing: border-box;
 }
 

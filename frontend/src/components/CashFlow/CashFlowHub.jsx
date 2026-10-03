@@ -22,6 +22,7 @@ import PayrollEntityModal from "./PayrollEntityModal";
 import PillarBreakdownCard from "./PillarBreakdownCard";
 import RealCashLiquidityCard from "./RealCashLiquidityCard";
 import AffiliateBanner from "../Common/AffiliateBanner";
+import QuantumOrbitalLoader from "../QuantumOrbitalLoader";
 import "./CashFlow.css";
 
 export default function CashFlowHub() {
@@ -326,6 +327,59 @@ export default function CashFlowHub() {
           </p>
         </div>
 
+        {/* Miniature Quantum Atom Orbital Box */}
+        <div
+          className="cashflow-quantum-atom-box"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            background: "rgba(10, 15, 30, 0.65)",
+            border: "1px solid rgba(0, 229, 255, 0.25)",
+            borderRadius: "14px",
+            padding: "6px 12px",
+            backdropFilter: "blur(10px)",
+            boxShadow: "0 4px 20px rgba(0, 0, 0, 0.35), inset 0 0 15px rgba(0, 229, 255, 0.05)",
+          }}
+          title="Simulación cuántica en tiempo real: Estados orbitales |ψ_nlm|² de la función de onda de Schrödinger"
+        >
+          <QuantumOrbitalLoader
+            height={74}
+            width={100}
+            compact={true}
+            showHud={false}
+            style={{
+              borderRadius: "10px",
+              border: "1px solid rgba(0, 229, 255, 0.3)",
+              boxShadow: "0 0 12px rgba(0, 229, 255, 0.15)",
+            }}
+          />
+          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span
+                style={{
+                  display: "inline-block",
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  backgroundColor: "#00e5ff",
+                  boxShadow: "0 0 8px #00e5ff",
+                  animation: "pulse 1.2s infinite alternate",
+                }}
+              />
+              <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "#f8fafc", letterSpacing: "0.2px" }}>
+                Modelo Cuántico
+              </span>
+            </div>
+            <span style={{ fontSize: "0.68rem", color: "#38bdf8", fontFamily: "var(--font-mono, monospace)" }}>
+              Ψ(r,θ,φ) Dinámico
+            </span>
+            <span style={{ fontSize: "0.62rem", color: "var(--text-muted)" }}>
+              Función de Onda Activa
+            </span>
+          </div>
+        </div>
+
         {/* Primary Call-to-Action Buttons */}
         <div className="cashflow-header-actions">
           {/* Log Real Expense Button */}
@@ -390,7 +444,7 @@ export default function CashFlowHub() {
                 fontWeight: 700,
                 color: "#f8fafc",
                 letterSpacing: "0.3px",
-                minWidth: "180px",
+                padding: "0 6px",
                 textAlign: "center",
                 whiteSpace: "nowrap",
                 display: "inline-block",
