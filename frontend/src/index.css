@@ -284,6 +284,16 @@
   border-bottom-color: rgba(0, 0, 0, 0.07) !important;
 }
 
+/* React Hot Toast Theme Support */
+[data-theme="light"] [role="status"] {
+  color: #0f172a !important;
+  font-weight: 600 !important;
+}
+
+[data-theme="light"] div[class*="go"] {
+  color: #0f172a;
+}
+
 /* Modal/overlay backgrounds */
 [data-theme="light"] [style*="background: \"rgba(0, 0, 0, 0."] {
   background: rgba(0, 0, 0, 0.3) !important;

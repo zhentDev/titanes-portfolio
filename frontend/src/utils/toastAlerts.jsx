@@ -5,7 +5,7 @@ export const toastConfirm = (message) => {
     toast(
       (t) => (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "#f1f5f9" }}>{message}</div>
+          <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "var(--text-primary)" }}>{message}</div>
           <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
             <button
               onClick={() => {
@@ -17,7 +17,7 @@ export const toastConfirm = (message) => {
                 borderRadius: "4px",
                 border: "1px solid var(--border)",
                 background: "transparent",
-                color: "#94a3b8",
+                color: "var(--text-secondary)",
                 fontSize: "0.8rem",
                 cursor: "pointer",
               }}
@@ -50,7 +50,7 @@ export const toastConfirm = (message) => {
         style: {
           background: "var(--bg-surface)",
           border: "1px solid var(--border)",
-          color: "#fff",
+          color: "var(--text-primary)",
         },
       },
     );
@@ -68,7 +68,7 @@ export const toastPrompt = (message, defaultValue = "") => {
               style={{
                 fontWeight: 600,
                 fontSize: "0.9rem",
-                color: "#f1f5f9",
+                color: "var(--text-primary)",
                 whiteSpace: "pre-line",
               }}
             >
@@ -92,8 +92,8 @@ export const toastPrompt = (message, defaultValue = "") => {
                 padding: "8px",
                 borderRadius: "4px",
                 border: "1px solid var(--border)",
-                background: "rgba(0,0,0,0.2)",
-                color: "#fff",
+                background: "var(--bg-base)",
+                color: "var(--text-primary)",
                 fontSize: "0.9rem",
                 outline: "none",
               }}
@@ -109,7 +109,7 @@ export const toastPrompt = (message, defaultValue = "") => {
                   borderRadius: "4px",
                   border: "1px solid var(--border)",
                   background: "transparent",
-                  color: "#94a3b8",
+                  color: "var(--text-secondary)",
                   fontSize: "0.8rem",
                   cursor: "pointer",
                 }}
@@ -143,7 +143,7 @@ export const toastPrompt = (message, defaultValue = "") => {
         style: {
           background: "var(--bg-surface)",
           border: "1px solid var(--border)",
-          color: "#fff",
+          color: "var(--text-primary)",
           minWidth: "300px",
         },
       },

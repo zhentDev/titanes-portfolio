@@ -420,6 +420,21 @@ export default function App() {
               background: "var(--bg-surface)",
               color: "var(--text-primary)",
               border: "1px solid var(--border)",
+              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+              fontSize: "0.88rem",
+              fontWeight: 600,
+            },
+            success: {
+              iconTheme: {
+                primary: "#10b981",
+                secondary: "var(--bg-surface)",
+              },
+            },
+            error: {
+              iconTheme: {
+                primary: "#ef4444",
+                secondary: "var(--bg-surface)",
+              },
             },
           }}
         />
@@ -435,8 +450,23 @@ export default function App() {
         toastOptions={{
           style: {
             background: "var(--bg-surface)",
-            color: "#fff",
+            color: "var(--text-primary)",
             border: "1px solid var(--border)",
+            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+            fontSize: "0.88rem",
+            fontWeight: 600,
+          },
+          success: {
+            iconTheme: {
+              primary: "#10b981",
+              secondary: "var(--bg-surface)",
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: "#ef4444",
+              secondary: "var(--bg-surface)",
+            },
           },
         }}
       />
