@@ -138,16 +138,23 @@ export default function WarrenAIModal({ isOpen, onClose }) {
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "var(--text-secondary)", marginBottom: 6 }}>
+            <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 700, color: "var(--text-secondary)", marginBottom: 8 }}>
               Pregunta Específica (Opcional):
             </label>
             <textarea
               className="input"
-              rows={2}
+              rows={5}
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               placeholder="Ej: ¿Qué opinas de ACN y NVDA tras los movimientos recientes? ¿Debo aumentar liquidez o comprar más?"
-              style={{ width: "100%", fontSize: "0.85rem", resize: "vertical" }}
+              style={{
+                width: "100%",
+                fontSize: "0.95rem",
+                lineHeight: "1.5",
+                minHeight: "120px",
+                padding: "12px",
+                resize: "vertical",
+              }}
             />
           </div>
 
