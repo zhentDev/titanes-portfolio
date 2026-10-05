@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
-import { fetchColInflationHistory, fetchFxHistory, fetchNAV } from "./api/client";
+import { fetchColInflationHistory, fetchFxHistory, fetchNAV, fetchLiveQuotes } from "./api/client";
 import CorrelationHeatmap from "./components/CorrelationHeatmap";
 import CreateStrategyModal from "./components/CreateStrategyModal";
 import DynamicStrategyView from "./components/DynamicStrategyView";
@@ -213,16 +213,61 @@ export default function App() {
     };
   }, [tickers, period, investment, numSlots, refreshKey, isPro]);
 
+  const [liveQuotesMap, setLiveQuotesMap] = useState({});
+
+  useEffect(() => {
+    if (!baseNavData?.holdings?.length) return;
+    const activeTickers = baseNavData.holdings.map((h) => h.ticker);
+    let isCancelled = false;
+    const fetchQuotes = () => {
+      fetchLiveQuotes(activeTickers)
+        .then((quotes) => {
+          if (!isCancelled && Array.isArray(quotes)) {
+            const map = {};
+            quotes.forEach((q) => {
+              if (q?.ticker) map[q.ticker] = q;
+            });
+            setLiveQuotesMap(map);
+          }
+        })
+        .catch(() => {});
+    };
+    fetchQuotes();
+    const interval = setInterval(fetchQuotes, 60_000);
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
+  }, [baseNavData]);
+
   // Client-side instant recalculation: 0ms latency, no spinner, no page reload, pure butter-smooth animation!
   const navData = useMemo(() => {
     if (!baseNavData) return null;
 
     const allHoldings = baseNavData.holdings || [];
     const currentSelected = selectedTickers ?? allHoldings.map((h) => h.ticker);
-    const updatedHoldings = allHoldings.map((h) => ({
-      ...h,
-      selected: currentSelected.includes(h.ticker),
-    }));
+    const updatedHoldings = allHoldings.map((h) => {
+      const live = liveQuotesMap[h.ticker];
+      const curPrice = live?.price ?? h.current_price;
+      const chg1dPct = live?.change_pct ?? h.change_pct_1d ?? (h.previous_price > 0 ? ((curPrice - h.previous_price) / h.previous_price) * 100 : 0);
+      const chg1dUsd = live?.change ?? h.change_usd_1d ?? (curPrice - (h.previous_price || curPrice));
+      const curVal = (h.shares || 0) * curPrice;
+      const startPrice = h.start_price || 0;
+      const retPct = startPrice > 0 ? ((curPrice - startPrice) / startPrice) * 100 : (h.return_pct ?? 0);
+      const retUsd = curVal - (h.shares || 0) * startPrice;
+
+      return {
+        ...h,
+        selected: currentSelected.includes(h.ticker),
+        current_price: curPrice,
+        current_value: curVal,
+        change_pct_1d: chg1dPct,
+        change_usd_1d: chg1dUsd,
+        return_pct: retPct,
+        return_usd: retUsd,
+        market_open: live?.market_open ?? h.market_open,
+      };
+    });
 
     const activeList = updatedHoldings.filter((h) => h.selected && h.shares > 0);
     const slotValue = investment / numSlots;

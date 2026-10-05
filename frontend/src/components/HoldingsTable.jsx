@@ -274,6 +274,34 @@ export default function HoldingsTable({
                     <div className="mono" style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-primary)" }}>
                       ${h.current_price?.toFixed(2)}
                     </div>
+                    {isSelected && (
+                      <div style={{ marginTop: 2, display: "flex", alignItems: "center", gap: 3 }}>
+                        <span
+                          className="mono"
+                          style={{
+                            fontSize: "0.68rem",
+                            fontWeight: 700,
+                            color: (h.change_pct_1d ?? 0) >= 0 ? "#10b981" : "#f43f5e",
+                          }}
+                        >
+                          {(h.change_pct_1d ?? 0) >= 0 ? "+" : ""}{(h.change_pct_1d ?? 0).toFixed(1)}%
+                        </span>
+                        {Math.abs(h.change_pct_1d ?? 0) >= 3.0 && (
+                          <span
+                            style={{
+                              fontSize: "0.58rem",
+                              padding: "0 3px",
+                              borderRadius: 3,
+                              background: (h.change_pct_1d ?? 0) >= 0 ? "rgba(16, 185, 129, 0.2)" : "rgba(244, 63, 94, 0.2)",
+                              color: (h.change_pct_1d ?? 0) >= 0 ? "#34d399" : "#fb7185",
+                              fontWeight: 800,
+                            }}
+                          >
+                            {Math.abs(h.change_pct_1d ?? 0) >= 6.0 ? "⚡" : "🔥"}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>Valor ({h.shares?.toFixed(2)} uds)</div>
@@ -307,6 +335,7 @@ export default function HoldingsTable({
                 "Acciones",
                 "Precio inicio",
                 "Precio actual",
+                "Movimiento Hoy (24h)",
                 "Valor actual",
               ].map((h) => (
                 <th
@@ -343,7 +372,7 @@ export default function HoldingsTable({
                 onClick={onToggleUnit}
                 title="Haz clic para alternar entre % y $"
               >
-                Retorno ({unit === "pct" ? "%" : "$"}) ⇄
+                Retorno Total ({unit === "pct" ? "%" : "$"}) ⇄
               </th>
             </tr>
           </thead>
@@ -500,6 +529,72 @@ export default function HoldingsTable({
                     </span>
                   </td>
 
+                  {/* Movimiento Hoy (24h) / Movimiento Brusco */}
+                  <td style={{ padding: "10px 12px", textAlign: "right" }}>
+                    {isSelected ? (() => {
+                      const chg1d = h.change_pct_1d ?? 0;
+                      const chgUsd1d = h.change_usd_1d ?? 0;
+                      const isUp1d = chg1d >= 0;
+                      const isAbrupt = Math.abs(chg1d) >= 3.0;
+                      const isExtreme = Math.abs(chg1d) >= 6.0;
+
+                      return (
+                        <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
+                          <span
+                            className="mono"
+                            style={{
+                              fontSize: "0.8rem",
+                              fontWeight: 700,
+                              color: isUp1d ? "#10b981" : "#f43f5e",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            <span>{isUp1d ? "+" : ""}{chg1d.toFixed(2)}%</span>
+                          </span>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }} className="mono">
+                              {chgUsd1d >= 0 ? "+" : ""}${chgUsd1d.toFixed(2)}
+                            </span>
+                            {isExtreme ? (
+                              <span
+                                title="Movimiento brusco extraordinario (±6%)"
+                                style={{
+                                  fontSize: "0.6rem",
+                                  padding: "1px 4px",
+                                  borderRadius: 4,
+                                  background: isUp1d ? "rgba(16, 185, 129, 0.2)" : "rgba(244, 63, 94, 0.2)",
+                                  color: isUp1d ? "#34d399" : "#fb7185",
+                                  fontWeight: 800,
+                                  border: `1px solid ${isUp1d ? "rgba(16, 185, 129, 0.4)" : "rgba(244, 63, 94, 0.4)"}`,
+                                }}
+                              >
+                                ⚡ BRUSCO
+                              </span>
+                            ) : isAbrupt ? (
+                              <span
+                                title="Movimiento relevante en la sesión (±3%)"
+                                style={{
+                                  fontSize: "0.6rem",
+                                  padding: "1px 4px",
+                                  borderRadius: 4,
+                                  background: isUp1d ? "rgba(16, 185, 129, 0.12)" : "rgba(244, 63, 94, 0.12)",
+                                  color: isUp1d ? "#10b981" : "#f43f5e",
+                                  fontWeight: 700,
+                                }}
+                              >
+                                {isUp1d ? "🚀 SALTO" : "🔻 CAÍDA"}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    })() : (
+                      <span className="mono" style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>—</span>
+                    )}
+                  </td>
+
                   {/* Current Value */}
                   <td style={{ padding: "10px 12px", textAlign: "right" }}>
                     <span
@@ -576,7 +671,7 @@ export default function HoldingsTable({
                 </span>
               </td>
               <td
-                colSpan={4}
+                colSpan={5}
                 style={{ padding: "10px 12px", textAlign: "right", color: "var(--text-muted)" }}
               >
                 <span className="mono" style={{ fontWeight: 600 }}>

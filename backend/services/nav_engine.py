@@ -330,6 +330,7 @@ def calculate_nav(
         return points
 
     last_row = prices_pd.iloc[-1]
+    prev_row = prices_pd.iloc[-2] if len(prices_pd) > 1 else last_row
 
     holdings = []
     slot_weight_pct = 100.0 / num_slots
@@ -343,6 +344,13 @@ def calculate_nav(
         current_price = last_row.get(t, 0.0)
         if str(current_price) == "nan":
             current_price = 0.0
+
+        prev_price = prev_row.get(t, current_price) if prev_row is not None else current_price
+        if str(prev_price) == "nan" or prev_price is None or prev_price <= 0:
+            prev_price = current_price
+
+        change_usd_1d = (current_price - prev_price) if prev_price > 0 else 0.0
+        change_pct_1d = ((current_price - prev_price) / prev_price * 100.0) if prev_price > 0 else 0.0
 
         start_price = rebalance_prices.get(t, 0.0)
         val = shares * current_price if is_selected else 0.0
@@ -387,6 +395,9 @@ def calculate_nav(
                 "shares": round(shares, 6) if is_selected else 0.0,
                 "start_price": round(start_price, 4),
                 "current_price": round(current_price, 4),
+                "previous_price": round(prev_price, 4),
+                "change_usd_1d": round(change_usd_1d, 4),
+                "change_pct_1d": round(change_pct_1d, 4),
                 "current_value": round(val, 4),
                 "return_pct": round(return_pct, 4),
                 "return_usd": round(val - (shares * start_price), 2)
