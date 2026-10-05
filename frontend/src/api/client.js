@@ -786,3 +786,31 @@ export async function fetchMeApi() {
   }
 }
 
+// ── WARREN AI PROMPT GENERATOR API ──────────────────────────────────────────
+
+export async function generateWarrenPromptApi({
+  focus,
+  userQuestion,
+  useOllama = true,
+  model = "qwen2.5-coder:14b",
+} = {}) {
+  const res = await safeFetch(`${BASE}/warren/prompt`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      focus,
+      user_question: userQuestion,
+      use_ollama: useOllama,
+      model,
+    }),
+  });
+  if (!res || !res.ok) throw new Error("Error generando prompt para WarrenAI");
+  return res.json();
+}
+
+export async function fetchWarrenSummaryApi() {
+  const res = await safeFetch(`${BASE}/warren/summary`);
+  if (!res || !res.ok) throw new Error("Error obteniendo resumen de inversiones");
+  return res.json();
+}
+

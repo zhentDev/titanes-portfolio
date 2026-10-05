@@ -30,6 +30,7 @@ from routers.nav import router as nav_router
 from routers.prices import router as prices_router
 from routers.purchases import router as purchases_router
 from routers.rebalance import router as rebalance_router
+from routers.warren import router as warren_router
 
 app = FastAPI(
     title="Titanes Portfolio API",
@@ -120,6 +121,7 @@ app.include_router(rebalance_router, prefix="/api")
 app.include_router(purchases_router, prefix="/api")
 app.include_router(fixed_income_router, prefix="/api/fixed-income", tags=["fixed-income"])
 app.include_router(cash_flow_router, prefix="/api", tags=["cash-flow"])
+app.include_router(warren_router, prefix="/api", tags=["warren"])
 
 
 @app.get("/")

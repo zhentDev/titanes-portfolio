@@ -17,6 +17,7 @@ import QuantitativeCard from "./components/QuantitativeCard";
 import RebalanceManager from "./components/RebalanceManager";
 import RebalanceTimer from "./components/RebalanceTimer";
 import SectorAllocation from "./components/SectorAllocation";
+import WarrenAIModal from "./components/WarrenAIModal";
 import { InfoTooltip } from "./components/Common";
 import AffiliateBanner from "./components/Common/AffiliateBanner";
 import AuthModal from "./components/AuthModal";
@@ -90,6 +91,7 @@ export default function App() {
   const [purchasesOpen, setPurchasesOpen] = useState(false);
   const [mobileStratModalOpen, setMobileStratModalOpen] = useState(false);
   const [mobilePurchasesModalOpen, setMobilePurchasesModalOpen] = useState(false);
+  const [showWarrenModal, setShowWarrenModal] = useState(false);
   const stratDropdownRef = useRef(null);
   const purchasesDropdownRef = useRef(null);
 
@@ -758,7 +760,24 @@ export default function App() {
             <span>🌊 Distribución & Flujo</span>
           </button>
 
-          {/* 5. Exportar CSV */}
+          {/* 5. Conector WarrenAI (Investing.com ProPicks) */}
+          <button
+            type="button"
+            className="nav-action-btn compact"
+            onClick={() => setShowWarrenModal(true)}
+            title="Conector WarrenAI (Investing.com ProPicks) — Generar prompt con Ollama y datos del portafolio"
+            style={{
+              borderColor: "rgba(16, 185, 129, 0.4)",
+              background: "rgba(16, 185, 129, 0.08)",
+              color: "#34d399",
+              fontWeight: 700,
+            }}
+          >
+            <span>🤖</span>
+            <span className="btn-text-hide-mobile">WarrenAI</span>
+          </button>
+
+          {/* 6. Exportar CSV */}
           {navData && (
             <button
               type="button"
@@ -2515,6 +2534,12 @@ export default function App() {
         isOpen={showMainInflationExplorer}
         onClose={() => setShowMainInflationExplorer(false)}
         inflationData={mainColInflationData}
+      />
+
+      {/* ── WarrenAI (Investing.com ProPicks) Modal ────── */}
+      <WarrenAIModal
+        isOpen={showWarrenModal}
+        onClose={() => setShowWarrenModal(false)}
       />
 
       {/* ── Modal de Autenticación (Login / Registro / OAuth2) ── */}
