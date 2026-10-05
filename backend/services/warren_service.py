@@ -207,6 +207,92 @@ def get_all_investments_summary(user_id: Optional[str] = None) -> Dict[str, Any]
     return result
 
 
+def filter_relevant_context(data: Dict[str, Any], user_question: Optional[str] = None, focus: Optional[str] = None) -> tuple[str, list]:
+    """
+    Intelligently inspects the question and focus to filter ONLY relevant assets and portfolios.
+    If the question mentions 'Platinum' or 'IPLT', only IPLT and related assets (e.g. materials/metals) are extracted.
+    If the question is broad or unspecific, provides the full executive summary.
+    """
+    text_query = f"{user_question or ''} {focus or ''}".lower()
+    
+    # Extract mentioned tickers from all portfolio positions
+    all_positions = []
+    for p in data.get("purchases_portfolios", []):
+        for pos in p.get("positions", []):
+            pos_copy = dict(pos)
+            pos_copy["portfolio_name"] = p["name"]
+            pos_copy["currency"] = p["currency"]
+            all_positions.append(pos_copy)
+
+    # Keyword synonyms / common assets
+    KEYWORD_TICKER_MAP = {
+        "platinum": ["IPLT.L", "IPLT"],
+        "platino": ["IPLT.L", "IPLT"],
+        "oro": ["PAXG-USD", "GDX.L", "GDX"],
+        "gold": ["PAXG-USD", "GDX.L", "GDX"],
+        "nvidia": ["NVDA"],
+        "semiconductor": ["NVDA", "SMH", "SMH.L"],
+        "semiconductores": ["NVDA", "SMH", "SMH.L"],
+        "spacex": ["SPCX"],
+        "espacio": ["SPCX"],
+        "china": ["CNYA.L", "KWEB.L", "3CP.F", "NNND.F", "EMIM.L"],
+        "crypto": ["PAXG-USD"],
+        "cripto": ["PAXG-USD"],
+        "nasdaq": ["CNDX.L"],
+        "s&p": ["CSPX.L"],
+        "sp500": ["CSPX.L"],
+    }
+
+    matched_tickers = set()
+
+    # 1. Match direct ticker codes (case-insensitive words)
+    words = [w.strip(".,;:?!()[]'\"").upper() for w in text_query.split()]
+    for p in all_positions:
+        ticker = p["ticker"].upper()
+        ticker_base = ticker.split(".")[0].split("-")[0]
+        if ticker in words or ticker_base in words:
+            matched_tickers.add(ticker)
+
+    # 2. Match synonyms
+    for kw, t_list in KEYWORD_TICKER_MAP.items():
+        if kw in text_query:
+            for t in t_list:
+                for p in all_positions:
+                    if p["ticker"].upper() == t or p["ticker"].upper().startswith(t):
+                        matched_tickers.add(p["ticker"].upper())
+
+    # If specific tickers are targeted by user question
+    if matched_tickers:
+        lines = []
+        target_positions = [p for p in all_positions if p["ticker"].upper() in matched_tickers]
+        lines.append(f"### ACTIVO(S) ESPECÍFICO(S) BAJO CONSULTA ({len(target_positions)} posición/es):")
+        for pos in target_positions:
+            lines.append(
+                f"- **{pos['ticker']}** ({pos.get('name', pos['ticker'])}) en portafolio '{pos['portfolio_name']}':\n"
+                f"  * Cantidad: {pos['shares']} unidades | Moneda: {pos['currency']}\n"
+                f"  * Precio Medio de Compra: ${pos['avg_price']}\n"
+                f"  * Precio Actual de Mercado: ${pos['current_price']}\n"
+                f"  * Variación Hoy (24h): {pos.get('change_pct_1d', 0)}%\n"
+                f"  * Retorno Total Acumulado: {pos['return_pct']}%\n"
+                f"  * Capital Invertido: ${pos['total_cost']} | Valor Actual: ${pos['current_value']}"
+            )
+        lines.append("")
+
+        # Contextual benchmarks or complementary portfolios only if relevant
+        is_metal = any(t in matched_tickers for t in ["IPLT.L", "PAXG-USD", "GDX.L"])
+        if is_metal:
+            lines.append("### CONTEXTO DE MATERIAS PRIMAS / METALES EN CARTERA:")
+            metal_positions = [p for p in all_positions if p["ticker"].upper() in ["PAXG-USD", "GDX.L", "IPLT.L"] and p["ticker"].upper() not in matched_tickers]
+            for m in metal_positions:
+                lines.append(f"- {m['ticker']} ({m['portfolio_name']}): Retorno {m['return_pct']}%, Precio Actual ${m['current_price']}")
+            lines.append("")
+
+        return "\n".join(lines), list(matched_tickers)
+
+    # Broad query: Full structured context
+    return build_raw_context_text(data), []
+
+
 def build_raw_context_text(data: Dict[str, Any]) -> str:
     """Builds a concise markdown context of the investor's whole portfolio."""
     lines = []
@@ -247,66 +333,81 @@ def generate_warren_prompt(
     ollama_model: str = DEFAULT_OLLAMA_MODEL,
 ) -> Dict[str, Any]:
     """
-    Generates an optimized prompt ready to copy-paste into WarrenAI (Investing.com ProPicks).
-    Uses Ollama to analyze and format it with ProPicks valuation criteria (Fair Value, ProTips, Health Score, Momentum).
+    Intelligently discriminates the portfolio information to generate a focused,
+    surgical prompt for WarrenAI without dumping unrelated noise.
     """
     portfolio_data = get_all_investments_summary(user_id=user_id)
-    raw_context = build_raw_context_text(portfolio_data)
+    discriminative_context, matched_tickers = filter_relevant_context(
+        portfolio_data, user_question=user_question, focus=focus
+    )
+
+    is_targeted = len(matched_tickers) > 0
 
     if not use_ollama:
-        # Fallback to high-quality template if Ollama is disabled or unreachable
-        direct_prompt = (
-            "Hola WarrenAI. Eres el analista cuantitativo de Investing.com y ProPicks AI. "
-            "A continuación te presento la totalidad de mis inversiones actuales registradas en mi plataforma privada "
-            "(incluyendo compras individuales, estrategias cuantitativas y renta fija). "
-            "Por favor realiza un análisis profundo evaluando para cada acción su Fair Value (Valor Razonable de InvestingPro), "
-            "su Puntuación de Salud Financiera (Financial Health Score), ProTips clave y si los movimientos recientes "
-            "(incluyendo saltos bruscos recientes) sugieren mantener, tomar ganancias o rebalancear.\n\n"
-            f"=== DATOS DE MI PORTAFOLIO ===\n{raw_context}\n\n"
-        )
-        if user_question:
-            direct_prompt += f"=== PREGUNTA ESPECÍFICA ===\n{user_question}\n"
+        if is_targeted:
+            prompt = (
+                f"Hola WarrenAI. Como analista cuantitativo de InvestingPro y ProPicks AI, requiero un análisis específico y técnico "
+                f"sobre la(s) siguiente(s) posición(es) de mi portafolio:\n\n"
+                f"{discriminative_context}\n\n"
+            )
+            if user_question:
+                prompt += f"**Mi consulta puntual:**\n{user_question}\n\n"
+            prompt += (
+                "Por favor analiza:\n"
+                "1. Valor Razonable (Fair Value de InvestingPro) y margen de seguridad o sobrevaloración.\n"
+                "2. Tendencia técnica, soportes, resistencias clave y zonas óptimas de salida/mitigación.\n"
+                "3. Catalizadores de mercado fundamentales (oferta/demanda global) y proyección temporal estimada de recuperación."
+            )
+        else:
+            prompt = (
+                "Hola WarrenAI. Eres el analista cuantitativo de Investing.com y ProPicks AI. "
+                "A continuación te presento un resumen consolidado de mis inversiones actuales:\n\n"
+                f"{discriminative_context}\n\n"
+            )
+            if user_question:
+                prompt += f"**Consulta del inversor:**\n{user_question}\n\n"
+            prompt += "Por favor realiza un diagnóstico de rebalanceo, Fair Value de posiciones clave y recomendaciones tácticas."
+
         return {
             "status": "success",
-            "model_used": "template_fallback",
-            "prompt_for_warren": direct_prompt,
-            "raw_context": raw_context,
+            "model_used": "smart_filter_fallback",
+            "prompt_for_warren": prompt,
+            "raw_context": discriminative_context,
             "portfolio_summary": portfolio_data,
+            "matched_tickers": matched_tickers,
         }
 
-    # System instruction for Ollama to construct the perfect prompt for WarrenAI
+    # System instruction for Ollama: be discriminating, surgical and include the exact figures
     system_prompt = (
-        "Eres un arquitecto de prompts financiero de élite. Tu objetivo es redactar un prompt estructurado, "
-        "exhaustivo y profesional en ESPAÑOL dirigido a 'WarrenAI' (la IA de Investing.com / InvestingPro / ProPicks). "
-        "El prompt que redactes debe estar listo para que el usuario simplemente lo copie y pegue en el chat de WarrenAI de Investing.com. "
-        "Debe pedirle a WarrenAI que aplique sus herramientas exclusivas: "
-        "1. Fair Value (Valor Razonable InvestingPro basado en múltiplos de flujos descontados). "
-        "2. Puntuación de Salud Financiera (Financial Health Score de 1 a 5). "
-        "3. ProTips clave (dividendos, recompras, deuda, momentum). "
-        "4. Evaluación de movimientos bruscos recientes (volatilidad y earnings). "
-        "5. Recomendaciones de compra, venta o ajuste para optimizar el portafolio total frente a S&P 500 y NASDAQ. "
-        "Devuelve ÚNICAMENTE el texto final del prompt para WarrenAI, sin introducciones tuyas."
+        "Eres un arquitecto de prompts financiero. Tu misión es redactar un prompt QUIRÚRGICO, "
+        "conciso y altamente específico en ESPAÑOL que el usuario copiará y pegará en el chat de 'WarrenAI' (la IA de Investing.com y ProPicks). "
+        "REGLAS CRÍTICAS DE DISCRIMINACIÓN:\n"
+        "1. Si el usuario pregunta por un activo o sector específico (ej. Platino, IPLT, NVDA, etc.), "
+        "ELIMINA COMPLETAMENTE toda información que no tenga nada que ver (cuentas bancarias, CDTs en Colombia, acciones no relacionadas). "
+        "2. Incluye OBLIGATORIAMENTE en el texto del prompt los datos numéricos exactos del activo consultado que están en los datos: "
+        "Ticker, precio medio de compra, precio actual de mercado y el porcentaje de pérdida/ganancia acumulada, para que WarrenAI tenga la base matemática real. "
+        "3. Incorpora textualmente la duda del inversor (por ejemplo, si desea saber cuándo vender para minimizar pérdidas o proyecciones de recuperación). "
+        "4. Pídele a WarrenAI que aplique sus herramientas nativas de InvestingPro (Fair Value, ProTips, soportes/resistencias y catalizadores). "
+        "5. Devuelve ÚNICAMENTE el texto final que el usuario enviará a WarrenAI, empezando con un saludo profesional a WarrenAI."
     )
 
     user_instructions = (
-        f"Genera el prompt definitivo para WarrenAI con los siguientes datos del usuario:\n\n"
-        f"{raw_context}\n\n"
+        f"Datos filtrados del portafolio:\n{discriminative_context}\n\n"
+        f"Pregunta del usuario: {user_question or 'Análisis de posición'}\n"
     )
     if focus:
-        user_instructions += f"Enfoque solicitado: {focus}\n"
-    if user_question:
-        user_instructions += f"Pregunta específica del usuario: {user_question}\n"
+        user_instructions += f"Enfoque: {focus}\n"
 
     ollama_output = query_ollama(user_instructions, system=system_prompt, model=ollama_model)
 
     if not ollama_output:
-        # Fallback if Ollama did not answer
         return generate_warren_prompt(focus, user_question, user_id, use_ollama=False)
 
     return {
         "status": "success",
         "model_used": ollama_model,
         "prompt_for_warren": ollama_output,
-        "raw_context": raw_context,
+        "raw_context": discriminative_context,
         "portfolio_summary": portfolio_data,
+        "matched_tickers": matched_tickers,
     }
