@@ -760,22 +760,24 @@ export default function App() {
             <span>🌊 Distribución & Flujo</span>
           </button>
 
-          {/* 5. Conector WarrenAI (Investing.com ProPicks) */}
-          <button
-            type="button"
-            className="nav-action-btn compact"
-            onClick={() => setShowWarrenModal(true)}
-            title="Conector WarrenAI (Investing.com ProPicks) — Generar prompt con Ollama y datos del portafolio"
-            style={{
-              borderColor: "rgba(16, 185, 129, 0.4)",
-              background: "rgba(16, 185, 129, 0.08)",
-              color: "#34d399",
-              fontWeight: 700,
-            }}
-          >
-            <span>🤖</span>
-            <span className="btn-text-hide-mobile">WarrenAI</span>
-          </button>
+          {/* 5. Conector WarrenAI (Solo en entorno local / desarrollo) */}
+          {typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && (
+            <button
+              type="button"
+              className="nav-action-btn compact"
+              onClick={() => setShowWarrenModal(true)}
+              title="Conector WarrenAI (Investing.com ProPicks) — Generar prompt con Ollama y datos del portafolio"
+              style={{
+                borderColor: "rgba(16, 185, 129, 0.4)",
+                background: "rgba(16, 185, 129, 0.08)",
+                color: "#34d399",
+                fontWeight: 700,
+              }}
+            >
+              <span>🤖</span>
+              <span className="btn-text-hide-mobile">WarrenAI</span>
+            </button>
+          )}
 
           {/* 6. Exportar CSV */}
           {navData && (
