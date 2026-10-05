@@ -1215,7 +1215,7 @@ export default function App() {
                   value={mode}
                   onChange={(e) => setMode(e.target.value)}
                   style={{
-                    background: "rgba(255, 255, 255, 0.08)",
+                    background: "var(--bg-card)",
                     border: "1px solid var(--border-accent)",
                     borderRadius: 8,
                     color: "var(--accent-primary)",
@@ -1227,14 +1227,14 @@ export default function App() {
                   }}
                   title="Cambiar de Estrategia o Portafolio"
                 >
-                  <option value="historical" style={{ background: "#111827", color: "#fff" }}>
+                  <option value="historical" style={{ background: "var(--bg-surface)", color: "var(--text-primary)" }}>
                     🏆 Titanes Tech (CORE)
                   </option>
-                  <option value="live" style={{ background: "#111827", color: "#fff" }}>
+                  <option value="live" style={{ background: "var(--bg-surface)", color: "var(--text-primary)" }}>
                     ⚡ Live Tracker (LIVE)
                   </option>
                   {(customStrategies || []).map((s) => (
-                    <option key={s.id} value={s.id} style={{ background: "#111827", color: "#fff" }}>
+                    <option key={s.id} value={s.id} style={{ background: "var(--bg-surface)", color: "var(--text-primary)" }}>
                       {s.isRealMoney ? "💵" : "🧪"} {s.name}
                     </option>
                   ))}
@@ -1243,10 +1243,10 @@ export default function App() {
               <div
                 style={{
                   display: "flex",
-                  background: "rgba(0,0,0,0.3)",
+                  background: "var(--bg-card-hover)",
                   borderRadius: 20,
                   padding: 4,
-                  border: "1px solid rgba(255,255,255,0.1)",
+                  border: "1px solid var(--border)",
                 }}
               >
                 <button
@@ -1256,10 +1256,11 @@ export default function App() {
                     borderRadius: 16,
                     border: "none",
                     background:
-                      mainYieldViewMode === "USD" ? "rgba(255,255,255,0.1)" : "transparent",
-                    color: mainYieldViewMode === "USD" ? "#fff" : "var(--text-muted)",
+                      mainYieldViewMode === "USD" ? "var(--bg-card)" : "transparent",
+                    color: mainYieldViewMode === "USD" ? "var(--accent-primary)" : "var(--text-secondary)",
+                    boxShadow: mainYieldViewMode === "USD" ? "var(--shadow-card)" : "none",
                     fontSize: "0.8rem",
-                    fontWeight: mainYieldViewMode === "USD" ? 700 : 400,
+                    fontWeight: mainYieldViewMode === "USD" ? 700 : 500,
                     cursor: "pointer",
                     transition: "all 0.2s",
                   }}
@@ -1284,10 +1285,11 @@ export default function App() {
                     borderRadius: 16,
                     border: "none",
                     background:
-                      mainYieldViewMode === "FX" ? "rgba(0, 229, 255, 0.15)" : "transparent",
-                    color: mainYieldViewMode === "FX" ? "#00e5ff" : "var(--text-muted)",
+                      mainYieldViewMode === "FX" ? "var(--bg-card)" : "transparent",
+                    color: mainYieldViewMode === "FX" ? "var(--accent-primary)" : "var(--text-secondary)",
+                    boxShadow: mainYieldViewMode === "FX" ? "var(--shadow-card)" : "none",
                     fontSize: "0.8rem",
-                    fontWeight: mainYieldViewMode === "FX" ? 700 : 400,
+                    fontWeight: mainYieldViewMode === "FX" ? 700 : 500,
                     cursor: "pointer",
                     transition: "all 0.2s",
                   }}
@@ -1308,10 +1310,11 @@ export default function App() {
                     borderRadius: 16,
                     border: "none",
                     background:
-                      mainYieldViewMode === "REAL" ? "rgba(245, 158, 11, 0.15)" : "transparent",
-                    color: mainYieldViewMode === "REAL" ? "#f59e0b" : "var(--text-muted)",
+                      mainYieldViewMode === "REAL" ? "var(--bg-card)" : "transparent",
+                    color: mainYieldViewMode === "REAL" ? "#d97706" : "var(--text-secondary)",
+                    boxShadow: mainYieldViewMode === "REAL" ? "var(--shadow-card)" : "none",
                     fontSize: "0.8rem",
-                    fontWeight: mainYieldViewMode === "REAL" ? 700 : 400,
+                    fontWeight: mainYieldViewMode === "REAL" ? 700 : 500,
                     cursor: "pointer",
                     transition: "all 0.2s",
                   }}
@@ -1325,12 +1328,13 @@ export default function App() {
                 <button
                   onClick={() => setShowMainInflationExplorer(true)}
                   style={{
-                    background: "rgba(245, 158, 11, 0.08)",
-                    border: "1px solid rgba(245, 158, 11, 0.25)",
-                    color: "#fbbf24",
+                    background: "rgba(245, 158, 11, 0.12)",
+                    border: "1px solid rgba(245, 158, 11, 0.35)",
+                    color: "#d97706",
                     padding: "6px 14px",
                     borderRadius: "14px",
                     fontSize: "0.8rem",
+                    fontWeight: 600,
                     display: "flex",
                     alignItems: "center",
                     gap: 6,

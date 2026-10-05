@@ -618,14 +618,14 @@ export default function DynamicStrategyView({
                 }}
                 title="Cambiar de Estrategia"
               >
-                <option value="historical" style={{ background: "#111827", color: "#fff" }}>
+                <option value="historical" style={{ background: "var(--bg-surface)", color: "var(--text-primary)" }}>
                   🏆 Titanes Tech (CORE)
                 </option>
-                <option value="live" style={{ background: "#111827", color: "#fff" }}>
+                <option value="live" style={{ background: "var(--bg-surface)", color: "var(--text-primary)" }}>
                   ⚡ Live Tracker (LIVE)
                 </option>
                 {(customStrategies || []).map((s) => (
-                  <option key={s.id} value={s.id} style={{ background: "#111827", color: "#fff" }}>
+                  <option key={s.id} value={s.id} style={{ background: "var(--bg-surface)", color: "var(--text-primary)" }}>
                     {s.isRealMoney ? "💵" : "🧪"} {s.name}
                   </option>
                 ))}
@@ -830,10 +830,10 @@ export default function DynamicStrategyView({
         <div
           style={{
             display: "flex",
-            background: "rgba(0,0,0,0.3)",
+            background: "var(--bg-card-hover)",
             borderRadius: 20,
             padding: 4,
-            border: "1px solid rgba(255,255,255,0.1)",
+            border: "1px solid var(--border)",
           }}
         >
           <button
@@ -842,10 +842,11 @@ export default function DynamicStrategyView({
               padding: "6px 16px",
               borderRadius: 16,
               border: "none",
-              background: stratYieldViewMode === "USD" ? "rgba(255,255,255,0.1)" : "transparent",
-              color: stratYieldViewMode === "USD" ? "#fff" : "var(--text-muted)",
+              background: stratYieldViewMode === "USD" ? "var(--bg-card)" : "transparent",
+              color: stratYieldViewMode === "USD" ? "var(--accent-primary)" : "var(--text-secondary)",
+              boxShadow: stratYieldViewMode === "USD" ? "var(--shadow-card)" : "none",
               fontSize: "0.8rem",
-              fontWeight: stratYieldViewMode === "USD" ? 700 : 400,
+              fontWeight: stratYieldViewMode === "USD" ? 700 : 500,
               cursor: "pointer",
               transition: "all 0.2s",
             }}
@@ -869,10 +870,11 @@ export default function DynamicStrategyView({
               padding: "6px 16px",
               borderRadius: 16,
               border: "none",
-              background: stratYieldViewMode === "FX" ? "rgba(0, 229, 255, 0.15)" : "transparent",
-              color: stratYieldViewMode === "FX" ? "#00e5ff" : "var(--text-muted)",
+              background: stratYieldViewMode === "FX" ? "var(--bg-card)" : "transparent",
+              color: stratYieldViewMode === "FX" ? "var(--accent-primary)" : "var(--text-secondary)",
+              boxShadow: stratYieldViewMode === "FX" ? "var(--shadow-card)" : "none",
               fontSize: "0.8rem",
-              fontWeight: stratYieldViewMode === "FX" ? 700 : 400,
+              fontWeight: stratYieldViewMode === "FX" ? 700 : 500,
               cursor: "pointer",
               transition: "all 0.2s",
             }}
@@ -893,10 +895,11 @@ export default function DynamicStrategyView({
               borderRadius: 16,
               border: "none",
               background:
-                stratYieldViewMode === "REAL" ? "rgba(245, 158, 11, 0.15)" : "transparent",
-              color: stratYieldViewMode === "REAL" ? "#f59e0b" : "var(--text-muted)",
+                stratYieldViewMode === "REAL" ? "var(--bg-card)" : "transparent",
+              color: stratYieldViewMode === "REAL" ? "#d97706" : "var(--text-secondary)",
+              boxShadow: stratYieldViewMode === "REAL" ? "var(--shadow-card)" : "none",
               fontSize: "0.8rem",
-              fontWeight: stratYieldViewMode === "REAL" ? 700 : 400,
+              fontWeight: stratYieldViewMode === "REAL" ? 700 : 500,
               cursor: "pointer",
               transition: "all 0.2s",
             }}
@@ -909,12 +912,13 @@ export default function DynamicStrategyView({
           <button
             onClick={() => setShowInflationExplorer(true)}
             style={{
-              background: "rgba(245, 158, 11, 0.08)",
-              border: "1px solid rgba(245, 158, 11, 0.25)",
-              color: "#fbbf24",
+              background: "rgba(245, 158, 11, 0.12)",
+              border: "1px solid rgba(245, 158, 11, 0.35)",
+              color: "#d97706",
               padding: "6px 14px",
               borderRadius: "14px",
               fontSize: "0.8rem",
+              fontWeight: 600,
               display: "flex",
               alignItems: "center",
               gap: 6,

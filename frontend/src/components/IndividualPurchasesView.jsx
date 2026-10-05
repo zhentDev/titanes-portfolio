@@ -1239,7 +1239,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                   style={{
                     fontSize: "1.4rem",
                     fontWeight: 800,
-                    color: "#f1f5f9",
+                    color: "var(--text-primary)",
                     display: "flex",
                     alignItems: "center",
                     gap: 10,
@@ -1254,7 +1254,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                     value={portfolioId}
                     onChange={(e) => onSelectPortfolio(e.target.value)}
                     style={{
-                      background: "rgba(255, 255, 255, 0.08)",
+                      background: "var(--bg-card)",
                       border: "1px solid var(--border-accent)",
                       borderRadius: 8,
                       color: "var(--accent-primary)",
@@ -1267,7 +1267,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                     title="Cambiar Histórico de Compras"
                   >
                     {purchasePortfolios.map((p) => (
-                      <option key={p.id} value={p.id} style={{ background: "#111827", color: "#fff" }}>
+                      <option key={p.id} value={p.id} style={{ background: "var(--bg-surface)", color: "var(--text-primary)" }}>
                         📁 {p.name}
                       </option>
                     ))}
@@ -1286,10 +1286,11 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                     gap: 8,
                     cursor: "pointer",
                     fontSize: "0.85rem",
-                    color: portfolio.isPlan ? "#00e5ff" : "var(--text-secondary)",
+                    color: portfolio.isPlan ? "var(--accent-primary)" : "var(--text-secondary)",
                     padding: "4px 8px",
                     borderRadius: "8px",
-                    background: "rgba(255, 255, 255, 0.03)",
+                    background: "var(--bg-card-hover)",
+                    border: "1px solid var(--border)",
                   }}
                 >
                   <input
@@ -1306,7 +1307,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                         setShowPlanModal(true);
                       }
                     }}
-                    style={{ accentColor: "#00e5ff", width: 16, height: 16 }}
+                    style={{ accentColor: "var(--accent-primary)", width: 16, height: 16 }}
                   />
                   🤖 Convertir en Plan
                 </label>
@@ -1314,12 +1315,13 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                 <button
                   onClick={() => setShowInflationExplorer(true)}
                   style={{
-                    background: "rgba(245, 158, 11, 0.08)",
-                    border: "1px solid rgba(245, 158, 11, 0.25)",
-                    color: "#fbbf24",
+                    background: "rgba(245, 158, 11, 0.12)",
+                    border: "1px solid rgba(245, 158, 11, 0.35)",
+                    color: "#d97706",
                     padding: "6px 12px",
                     borderRadius: "12px",
                     fontSize: "0.8rem",
+                    fontWeight: 600,
                     display: "flex",
                     alignItems: "center",
                     gap: 6,

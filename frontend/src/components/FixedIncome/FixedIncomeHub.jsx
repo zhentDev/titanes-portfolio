@@ -770,20 +770,21 @@ export default function FixedIncomeHub() {
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
           gap: 12,
-          background: "rgba(15, 23, 42, 0.65)",
+          background: "var(--bg-card)",
           padding: "16px 20px",
           borderRadius: 14,
-          border: "1px solid rgba(255, 255, 255, 0.08)",
-          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+          border: "1px solid var(--border)",
+          boxShadow: "var(--shadow-card)",
         }}
       >
         <div>
           <div
             style={{
               fontSize: "0.72rem",
-              color: "#94a3b8",
+              color: "var(--text-muted)",
               textTransform: "uppercase",
               letterSpacing: 0.5,
+              fontWeight: 600,
             }}
           >
             Patrimonio Renta Fija
@@ -792,7 +793,7 @@ export default function FixedIncomeHub() {
             style={{
               fontSize: "1.45rem",
               fontWeight: 800,
-              color: "#f1f5f9",
+              color: "var(--text-primary)",
               fontFamily: "'JetBrains Mono', monospace",
               marginTop: 4,
             }}
@@ -803,7 +804,7 @@ export default function FixedIncomeHub() {
               maximumFractionDigits: 2,
             })}
           </div>
-          <div style={{ fontSize: "0.68rem", color: "#38bdf8", marginTop: 4, fontWeight: 600, display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <div style={{ fontSize: "0.68rem", color: "var(--accent-primary)", marginTop: 4, fontWeight: 600, display: "flex", gap: 6, flexWrap: "wrap" }}>
             <span>💧 Cajitas: {currSymbol} {metrics.liquidBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             {metrics.cdtsCapitalTotal > 0 && (
               <>
@@ -814,11 +815,11 @@ export default function FixedIncomeHub() {
             {metrics.cdtsExtraYield > 0 && (
               <>
                 <span>•</span>
-                <span style={{ color: "#10b981" }}>📈 +{currSymbol} {metrics.cdtsExtraYield.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} rend.</span>
+                <span style={{ color: "var(--gain)" }}>📈 +{currSymbol} {metrics.cdtsExtraYield.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} rend.</span>
               </>
             )}
           </div>
-          <div style={{ fontSize: "0.68rem", color: "#64748b", marginTop: 2 }}>
+          <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 2 }}>
             {preferredCurrency === "COP"
               ? `≈ USD $${(metrics.totalPatrimony / fxRate).toFixed(2)}`
               : `≈ COP $${(metrics.totalPatrimony * fxRate).toLocaleString("en-US", { maximumFractionDigits: 0 })}`}
@@ -829,9 +830,10 @@ export default function FixedIncomeHub() {
           <div
             style={{
               fontSize: "0.72rem",
-              color: "#94a3b8",
+              color: "var(--text-muted)",
               textTransform: "uppercase",
               letterSpacing: 0.5,
+              fontWeight: 600,
             }}
           >
             Rendimiento Diario
@@ -840,7 +842,7 @@ export default function FixedIncomeHub() {
             style={{
               fontSize: "1.35rem",
               fontWeight: 700,
-              color: "#10b981",
+              color: "var(--gain)",
               fontFamily: "'JetBrains Mono', monospace",
               marginTop: 4,
             }}
@@ -851,7 +853,7 @@ export default function FixedIncomeHub() {
               maximumFractionDigits: 2,
             })}
           </div>
-          <div style={{ fontSize: "0.7rem", color: "#10b981", marginTop: 2 }}>
+          <div style={{ fontSize: "0.7rem", color: "var(--gain)", marginTop: 2, fontWeight: 600 }}>
             Generación pasiva diaria
           </div>
         </div>
@@ -860,9 +862,10 @@ export default function FixedIncomeHub() {
           <div
             style={{
               fontSize: "0.72rem",
-              color: "#94a3b8",
+              color: "var(--text-muted)",
               textTransform: "uppercase",
               letterSpacing: 0.5,
+              fontWeight: 600,
             }}
           >
             Rendimiento Mensual Estimado
@@ -871,7 +874,7 @@ export default function FixedIncomeHub() {
             style={{
               fontSize: "1.35rem",
               fontWeight: 700,
-              color: "#38bdf8",
+              color: "var(--accent-primary)",
               fontFamily: "'JetBrains Mono', monospace",
               marginTop: 4,
             }}
@@ -882,7 +885,7 @@ export default function FixedIncomeHub() {
               maximumFractionDigits: 2,
             })}
           </div>
-          <div style={{ fontSize: "0.7rem", color: "#64748b", marginTop: 2 }}>
+          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
             ≈ 30.4 días capitalizables
           </div>
         </div>
@@ -891,9 +894,10 @@ export default function FixedIncomeHub() {
           <div
             style={{
               fontSize: "0.72rem",
-              color: "#94a3b8",
+              color: "var(--text-muted)",
               textTransform: "uppercase",
               letterSpacing: 0.5,
+              fontWeight: 600,
             }}
           >
             Tasa Ponderada E.A.
@@ -902,15 +906,15 @@ export default function FixedIncomeHub() {
             style={{
               fontSize: "1.35rem",
               fontWeight: 800,
-              color: "#f59e0b",
+              color: "#d97706",
               fontFamily: "'JetBrains Mono', monospace",
               marginTop: 4,
             }}
           >
             {metrics.weightedEA.toFixed(2)}%{" "}
-            <span style={{ fontSize: "0.75rem", fontWeight: 500, color: "#94a3b8" }}>E.A.</span>
+            <span style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--text-muted)" }}>E.A.</span>
           </div>
-          <div style={{ fontSize: "0.7rem", color: "#fbbf24", marginTop: 2 }}>
+          <div style={{ fontSize: "0.7rem", color: "#d97706", marginTop: 2, fontWeight: 600 }}>
             Promedio ponderado del capital
           </div>
         </div>
@@ -919,9 +923,10 @@ export default function FixedIncomeHub() {
           <div
             style={{
               fontSize: "0.72rem",
-              color: "#94a3b8",
+              color: "var(--text-muted)",
               textTransform: "uppercase",
               letterSpacing: 0.5,
+              fontWeight: 600,
             }}
           >
             Rendimiento Real (vs IPC)
@@ -930,16 +935,16 @@ export default function FixedIncomeHub() {
             style={{
               fontSize: "1.35rem",
               fontWeight: 800,
-              color: metrics.realRateEA >= 0 ? "#10b981" : "#ef4444",
+              color: metrics.realRateEA >= 0 ? "var(--gain)" : "var(--loss)",
               fontFamily: "'JetBrains Mono', monospace",
               marginTop: 4,
             }}
           >
             {metrics.realRateEA >= 0 ? "+" : ""}
             {metrics.realRateEA.toFixed(2)}%{" "}
-            <span style={{ fontSize: "0.75rem", fontWeight: 500, color: "#94a3b8" }}>Real</span>
+            <span style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--text-muted)" }}>Real</span>
           </div>
-          <div style={{ fontSize: "0.7rem", color: "#94a3b8", marginTop: 2 }}>
+          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
             Ajustado por inflación (
             {preferredCurrency === "COP" ? `IPC CO ${colInflationRate}%` : "IPC US 3.0%"})
           </div>

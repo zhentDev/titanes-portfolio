@@ -371,9 +371,9 @@ export default function CashFlowHub() {
               style={{
                 background: "transparent",
                 border: "none",
-                color: isAtStartPeriod ? "#475569" : "#38bdf8",
+                color: isAtStartPeriod ? "var(--text-muted)" : "var(--accent-primary)",
                 cursor: isAtStartPeriod ? "not-allowed" : "pointer",
-                opacity: isAtStartPeriod ? 0.25 : 1,
+                opacity: isAtStartPeriod ? 0.35 : 1,
                 pointerEvents: isAtStartPeriod ? "none" : "auto",
                 fontSize: "1rem",
                 padding: "4px 8px",
@@ -390,7 +390,7 @@ export default function CashFlowHub() {
                 fontFamily: "Inter, sans-serif",
                 fontSize: "0.85rem",
                 fontWeight: 700,
-                color: "#f8fafc",
+                color: "var(--text-primary)",
                 letterSpacing: "0.3px",
                 padding: "0 6px",
                 textAlign: "center",
@@ -408,7 +408,7 @@ export default function CashFlowHub() {
               style={{
                 background: "transparent",
                 border: "none",
-                color: "#38bdf8",
+                color: "var(--accent-primary)",
                 cursor: "pointer",
                 fontSize: "1rem",
                 padding: "4px 8px",
@@ -432,8 +432,8 @@ export default function CashFlowHub() {
                 border: "none",
                 fontSize: "0.8rem",
                 fontWeight: currency === "COP" ? 700 : 400,
-                background: currency === "COP" ? "rgba(0, 229, 255, 0.18)" : "transparent",
-                color: currency === "COP" ? "#00e5ff" : "#94a3b8",
+                background: currency === "COP" ? "var(--accent-glow)" : "transparent",
+                color: currency === "COP" ? "var(--accent-primary)" : "var(--text-secondary)",
                 cursor: "pointer",
                 transition: "all 0.15s ease",
                 display: "inline-flex",
@@ -453,8 +453,8 @@ export default function CashFlowHub() {
                 border: "none",
                 fontSize: "0.8rem",
                 fontWeight: currency === "USD" ? 700 : 400,
-                background: currency === "USD" ? "rgba(0, 229, 255, 0.18)" : "transparent",
-                color: currency === "USD" ? "#00e5ff" : "#94a3b8",
+                background: currency === "USD" ? "var(--accent-glow)" : "transparent",
+                color: currency === "USD" ? "var(--accent-primary)" : "var(--text-secondary)",
                 cursor: "pointer",
                 transition: "all 0.15s ease",
                 display: "inline-flex",
@@ -465,7 +465,7 @@ export default function CashFlowHub() {
             >
               <span role="img" aria-label="USA">🇺🇸</span>
               <span>USD</span>
-              <span style={{ fontSize: "0.7rem", opacity: 0.8, color: "#38bdf8" }}>
+              <span style={{ fontSize: "0.7rem", opacity: 0.85, color: "var(--accent-primary)" }}>
                 (≈${Math.round(fxRate).toLocaleString("es-CO")})
               </span>
             </button>
@@ -478,7 +478,7 @@ export default function CashFlowHub() {
           <button
             type="button"
             className="cashflow-action-btn secondary"
-            style={{ borderColor: "rgba(0, 229, 255, 0.3)", color: "#38bdf8" }}
+            style={{ borderColor: "var(--border-accent)", color: "var(--accent-primary)" }}
             onClick={() => setPayrollModalOpen(true)}
             title="Calcular Salario Neto a partir de Salario Bruto restando Salud, Pensión y Parafiscales de Ley Colombia"
           >

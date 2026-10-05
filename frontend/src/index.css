@@ -256,18 +256,41 @@
 /* Any inline white/light text on dark backgrounds → dark text in light mode */
 [data-theme="light"] [style*="color: \"#f1f5f9\""],
 [data-theme="light"] [style*="color: \"#e2e8f0\""],
+[data-theme="light"] [style*="color: \"#f8fafc\""],
 [data-theme="light"] [style*="color: #f1f5f9"],
 [data-theme="light"] [style*="color: #e2e8f0"],
-[data-theme="light"] [style*="color: #f8fafc"] {
+[data-theme="light"] [style*="color: #f8fafc"],
+[data-theme="light"] [style*="color: #ffffff"],
+[data-theme="light"] [style*="color: \"#ffffff\""],
+[data-theme="light"] [style*="color: #fff"],
+[data-theme="light"] [style*="color: \"#fff\""] {
   color: #0f172a !important;
+}
+
+/* Light blue / pale cyan accents on light background → high contrast blue */
+[data-theme="light"] [style*="color: #38bdf8"],
+[data-theme="light"] [style*="color: \"#38bdf8\""],
+[data-theme="light"] [style*="color: #00e5ff"],
+[data-theme="light"] [style*="color: \"#00e5ff\""] {
+  color: #0284c7 !important;
+}
+
+/* Pale yellow / amber on light background → readable dark amber */
+[data-theme="light"] [style*="color: #fbbf24"],
+[data-theme="light"] [style*="color: \"#fbbf24\""],
+[data-theme="light"] [style*="color: #f59e0b"],
+[data-theme="light"] [style*="color: \"#f59e0b\""] {
+  color: #b45309 !important;
 }
 
 /* Muted secondary text */
 [data-theme="light"] [style*="color: #94a3b8"],
 [data-theme="light"] [style*="color: \"#94a3b8\""],
 [data-theme="light"] [style*="color: #cbd5e1"],
-[data-theme="light"] [style*="color: \"#cbd5e1\""] {
-  color: #334155 !important;
+[data-theme="light"] [style*="color: \"#cbd5e1\""],
+[data-theme="light"] [style*="color: #64748b"],
+[data-theme="light"] [style*="color: \"#64748b\""] {
+  color: #475569 !important;
 }
 
 /* Inner inputs inside custom control wrappers */
