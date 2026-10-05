@@ -1828,10 +1828,10 @@ export default function FixedIncomeHub() {
                             type="button"
                             onClick={() => toggleAccountExpand(acc.id)}
                             style={{
-                              background: isExpanded ? "rgba(16, 185, 129, 0.2)" : "rgba(255, 255, 255, 0.06)",
-                              border: `1px solid ${isExpanded ? "#10b981" : "rgba(255, 255, 255, 0.12)"}`,
+                              background: isExpanded ? "rgba(16, 185, 129, 0.2)" : "var(--bg-card-hover)",
+                              border: `1px solid ${isExpanded ? "var(--gain)" : "var(--border)"}`,
                               borderRadius: 8,
-                              color: isExpanded ? "#10b981" : "#cbd5e1",
+                              color: isExpanded ? "var(--gain)" : "var(--text-secondary)",
                               cursor: "pointer",
                               padding: "6px 11px",
                               fontSize: "0.76rem",
@@ -1868,7 +1868,7 @@ export default function FixedIncomeHub() {
                                 </span>
                               )}
                               {acc.isTaxExemptGMF && acc.type !== "crypto" && (
-                                <span style={{ color: "#38bdf8", fontSize: "0.7rem", fontWeight: 600 }}>
+                                <span style={{ color: "var(--accent-primary)", fontSize: "0.7rem", fontWeight: 700 }}>
                                   • Exenta 4×1000
                                 </span>
                               )}
@@ -2041,8 +2041,8 @@ export default function FixedIncomeHub() {
                         return (
                           <div
                             style={{
-                              background: "rgba(0, 0, 0, 0.35)",
-                              borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+                              background: "var(--bg-surface)",
+                              borderTop: "1px solid var(--border)",
                               padding: "10px 14px",
                             }}
                           >
@@ -2058,10 +2058,10 @@ export default function FixedIncomeHub() {
                                 }}
                               >
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 6 }}>
-                                  <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#f59e0b", display: "flex", alignItems: "center", gap: 6 }}>
+                                  <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#d97706", display: "flex", alignItems: "center", gap: 6 }}>
                                     <span>⏳ CDTs Vinculados a {acc.name}:</span>
                                   </span>
-                                  <span style={{ fontSize: "0.78rem", color: "#34d399", fontWeight: 700 }}>
+                                  <span style={{ fontSize: "0.78rem", color: "var(--gain)", fontWeight: 700 }}>
                                     {yieldData.activeCDTsList.length > 0 && `Activos: $${yieldData.activeCDTsCapital.toLocaleString("en-US", { maximumFractionDigits: 0 })} COP (+$${yieldData.activeCDTsAccruedInterest.toLocaleString("en-US", { maximumFractionDigits: 0 })} rend.)`}
                                     {yieldData.activeCDTsList.length > 0 && yieldData.maturedCDTsList.length > 0 && " • "}
                                     {yieldData.maturedCDTsList.length > 0 && `📦 ${yieldData.maturedCDTsList.length} Cerrados (+$${yieldData.maturedCDTsTotalProfit.toLocaleString("en-US", { maximumFractionDigits: 0 })} cobrados)`}
@@ -2074,23 +2074,23 @@ export default function FixedIncomeHub() {
                                     <div
                                       key={`act_cdt_${cIdx}`}
                                       style={{
-                                        background: "rgba(0,0,0,0.35)",
+                                        background: "var(--bg-card)",
                                         padding: "8px 10px",
                                         borderRadius: 6,
-                                        border: "1px solid rgba(245, 158, 11, 0.2)",
+                                        border: "1px solid rgba(245, 158, 11, 0.25)",
                                       }}
                                     >
-                                      <div style={{ display: "flex", justifyContent: "space-between", color: "#f8fafc", fontSize: "0.78rem", fontWeight: 600 }}>
+                                      <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-primary)", fontSize: "0.78rem", fontWeight: 600 }}>
                                         <span>⏳ {c.name || c.category}</span>
-                                        <span style={{ color: "#f59e0b", fontWeight: 700 }}>{c.interestRateEA}% E.A.</span>
+                                        <span style={{ color: "#d97706", fontWeight: 700 }}>{c.interestRateEA}% E.A.</span>
                                       </div>
-                                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: "0.72rem", color: "#94a3b8" }}>
+                                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: "0.72rem", color: "var(--text-muted)" }}>
                                         <span>Capital: ${Number(c.capital || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
                                         <span>{c.daysElapsed} de {c.termDays}d</span>
                                       </div>
                                       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: "0.75rem" }}>
-                                        <span style={{ color: "#64748b" }}>Rend. a hoy:</span>
-                                        <span style={{ color: "#34d399", fontWeight: 700, fontFamily: "JetBrains Mono" }}>
+                                        <span style={{ color: "var(--text-muted)" }}>Rend. a hoy:</span>
+                                        <span style={{ color: "var(--gain)", fontWeight: 700, fontFamily: "JetBrains Mono" }}>
                                           +${Number(c.accruedYield || 0).toLocaleString("en-US", { maximumFractionDigits: 2 })} COP
                                         </span>
                                       </div>
@@ -2102,19 +2102,19 @@ export default function FixedIncomeHub() {
                                     <div
                                       key={`mat_cdt_${cIdx}`}
                                       style={{
-                                        background: "rgba(0,0,0,0.25)",
+                                        background: "var(--bg-card)",
                                         padding: "8px 10px",
                                         borderRadius: 6,
-                                        border: "1px solid rgba(148, 163, 184, 0.15)",
+                                        border: "1px solid var(--border)",
                                       }}
                                     >
-                                      <div style={{ display: "flex", justifyContent: "space-between", color: "#94a3b8", fontSize: "0.78rem", fontWeight: 600 }}>
+                                      <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-secondary)", fontSize: "0.78rem", fontWeight: 600 }}>
                                         <span>📦 {c.name || c.category} (Cerrado)</span>
-                                        <span style={{ color: "#94a3b8" }}>{c.interestRateEA}% E.A.</span>
+                                        <span style={{ color: "var(--text-muted)" }}>{c.interestRateEA}% E.A.</span>
                                       </div>
                                       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: "0.75rem" }}>
-                                        <span style={{ color: "#64748b" }}>Ganancia cobrada:</span>
-                                        <span style={{ color: "#10b981", fontWeight: 700, fontFamily: "JetBrains Mono" }}>
+                                        <span style={{ color: "var(--text-muted)" }}>Ganancia cobrada:</span>
+                                        <span style={{ color: "var(--gain)", fontWeight: 700, fontFamily: "JetBrains Mono" }}>
                                           +${Number(c.finalProfit || 0).toLocaleString("en-US", { maximumFractionDigits: 2 })} {c.currency || acc.currency || "COP"}
                                         </span>
                                       </div>
@@ -2128,18 +2128,18 @@ export default function FixedIncomeHub() {
                             {yieldData.periodBreakdown.length > 0 && (
                               <div
                                 style={{
-                                  background: "rgba(15, 23, 42, 0.7)",
+                                  background: "var(--bg-card)",
                                   borderRadius: 8,
                                   padding: "10px 14px",
                                   marginBottom: 12,
-                                  border: "1px solid rgba(56, 189, 248, 0.2)",
+                                  border: "1px solid var(--border-accent)",
                                 }}
                               >
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 6 }}>
-                                  <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#38bdf8" }}>
+                                  <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--accent-primary)" }}>
                                     📊 Rentabilidad Compuesta en Cajita por Períodos de Tasa:
                                   </span>
-                                  <span style={{ fontSize: "0.78rem", color: "#10b981", fontWeight: 700 }}>
+                                  <span style={{ fontSize: "0.78rem", color: "var(--gain)", fontWeight: 700 }}>
                                     Total Ganado en Cajita: +${yieldData.liquidEarnedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })} {acc.currency || "COP"}
                                   </span>
                                 </div>
@@ -2148,19 +2148,19 @@ export default function FixedIncomeHub() {
                                     <div
                                       key={pIdx}
                                       style={{
-                                        background: "rgba(0,0,0,0.3)",
+                                        background: "var(--bg-card-hover)",
                                         padding: "8px 10px",
                                         borderRadius: 6,
-                                        border: "1px solid rgba(255,255,255,0.05)",
+                                        border: "1px solid var(--border)",
                                       }}
                                     >
-                                      <div style={{ display: "flex", justifyContent: "space-between", color: "#94a3b8", fontSize: "0.72rem" }}>
+                                      <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-secondary)", fontSize: "0.72rem" }}>
                                         <span>{p.startDate} al {p.endDate}</span>
-                                        <span style={{ color: "#38bdf8", fontWeight: 700 }}>{p.rateEA}% E.A.</span>
+                                        <span style={{ color: "var(--accent-primary)", fontWeight: 700 }}>{p.rateEA}% E.A.</span>
                                       </div>
                                       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: "0.75rem" }}>
-                                        <span style={{ color: "#64748b" }}>{p.days} días activos</span>
-                                        <span style={{ color: "#10b981", fontWeight: 700, fontFamily: "JetBrains Mono" }}>
+                                        <span style={{ color: "var(--text-muted)" }}>{p.days} días activos</span>
+                                        <span style={{ color: "var(--gain)", fontWeight: 700, fontFamily: "JetBrains Mono" }}>
                                           +${p.interestEarned.toLocaleString("en-US", { maximumFractionDigits: 2 })} {acc.currency || "COP"}
                                         </span>
                                       </div>
@@ -2181,7 +2181,7 @@ export default function FixedIncomeHub() {
                               }}
                             >
                               {/* Filter buttons (Tipo) */}
-                              <div style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(255,255,255,0.04)", padding: "3px 4px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 4, background: "var(--bg-card)", padding: "3px 4px", borderRadius: 8, border: "1px solid var(--border)" }}>
                                 {[
                                   { id: "all", label: "Todos" },
                                   { id: "credit", label: "+ Depósitos" },
@@ -2192,14 +2192,15 @@ export default function FixedIncomeHub() {
                                     type="button"
                                     onClick={() => setMovementFilterType((prev) => ({ ...prev, [acc.id]: t.id }))}
                                     style={{
-                                      background: currentType === t.id ? (t.id === "credit" ? "#10b981" : t.id === "debit" ? "#f43f5e" : "rgba(255,255,255,0.18)") : "transparent",
-                                      color: currentType === t.id ? (t.id === "credit" || t.id === "debit" ? "#000" : "#fff") : "#94a3b8",
+                                      background: currentType === t.id ? (t.id === "credit" ? "var(--gain)" : t.id === "debit" ? "var(--loss)" : "var(--accent-primary)") : "transparent",
+                                      color: currentType === t.id ? "#ffffff" : "var(--text-secondary)",
                                       border: "none",
                                       borderRadius: 5,
                                       padding: "4px 10px",
                                       fontSize: "0.78rem",
                                       fontWeight: currentType === t.id ? 700 : 500,
                                       cursor: "pointer",
+                                      transition: "all 0.15s ease",
                                     }}
                                   >
                                     {t.label}
@@ -2212,10 +2213,10 @@ export default function FixedIncomeHub() {
                                 value={currentYear}
                                 onChange={(e) => setMovementYear((prev) => ({ ...prev, [acc.id]: e.target.value }))}
                                 style={{
-                                  background: "rgba(15, 23, 42, 0.8)",
-                                  border: "1px solid rgba(255, 255, 255, 0.12)",
+                                  background: "var(--bg-card)",
+                                  border: "1px solid var(--border)",
                                   borderRadius: 6,
-                                  color: "#e2e8f0",
+                                  color: "var(--text-primary)",
                                   fontSize: "0.78rem",
                                   padding: "5px 8px",
                                   cursor: "pointer",
@@ -2236,10 +2237,10 @@ export default function FixedIncomeHub() {
                                   onChange={(e) => setMovementSearch((prev) => ({ ...prev, [acc.id]: e.target.value }))}
                                   style={{
                                     width: "100%",
-                                    background: "rgba(15, 23, 42, 0.8)",
-                                    border: "1px solid rgba(255, 255, 255, 0.12)",
+                                    background: "var(--bg-card)",
+                                    border: "1px solid var(--border)",
                                     borderRadius: 6,
-                                    color: "#f8fafc",
+                                    color: "var(--text-primary)",
                                     fontSize: "0.78rem",
                                     padding: "5px 10px",
                                     outline: "none",
@@ -2371,10 +2372,10 @@ export default function FixedIncomeHub() {
                                             });
                                           }}
                                           style={{
-                                            background: "transparent",
-                                            border: "1px solid rgba(255,255,255,0.2)",
+                                            background: "var(--bg-card-hover)",
+                                            border: "1px solid var(--border)",
                                             borderRadius: 4,
-                                            color: "#94a3b8",
+                                            color: "var(--text-secondary)",
                                             padding: "4px 8px",
                                             fontSize: "0.75rem",
                                             cursor: "pointer",
@@ -2385,12 +2386,12 @@ export default function FixedIncomeHub() {
                                       </div>
                                     </div>
                                   ) : (
-                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 14, fontSize: "0.76rem", color: "#94a3b8", marginBottom: 10 }}>
-                                      <span>Mostrando: <strong style={{ color: "#f1f5f9" }}>{filteredTx.length}</strong> de {accTx.length}</span>
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 14, fontSize: "0.76rem", color: "var(--text-secondary)", marginBottom: 10 }}>
+                                      <span>Mostrando: <strong style={{ color: "var(--text-primary)" }}>{filteredTx.length}</strong> de {accTx.length}</span>
                                       <span>•</span>
-                                      <span>Total Entradas: <strong style={{ color: "#10b981" }}>+${totalCredits.toLocaleString("en-US", { maximumFractionDigits: 0 })}</strong></span>
+                                      <span>Total Entradas: <strong style={{ color: "var(--gain)" }}>+${totalCredits.toLocaleString("en-US", { maximumFractionDigits: 0 })}</strong></span>
                                       <span>•</span>
-                                      <span>Total Salidas: <strong style={{ color: "#f43f5e" }}>-${totalDebits.toLocaleString("en-US", { maximumFractionDigits: 0 })}</strong></span>
+                                      <span>Total Salidas: <strong style={{ color: "var(--loss)" }}>-${totalDebits.toLocaleString("en-US", { maximumFractionDigits: 0 })}</strong></span>
                                     </div>
                                   )}
                                 </>
@@ -2406,7 +2407,7 @@ export default function FixedIncomeHub() {
                               ) : (
                                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
                                   <thead>
-                                    <tr style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.1)", color: "#94a3b8", textAlign: "left", position: "sticky", top: 0, background: "#0b1120", zIndex: 1 }}>
+                                    <tr style={{ borderBottom: "1px solid var(--border)", color: "var(--text-secondary)", textAlign: "left", position: "sticky", top: 0, background: "var(--bg-surface)", zIndex: 1 }}>
                                       <th style={{ padding: "8px 6px", width: 28, textAlign: "center" }}>
                                         <input
                                           type="checkbox"
@@ -2439,7 +2440,7 @@ export default function FixedIncomeHub() {
                                         <tr
                                           key={tx.id || `tx_${txIdx}`}
                                           style={{
-                                            borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+                                            borderBottom: "1px solid var(--border)",
                                             background: isSelected ? "rgba(59, 130, 246, 0.12)" : "transparent",
                                             transition: "background 0.15s ease",
                                           }}
@@ -2452,16 +2453,16 @@ export default function FixedIncomeHub() {
                                               style={{ cursor: "pointer" }}
                                             />
                                           </td>
-                                          <td style={{ padding: "8px 6px", color: "#94a3b8", fontFamily: "JetBrains Mono", fontSize: "0.78rem" }}>{tx.date}</td>
-                                          <td style={{ padding: "8px 6px", color: "#e2e8f0", fontWeight: 500 }}>{tx.description || "Movimiento"}</td>
+                                          <td style={{ padding: "8px 6px", color: "var(--text-secondary)", fontFamily: "JetBrains Mono", fontSize: "0.78rem" }}>{tx.date}</td>
+                                          <td style={{ padding: "8px 6px", color: "var(--text-primary)", fontWeight: 500 }}>{tx.description || "Movimiento"}</td>
                                           <td style={{ padding: "8px 6px", textAlign: "center" }}>
                                             <span style={{
                                               padding: "3px 8px",
                                               borderRadius: 4,
                                               fontSize: "0.72rem",
                                               fontWeight: 700,
-                                              background: isCredit ? "rgba(16, 185, 129, 0.15)" : "rgba(244, 63, 94, 0.15)",
-                                              color: isCredit ? "#10b981" : "#f43f5e",
+                                              background: isCredit ? "var(--gain-bg)" : "var(--loss-bg)",
+                                              color: isCredit ? "var(--gain)" : "var(--loss)",
                                             }}>
                                               {isCredit ? "Depósito" : "Retiro"}
                                             </span>
@@ -2472,7 +2473,7 @@ export default function FixedIncomeHub() {
                                             fontFamily: "JetBrains Mono",
                                             fontWeight: 700,
                                             fontSize: "0.85rem",
-                                            color: isCredit ? "#10b981" : "#f43f5e",
+                                            color: isCredit ? "var(--gain)" : "var(--loss)",
                                           }}>
                                             {isCredit ? "+" : "-"}${Math.abs(Number(tx.amount || 0)).toLocaleString("en-US", { maximumFractionDigits: 2 })}
                                           </td>
@@ -2489,10 +2490,10 @@ export default function FixedIncomeHub() {
                                                 setModalOpen(true);
                                               }}
                                               style={{
-                                                background: "rgba(255, 255, 255, 0.04)",
-                                                border: "none",
+                                                background: "var(--bg-card-hover)",
+                                                border: "1px solid var(--border)",
                                                 borderRadius: 4,
-                                                color: "#94a3b8",
+                                                color: "var(--text-secondary)",
                                                 cursor: "pointer",
                                                 fontSize: "0.82rem",
                                                 padding: "3px 6px",
@@ -2506,10 +2507,10 @@ export default function FixedIncomeHub() {
                                               type="button"
                                               onClick={() => handleDeleteTransaction(tx)}
                                               style={{
-                                                background: "rgba(244, 63, 94, 0.08)",
-                                                border: "none",
+                                                background: "var(--loss-bg)",
+                                                border: "1px solid var(--loss)",
                                                 borderRadius: 4,
-                                                color: "#f43f5e",
+                                                color: "var(--loss)",
                                                 cursor: "pointer",
                                                 fontSize: "0.78rem",
                                                 padding: "3px 6px",
