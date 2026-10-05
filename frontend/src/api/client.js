@@ -11,8 +11,11 @@ const IS_LOCAL_HOST =
   (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 
 // Use local backend when developing on localhost, and Render cloud backend on GitHub Pages/production!
-const BASE = IS_LOCAL_HOST ? LOCAL_BACKEND_BASE : RENDER_BACKEND_BASE;
-const TIMEOUT_MS = 4000; // 4 seconds timeout for cloud backend before static fallback
+// Try local backend first when on localhost, but seamlessly fallback to Render cloud backend if local is not running
+let ACTIVE_BASE = IS_LOCAL_HOST ? LOCAL_BACKEND_BASE : RENDER_BACKEND_BASE;
+export const getBase = () => ACTIVE_BASE;
+const BASE = ACTIVE_BASE;
+const TIMEOUT_MS = 4000; // 4 seconds timeout before fallback
 
 // Helper to get relative static data path on GitHub Pages
 function getStaticDataPath(file) {
@@ -93,43 +96,61 @@ async function fetchWithFallback(endpoint, staticFile, options = {}) {
 
   let resultData = null;
 
-  try {
-    const timeout = options.timeoutMs || TIMEOUT_MS;
+  // Function to execute request against a base url
+  const tryFetchBase = async (baseUrl, timeoutMs) => {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeout);
-    const res = await safeFetch(
-      `${BASE}${endpoint}`,
-      { ...options, signal: controller.signal },
-      1,
-      300,
-    );
-    clearTimeout(timer);
-
-    if (res.ok) {
-      resultData = await res.json();
-      if (staticFile && resultData && typeof resultData === "object") {
-        const hasAuth = Boolean(getAuthHeaders().Authorization);
-        const isEmptyAccounts = Array.isArray(resultData.accounts) && resultData.accounts.length === 0;
-        const isEmptyCDTs = Array.isArray(resultData.cdts) && resultData.cdts.length === 0;
-        const isEmptyInflows = Array.isArray(resultData.inflows) && resultData.inflows.length === 0;
-        const isEmptyNeeds = Array.isArray(resultData.needs) && resultData.needs.length === 0;
-        // Authenticated users legitimately have empty portfolios (0 accounts/0 cdts/0 inflows).
-        // Only unauthenticated public showcase sessions should fall back to demo static JSON.
-        if (!hasAuth && ((isEmptyAccounts && isEmptyCDTs) || (isEmptyInflows && isEmptyNeeds))) {
-          resultData = null; // trigger static fallback below
-        }
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await safeFetch(
+        `${baseUrl}${endpoint}`,
+        { ...options, signal: controller.signal },
+        0, // 0 retries here to switch fast if local is down
+      );
+      clearTimeout(timer);
+      if (res && res.ok) {
+        return await res.json();
       }
+    } catch {
+      clearTimeout(timer);
     }
-  } catch {
-    // Backend offline / waking up
+    return null;
+  };
+
+  // 1. Primary backend try
+  const timeout = options.timeoutMs || TIMEOUT_MS;
+  resultData = await tryFetchBase(ACTIVE_BASE, timeout);
+
+  // 2. If localhost was used and failed, automatically try Render cloud backend!
+  if (!resultData && ACTIVE_BASE === LOCAL_BACKEND_BASE) {
+    resultData = await tryFetchBase(RENDER_BACKEND_BASE, Math.max(timeout, 8000));
+    if (resultData) {
+      // Switch active base so subsequent calls don't hang waiting for dead localhost
+      ACTIVE_BASE = RENDER_BACKEND_BASE;
+    }
   }
 
-  // Seamless static fallback
+  // Filter check for authenticated empty state
+  if (staticFile && resultData && typeof resultData === "object") {
+    const hasAuth = Boolean(getAuthHeaders().Authorization);
+    const isEmptyAccounts = Array.isArray(resultData.accounts) && resultData.accounts.length === 0;
+    const isEmptyCDTs = Array.isArray(resultData.cdts) && resultData.cdts.length === 0;
+    const isEmptyInflows = Array.isArray(resultData.inflows) && resultData.inflows.length === 0;
+    const isEmptyNeeds = Array.isArray(resultData.needs) && resultData.needs.length === 0;
+    if (!hasAuth && ((isEmptyAccounts && isEmptyCDTs) || (isEmptyInflows && isEmptyNeeds))) {
+      resultData = null; // trigger static fallback below
+    }
+  }
+
+  // 3. Seamless static fallback
   if (!resultData && staticFile) {
-    const staticUrl = getStaticDataPath(staticFile);
-    const staticRes = await fetch(staticUrl);
-    if (staticRes.ok) {
-      resultData = await staticRes.json();
+    try {
+      const staticUrl = getStaticDataPath(staticFile);
+      const staticRes = await fetch(staticUrl);
+      if (staticRes.ok) {
+        resultData = await staticRes.json();
+      }
+    } catch {
+      // ignore static error
     }
   }
 
@@ -137,6 +158,11 @@ async function fetchWithFallback(endpoint, staticFile, options = {}) {
     // Store in client memory cache
     API_CACHE.set(cacheKey, { timestamp: now, data: resultData });
     return resultData;
+  }
+
+  // If no static fallback file was configured (e.g. live quotes/intraday), return empty/null gracefully
+  if (!staticFile) {
+    return null;
   }
 
   throw new Error(

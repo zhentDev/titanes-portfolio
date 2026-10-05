@@ -247,11 +247,19 @@ export default function NavChart({
         timeFormatter: (time) => {
           if (typeof time === "number") {
             const date = new Date(time * 1000);
-            return date.toLocaleTimeString("es-CO", {
+            if (isLiveMode) {
+              return date.toLocaleTimeString("es-CO", {
+                timeZone: "America/Bogota",
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              });
+            }
+            return date.toLocaleDateString("es-CO", {
               timeZone: "America/Bogota",
-              hour: "numeric",
-              minute: "2-digit",
-              hour12: true,
+              year: "numeric",
+              month: "short",
+              day: "numeric",
             });
           }
           return String(time);
@@ -276,16 +284,23 @@ export default function NavChart({
         barSpacing: isMobile ? 12 : 8,
         fixLeftEdge: true,
         fixRightEdge: true,
-        timeVisible: true,
+        timeVisible: isLiveMode,
         secondsVisible: false,
         tickMarkFormatter: (time) => {
           if (typeof time === "number") {
             const date = new Date(time * 1000);
-            return date.toLocaleTimeString("es-CO", {
+            if (isLiveMode) {
+              return date.toLocaleTimeString("es-CO", {
+                timeZone: "America/Bogota",
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: false,
+              });
+            }
+            return date.toLocaleDateString("es-CO", {
               timeZone: "America/Bogota",
-              hour: "numeric",
-              minute: "2-digit",
-              hour12: false,
+              month: "short",
+              day: "numeric",
             });
           }
           return String(time);

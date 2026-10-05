@@ -163,14 +163,22 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
         }
 
         // 2. Fetch live quotes for active positions only
-        const quotesData = await fetchLiveQuotes(activeTickers);
-        const safeQuotesData = Array.isArray(quotesData) ? quotesData : [];
+        let safeQuotesData = [];
+        try {
+          const quotesData = await fetchLiveQuotes(activeTickers);
+          safeQuotesData = Array.isArray(quotesData) ? quotesData : [];
+        } catch (quoteErr) {
+          console.warn("[LIVE MODE] No se pudieron cargar cotizaciones en vivo:", quoteErr);
+        }
+
         if (safeQuotesData.length > 0) {
           setQuotes(safeQuotesData);
-          // Si cualquiera de las acciones de la estrategia está abierta (ej. 8:30 AM en su mercado), se activa el modo en vivo
-          const anyStockOpen = safeQuotesData.some((q) => q.market_open === true);
-          setMarketOpen(anyStockOpen);
         }
+
+        // Si cualquiera de las acciones de la estrategia reporta mercado abierto, o el reloj de mercado de EE.UU./BVC está activo
+        const anyStockOpenReported = safeQuotesData.some((q) => q.market_open === true);
+        const anyMarketOpenByHours = activeHoldings.some((h) => isStockMarketOpen(h.ticker, h.exchange));
+        setMarketOpen(anyStockOpenReported || anyMarketOpenByHours);
         setLastUpdate(new Date());
 
         // 3. Intraday chart: Carga la trayectoria completa de la sesión más reciente (tanto abierta como cerrada)
