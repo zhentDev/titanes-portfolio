@@ -779,8 +779,8 @@ export default function App() {
             </button>
           )}
 
-          {/* 6. Exportar CSV */}
-          {navData && (
+          {/* 6. Exportar CSV (Oculto temporalmente) */}
+          {/* navData && (
             <button
               type="button"
               className="nav-action-btn compact"
@@ -790,7 +790,7 @@ export default function App() {
               <span>📥</span>
               <span className="btn-text-hide-mobile">CSV</span>
             </button>
-          )}
+          ) */}
 
           {/* 6. Selector Modo Diurno / Nocturno (Compacto & Elegante) */}
           <button
