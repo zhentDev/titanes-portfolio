@@ -26,6 +26,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -39,6 +40,7 @@ jobs:
       - name: Set up Python & Generate Static Data
         working-directory: ./backend
         continue-on-error: true
+        timeout-minutes: 3
         run: |
           uv sync
           uv run python generate_static_data.py
