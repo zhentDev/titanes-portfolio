@@ -29,8 +29,8 @@ export function getAuthHeaders() {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-// Resilient fetch helper with automatic retry for initial startup / hot-reloads
-async function safeFetch(url, options = {}, retries = 1, delayMs = 300) {
+// Resilient fetch helper with automatic retry for server cold starts (Render sleep / 500s / 502s / 503s / 504s)
+async function safeFetch(url, options = {}, retries = 3, delayMs = 1500) {
   const mergedHeaders = {
     ...getAuthHeaders(),
     ...(options.headers || {}),
@@ -39,23 +39,38 @@ async function safeFetch(url, options = {}, retries = 1, delayMs = 300) {
     ...options,
     headers: mergedHeaders,
   };
+
+  let lastError = null;
+  let lastResponse = null;
+
   for (let i = 0; i <= retries; i++) {
     try {
       const res = await fetch(url, finalOptions);
       if (res.ok) return res;
+
+      lastResponse = res;
+      // If server returned 500, 502, 503 or 504 (typical Render waking-up errors)
       if (res.status >= 500 && i < retries) {
-        await new Promise((r) => setTimeout(r, delayMs));
+        // Exponential backoff: 1.5s -> 3s -> 4.5s... gives Render 10-15s to finish booting
+        const waitTime = delayMs * (i + 1);
+        console.warn(`[API] Servidor respondiendo ${res.status}. Posible inicio en frío de Render. Reintentando en ${waitTime}ms (intento ${i + 1}/${retries})...`);
+        await new Promise((r) => setTimeout(r, waitTime));
         continue;
       }
       return res;
     } catch (err) {
+      lastError = err;
       if (i < retries) {
-        await new Promise((r) => setTimeout(r, delayMs));
+        const waitTime = delayMs * (i + 1);
+        console.warn(`[API] Fallo de conexión (${err.message}). Reintentando en ${waitTime}ms (intento ${i + 1}/${retries})...`);
+        await new Promise((r) => setTimeout(r, waitTime));
         continue;
       }
       throw err;
     }
   }
+
+  return lastResponse;
 }
 
 // ── Client-Side In-Memory Cache (0ms latency on tab switching) ──
@@ -97,14 +112,15 @@ async function fetchWithFallback(endpoint, staticFile, options = {}) {
   let resultData = null;
 
   // Function to execute request against a base url
-  const tryFetchBase = async (baseUrl, timeoutMs) => {
+  const tryFetchBase = async (baseUrl, timeoutMs, retries = 0) => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const res = await safeFetch(
         `${baseUrl}${endpoint}`,
         { ...options, signal: controller.signal },
-        0, // 0 retries here to switch fast if local is down
+        retries,
+        1500,
       );
       clearTimeout(timer);
       if (res && res.ok) {
@@ -117,12 +133,14 @@ async function fetchWithFallback(endpoint, staticFile, options = {}) {
   };
 
   // 1. Primary backend try
-  const timeout = options.timeoutMs || TIMEOUT_MS;
-  resultData = await tryFetchBase(ACTIVE_BASE, timeout);
+  const isRenderPrimary = ACTIVE_BASE === RENDER_BACKEND_BASE;
+  const timeout = options.timeoutMs || (isRenderPrimary ? 12000 : TIMEOUT_MS);
+  // If we are already pointing to Render, give it 2 retries to wake up
+  resultData = await tryFetchBase(ACTIVE_BASE, timeout, isRenderPrimary ? 2 : 0);
 
-  // 2. If localhost was used and failed, automatically try Render cloud backend!
+  // 2. If localhost was used and failed, automatically try Render cloud backend with wake-up retries!
   if (!resultData && ACTIVE_BASE === LOCAL_BACKEND_BASE) {
-    resultData = await tryFetchBase(RENDER_BACKEND_BASE, Math.max(timeout, 8000));
+    resultData = await tryFetchBase(RENDER_BACKEND_BASE, 15000, 2);
     if (resultData) {
       // Switch active base so subsequent calls don't hang waiting for dead localhost
       ACTIVE_BASE = RENDER_BACKEND_BASE;
@@ -244,8 +262,8 @@ export async function fetchIntraday(ticker) {
 /** GET /api/prices/indices_history?start_date=YYYY-MM-DD */
 export async function fetchIndicesHistory(startDate) {
   try {
-    const res = await fetch(`${BASE}/prices/indices_history?start_date=${startDate}`);
-    if (res.ok) {
+    const res = await safeFetch(`${BASE}/prices/indices_history?start_date=${startDate}`, {}, 2, 1000);
+    if (res && res.ok) {
       return await res.json();
     }
   } catch {}
@@ -254,11 +272,16 @@ export async function fetchIndicesHistory(startDate) {
 
 /** GET /api/prices/historical/:ticker?date=YYYY-MM-DD&time=HH:MM */
 export async function fetchHistoricalPrice(ticker, date, time = null) {
-  // Try to fetch from backend. If offline, return a mock object.
+  // Try to fetch from backend with automatic retry. If offline, return a mock object.
   try {
     const timeParam = time ? `&time=${encodeURIComponent(time)}` : "";
-    const res = await fetch(`${BASE}/prices/historical/${encodeURIComponent(ticker)}?date=${date}${timeParam}`);
-    if (res.ok) {
+    const res = await safeFetch(
+      `${BASE}/prices/historical/${encodeURIComponent(ticker)}?date=${date}${timeParam}`,
+      {},
+      2,
+      1000,
+    );
+    if (res && res.ok) {
       return await res.json();
     }
   } catch {
@@ -744,33 +767,51 @@ export async function deleteWealthItemApi(id) {
 // ── AUTH API ENDPOINTS ─────────────────────────────────────────────────────────
 
 export async function loginApi(email, password) {
-  const res = await fetch(`${BASE}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
+  const res = await safeFetch(
+    `${BASE}/auth/login`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    },
+    2,
+    1500,
+  );
+  if (!res) throw new Error("Servidor no disponible");
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || "Error al iniciar sesión");
   return data;
 }
 
 export async function registerApi(email, password, name) {
-  const res = await fetch(`${BASE}/auth/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password, name }),
-  });
+  const res = await safeFetch(
+    `${BASE}/auth/register`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, name }),
+    },
+    2,
+    1500,
+  );
+  if (!res) throw new Error("Servidor no disponible");
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || "Error al registrarse");
   return data;
 }
 
 export async function oauthLoginApi(idToken, profile = {}) {
-  const res = await fetch(`${BASE}/auth/oauth`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id_token: idToken, ...profile }),
-  });
+  const res = await safeFetch(
+    `${BASE}/auth/oauth`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id_token: idToken, ...profile }),
+    },
+    2,
+    1500,
+  );
+  if (!res) throw new Error("Servidor no disponible");
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || "Error en autenticación OAuth");
   return data;
