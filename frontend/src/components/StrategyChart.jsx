@@ -549,6 +549,8 @@ export default function StrategyChart({
         ? targetReturns.strat * 100
         : (currentStrat ? ((currentStrat - baseVal) / baseVal) * 100 : 0));
 
+  const isLight = theme === "light";
+
   return (
     <div>
       <div
@@ -566,12 +568,32 @@ export default function StrategyChart({
             display: "flex",
             alignItems: "center",
             gap: 6,
-            background: visibleSeries.sp500 ? "rgba(245, 158, 11, 0.08)" : "rgba(255,255,255,0.02)",
-            border: `1px solid ${visibleSeries.sp500 ? "rgba(245, 158, 11, 0.3)" : "#334155"}`,
+            background: visibleSeries.sp500
+              ? isLight
+                ? "rgba(245, 158, 11, 0.16)"
+                : "rgba(245, 158, 11, 0.08)"
+              : isLight
+                ? "rgba(0,0,0,0.04)"
+                : "rgba(255,255,255,0.02)",
+            border: `1px solid ${
+              visibleSeries.sp500
+                ? isLight
+                  ? "rgba(245, 158, 11, 0.6)"
+                  : "rgba(245, 158, 11, 0.3)"
+                : isLight
+                  ? "rgba(0,0,0,0.12)"
+                  : "#334155"
+            }`,
             padding: "4px 10px",
             borderRadius: 6,
             cursor: "pointer",
-            color: visibleSeries.sp500 ? "#f1f5f9" : "#94a3b8",
+            color: visibleSeries.sp500
+              ? isLight
+                ? "#92400e"
+                : "#f1f5f9"
+              : isLight
+                ? "#64748b"
+                : "#94a3b8",
             fontSize: "0.75rem",
           }}
         >
@@ -584,11 +606,11 @@ export default function StrategyChart({
               opacity: visibleSeries.sp500 ? 1 : 0.3,
             }}
           />
-          <strong>{benchmarkName}</strong>
-          <span className="mono" style={{ color: "#fbbf24", fontWeight: 700 }}>
+          <strong style={{ color: isLight ? "#92400e" : "#f1f5f9" }}>{benchmarkName}</strong>
+          <span className="mono" style={{ color: isLight ? "#d97706" : "#fbbf24", fontWeight: 700 }}>
             ${currentSP?.toFixed(2)}
           </span>
-          <span style={{ color: spPct >= 0 ? "#22c55e" : "#ef4444", fontSize: "0.7rem" }}>
+          <span style={{ color: spPct >= 0 ? (isLight ? "#16a34a" : "#22c55e") : (isLight ? "#dc2626" : "#ef4444"), fontSize: "0.7rem", fontWeight: 600 }}>
             ({spPct >= 0 ? "+" : ""}
             {spPct.toFixed(2)}%)
           </span>
@@ -601,13 +623,31 @@ export default function StrategyChart({
             alignItems: "center",
             gap: 6,
             background: visibleSeries.nasdaq
-              ? "rgba(168, 85, 247, 0.08)"
-              : "rgba(255,255,255,0.02)",
-            border: `1px solid ${visibleSeries.nasdaq ? "rgba(168, 85, 247, 0.3)" : "#334155"}`,
+              ? isLight
+                ? "rgba(168, 85, 247, 0.16)"
+                : "rgba(168, 85, 247, 0.08)"
+              : isLight
+                ? "rgba(0,0,0,0.04)"
+                : "rgba(255,255,255,0.02)",
+            border: `1px solid ${
+              visibleSeries.nasdaq
+                ? isLight
+                  ? "rgba(168, 85, 247, 0.6)"
+                  : "rgba(168, 85, 247, 0.3)"
+                : isLight
+                  ? "rgba(0,0,0,0.12)"
+                  : "#334155"
+            }`,
             padding: "4px 10px",
             borderRadius: 6,
             cursor: "pointer",
-            color: visibleSeries.nasdaq ? "#f1f5f9" : "#94a3b8",
+            color: visibleSeries.nasdaq
+              ? isLight
+                ? "#6b21a8"
+                : "#f1f5f9"
+              : isLight
+                ? "#64748b"
+                : "#94a3b8",
             fontSize: "0.75rem",
           }}
         >
@@ -620,11 +660,11 @@ export default function StrategyChart({
               opacity: visibleSeries.nasdaq ? 1 : 0.3,
             }}
           />
-          <strong>NASDAQ</strong>
-          <span className="mono" style={{ color: "#c084fc", fontWeight: 700 }}>
+          <strong style={{ color: isLight ? "#6b21a8" : "#f1f5f9" }}>NASDAQ</strong>
+          <span className="mono" style={{ color: isLight ? "#7c3aed" : "#c084fc", fontWeight: 700 }}>
             ${currentNasdaq?.toFixed(2)}
           </span>
-          <span style={{ color: nasdaqPct >= 0 ? "#22c55e" : "#ef4444", fontSize: "0.7rem" }}>
+          <span style={{ color: nasdaqPct >= 0 ? (isLight ? "#16a34a" : "#22c55e") : (isLight ? "#dc2626" : "#ef4444"), fontSize: "0.7rem", fontWeight: 600 }}>
             ({nasdaqPct >= 0 ? "+" : ""}
             {nasdaqPct.toFixed(2)}%)
           </span>
@@ -637,13 +677,31 @@ export default function StrategyChart({
             alignItems: "center",
             gap: 6,
             background: visibleSeries.strat
-              ? `${strategy?.color || COLORS.mm20}20`
-              : "rgba(255,255,255,0.02)",
-            border: `1px solid ${visibleSeries.strat ? `${strategy?.color || COLORS.mm20}66` : "#334155"}`,
+              ? isLight
+                ? `${strategy?.color || COLORS.mm20}25`
+                : `${strategy?.color || COLORS.mm20}20`
+              : isLight
+                ? "rgba(0,0,0,0.04)"
+                : "rgba(255,255,255,0.02)",
+            border: `1px solid ${
+              visibleSeries.strat
+                ? isLight
+                  ? `${strategy?.color || COLORS.mm20}99`
+                  : `${strategy?.color || COLORS.mm20}66`
+                : isLight
+                  ? "rgba(0,0,0,0.12)"
+                  : "#334155"
+            }`,
             padding: "4px 10px",
             borderRadius: 6,
             cursor: "pointer",
-            color: visibleSeries.strat ? "#f1f5f9" : "#94a3b8",
+            color: visibleSeries.strat
+              ? isLight
+                ? "#0f172a"
+                : "#f1f5f9"
+              : isLight
+                ? "#64748b"
+                : "#94a3b8",
             fontSize: "0.75rem",
           }}
         >
@@ -669,7 +727,7 @@ export default function StrategyChart({
               }}
             />
           )}
-          <strong>
+          <strong style={{ color: isLight ? "#0f172a" : "#f1f5f9" }}>
             {strategy?.name || "Estrategia"} {strategy?.isSystem ? "PRO" : ""}
           </strong>
           <span
@@ -678,18 +736,28 @@ export default function StrategyChart({
               padding: "1px 4px",
               borderRadius: 3,
               background: strategy?.isRealMoney
-                ? "rgba(16, 185, 129, 0.2)"
-                : "rgba(168, 85, 247, 0.2)",
-              color: strategy?.isRealMoney ? "#34d399" : "#c084fc",
+                ? isLight
+                  ? "rgba(16, 185, 129, 0.25)"
+                  : "rgba(16, 185, 129, 0.2)"
+                : isLight
+                  ? "rgba(168, 85, 247, 0.25)"
+                  : "rgba(168, 85, 247, 0.2)",
+              color: strategy?.isRealMoney
+                ? isLight
+                  ? "#047857"
+                  : "#34d399"
+                : isLight
+                  ? "#6b21a8"
+                  : "#c084fc",
               fontWeight: 700,
             }}
           >
             {strategy?.isRealMoney ? "REAL" : "SIM"}
           </span>
-          <span className="mono" style={{ color: strategy?.color || COLORS.mm20, fontWeight: 700 }}>
+          <span className="mono" style={{ color: isLight ? (strategy?.isRealMoney ? "#047857" : "#6b21a8") : (strategy?.color || COLORS.mm20), fontWeight: 700 }}>
             ${currentStrat?.toFixed(2)}
           </span>
-          <span style={{ color: stratPct >= 0 ? "#22c55e" : "#ef4444", fontSize: "0.7rem" }}>
+          <span style={{ color: stratPct >= 0 ? (isLight ? "#16a34a" : "#22c55e") : (isLight ? "#dc2626" : "#ef4444"), fontSize: "0.7rem", fontWeight: 600 }}>
             ({stratPct >= 0 ? "+" : ""}
             {stratPct.toFixed(2)}%)
           </span>
@@ -701,12 +769,32 @@ export default function StrategyChart({
             display: "flex",
             alignItems: "center",
             gap: 6,
-            background: visibleSeries.baseLine ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.02)",
-            border: `1px solid ${visibleSeries.baseLine ? "rgba(255,255,255,0.25)" : "#334155"}`,
+            background: visibleSeries.baseLine
+              ? isLight
+                ? "rgba(71, 85, 105, 0.12)"
+                : "rgba(255,255,255,0.06)"
+              : isLight
+                ? "rgba(0,0,0,0.04)"
+                : "rgba(255,255,255,0.02)",
+            border: `1px solid ${
+              visibleSeries.baseLine
+                ? isLight
+                  ? "rgba(71, 85, 105, 0.35)"
+                  : "rgba(255,255,255,0.25)"
+                : isLight
+                  ? "rgba(0,0,0,0.12)"
+                  : "#334155"
+            }`,
             padding: "4px 10px",
             borderRadius: 6,
             cursor: "pointer",
-            color: visibleSeries.baseLine ? "#f1f5f9" : "#94a3b8",
+            color: visibleSeries.baseLine
+              ? isLight
+                ? "#1e293b"
+                : "#f1f5f9"
+              : isLight
+                ? "#64748b"
+                : "#94a3b8",
             fontSize: "0.75rem",
           }}
         >
@@ -714,12 +802,12 @@ export default function StrategyChart({
             style={{
               width: 8,
               height: 2,
-              borderTop: "2px dashed #94a3b8",
+              borderTop: `2px dashed ${isLight ? "#475569" : "#94a3b8"}`,
               opacity: visibleSeries.baseLine ? 1 : 0.3,
             }}
           />
-          <strong>Base Asignada</strong>
-          <span className="mono" style={{ color: "#94a3b8", fontWeight: 700 }}>
+          <strong style={{ color: isLight ? "#1e293b" : "#f1f5f9" }}>Base Asignada</strong>
+          <span className="mono" style={{ color: isLight ? "#475569" : "#94a3b8", fontWeight: 700 }}>
             ${currentBase?.toFixed(2)}
           </span>
         </button>
@@ -738,13 +826,13 @@ export default function StrategyChart({
               display: "flex",
               flexDirection: "column",
               gap: 4,
-              background: "rgba(15, 23, 42, 0.85)",
+              background: isLight ? "rgba(255, 255, 255, 0.9)" : "rgba(15, 23, 42, 0.85)",
               backdropFilter: "blur(6px)",
               WebkitBackdropFilter: "blur(6px)",
-              border: "1px solid rgba(255, 255, 255, 0.12)",
+              border: isLight ? "1px solid rgba(0, 0, 0, 0.12)" : "1px solid rgba(255, 255, 255, 0.12)",
               borderRadius: 6,
               padding: "6px 10px",
-              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.35)",
+              boxShadow: isLight ? "0 4px 12px rgba(0, 0, 0, 0.08)" : "0 4px 12px rgba(0, 0, 0, 0.35)",
               pointerEvents: "none",
               zIndex: 10,
               maxWidth: 150,
@@ -759,7 +847,7 @@ export default function StrategyChart({
                   ) : (
                     <span style={{ width: 10, height: 0, borderTop: `2px dashed ${strategy?.color || COLORS.mm20}`, flexShrink: 0 }} />
                   )}
-                  <span style={{ color: "#f8fafc", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <span style={{ color: isLight ? "#0f172a" : "#f8fafc", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {strategy?.name ? (strategy.name.length > 12 ? strategy.name.slice(0, 11) + "…" : strategy.name) : "Estrategia"}
                   </span>
                   <span
@@ -768,8 +856,14 @@ export default function StrategyChart({
                       padding: "1px 3px",
                       borderRadius: 3,
                       lineHeight: 1,
-                      background: isReal ? "rgba(16, 185, 129, 0.25)" : "rgba(168, 85, 247, 0.25)",
-                      color: isReal ? "#34d399" : "#c084fc",
+                      background: isReal
+                        ? isLight
+                          ? "rgba(16, 185, 129, 0.25)"
+                          : "rgba(16, 185, 129, 0.25)"
+                        : isLight
+                          ? "rgba(168, 85, 247, 0.25)"
+                          : "rgba(168, 85, 247, 0.25)",
+                      color: isReal ? (isLight ? "#047857" : "#34d399") : (isLight ? "#6b21a8" : "#c084fc"),
                       fontWeight: 700,
                       flexShrink: 0,
                     }}
@@ -782,7 +876,7 @@ export default function StrategyChart({
             {visibleSeries.sp500 && (
               <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", fontWeight: 600 }}>
                 <span style={{ width: 7, height: 7, borderRadius: "50%", background: chartColors.sp500, flexShrink: 0 }} />
-                <span style={{ color: "#cbd5e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <span style={{ color: isLight ? "#334155" : "#cbd5e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {benchmarkName === "S&P 500" ? "S&P 500" : benchmarkName}
                 </span>
               </div>
@@ -790,15 +884,15 @@ export default function StrategyChart({
             {visibleSeries.nasdaq && (
               <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", fontWeight: 600 }}>
                 <span style={{ width: 7, height: 7, borderRadius: "50%", background: chartColors.nasdaq, flexShrink: 0 }} />
-                <span style={{ color: "#cbd5e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <span style={{ color: isLight ? "#334155" : "#cbd5e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   NASDAQ
                 </span>
               </div>
             )}
             {visibleSeries.baseLine && (
               <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", fontWeight: 600 }}>
-                <span style={{ width: 10, height: 2, background: chartColors.base || "#94a3b8", flexShrink: 0, borderRadius: 1 }} />
-                <span style={{ color: "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <span style={{ width: 10, height: 2, background: isLight ? "#475569" : (chartColors.base || "#94a3b8"), flexShrink: 0, borderRadius: 1 }} />
+                <span style={{ color: isLight ? "#334155" : "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   Base
                 </span>
               </div>

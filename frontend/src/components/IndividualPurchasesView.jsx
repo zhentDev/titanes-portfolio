@@ -2341,12 +2341,13 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                     display: "flex",
                     alignItems: "center",
                     gap: 6,
-                    color: "#00e5ff",
+                    color: theme === "light" ? "#0284c7" : "#00e5ff",
+                    fontWeight: 700,
                     opacity: visibleSeries.valor ? 1 : 0.4,
                   }}
                 >
                   <span
-                    style={{ width: 10, height: 10, borderRadius: "50%", background: "#00e5ff" }}
+                    style={{ width: 10, height: 10, borderRadius: "50%", background: theme === "light" ? "#0284c7" : "#00e5ff" }}
                   />{" "}
                   Valor
                 </button>
@@ -2361,11 +2362,12 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                     display: "flex",
                     alignItems: "center",
                     gap: 6,
-                    color: "#ec4899",
+                    color: theme === "light" ? "#be185d" : "#ec4899",
+                    fontWeight: 700,
                     opacity: hasIndexData ? (visibleSeries.sp500 ? 1 : 0.4) : 0.3,
                   }}
                 >
-                  <span style={{ width: 10, height: 2, background: "#ec4899" }} /> S&P 500
+                  <span style={{ width: 10, height: 2, background: theme === "light" ? "#be185d" : "#ec4899" }} /> S&P 500
                 </button>
                 <button
                   onClick={() => toggleSeries("nasdaq")}
@@ -2378,11 +2380,12 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                     display: "flex",
                     alignItems: "center",
                     gap: 6,
-                    color: "#8b5cf6",
+                    color: theme === "light" ? "#6d28d9" : "#8b5cf6",
+                    fontWeight: 700,
                     opacity: hasIndexData ? (visibleSeries.nasdaq ? 1 : 0.4) : 0.3,
                   }}
                 >
-                  <span style={{ width: 10, height: 2, background: "#8b5cf6" }} /> NASDAQ
+                  <span style={{ width: 10, height: 2, background: theme === "light" ? "#6d28d9" : "#8b5cf6" }} /> NASDAQ
                 </button>
                 <button
                   onClick={() => toggleSeries("invested")}
@@ -2393,11 +2396,12 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                     display: "flex",
                     alignItems: "center",
                     gap: 6,
-                    color: "#f59e0b",
+                    color: theme === "light" ? "#b45309" : "#f59e0b",
+                    fontWeight: 700,
                     opacity: visibleSeries.invested ? 1 : 0.4,
                   }}
                 >
-                  <span style={{ width: 10, height: 2, background: "#f59e0b" }} /> Invertido
+                  <span style={{ width: 10, height: 2, background: theme === "light" ? "#b45309" : "#f59e0b" }} /> Invertido
                 </button>
               </div>
 
@@ -3445,6 +3449,80 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                               Apertura: ${group.avgOpenPrice.toFixed(2)}
                             </div>
                           </div>
+
+                          {/* Movimiento Hoy 24h & Alertas de Saltos Bruscos */}
+                          {(() => {
+                            const lq = liveQuotes[group.ticker];
+                            const chg1d = Number(lq?.change_pct ?? lq?.regularMarketChangePercent ?? 0);
+                            const chgUsd1d = Number(lq?.change ?? lq?.regularMarketChange ?? 0);
+                            const has1d = lq && (lq.change_pct != null || lq.regularMarketChangePercent != null);
+                            const isExtreme = Math.abs(chg1d) >= 6;
+                            const isAbrupt = Math.abs(chg1d) >= 3;
+                            const isUp1d = chg1d >= 0;
+
+                            return (
+                              <div style={{ minWidth: 95, textAlign: "right" }}>
+                                <div style={{ color: "var(--text-secondary)", fontSize: "0.7rem" }}>
+                                  Hoy (24h)
+                                </div>
+                                {has1d ? (
+                                  <div>
+                                    <div
+                                      className="mono"
+                                      style={{
+                                        fontWeight: 800,
+                                        fontSize: "0.85rem",
+                                        color: isUp1d
+                                          ? theme === "light" ? "#16a34a" : "#4ade80"
+                                          : theme === "light" ? "#dc2626" : "#f87171",
+                                      }}
+                                    >
+                                      {isUp1d ? "+" : ""}{chg1d.toFixed(2)}%
+                                    </div>
+                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, marginTop: 1 }}>
+                                      <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }} className="mono">
+                                        {chgUsd1d >= 0 ? "+" : ""}${chgUsd1d.toFixed(2)}
+                                      </span>
+                                      {isExtreme ? (
+                                        <span
+                                          title="Movimiento brusco extraordinario (±6%)"
+                                          style={{
+                                            fontSize: "0.58rem",
+                                            padding: "1px 4px",
+                                            borderRadius: 4,
+                                            background: isUp1d ? "rgba(16, 185, 129, 0.2)" : "rgba(244, 63, 94, 0.2)",
+                                            color: isUp1d ? (theme === "light" ? "#047857" : "#34d399") : (theme === "light" ? "#be123c" : "#fb7185"),
+                                            fontWeight: 800,
+                                            border: `1px solid ${isUp1d ? "rgba(16, 185, 129, 0.4)" : "rgba(244, 63, 94, 0.4)"}`,
+                                          }}
+                                        >
+                                          ⚡ BRUSCO
+                                        </span>
+                                      ) : isAbrupt ? (
+                                        <span
+                                          title="Movimiento relevante en la sesión (±3%)"
+                                          style={{
+                                            fontSize: "0.58rem",
+                                            padding: "1px 4px",
+                                            borderRadius: 4,
+                                            background: isUp1d ? "rgba(16, 185, 129, 0.12)" : "rgba(244, 63, 94, 0.12)",
+                                            color: isUp1d ? (theme === "light" ? "#059669" : "#10b981") : (theme === "light" ? "#e11d48" : "#f43f5e"),
+                                            fontWeight: 700,
+                                          }}
+                                        >
+                                          {isUp1d ? "🚀 SALTO" : "🔻 CAÍDA"}
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="mono" style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                                    —
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                           {(() => {
                             const profit =
                               yieldViewMode === "USD"
@@ -3626,6 +3704,70 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                                         </span>
                                       )}
                                     </div>
+                                  </div>
+                                  <div style={{ minWidth: 70, textAlign: "right" }}>
+                                    <div style={{ color: "var(--text-secondary)" }}>
+                                      Hoy (24h)
+                                    </div>
+                                    {(() => {
+                                      const lq = liveQuotes[p.ticker];
+                                      const chg1d = Number(lq?.change_pct ?? lq?.regularMarketChangePercent ?? 0);
+                                      const has1d = lq && (lq.change_pct != null || lq.regularMarketChangePercent != null);
+                                      const isExtreme = Math.abs(chg1d) >= 6;
+                                      const isAbrupt = Math.abs(chg1d) >= 3;
+                                      const isUp1d = chg1d >= 0;
+
+                                      if (!has1d) {
+                                        return <span className="mono" style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>—</span>;
+                                      }
+
+                                      return (
+                                        <div>
+                                          <div
+                                            className="mono"
+                                            style={{
+                                              fontWeight: 800,
+                                              fontSize: "0.8rem",
+                                              color: isUp1d
+                                                ? theme === "light" ? "#16a34a" : "#4ade80"
+                                                : theme === "light" ? "#dc2626" : "#f87171",
+                                            }}
+                                          >
+                                            {isUp1d ? "+" : ""}{chg1d.toFixed(2)}%
+                                          </div>
+                                          {isExtreme ? (
+                                            <span
+                                              title="Movimiento brusco extraordinario (±6%)"
+                                              style={{
+                                                fontSize: "0.55rem",
+                                                padding: "1px 3px",
+                                                borderRadius: 3,
+                                                background: isUp1d ? "rgba(16, 185, 129, 0.2)" : "rgba(244, 63, 94, 0.2)",
+                                                color: isUp1d ? (theme === "light" ? "#047857" : "#34d399") : (theme === "light" ? "#be123c" : "#fb7185"),
+                                                fontWeight: 800,
+                                                border: `1px solid ${isUp1d ? "rgba(16, 185, 129, 0.4)" : "rgba(244, 63, 94, 0.4)"}`,
+                                              }}
+                                            >
+                                              ⚡ BRUSCO
+                                            </span>
+                                          ) : isAbrupt ? (
+                                            <span
+                                              title="Movimiento relevante en la sesión (±3%)"
+                                              style={{
+                                                fontSize: "0.55rem",
+                                                padding: "1px 3px",
+                                                borderRadius: 3,
+                                                background: isUp1d ? "rgba(16, 185, 129, 0.12)" : "rgba(244, 63, 94, 0.12)",
+                                                color: isUp1d ? (theme === "light" ? "#059669" : "#10b981") : (theme === "light" ? "#e11d48" : "#f43f5e"),
+                                                fontWeight: 700,
+                                              }}
+                                            >
+                                              {isUp1d ? "🚀 SALTO" : "🔻 CAÍDA"}
+                                            </span>
+                                          ) : null}
+                                        </div>
+                                      );
+                                    })()}
                                   </div>
                                 </div>
                                 {(() => {
