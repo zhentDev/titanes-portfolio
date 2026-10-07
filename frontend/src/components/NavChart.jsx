@@ -281,15 +281,16 @@ export default function NavChart({
       },
       timeScale: {
         borderColor: chartColors.borderColor,
-        barSpacing: isMobile ? 12 : 8,
+        barSpacing: isMobile ? 14 : 9,
+        minBarSpacing: 6,
         fixLeftEdge: true,
         fixRightEdge: true,
         timeVisible: isLiveMode,
         secondsVisible: false,
         tickMarkFormatter: (time) => {
-          if (typeof time === "number") {
-            const date = new Date(time * 1000);
-            if (isLiveMode) {
+          if (isLiveMode) {
+            if (typeof time === "number") {
+              const date = new Date(time * 1000);
               return date.toLocaleTimeString("es-CO", {
                 timeZone: "America/Bogota",
                 hour: "numeric",
@@ -297,13 +298,30 @@ export default function NavChart({
                 hour12: false,
               });
             }
-            return date.toLocaleDateString("es-CO", {
-              timeZone: "America/Bogota",
-              month: "short",
-              day: "numeric",
-            });
+            return String(time);
           }
-          return String(time);
+
+          // Formato elegante y conciso para evitar colisión de textos:
+          // Ej: "Ago 26", "Sep 26", "Oct 26" (o "08/26" / "15 Ago" si es zoom corto)
+          try {
+            const raw = typeof time === "number" ? new Date(time * 1000) : new Date(String(time).slice(0, 10) + "T12:00:00Z");
+            if (isNaN(raw.getTime())) return String(time);
+
+            const mNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+            const m = mNames[raw.getUTCMonth()];
+            const yr = String(raw.getUTCFullYear()).slice(2);
+            const d = raw.getUTCDate();
+
+            // Si es un periodo corto (1W o 1M), mostrar día y mes (ej. "15 Ago")
+            if (period === "1W" || period === "1M") {
+              return `${d} ${m}`;
+            }
+
+            // En móvil o periodos medios/largos (3M, 6M, 1Y, MAX), mostrar Mes y Año conciso ("Ago 26")
+            return `${m} ${yr}`;
+          } catch {
+            return String(time);
+          }
         },
       },
       handleScroll: { mouseWheel: true, pressedMouseMove: true },
