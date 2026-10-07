@@ -320,6 +320,11 @@ def get_historical_prices(
     else:
         closes["date"] = pd.to_datetime(closes["date"]).dt.date
 
+    # Forward-fill then back-fill ticker prices so transient missing bars/NaNs from Yahoo don't drop positions
+    price_cols = [c for c in closes.columns if c != "date"]
+    if price_cols:
+        closes[price_cols] = closes[price_cols].ffill().bfill()
+
     df = pl.from_pandas(closes)
 
     # Rename benchmark columns to friendly names

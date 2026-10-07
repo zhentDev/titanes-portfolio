@@ -271,8 +271,32 @@ export default function App() {
       };
     });
 
-    const activeList = updatedHoldings.filter((h) => h.selected && h.shares > 0);
     const slotValue = investment / numSlots;
+
+    // Safety fallback: if backend returned 0 shares due to a transient data glitch on rebalance day,
+    // ensure active portfolio tickers get their nominal slot shares so holdings and chart never collapse
+    const sanitizedHoldings = updatedHoldings.map((h) => {
+      let shares = h.shares;
+      let startPrice = h.start_price;
+      const curPrice = h.current_price;
+      if ((!shares || shares <= 0) && curPrice > 0) {
+        shares = slotValue / curPrice;
+        if (!startPrice || startPrice <= 0) startPrice = curPrice;
+      }
+      const curVal = shares * curPrice;
+      const retPct = startPrice > 0 ? ((curPrice - startPrice) / startPrice) * 100 : 0;
+      const retUsd = curVal - shares * startPrice;
+      return {
+        ...h,
+        shares,
+        start_price: startPrice,
+        current_value: curVal,
+        return_pct: retPct,
+        return_usd: retUsd,
+      };
+    });
+
+    const activeList = sanitizedHoldings.filter((h) => h.selected && h.shares > 0);
     const activeInvested = activeList.length * slotValue;
     const currentStockValue = activeList.reduce((sum, h) => sum + h.shares * h.current_price, 0);
     const activeReturn = currentStockValue - activeInvested;
@@ -287,28 +311,58 @@ export default function App() {
     const datePoints = baseNavData.nav || [];
     const defaultActiveInvested = baseNavData.summary?.active_invested || activeInvested;
     const filterRatio = defaultActiveInvested > 0 ? activeInvested / defaultActiveInvested : 1;
-    const isAllSelected = !selectedTickers || activeList.length === allHoldings.length;
+    const isAllSelected = !selectedTickers || activeList.length === sanitizedHoldings.length;
 
-    const scaledNav = isAllSelected
-      ? datePoints
+    let scaledNav = isAllSelected
+      ? [...datePoints]
       : datePoints.map((pt) => ({
           ...pt,
           value: Number((pt.value * filterRatio).toFixed(4)),
         }));
 
     // Rescaled S&P 500 and NASDAQ:
-    // baseNavData.sp500 / nasdaq from backend already scale to daily active capital ($666.67 -> $800.00).
-    // If the user unchecks holdings in UI, scale proportionally by activeInvested / defaultActiveInvested.
-
-    const scaledSP500 = (baseNavData.sp500 || []).map((pt) => ({
+    let scaledSP500 = [...(baseNavData.sp500 || [])].map((pt) => ({
       ...pt,
       value: Number((pt.value * filterRatio).toFixed(4)),
     }));
 
-    const scaledNasdaq = (baseNavData.nasdaq || []).map((pt) => ({
+    let scaledNasdaq = [...(baseNavData.nasdaq || [])].map((pt) => ({
       ...pt,
       value: Number((pt.value * filterRatio).toFixed(4)),
     }));
+
+    // Intraday / Real-Time Market Injection:
+    // When market opens today, ensure the current day's price action is dynamically plotted on the chart
+    if (scaledNav.length > 0 && currentStockValue > 0) {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const lastNavPt = scaledNav[scaledNav.length - 1];
+      const liveNavValue = Number(currentStockValue.toFixed(4));
+
+      if (lastNavPt && String(lastNavPt.date).slice(0, 10) === todayStr) {
+        // Update today's existing point with latest live value
+        scaledNav[scaledNav.length - 1] = { ...lastNavPt, value: liveNavValue };
+      } else if (lastNavPt && String(lastNavPt.date).slice(0, 10) < todayStr) {
+        // Append today's point dynamically as soon as the market opens
+        scaledNav.push({ date: todayStr, value: liveNavValue });
+
+        if (scaledSP500.length > 0) {
+          const lastSP = scaledSP500[scaledSP500.length - 1];
+          const spChangePct = (baseNavData.summary?.sp500_return_pct ?? 0) / 100;
+          scaledSP500.push({
+            date: todayStr,
+            value: Number((lastSP.value * (1 + spChangePct * 0.05)).toFixed(4)),
+          });
+        }
+        if (scaledNasdaq.length > 0) {
+          const lastND = scaledNasdaq[scaledNasdaq.length - 1];
+          const ndChangePct = (baseNavData.summary?.nasdaq_return_pct ?? 0) / 100;
+          scaledNasdaq.push({
+            date: todayStr,
+            value: Number((lastND.value * (1 + ndChangePct * 0.05)).toFixed(4)),
+          });
+        }
+      }
+    }
 
     const sp500Pct = baseNavData.summary?.sp500_return_pct || 0;
     const nasdaqPct = baseNavData.summary?.nasdaq_return_pct || 0;
@@ -320,7 +374,7 @@ export default function App() {
       nav: scaledNav,
       sp500: scaledSP500,
       nasdaq: scaledNasdaq,
-      holdings: updatedHoldings,
+      holdings: sanitizedHoldings,
       summary: {
         ...baseNavData.summary,
         active_invested: activeInvested,

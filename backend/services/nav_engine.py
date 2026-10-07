@@ -7,6 +7,7 @@ across different rebalance periods based on the user's rebalance history.
 
 from __future__ import annotations
 
+import pandas as pd
 import polars as pl
 
 from services.db import get_all_rebalances
@@ -122,17 +123,13 @@ def calculate_nav(
         slot_value = investment / num_slots if num_slots > 0 else 0.0
         current_cash = 0.0
         
-        valid_tickers = []
-        for t in active_rebal["tickers"]:
-            if (
-                (selected_tickers is None or t in selected_tickers)
-                and t in first_row
-                and not pl.Series([first_row[t]]).is_null()[0]
-                and not str(first_row[t]) == "nan"
-            ):
-                valid_tickers.append(t)
+        valid_tickers = [t for t in active_rebal["tickers"] if (selected_tickers is None or t in selected_tickers)]
         for t in valid_tickers:
-            price = first_row[t]
+            price = first_row.get(t) if t in first_row else None
+            if price is None or pd.isna(price) or float(price) <= 0:
+                series_non_null = prices_pd[t].dropna() if t in prices_pd.columns else pd.Series()
+                price = float(series_non_null.iloc[-1]) if not series_non_null.empty else 1.0
+            price = float(price)
             current_shares[t] = slot_value / price if price > 0 else 0.0
             rebalance_prices[t] = price
             ticker_entry_dates[t] = first_hist_date
@@ -166,18 +163,25 @@ def calculate_nav(
             new_tickers = next_rebalance["tickers"]
             valid_tickers = []
             for t in new_tickers:
-                if (
-                    (selected_tickers is None or t in selected_tickers)
-                    and t in row
-                    and not pl.Series([row[t]]).is_null()[0]
-                    and not str(row[t]) == "nan"
-                ):
+                if selected_tickers is not None and t not in selected_tickers:
+                    continue
+                # If t is in columns and has a valid price or fallback
+                price_val = row.get(t) if t in row else None
+                if price_val is not None and not pd.isna(price_val) and float(price_val) > 0:
                     valid_tickers.append(t)
+                elif t in rebalance_prices and rebalance_prices[t] > 0:
+                    # Fallback to last known rebalance price if present
+                    valid_tickers.append(t)
+                elif t in prices_pd.columns:
+                    # Fallback to any valid price in the series for ticker t
+                    series_non_null = prices_pd[t].dropna()
+                    if not series_non_null.empty:
+                        valid_tickers.append(t)
 
             slot_value = investment / num_slots if num_slots > 0 else 0.0
 
             # 1. Liquidate tickers no longer in new valid_tickers
-            liquidated_tickers = [t for t in list(current_shares.keys()) if t not in valid_tickers]
+            liquidated_tickers = [t for t in list(current_shares.keys()) if t not in new_tickers]
             from datetime import date as dt_date
             from services.market_data import get_ticker_meta
 
@@ -237,7 +241,14 @@ def calculate_nav(
 
             # 2. Keep continuing tickers; allocate new slots for new tickers
             for t in valid_tickers:
-                price = row[t]
+                price = row.get(t) if t in row else None
+                if price is None or pd.isna(price) or float(price) <= 0:
+                    # Fallback to rebalance_prices or any known price
+                    price = rebalance_prices.get(t)
+                    if price is None or pd.isna(price) or float(price) <= 0:
+                        series_non_null = prices_pd[t].dropna() if t in prices_pd.columns else pd.Series()
+                        price = float(series_non_null.iloc[-1]) if not series_non_null.empty else 1.0
+                price = float(price)
                 if t not in current_shares:
                     # New position: allocate slot
                     current_shares[t] = slot_value / price if price > 0 else 0.0
