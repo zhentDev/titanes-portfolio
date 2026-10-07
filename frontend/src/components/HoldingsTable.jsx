@@ -12,6 +12,10 @@ export default function HoldingsTable({
   onToggleUnit,
   isRealMoney = false,
   closedOnly = false,
+  onOpenWasmLab,
+  onOpenWarren,
+  onExportExcel,
+  onExportPyScript,
 }) {
   const [activeTab, setActiveTab] = useState(closedOnly ? "closed" : "active"); // 'active' | 'closed'
   const [mobileViewMode, setMobileViewMode] = useState("auto"); // 'auto' | 'card' | 'table'
@@ -169,7 +173,58 @@ export default function HoldingsTable({
           <InfoTooltip conceptKey="active_invested" />
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          {/* Herramientas de Laboratorio / IA integradas en la tabla */}
+          {onOpenWasmLab && (
+            <button
+              type="button"
+              onClick={onOpenWasmLab}
+              title="Abrir simulador WASM / Web Worker de portafolio"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "3px 9px",
+                borderRadius: "12px",
+                border: "1px solid rgba(0, 229, 255, 0.3)",
+                background: "rgba(0, 229, 255, 0.08)",
+                color: "#00e5ff",
+                fontSize: "0.72rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <span>⚡</span>
+              <span>WASM Lab</span>
+            </button>
+          )}
+
+          {onOpenWarren && (
+            <button
+              type="button"
+              onClick={onOpenWarren}
+              title="Generar análisis de cartera con WarrenAI"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "3px 9px",
+                borderRadius: "12px",
+                border: "1px solid rgba(16, 185, 129, 0.3)",
+                background: "rgba(16, 185, 129, 0.08)",
+                color: "#34d399",
+                fontSize: "0.72rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <span>🤖</span>
+              <span>WarrenAI</span>
+            </button>
+          )}
+
           <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Unidad:</span>
           <div
             className="unit-toggle"
@@ -179,6 +234,57 @@ export default function HoldingsTable({
             <button className={`unit-btn ${unit === "pct" ? "active" : ""}`}>%</button>
             <button className={`unit-btn ${unit === "usd" ? "active" : ""}`}>$</button>
           </div>
+
+          {/* Exportadores integrados en la tabla */}
+          {onExportExcel && (
+            <button
+              type="button"
+              onClick={onExportExcel}
+              title="Descargar informe completo del portafolio en Excel (.xlsx) con timeline diario de todas las acciones"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "3px 9px",
+                borderRadius: "12px",
+                border: "1px solid rgba(16, 185, 129, 0.35)",
+                background: "rgba(16, 185, 129, 0.08)",
+                color: "#10b981",
+                fontSize: "0.72rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <span>📊</span>
+              <span>Excel</span>
+            </button>
+          )}
+
+          {onExportPyScript && (
+            <button
+              type="button"
+              onClick={onExportPyScript}
+              title="Exportar con PyScript 2.0+ (MicroPython WASM / Polyscript en el navegador)"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "3px 9px",
+                borderRadius: "12px",
+                border: "1px solid rgba(245, 158, 11, 0.35)",
+                background: "rgba(245, 158, 11, 0.08)",
+                color: "#f59e0b",
+                fontSize: "0.72rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <span>🐍</span>
+              <span>PyScript</span>
+            </button>
+          )}
 
           {/* Selector de modo vista Móvil (Tarjetas vs Tabla) */}
           <div

@@ -683,6 +683,13 @@ input[type="number"] {
   background: rgba(2, 132, 199, 0.75);
 }
 
+/* ── Hide Chart Floating Legend on smaller/medium screens to maximize chart canvas ── */
+@media (max-width: 1024px) {
+  .chart-floating-legend {
+    display: none !important;
+  }
+}
+
 /* ── Loading Spinner ────────────────────────── */
 .spinner {
   width: 24px;

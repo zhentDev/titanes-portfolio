@@ -106,8 +106,8 @@
       "name": "Bolsillo a la vista",
       "type": "pocket",
       "currency": "USD",
-      "balance": 370.55,
-      "interestRateEA": 3,
+      "balance": 386.95000000000005,
+      "interestRateEA": 3.0,
       "isTaxExemptGMF": true,
       "rateHistory": [
         {
@@ -140,35 +140,13 @@
       ]
     },
     {
-      "id": "acc_1786780168348",
-      "entityId": "ent_1786777900826",
-      "name": "Plenti Oro (PAXG)",
-      "type": "crypto",
-      "currency": "USD",
-      "balance": 16.05002444078877,
-      "interestRateEA": 8,
-      "isTaxExemptGMF": true,
-      "rateHistory": [
-        {
-          "date": "2026-08-15",
-          "rateEA": 8
-        }
-      ],
-      "createdAt": "2026-08-15T07:49:28.348Z",
-      "startDate": "2026-08-15",
-      "goldQuantity": 0.0997,
-      "goldBuyPrice": 3997.36,
-      "goldSellPrice": 4042.13,
-      "goldCommission": 1.4
-    },
-    {
       "id": "acc_1789616855068",
       "entityId": "ent_1789616750396",
       "name": "Impresora",
       "type": "pocket",
       "currency": "COP",
       "balance": 236483.88222876663,
-      "interestRateEA": 9.0,
+      "interestRateEA": 9,
       "isTaxExemptGMF": true,
       "rateHistory": [
         {
@@ -184,7 +162,7 @@
       "name": "Fondo de emergencia",
       "type": "pocket",
       "currency": "COP",
-      "balance": 800000,
+      "balance": 1070000,
       "interestRateEA": 9,
       "isTaxExemptGMF": true,
       "rateHistory": [
@@ -463,6 +441,36 @@
   ],
   "transactions": [
     {
+      "id": "tx_1790923968011_zbjc2k",
+      "accountId": "acc_1786777955489",
+      "date": "2026-10-01",
+      "description": "Retiro de Bolsillo a la vista",
+      "amount": -225,
+      "currency": "USD",
+      "type": "debit",
+      "createdAt": "2026-10-02T06:52:48.011Z"
+    },
+    {
+      "id": "tx_1790923930084_qs0xxk",
+      "accountId": "acc_1786777955489",
+      "date": "2026-10-02",
+      "description": "Aporte a Bolsillo a la vista",
+      "amount": 241.4,
+      "currency": "USD",
+      "type": "credit",
+      "createdAt": "2026-10-02T06:52:10.084Z"
+    },
+    {
+      "id": "tx_1790923857060_1ni5mf",
+      "accountId": "acc_1789760692910",
+      "date": "2026-10-02",
+      "description": "Aporte a Fondo de emergencia",
+      "amount": 270000,
+      "currency": "COP",
+      "type": "credit",
+      "createdAt": "2026-10-02T06:50:57.060Z"
+    },
+    {
       "id": "tx_1789760705657_b2g14e",
       "accountId": "acc_1789760692910",
       "date": "2026-09-18",
@@ -531,36 +539,6 @@
       "currency": "COP",
       "type": "debit",
       "createdAt": "2026-08-18T00:32:36.149Z"
-    },
-    {
-      "id": "tx_1786780280546_ptsnho",
-      "accountId": "acc_1786780168348",
-      "date": "2026-07-31",
-      "description": "Aporte a Plenti Oro (PAXG)",
-      "amount": 20,
-      "currency": "USD",
-      "type": "credit",
-      "createdAt": "2026-08-15T07:51:20.546Z"
-    },
-    {
-      "id": "tx_1786780214953_dtgqo1",
-      "accountId": "acc_1786780168348",
-      "date": "2026-07-29",
-      "description": "Aporte a Plenti Oro (PAXG)",
-      "amount": 400,
-      "currency": "USD",
-      "type": "credit",
-      "createdAt": "2026-08-15T07:50:14.953Z"
-    },
-    {
-      "id": "tx_1786780192590_o75kzs",
-      "accountId": "acc_1786780168348",
-      "date": "2026-07-31",
-      "description": "Retiro de Plenti Oro (PAXG)",
-      "amount": -404.21,
-      "currency": "USD",
-      "type": "debit",
-      "createdAt": "2026-08-15T07:49:52.590Z"
     },
     {
       "id": "tx_1786778544792_rezb73",

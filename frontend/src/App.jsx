@@ -816,89 +816,7 @@ export default function App() {
             <span>🌊 Distribución & Flujo</span>
           </button>
 
-          {/* 5. Conector WarrenAI (Solo en entorno local / desarrollo) */}
-          {typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && (
-            <>
-              <button
-                type="button"
-                className="nav-action-btn compact"
-                onClick={() => setShowWarrenModal(true)}
-                title="Conector WarrenAI (Investing.com ProPicks) — Generar prompt con Ollama y datos del portafolio"
-                style={{
-                  borderColor: "rgba(16, 185, 129, 0.4)",
-                  background: "rgba(16, 185, 129, 0.08)",
-                  color: "#34d399",
-                  fontWeight: 700,
-                }}
-              >
-                <span>🤖</span>
-                <span className="btn-text-hide-mobile">WarrenAI</span>
-              </button>
 
-              <button
-                type="button"
-                className="nav-action-btn compact"
-                onClick={() => setShowWasmLabModal(true)}
-                title="WASM / Web Worker Lab — Simulación ultrarrápida en cliente"
-                style={{
-                  borderColor: "rgba(0, 229, 255, 0.4)",
-                  background: "rgba(0, 229, 255, 0.08)",
-                  color: "#00e5ff",
-                  fontWeight: 700,
-                }}
-              >
-                <span>⚡</span>
-                <span className="btn-text-hide-mobile">WASM Lab</span>
-              </button>
-            </>
-          )}
-
-          {/* Exportación: Excel Nativo & PyScript 2.0+ WASM */}
-          {navData && (
-            <>
-              <button
-                type="button"
-                className="nav-action-btn compact"
-                onClick={async () => {
-                  try {
-                    await exportPortfolioExcel(mode, investment, numSlots);
-                  } catch (e) {
-                    console.error("Fallo descarga Excel:", e);
-                  }
-                }}
-                title="Descargar informe completo del portafolio en Excel (.xlsx) con timeline diario de todas las acciones"
-                style={{
-                  borderColor: "rgba(16, 185, 129, 0.4)",
-                  color: "#10b981",
-                  fontWeight: 600,
-                }}
-              >
-                <span>📊</span>
-                <span className="btn-text-hide-mobile">Excel</span>
-              </button>
-
-              <button
-                type="button"
-                className="nav-action-btn compact"
-                onClick={async () => {
-                  try {
-                    await exportPortfolioPyScript(navData, investment);
-                  } catch (e) {
-                    console.error("Fallo ejecución PyScript:", e);
-                  }
-                }}
-                title="Ejecutar y exportar con PyScript 2.0+ (MicroPython WASM / Polyscript en el navegador)"
-                style={{
-                  borderColor: "rgba(245, 158, 11, 0.4)",
-                  color: "#f59e0b",
-                  fontWeight: 600,
-                }}
-              >
-                <span>🐍</span>
-                <span className="btn-text-hide-mobile">PyScript</span>
-              </button>
-            </>
-          )}
 
           {/* 6. Selector Modo Diurno / Nocturno (Compacto & Elegante) */}
           <button
@@ -2622,6 +2540,10 @@ export default function App() {
                     onToggleTicker={toggleTicker}
                     unit={unit}
                     onToggleUnit={toggleUnit}
+                    onOpenWasmLab={() => setShowWasmLabModal(true)}
+                    onOpenWarren={() => setShowWarrenModal(true)}
+                    onExportExcel={() => exportPortfolioExcel(mode, investment, numSlots)}
+                    onExportPyScript={() => exportPortfolioPyScript(navData, investment)}
                   />
                 ) : loading ? (
                   <div style={{ display: "flex", justifyContent: "center", padding: 40 }}>

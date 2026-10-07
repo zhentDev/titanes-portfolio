@@ -1459,9 +1459,10 @@ export default function NavChart({
           }}
         />
 
-        {/* Floating Top-Left Series Indicators (Hidden on small/mobile screens) */}
+        {/* Floating Top-Left Series Indicators (Hidden on small/medium screens to maximize chart view) */}
         {!isMobile && (
           <div
+            className="chart-floating-legend"
             style={{
               position: "absolute",
               top: 10,

@@ -1,7 +1,7 @@
 {
   "nav": [
     {
-      "date": "2026-09-24",
+      "date": "2026-09-30",
       "value": 800.0,
       "total_value": 2000.0,
       "stock_value": 800.0,
@@ -9,331 +9,331 @@
       "active_invested": 800.0
     },
     {
-      "date": "2026-09-25",
-      "value": 810.4241,
-      "total_value": 2010.4241,
-      "stock_value": 810.4241,
-      "cash": 1200.0,
-      "active_invested": 800.0
-    },
-    {
-      "date": "2026-09-28",
-      "value": 804.8507,
-      "total_value": 2004.8507,
-      "stock_value": 804.8507,
-      "cash": 1200.0,
-      "active_invested": 800.0
-    },
-    {
-      "date": "2026-09-29",
-      "value": 820.1455,
-      "total_value": 2020.1455,
-      "stock_value": 820.1455,
-      "cash": 1200.0,
-      "active_invested": 800.0
-    },
-    {
-      "date": "2026-09-30",
-      "value": 828.8377,
-      "total_value": 2028.8377,
-      "stock_value": 828.8377,
-      "cash": 1200.0,
-      "active_invested": 800.0
-    },
-    {
       "date": "2026-10-01",
-      "value": 1123.2705,
-      "total_value": 2056.6038,
-      "stock_value": 1123.2705,
+      "value": 1102.3988,
+      "total_value": 2035.7322,
+      "stock_value": 1102.3988,
+      "cash": 933.3333,
+      "active_invested": 1066.6667
+    },
+    {
+      "date": "2026-10-02",
+      "value": 1127.0218,
+      "total_value": 2060.3551,
+      "stock_value": 1127.0218,
+      "cash": 933.3333,
+      "active_invested": 1066.6667
+    },
+    {
+      "date": "2026-10-05",
+      "value": 1115.8942,
+      "total_value": 2049.2276,
+      "stock_value": 1115.8942,
+      "cash": 933.3333,
+      "active_invested": 1066.6667
+    },
+    {
+      "date": "2026-10-06",
+      "value": 1107.6729,
+      "total_value": 2041.0063,
+      "stock_value": 1107.6729,
+      "cash": 933.3333,
+      "active_invested": 1066.6667
+    },
+    {
+      "date": "2026-10-07",
+      "value": 1094.2695,
+      "total_value": 2027.6028,
+      "stock_value": 1094.2695,
       "cash": 933.3333,
       "active_invested": 1066.6667
     }
   ],
   "sp500": [
     {
-      "date": "2026-09-24",
+      "date": "2026-09-30",
       "value": 800.0
     },
     {
-      "date": "2026-09-25",
-      "value": 804.0789
-    },
-    {
-      "date": "2026-09-28",
-      "value": 797.8775
-    },
-    {
-      "date": "2026-09-29",
-      "value": 796.5431
-    },
-    {
-      "date": "2026-09-30",
-      "value": 794.539
-    },
-    {
       "date": "2026-10-01",
-      "value": 1061.0289
+      "value": 1068.7453
+    },
+    {
+      "date": "2026-10-02",
+      "value": 1076.5896
+    },
+    {
+      "date": "2026-10-05",
+      "value": 1083.7313
+    },
+    {
+      "date": "2026-10-06",
+      "value": 1090.0018
+    },
+    {
+      "date": "2026-10-07",
+      "value": 1087.236
     }
   ],
   "nasdaq": [
     {
-      "date": "2026-09-24",
+      "date": "2026-09-30",
       "value": 800.0
     },
     {
-      "date": "2026-09-25",
-      "value": 803.8413
-    },
-    {
-      "date": "2026-09-28",
-      "value": 796.4665
-    },
-    {
-      "date": "2026-09-29",
-      "value": 795.7882
-    },
-    {
-      "date": "2026-09-30",
-      "value": 797.6745
-    },
-    {
       "date": "2026-10-01",
-      "value": 1065.062
+      "value": 1067.0852
+    },
+    {
+      "date": "2026-10-02",
+      "value": 1079.7632
+    },
+    {
+      "date": "2026-10-05",
+      "value": 1091.1383
+    },
+    {
+      "date": "2026-10-06",
+      "value": 1096.002
+    },
+    {
+      "date": "2026-10-07",
+      "value": 1091.6978
     }
   ],
   "mm20": [
     {
-      "date": "2026-09-24",
+      "date": "2026-09-30",
       "value": 800.0
     },
     {
-      "date": "2026-09-25",
-      "value": 802.8598
-    },
-    {
-      "date": "2026-09-28",
-      "value": 796.8101
-    },
-    {
-      "date": "2026-09-29",
-      "value": 796.0401
-    },
-    {
-      "date": "2026-09-30",
-      "value": 791.4203
-    },
-    {
       "date": "2026-10-01",
-      "value": 1065.0534
+      "value": 1077.7855
+    },
+    {
+      "date": "2026-10-02",
+      "value": 1088.0149
+    },
+    {
+      "date": "2026-10-05",
+      "value": 1092.3142
+    },
+    {
+      "date": "2026-10-06",
+      "value": 1097.0582
+    },
+    {
+      "date": "2026-10-07",
+      "value": 1080.2317
     }
   ],
   "ticker_series": {
     "ON": [
       {
-        "date": "2026-09-24",
+        "date": "2026-09-30",
         "factor": 1.0
       },
       {
-        "date": "2026-09-25",
-        "factor": 1.055366
-      },
-      {
-        "date": "2026-09-28",
-        "factor": 1.034176
-      },
-      {
-        "date": "2026-09-29",
-        "factor": 1.038277
-      },
-      {
-        "date": "2026-09-30",
-        "factor": 1.050854
-      },
-      {
         "date": "2026-10-01",
-        "factor": 1.07799
+        "factor": 1.041759
+      },
+      {
+        "date": "2026-10-02",
+        "factor": 1.104332
+      },
+      {
+        "date": "2026-10-05",
+        "factor": 1.117861
+      },
+      {
+        "date": "2026-10-06",
+        "factor": 1.122805
+      },
+      {
+        "date": "2026-10-07",
+        "factor": 1.077664
       }
     ],
     "HPQ": [
       {
-        "date": "2026-09-24",
+        "date": "2026-09-30",
         "factor": 1.0
       },
       {
-        "date": "2026-09-25",
-        "factor": 1.005138
-      },
-      {
-        "date": "2026-09-28",
-        "factor": 1.00578
-      },
-      {
-        "date": "2026-09-29",
-        "factor": 0.986834
-      },
-      {
-        "date": "2026-09-30",
-        "factor": 1.004496
-      },
-      {
         "date": "2026-10-01",
-        "factor": 1.034843
+        "factor": 1.027813
+      },
+      {
+        "date": "2026-10-02",
+        "factor": 1.026854
+      },
+      {
+        "date": "2026-10-05",
+        "factor": 1.006074
+      },
+      {
+        "date": "2026-10-06",
+        "factor": 1.014386
+      },
+      {
+        "date": "2026-10-07",
+        "factor": 1.036925
       }
     ],
     "ORCL": [
       {
-        "date": "2026-09-24",
+        "date": "2026-09-30",
         "factor": 1.0
       },
       {
-        "date": "2026-09-25",
-        "factor": 0.982514
-      },
-      {
-        "date": "2026-09-28",
-        "factor": 0.950265
-      },
-      {
-        "date": "2026-09-29",
-        "factor": 0.987459
-      },
-      {
-        "date": "2026-09-30",
-        "factor": 0.983947
-      },
-      {
         "date": "2026-10-01",
-        "factor": 0.988175
+        "factor": 1.005608
+      },
+      {
+        "date": "2026-10-02",
+        "factor": 1.036417
+      },
+      {
+        "date": "2026-10-05",
+        "factor": 1.037728
+      },
+      {
+        "date": "2026-10-06",
+        "factor": 1.054406
+      },
+      {
+        "date": "2026-10-07",
+        "factor": 1.05193
       }
     ],
     "AMAT": [
       {
-        "date": "2026-09-24",
+        "date": "2026-09-30",
         "factor": 1.0
       },
       {
-        "date": "2026-09-25",
-        "factor": 1.022667
-      },
-      {
-        "date": "2026-09-28",
-        "factor": 1.026379
-      },
-      {
-        "date": "2026-09-29",
-        "factor": 1.07962
-      },
-      {
-        "date": "2026-09-30",
-        "factor": 1.078292
-      },
-      {
         "date": "2026-10-01",
-        "factor": 1.112314
+        "factor": 1.035042
+      },
+      {
+        "date": "2026-10-02",
+        "factor": 1.056044
+      },
+      {
+        "date": "2026-10-05",
+        "factor": 1.060425
+      },
+      {
+        "date": "2026-10-06",
+        "factor": 1.036939
+      },
+      {
+        "date": "2026-10-07",
+        "factor": 1.016563
       }
     ],
     "ACN": [
       {
-        "date": "2026-09-24",
+        "date": "2026-09-30",
         "factor": 1.0
       },
       {
-        "date": "2026-09-25",
-        "factor": 0.992672
-      },
-      {
-        "date": "2026-09-28",
-        "factor": 0.983428
-      },
-      {
-        "date": "2026-09-29",
-        "factor": 0.998365
-      },
-      {
-        "date": "2026-09-30",
-        "factor": 1.033594
-      },
-      {
         "date": "2026-10-01",
-        "factor": 1.211206
+        "factor": 1.157768
+      },
+      {
+        "date": "2026-10-02",
+        "factor": 1.084692
+      },
+      {
+        "date": "2026-10-05",
+        "factor": 1.063696
+      },
+      {
+        "date": "2026-10-06",
+        "factor": 1.054698
+      },
+      {
+        "date": "2026-10-07",
+        "factor": 1.074876
       }
     ],
     "SWKS": [
       {
-        "date": "2026-09-24",
-        "factor": 1.04102
-      },
-      {
-        "date": "2026-09-25",
-        "factor": 1.059158
-      },
-      {
-        "date": "2026-09-28",
-        "factor": 1.038411
-      },
-      {
-        "date": "2026-09-29",
-        "factor": 1.043746
-      },
-      {
         "date": "2026-09-30",
-        "factor": 1.013397
+        "factor": 1.027898
       },
       {
         "date": "2026-10-01",
         "factor": 1.0
+      },
+      {
+        "date": "2026-10-02",
+        "factor": 1.022487
+      },
+      {
+        "date": "2026-10-05",
+        "factor": 1.009019
+      },
+      {
+        "date": "2026-10-06",
+        "factor": 0.995551
+      },
+      {
+        "date": "2026-10-07",
+        "factor": 0.987434
       }
     ],
     "ONTO": [
       {
-        "date": "2026-09-24",
-        "factor": 0.906566
-      },
-      {
-        "date": "2026-09-25",
-        "factor": 0.932201
-      },
-      {
-        "date": "2026-09-28",
-        "factor": 0.935766
-      },
-      {
-        "date": "2026-09-29",
-        "factor": 0.987458
-      },
-      {
         "date": "2026-09-30",
-        "factor": 0.997602
+        "factor": 0.977579
       },
       {
         "date": "2026-10-01",
         "factor": 1.0
+      },
+      {
+        "date": "2026-10-02",
+        "factor": 1.040936
+      },
+      {
+        "date": "2026-10-05",
+        "factor": 1.033441
+      },
+      {
+        "date": "2026-10-06",
+        "factor": 0.996284
+      },
+      {
+        "date": "2026-10-07",
+        "factor": 0.961192
       }
     ],
     "ACLS": [
       {
-        "date": "2026-09-24",
-        "factor": 0.858484
-      },
-      {
-        "date": "2026-09-25",
-        "factor": 0.910005
-      },
-      {
-        "date": "2026-09-28",
-        "factor": 0.916657
-      },
-      {
-        "date": "2026-09-29",
-        "factor": 0.951251
-      },
-      {
         "date": "2026-09-30",
-        "factor": 0.969657
+        "factor": 0.959549
       },
       {
         "date": "2026-10-01",
         "factor": 1.0
+      },
+      {
+        "date": "2026-10-02",
+        "factor": 1.080901
+      },
+      {
+        "date": "2026-10-05",
+        "factor": 1.040963
+      },
+      {
+        "date": "2026-10-06",
+        "factor": 1.032477
+      },
+      {
+        "date": "2026-10-07",
+        "factor": 1.000439
       }
     ]
   },
@@ -381,295 +381,91 @@
   ],
   "holdings": [
     {
-      "ticker": "ACN",
-      "name": "Accenture plc",
-      "sector": "Technology",
-      "exchange": "NYQ",
-      "weight": 6.67,
-      "shares": 0.751555,
-      "start_price": 177.41,
-      "current_price": 214.88,
-      "current_value": 161.4941,
-      "return_pct": 21.1206,
-      "return_usd": 28.16,
-      "selected": true,
-      "entry_date": "2026-09-24",
-      "history": [
-        {
-          "date": "2026-09-24",
-          "factor": 1.0
-        },
-        {
-          "date": "2026-09-25",
-          "factor": 0.992672
-        },
-        {
-          "date": "2026-09-28",
-          "factor": 0.983428
-        },
-        {
-          "date": "2026-09-29",
-          "factor": 0.998365
-        },
-        {
-          "date": "2026-09-30",
-          "factor": 1.033594
-        },
-        {
-          "date": "2026-10-01",
-          "factor": 1.211206
-        }
-      ],
-      "market_open": true
-    },
-    {
-      "ticker": "AMAT",
-      "name": "Applied Materials, Inc.",
-      "sector": "Equipamiento de Semiconductores",
-      "exchange": "NASDAQ",
-      "weight": 6.67,
-      "shares": 0.281146,
-      "start_price": 474.25,
-      "current_price": 527.515,
-      "current_value": 148.3086,
-      "return_pct": 11.2314,
-      "return_usd": 14.98,
-      "selected": true,
-      "entry_date": "2026-09-24",
-      "history": [
-        {
-          "date": "2026-09-24",
-          "factor": 1.0
-        },
-        {
-          "date": "2026-09-25",
-          "factor": 1.022667
-        },
-        {
-          "date": "2026-09-28",
-          "factor": 1.026379
-        },
-        {
-          "date": "2026-09-29",
-          "factor": 1.07962
-        },
-        {
-          "date": "2026-09-30",
-          "factor": 1.078292
-        },
-        {
-          "date": "2026-10-01",
-          "factor": 1.112314
-        }
-      ],
-      "market_open": true
-    },
-    {
       "ticker": "ON",
       "name": "ON Semiconductor Corporation",
       "sector": "Semiconductores & Automoci\u00f3n",
       "exchange": "NASDAQ",
       "weight": 6.67,
-      "shares": 1.822739,
-      "start_price": 73.15,
-      "current_price": 78.855,
-      "current_value": 143.7321,
-      "return_pct": 7.799,
-      "return_usd": 10.4,
+      "shares": 1.73453,
+      "start_price": 76.87,
+      "current_price": 82.84,
+      "previous_price": 86.31,
+      "change_usd_1d": -3.47,
+      "change_pct_1d": -4.0204,
+      "current_value": 143.6885,
+      "return_pct": 7.7664,
+      "return_usd": 10.36,
       "selected": true,
-      "entry_date": "2026-09-24",
+      "entry_date": "2026-09-30",
       "history": [
         {
-          "date": "2026-09-24",
+          "date": "2026-09-30",
           "factor": 1.0
         },
         {
-          "date": "2026-09-25",
-          "factor": 1.055366
-        },
-        {
-          "date": "2026-09-28",
-          "factor": 1.034176
-        },
-        {
-          "date": "2026-09-29",
-          "factor": 1.038277
-        },
-        {
-          "date": "2026-09-30",
-          "factor": 1.050854
-        },
-        {
           "date": "2026-10-01",
-          "factor": 1.07799
+          "factor": 1.041759
+        },
+        {
+          "date": "2026-10-02",
+          "factor": 1.104332
+        },
+        {
+          "date": "2026-10-05",
+          "factor": 1.117861
+        },
+        {
+          "date": "2026-10-06",
+          "factor": 1.122805
+        },
+        {
+          "date": "2026-10-07",
+          "factor": 1.077664
         }
       ],
       "market_open": true
     },
     {
-      "ticker": "HPQ",
-      "name": "HP Inc.",
-      "sector": "Hardware, PCs & Impresi\u00f3n",
-      "exchange": "NYSE",
-      "weight": 6.67,
-      "shares": 4.281738,
-      "start_price": 31.14,
-      "current_price": 32.225,
-      "current_value": 137.979,
-      "return_pct": 3.4843,
-      "return_usd": 4.65,
-      "selected": true,
-      "entry_date": "2026-09-24",
-      "history": [
-        {
-          "date": "2026-09-24",
-          "factor": 1.0
-        },
-        {
-          "date": "2026-09-25",
-          "factor": 1.005138
-        },
-        {
-          "date": "2026-09-28",
-          "factor": 1.00578
-        },
-        {
-          "date": "2026-09-29",
-          "factor": 0.986834
-        },
-        {
-          "date": "2026-09-30",
-          "factor": 1.004496
-        },
-        {
-          "date": "2026-10-01",
-          "factor": 1.034843
-        }
-      ],
-      "market_open": true
-    },
-    {
-      "ticker": "SWKS",
-      "name": "Skyworks Solutions, Inc.",
-      "sector": "Technology",
-      "exchange": "NMS",
-      "weight": 6.67,
-      "shares": 1.580715,
-      "start_price": 84.35,
-      "current_price": 84.35,
-      "current_value": 133.3333,
-      "return_pct": 0.0,
-      "return_usd": 0.0,
-      "selected": true,
-      "entry_date": "2026-10-01",
-      "history": [
-        {
-          "date": "2026-09-24",
-          "factor": 1.0
-        },
-        {
-          "date": "2026-09-25",
-          "factor": 1.017424
-        },
-        {
-          "date": "2026-09-28",
-          "factor": 0.997495
-        },
-        {
-          "date": "2026-09-29",
-          "factor": 1.002619
-        },
-        {
-          "date": "2026-09-30",
-          "factor": 0.973466
-        },
-        {
-          "date": "2026-10-01",
-          "factor": 0.960597
-        }
-      ],
-      "market_open": true
-    },
-    {
-      "ticker": "ONTO",
-      "name": "Onto Innovation Inc.",
+      "ticker": "ACN",
+      "name": "Accenture plc",
       "sector": "Technology",
       "exchange": "NYQ",
       "weight": 6.67,
-      "shares": 0.432115,
-      "start_price": 308.56,
-      "current_price": 308.56,
-      "current_value": 133.3333,
-      "return_pct": 0.0,
-      "return_usd": 0.0,
+      "shares": 0.727127,
+      "start_price": 183.37,
+      "current_price": 197.1,
+      "previous_price": 193.4,
+      "change_usd_1d": 3.7,
+      "change_pct_1d": 1.9131,
+      "current_value": 143.3168,
+      "return_pct": 7.4876,
+      "return_usd": 9.98,
       "selected": true,
-      "entry_date": "2026-10-01",
+      "entry_date": "2026-09-30",
       "history": [
         {
-          "date": "2026-09-24",
+          "date": "2026-09-30",
           "factor": 1.0
         },
         {
-          "date": "2026-09-25",
-          "factor": 1.028277
-        },
-        {
-          "date": "2026-09-28",
-          "factor": 1.03221
-        },
-        {
-          "date": "2026-09-29",
-          "factor": 1.089229
-        },
-        {
-          "date": "2026-09-30",
-          "factor": 1.100418
-        },
-        {
           "date": "2026-10-01",
-          "factor": 1.103064
-        }
-      ],
-      "market_open": true
-    },
-    {
-      "ticker": "ACLS",
-      "name": "Axcelis Technologies",
-      "sector": "Semiconductores",
-      "exchange": "NASDAQ",
-      "weight": 6.67,
-      "shares": 0.985574,
-      "start_price": 135.285,
-      "current_price": 135.285,
-      "current_value": 133.3333,
-      "return_pct": 0.0,
-      "return_usd": 0.0,
-      "selected": true,
-      "entry_date": "2026-10-01",
-      "history": [
-        {
-          "date": "2026-09-24",
-          "factor": 1.0
+          "factor": 1.157768
         },
         {
-          "date": "2026-09-25",
-          "factor": 1.060014
+          "date": "2026-10-02",
+          "factor": 1.084692
         },
         {
-          "date": "2026-09-28",
-          "factor": 1.067763
+          "date": "2026-10-05",
+          "factor": 1.063696
         },
         {
-          "date": "2026-09-29",
-          "factor": 1.108059
+          "date": "2026-10-06",
+          "factor": 1.054698
         },
         {
-          "date": "2026-09-30",
-          "factor": 1.129499
-        },
-        {
-          "date": "2026-10-01",
-          "factor": 1.164844
+          "date": "2026-10-07",
+          "factor": 1.074876
         }
       ],
       "market_open": true
@@ -680,41 +476,287 @@
       "sector": "Software Empresarial & Nube",
       "exchange": "NYSE",
       "weight": 6.67,
-      "shares": 0.955521,
-      "start_price": 139.54,
-      "current_price": 137.89,
-      "current_value": 131.7567,
-      "return_pct": -1.1825,
-      "return_usd": -1.58,
+      "shares": 0.971109,
+      "start_price": 137.3,
+      "current_price": 144.43,
+      "previous_price": 144.77,
+      "change_usd_1d": -0.34,
+      "change_pct_1d": -0.2349,
+      "current_value": 140.2573,
+      "return_pct": 5.193,
+      "return_usd": 6.92,
       "selected": true,
-      "entry_date": "2026-09-24",
+      "entry_date": "2026-09-30",
       "history": [
         {
-          "date": "2026-09-24",
+          "date": "2026-09-30",
           "factor": 1.0
         },
         {
-          "date": "2026-09-25",
-          "factor": 0.982514
-        },
-        {
-          "date": "2026-09-28",
-          "factor": 0.950265
-        },
-        {
-          "date": "2026-09-29",
-          "factor": 0.987459
-        },
-        {
-          "date": "2026-09-30",
-          "factor": 0.983947
-        },
-        {
           "date": "2026-10-01",
-          "factor": 0.988175
+          "factor": 1.005608
+        },
+        {
+          "date": "2026-10-02",
+          "factor": 1.036417
+        },
+        {
+          "date": "2026-10-05",
+          "factor": 1.037728
+        },
+        {
+          "date": "2026-10-06",
+          "factor": 1.054406
+        },
+        {
+          "date": "2026-10-07",
+          "factor": 1.05193
         }
       ],
       "market_open": true
+    },
+    {
+      "ticker": "HPQ",
+      "name": "HP Inc.",
+      "sector": "Hardware, PCs & Impresi\u00f3n",
+      "exchange": "NYSE",
+      "weight": 6.67,
+      "shares": 4.262575,
+      "start_price": 31.28,
+      "current_price": 32.435,
+      "previous_price": 31.73,
+      "change_usd_1d": 0.705,
+      "change_pct_1d": 2.2219,
+      "current_value": 138.2566,
+      "return_pct": 3.6925,
+      "return_usd": 4.92,
+      "selected": true,
+      "entry_date": "2026-09-30",
+      "history": [
+        {
+          "date": "2026-09-30",
+          "factor": 1.0
+        },
+        {
+          "date": "2026-10-01",
+          "factor": 1.027813
+        },
+        {
+          "date": "2026-10-02",
+          "factor": 1.026854
+        },
+        {
+          "date": "2026-10-05",
+          "factor": 1.006074
+        },
+        {
+          "date": "2026-10-06",
+          "factor": 1.014386
+        },
+        {
+          "date": "2026-10-07",
+          "factor": 1.036925
+        }
+      ],
+      "market_open": true
+    },
+    {
+      "ticker": "AMAT",
+      "name": "Applied Materials, Inc.",
+      "sector": "Equipamiento de Semiconductores",
+      "exchange": "NASDAQ",
+      "weight": 6.67,
+      "shares": 0.260732,
+      "start_price": 511.38,
+      "current_price": 519.85,
+      "previous_price": 530.27,
+      "change_usd_1d": -10.42,
+      "change_pct_1d": -1.965,
+      "current_value": 135.5417,
+      "return_pct": 1.6563,
+      "return_usd": 2.21,
+      "selected": true,
+      "entry_date": "2026-09-30",
+      "history": [
+        {
+          "date": "2026-09-30",
+          "factor": 1.0
+        },
+        {
+          "date": "2026-10-01",
+          "factor": 1.035042
+        },
+        {
+          "date": "2026-10-02",
+          "factor": 1.056044
+        },
+        {
+          "date": "2026-10-05",
+          "factor": 1.060425
+        },
+        {
+          "date": "2026-10-06",
+          "factor": 1.036939
+        },
+        {
+          "date": "2026-10-07",
+          "factor": 1.016563
+        }
+      ],
+      "market_open": true
+    },
+    {
+      "ticker": "ACLS",
+      "name": "Axcelis Technologies",
+      "sector": "Semiconductores",
+      "exchange": "NASDAQ",
+      "weight": 6.67,
+      "shares": 0.9753,
+      "start_price": 136.71,
+      "current_price": 136.77,
+      "previous_price": 141.15,
+      "change_usd_1d": -4.38,
+      "change_pct_1d": -3.1031,
+      "current_value": 133.3918,
+      "return_pct": 0.0439,
+      "return_usd": 0.06,
+      "selected": true,
+      "entry_date": "2026-10-01",
+      "history": [
+        {
+          "date": "2026-09-30",
+          "factor": 1.0
+        },
+        {
+          "date": "2026-10-01",
+          "factor": 1.042156
+        },
+        {
+          "date": "2026-10-02",
+          "factor": 1.126468
+        },
+        {
+          "date": "2026-10-05",
+          "factor": 1.084845
+        },
+        {
+          "date": "2026-10-06",
+          "factor": 1.076002
+        },
+        {
+          "date": "2026-10-07",
+          "factor": 1.042613
+        }
+      ],
+      "market_open": true
+    },
+    {
+      "ticker": "SWKS",
+      "name": "Skyworks Solutions, Inc.",
+      "sector": "Technology",
+      "exchange": "NMS",
+      "weight": 6.67,
+      "shares": 1.603335,
+      "start_price": 83.16,
+      "current_price": 82.115,
+      "previous_price": 82.79,
+      "change_usd_1d": -0.675,
+      "change_pct_1d": -0.8153,
+      "current_value": 131.6578,
+      "return_pct": -1.2566,
+      "return_usd": -1.68,
+      "selected": true,
+      "entry_date": "2026-10-01",
+      "history": [
+        {
+          "date": "2026-09-30",
+          "factor": 1.0
+        },
+        {
+          "date": "2026-10-01",
+          "factor": 0.972859
+        },
+        {
+          "date": "2026-10-02",
+          "factor": 0.994736
+        },
+        {
+          "date": "2026-10-05",
+          "factor": 0.981633
+        },
+        {
+          "date": "2026-10-06",
+          "factor": 0.968531
+        },
+        {
+          "date": "2026-10-07",
+          "factor": 0.960634
+        }
+      ],
+      "market_open": true
+    },
+    {
+      "ticker": "ONTO",
+      "name": "Onto Innovation Inc.",
+      "sector": "Technology",
+      "exchange": "NYQ",
+      "weight": 6.67,
+      "shares": 0.423442,
+      "start_price": 314.88,
+      "current_price": 302.66,
+      "previous_price": 313.71,
+      "change_usd_1d": -11.05,
+      "change_pct_1d": -3.5224,
+      "current_value": 128.1589,
+      "return_pct": -3.8808,
+      "return_usd": -5.17,
+      "selected": true,
+      "entry_date": "2026-10-01",
+      "history": [
+        {
+          "date": "2026-09-30",
+          "factor": 1.0
+        },
+        {
+          "date": "2026-10-01",
+          "factor": 1.022935
+        },
+        {
+          "date": "2026-10-02",
+          "factor": 1.064811
+        },
+        {
+          "date": "2026-10-05",
+          "factor": 1.057144
+        },
+        {
+          "date": "2026-10-06",
+          "factor": 1.019135
+        },
+        {
+          "date": "2026-10-07",
+          "factor": 0.983237
+        }
+      ],
+      "market_open": true
+    }
+  ],
+  "closed_holdings": [
+    {
+      "ticker": "NTAP",
+      "name": "NetApp, Inc.",
+      "sector": "Almacenamiento H\u00edbrido & Nube",
+      "exchange": "NASDAQ",
+      "shares": 0.634679,
+      "entry_date": "2026-09-30",
+      "entry_price": 210.08,
+      "exit_date": "2026-10-01",
+      "exit_price": 215.05,
+      "cost_basis": 133.33,
+      "exit_value": 136.49,
+      "realized_pnl": 3.16,
+      "realized_return_pct": 2.37,
+      "holding_days": 1
     }
   ],
   "correlations": {
@@ -732,106 +774,106 @@
     "matrix": [
       [
         1.0,
-        0.32,
-        0.02,
-        0.21,
-        0.18,
-        0.61,
-        0.14,
-        0.89,
-        0.98
+        -0.2,
+        0.71,
+        0.82,
+        0.03,
+        0.33,
+        0.91,
+        0.85,
+        0.68
       ],
       [
-        0.32,
+        -0.2,
         1.0,
-        -0.35,
-        -0.43,
-        0.73,
+        -0.19,
+        0.06,
+        0.71,
+        -0.36,
+        -0.09,
+        0.19,
+        -0.75
+      ],
+      [
+        0.71,
+        -0.19,
+        1.0,
+        0.25,
         -0.48,
-        -0.81,
-        -0.13,
-        0.26
-      ],
-      [
-        0.02,
-        -0.35,
-        1.0,
-        0.81,
-        0.25,
-        0.25,
-        0.72,
-        0.27,
-        0.2
-      ],
-      [
-        0.21,
-        -0.43,
-        0.81,
-        1.0,
-        0.23,
-        0.65,
         0.74,
-        0.54,
-        0.4
-      ],
-      [
-        0.18,
-        0.73,
-        0.25,
-        0.23,
-        1.0,
-        -0.27,
-        -0.41,
-        -0.05,
-        0.28
-      ],
-      [
-        0.61,
-        -0.48,
-        0.25,
-        0.65,
-        -0.27,
-        1.0,
-        0.69,
-        0.9,
+        0.56,
+        0.79,
         0.67
       ],
       [
-        0.14,
-        -0.81,
-        0.72,
-        0.74,
-        -0.41,
-        0.69,
-        1.0,
-        0.55,
-        0.25
-      ],
-      [
-        0.89,
-        -0.13,
-        0.27,
-        0.54,
-        -0.05,
-        0.9,
-        0.55,
-        1.0,
-        0.92
-      ],
-      [
-        0.98,
-        0.26,
-        0.2,
-        0.4,
-        0.28,
-        0.67,
+        0.82,
+        0.06,
         0.25,
+        1.0,
+        0.44,
+        0.02,
         0.92,
+        0.71,
+        0.24
+      ],
+      [
+        0.03,
+        0.71,
+        -0.48,
+        0.44,
+        1.0,
+        -0.78,
+        0.09,
+        0.05,
+        -0.51
+      ],
+      [
+        0.33,
+        -0.36,
+        0.74,
+        0.02,
+        -0.78,
+        1.0,
+        0.41,
+        0.51,
+        0.39
+      ],
+      [
+        0.91,
+        -0.09,
+        0.56,
+        0.92,
+        0.09,
+        0.41,
+        1.0,
+        0.87,
+        0.41
+      ],
+      [
+        0.85,
+        0.19,
+        0.79,
+        0.71,
+        0.05,
+        0.51,
+        0.87,
+        1.0,
+        0.34
+      ],
+      [
+        0.68,
+        -0.75,
+        0.67,
+        0.24,
+        -0.51,
+        0.39,
+        0.41,
+        0.34,
         1.0
       ]
     ],
-    "avg_correlation": 0.46,
-    "diversification_score": 8.9
+    "avg_correlation": 0.47,
+    "diversification_score": 8.8
   },
   "monte_carlo": {
     "days": [
@@ -843,48 +885,48 @@
       90
     ],
     "median": [
-      1123.27,
-      3629.94,
-      11730.44,
-      37907.84,
-      122502.23,
-      1279304.2
+      1094.27,
+      3330.31,
+      10135.5,
+      30846.5,
+      93878.57,
+      869535.91
     ],
     "bull_95": [
-      1123.27,
-      4938.15,
-      9118.78,
-      14599.29,
-      21709.23,
-      42237.91
+      1094.27,
+      5317.57,
+      10235.47,
+      16917.32,
+      25840.59,
+      52591.7
     ],
     "bear_5": [
-      1123.27,
-      468.24,
-      325.88,
-      246.76,
-      195.18,
-      131.71
+      1094.27,
+      400.08,
+      263.72,
+      191.53,
+      146.27,
+      93.05
     ],
     "scenarios": {
       "ai_rally": {
         "name": "Rally de Inteligencia Artificial",
         "impact_pct": 25.0,
-        "projected_value": 1404.09,
+        "projected_value": 1367.84,
         "prob": "Alta (Catalizador Q3/Q4)",
         "color": "#10b981"
       },
       "rate_shock": {
         "name": "Correcci\u00f3n Tech / Shock de Tasas",
         "impact_pct": -15.0,
-        "projected_value": 954.78,
+        "projected_value": 930.13,
         "prob": "Media (Protegido por Cash Q)",
         "color": "#ef4444"
       },
       "sideways": {
         "name": "Mercado Lateral / Rango",
         "impact_pct": 4.5,
-        "projected_value": 1173.82,
+        "projected_value": 1143.51,
         "prob": "Muy Alta (Consolidaci\u00f3n)",
         "color": "#f59e0b"
       }
@@ -893,17 +935,17 @@
   "radar": [
     {
       "factor": "Momentum Relativo",
-      "score": 81,
+      "score": 70,
       "benchmark": 55
     },
     {
       "factor": "Resiliencia / Drawdown",
-      "score": 86,
+      "score": 75,
       "benchmark": 60
     },
     {
       "factor": "Alfa vs S&P 500",
-      "score": 98,
+      "score": 70,
       "benchmark": 50
     },
     {
@@ -913,42 +955,48 @@
     },
     {
       "factor": "Diversificaci\u00f3n",
-      "score": 84,
+      "score": 83,
       "benchmark": 60
     }
   ],
   "summary": {
     "start_value": 2000.0,
-    "end_value": 2056.6,
+    "end_value": 2027.6,
     "invested_value": 2000.0,
     "active_invested": 1066.67,
-    "active_stock_value": 1123.27,
-    "active_return": 56.6,
-    "active_return_pct": 5.31,
-    "sp500_return": -5.64,
-    "sp500_return_pct": -0.53,
-    "nasdaq_return": -1.6,
-    "nasdaq_return_pct": -0.15,
-    "mm20_return": -1.61,
-    "mm20_return_pct": -0.15,
-    "alpha_sp500": 5.84,
-    "alpha_sp500_usd": 62.24,
-    "alpha_nasdaq": 5.46,
-    "alpha_nasdaq_usd": 58.21,
-    "alpha_mm20": 5.46,
-    "alpha_mm20_usd": 58.22,
-    "sharpe_ratio": 7.98,
-    "sortino_ratio": 393.71,
-    "beta_sp500": 1.03,
-    "beta_nasdaq": 1.03,
-    "annualized_vol_pct": 246.32,
-    "win_rate_pct": 87.5,
-    "diversification_score": 8.9,
-    "max_drawdown_pct": -0.69,
-    "max_drawdown_usd": -7.72,
+    "active_stock_value": 1094.27,
+    "active_return": 27.6,
+    "active_return_pct": 2.59,
+    "total_realized_pnl": 3.16,
+    "unrealized_pnl": 27.6,
+    "total_strategy_pnl": 30.76,
+    "total_strategy_return_pct": 2.88,
+    "closed_count": 1,
+    "win_rate_closed_pct": 100.0,
+    "sp500_return": 20.57,
+    "sp500_return_pct": 1.93,
+    "nasdaq_return": 25.03,
+    "nasdaq_return_pct": 2.35,
+    "mm20_return": 13.57,
+    "mm20_return_pct": 1.27,
+    "alpha_sp500": 0.66,
+    "alpha_sp500_usd": 7.03,
+    "alpha_nasdaq": 0.24,
+    "alpha_nasdaq_usd": 2.57,
+    "alpha_mm20": 1.32,
+    "alpha_mm20_usd": 14.04,
+    "sharpe_ratio": 6.9,
+    "sortino_ratio": 149.86,
+    "beta_sp500": 1.15,
+    "beta_nasdaq": 1.16,
+    "annualized_vol_pct": 270.51,
+    "win_rate_pct": 75.0,
+    "diversification_score": 8.8,
+    "max_drawdown_pct": -2.91,
+    "max_drawdown_usd": -32.75,
     "cash_reserved": 933.33,
-    "total_return": 56.6,
-    "total_return_pct": 2.83,
+    "total_return": 27.6,
+    "total_return_pct": 1.38,
     "num_holdings": 8,
     "num_slots": 15,
     "unallocated_slots": 7
