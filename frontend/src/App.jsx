@@ -18,6 +18,7 @@ import RebalanceManager from "./components/RebalanceManager";
 import RebalanceTimer from "./components/RebalanceTimer";
 import SectorAllocation from "./components/SectorAllocation";
 import WarrenAIModal from "./components/WarrenAIModal";
+import WasmNavSimulator from "./components/WasmNavSimulator";
 import { InfoTooltip } from "./components/Common";
 import AffiliateBanner from "./components/Common/AffiliateBanner";
 import AuthModal from "./components/AuthModal";
@@ -26,7 +27,7 @@ import StrategyPaywall from "./components/StrategyPaywall";
 import QuantumOrbitalLoader from "./components/QuantumOrbitalLoader";
 import { useAuthStore } from "./store/authStore";
 import { usePortfolioStore } from "./store/portfolioStore";
-import { exportPortfolioCSV } from "./utils/exportReport";
+import { exportPortfolioExcel, exportPortfolioPyScript } from "./utils/exportReport";
 import { toastPrompt } from "./utils/toastAlerts";
 import { useTheme } from "./context/ThemeContext";
 import "./App.css";
@@ -92,6 +93,7 @@ export default function App() {
   const [mobileStratModalOpen, setMobileStratModalOpen] = useState(false);
   const [mobilePurchasesModalOpen, setMobilePurchasesModalOpen] = useState(false);
   const [showWarrenModal, setShowWarrenModal] = useState(false);
+  const [showWasmLabModal, setShowWasmLabModal] = useState(false);
   const stratDropdownRef = useRef(null);
   const purchasesDropdownRef = useRef(null);
 
@@ -816,35 +818,87 @@ export default function App() {
 
           {/* 5. Conector WarrenAI (Solo en entorno local / desarrollo) */}
           {typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && (
-            <button
-              type="button"
-              className="nav-action-btn compact"
-              onClick={() => setShowWarrenModal(true)}
-              title="Conector WarrenAI (Investing.com ProPicks) — Generar prompt con Ollama y datos del portafolio"
-              style={{
-                borderColor: "rgba(16, 185, 129, 0.4)",
-                background: "rgba(16, 185, 129, 0.08)",
-                color: "#34d399",
-                fontWeight: 700,
-              }}
-            >
-              <span>🤖</span>
-              <span className="btn-text-hide-mobile">WarrenAI</span>
-            </button>
+            <>
+              <button
+                type="button"
+                className="nav-action-btn compact"
+                onClick={() => setShowWarrenModal(true)}
+                title="Conector WarrenAI (Investing.com ProPicks) — Generar prompt con Ollama y datos del portafolio"
+                style={{
+                  borderColor: "rgba(16, 185, 129, 0.4)",
+                  background: "rgba(16, 185, 129, 0.08)",
+                  color: "#34d399",
+                  fontWeight: 700,
+                }}
+              >
+                <span>🤖</span>
+                <span className="btn-text-hide-mobile">WarrenAI</span>
+              </button>
+
+              <button
+                type="button"
+                className="nav-action-btn compact"
+                onClick={() => setShowWasmLabModal(true)}
+                title="WASM / Web Worker Lab — Simulación ultrarrápida en cliente"
+                style={{
+                  borderColor: "rgba(0, 229, 255, 0.4)",
+                  background: "rgba(0, 229, 255, 0.08)",
+                  color: "#00e5ff",
+                  fontWeight: 700,
+                }}
+              >
+                <span>⚡</span>
+                <span className="btn-text-hide-mobile">WASM Lab</span>
+              </button>
+            </>
           )}
 
-          {/* 6. Exportar CSV (Oculto temporalmente) */}
-          {/* navData && (
-            <button
-              type="button"
-              className="nav-action-btn compact"
-              onClick={() => exportPortfolioCSV(navData, investment)}
-              title="Descargar informe completo del portafolio en formato CSV"
-            >
-              <span>📥</span>
-              <span className="btn-text-hide-mobile">CSV</span>
-            </button>
-          ) */}
+          {/* Exportación: Excel Nativo & PyScript 2.0+ WASM */}
+          {navData && (
+            <>
+              <button
+                type="button"
+                className="nav-action-btn compact"
+                onClick={async () => {
+                  try {
+                    await exportPortfolioExcel(mode, investment, numSlots);
+                  } catch (e) {
+                    console.error("Fallo descarga Excel:", e);
+                  }
+                }}
+                title="Descargar informe completo del portafolio en Excel (.xlsx) con timeline diario de todas las acciones"
+                style={{
+                  borderColor: "rgba(16, 185, 129, 0.4)",
+                  color: "#10b981",
+                  fontWeight: 600,
+                }}
+              >
+                <span>📊</span>
+                <span className="btn-text-hide-mobile">Excel</span>
+              </button>
+
+              <button
+                type="button"
+                className="nav-action-btn compact"
+                onClick={async () => {
+                  try {
+                    await exportPortfolioPyScript(navData, investment);
+                  } catch (e) {
+                    console.error("Fallo ejecución PyScript:", e);
+                  }
+                }}
+                title="Ejecutar y exportar con PyScript 2.0+ (MicroPython WASM / Polyscript en el navegador)"
+                style={{
+                  borderColor: "rgba(245, 158, 11, 0.4)",
+                  color: "#f59e0b",
+                  fontWeight: 600,
+                }}
+              >
+                <span>🐍</span>
+                <span className="btn-text-hide-mobile">PyScript</span>
+              </button>
+            </>
+          )}
 
           {/* 6. Selector Modo Diurno / Nocturno (Compacto & Elegante) */}
           <button
@@ -2596,6 +2650,12 @@ export default function App() {
       <WarrenAIModal
         isOpen={showWarrenModal}
         onClose={() => setShowWarrenModal(false)}
+      />
+
+      {/* ── WASM / Web Worker Simulation Lab Modal ────── */}
+      <WasmNavSimulator
+        isOpen={showWasmLabModal}
+        onClose={() => setShowWasmLabModal(false)}
       />
 
       {/* ── Modal de Autenticación (Login / Registro / OAuth2) ── */}

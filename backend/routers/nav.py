@@ -82,3 +82,58 @@ def nav_endpoint(
     )
     return result
 
+
+@router.get("/nav/export/excel")
+def export_nav_excel(
+    request: Request,
+    period: str = "MAX",
+    investment: float = 2000.0,
+    num_slots: int = 15,
+    selected_tickers: str | None = None,
+    strategy_id: str = "historical",
+):
+    from fastapi.responses import StreamingResponse
+    from services.excel_exporter import generate_portfolio_excel
+
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    rebalances = get_all_rebalances(strategy_id=strategy_id, user_id=user_id)
+    if not rebalances:
+        empty_res = calculate_nav(None, investment=investment, num_slots=num_slots, strategy_id=strategy_id, user_id=user_id)
+        excel_stream = generate_portfolio_excel(empty_res, investment=investment)
+        return StreamingResponse(
+            excel_stream,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=Titanes_Reporte.xlsx"},
+        )
+
+    all_tickers = set()
+    for r in rebalances:
+        all_tickers.update(r["tickers"])
+    ticker_list = list(all_tickers)
+    earliest_rebal = min([r["date"] for r in rebalances]) if rebalances else None
+
+    selected_list = None
+    if selected_tickers and isinstance(selected_tickers, str):
+        selected_list = [t.strip().upper() for t in selected_tickers.split(",") if t.strip()]
+
+    prices_df = get_historical_prices(ticker_list, period="MAX", start_date=earliest_rebal)
+    nav_res = calculate_nav(
+        prices_df,
+        investment=investment,
+        num_slots=num_slots,
+        selected_tickers=selected_list,
+        strategy_id=strategy_id,
+        user_id=user_id,
+        period="MAX",
+    )
+
+    excel_stream = generate_portfolio_excel(nav_res, investment=investment)
+    filename = f"Titanes_Portafolio_{date.today().isoformat()}.xlsx"
+    return StreamingResponse(
+        excel_stream,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
