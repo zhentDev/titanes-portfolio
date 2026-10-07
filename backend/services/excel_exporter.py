@@ -156,15 +156,19 @@ def generate_portfolio_excel(nav_result: dict, investment: float, strategy_name:
     # Extraemos fechas únicas ordenadas de nav_series
     dates = [pt["date"] for pt in nav_series]
 
-    # Preparamos mapas de precios diarios por ticker usando sus listas history
+    # Preparamos mapas de precios diarios por ticker y su fecha de entrada real en el portafolio
     ticker_history_map = {}
+    ticker_entry_map = {}
     for h in holdings:
         t = h.get("ticker")
         ticker_history_map[t] = {}
-        # start_price * factor
+        # Entry date exacta cuando se abrió la posición
+        entry_d = str(h.get("entry_date", ""))[:10]
+        ticker_entry_map[t] = entry_d
+
         s_price = h.get("start_price", 1.0)
         for hist_pt in h.get("history", []):
-            d = hist_pt.get("date")
+            d = str(hist_pt.get("date", ""))[:10]
             f = hist_pt.get("factor", 1.0)
             ticker_history_map[t][d] = s_price * f
 
@@ -186,9 +190,10 @@ def generate_portfolio_excel(nav_result: dict, investment: float, strategy_name:
     for t in active_tickers:
         col_letter_p = get_column_letter(curr_col)
         col_letter_v = get_column_letter(curr_col + 1)
+        entry_tag = f" [Desde {ticker_entry_map.get(t, '')}]" if ticker_entry_map.get(t) else ""
         
-        ws2[f"{col_letter_p}1"] = f"{t} (Precio $)"
-        ws2[f"{col_letter_v}1"] = f"{t} (Cambio Día %)"
+        ws2[f"{col_letter_p}1"] = f"{t} Precio ($){entry_tag}"
+        ws2[f"{col_letter_v}1"] = f"{t} Cambio Día (%)"
         
         ws2[f"{col_letter_p}1"].fill = sub_fill
         ws2[f"{col_letter_p}1"].font = header_font
@@ -204,7 +209,7 @@ def generate_portfolio_excel(nav_result: dict, investment: float, strategy_name:
     prev_ticker_prices = {}
 
     for pt in nav_series:
-        d = pt["date"]
+        d = str(pt["date"])[:10]
         val = pt.get("value", 0)
         
         # Rendimiento diario del portafolio
@@ -223,9 +228,17 @@ def generate_portfolio_excel(nav_result: dict, investment: float, strategy_name:
         nd_val = nasdaq_map.get(d, 0)
         ws2.cell(row=row_num, column=5, value=f"${nd_val:,.2f}" if nd_val > 0 else "N/A").font = regular_font
 
-        # Tickers individuales
+        # Tickers individuales: SOLO graficar y registrar a partir de su fecha de entrada efectiva
         for t in active_tickers:
             col_p, col_v = ticker_col_map[t]
+            entry_d = ticker_entry_map.get(t, "")
+            
+            # Si el día actual es anterior a la fecha de compra/rebalanceo de este ticker, se deja en blanco
+            if entry_d and d < entry_d:
+                ws2.cell(row=row_num, column=col_p, value="").font = regular_font
+                ws2.cell(row=row_num, column=col_v, value="").font = regular_font
+                continue
+
             t_price = ticker_history_map[t].get(d)
             if t_price is not None:
                 ws2.cell(row=row_num, column=col_p, value=f"${t_price:,.2f}").font = regular_font
@@ -233,8 +246,13 @@ def generate_portfolio_excel(nav_result: dict, investment: float, strategy_name:
                 t_chg = ((t_price - prev_p) / prev_p * 100) if (prev_p and prev_p > 0) else 0.0
                 prev_ticker_prices[t] = t_price
 
-                c_tchg = ws2.cell(row=row_num, column=col_v, value=f"{t_chg:+.2f}%")
-                c_tchg.font = green_font if t_chg >= 0 else red_font
+                # Si es el primer día de compra, marcar como Entrada
+                if prev_p is None:
+                    c_tchg = ws2.cell(row=row_num, column=col_v, value="Entrada")
+                    c_tchg.font = bold_font
+                else:
+                    c_tchg = ws2.cell(row=row_num, column=col_v, value=f"{t_chg:+.2f}%")
+                    c_tchg.font = green_font if t_chg >= 0 else red_font
             else:
                 ws2.cell(row=row_num, column=col_p, value="-").font = regular_font
                 ws2.cell(row=row_num, column=col_v, value="-").font = regular_font

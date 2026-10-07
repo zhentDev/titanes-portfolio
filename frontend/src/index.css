@@ -619,8 +619,8 @@ input[type="number"] {
 
 /* ── Scrollbar ──────────────────────────────── */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -631,6 +631,56 @@ input[type="number"] {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
+}
+
+/* ── Holdings Table Scroll Wrapper & Prominent Horizontal Scrollbar ── */
+.holdings-table-scroll-wrapper {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 229, 255, 0.4) rgba(0, 0, 0, 0.15);
+  padding-bottom: 6px;
+}
+
+.holdings-table-scroll-wrapper::-webkit-scrollbar {
+  height: 10px; /* Barra horizontal más ancha y fácil de arrastrar */
+}
+
+.holdings-table-scroll-wrapper::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  margin: 0 4px;
+}
+
+.holdings-table-scroll-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(0, 229, 255, 0.35);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  transition: background-color 0.2s ease;
+}
+
+.holdings-table-scroll-wrapper::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 229, 255, 0.65);
+  border: 1px solid transparent;
+}
+
+[data-theme="light"] .holdings-table-scroll-wrapper {
+  scrollbar-color: rgba(2, 132, 199, 0.4) rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .holdings-table-scroll-wrapper::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .holdings-table-scroll-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(2, 132, 199, 0.45);
+}
+
+[data-theme="light"] .holdings-table-scroll-wrapper::-webkit-scrollbar-thumb:hover {
+  background: rgba(2, 132, 199, 0.75);
 }
 
 /* ── Loading Spinner ────────────────────────── */

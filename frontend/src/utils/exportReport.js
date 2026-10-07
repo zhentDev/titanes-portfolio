@@ -146,7 +146,7 @@ try:
 
     prev_val = None
     for pt in nav_series:
-        d = pt.get("date")
+        d = str(pt.get("date", ""))[:10]
         val = pt.get("value", 0)
         daily_chg = ((val - prev_val) / prev_val * 100) if (prev_val and prev_val > 0) else 0.0
         prev_val = val
@@ -157,10 +157,15 @@ try:
         row_cells = [d, f"\${val:.2f}", f"{daily_chg:+.2f}%", f"\${sp_val:.2f}", f"\${nd_val:.2f}"]
         
         for h in holdings:
-            t_price = h.get("current_price", 0)
-            t_ret = h.get("return_pct", 0)
-            row_cells.append(f"\${t_price:.2f}")
-            row_cells.append(f"{t_ret:+.2f}%")
+            entry_d = str(h.get("entry_date", ""))[:10]
+            if entry_d and d < entry_d:
+                row_cells.append("")
+                row_cells.append("")
+            else:
+                t_price = h.get("current_price", 0)
+                t_ret = h.get("return_pct", 0)
+                row_cells.append(f"\${t_price:.2f}")
+                row_cells.append(f"{t_ret:+.2f}%")
 
         lines.append(",".join(row_cells))
 

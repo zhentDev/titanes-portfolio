@@ -323,8 +323,27 @@ export default function HoldingsTable({
           })}
         </div>
       ) : (
-        <div style={{ overflowX: "auto", minWidth: 0, width: "100%", WebkitOverflowScrolling: "touch" }}>
-          <table style={{ width: "100%", minWidth: "780px", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
+        <div 
+          className="holdings-table-scroll-wrapper"
+          style={{ 
+            overflowX: "auto", 
+            minWidth: 0, 
+            width: "100%", 
+            WebkitOverflowScrolling: "touch",
+            userSelect: "none",
+            WebkitUserSelect: "none",
+          }}
+        >
+          <table 
+            style={{ 
+              width: "100%", 
+              minWidth: "780px", 
+              borderCollapse: "collapse", 
+              fontSize: "0.8125rem",
+              userSelect: "none",
+              WebkitUserSelect: "none",
+            }}
+          >
           <thead>
             <tr style={{ borderBottom: "1px solid var(--border)" }}>
               {[
@@ -874,8 +893,27 @@ export default function HoldingsTable({
             </div>
           ) : (
             /* Vista de Tabla para Cerradas */
-            <div style={{ overflowX: "auto", minWidth: 0, width: "100%", WebkitOverflowScrolling: "touch" }}>
-              <table style={{ width: "100%", minWidth: "820px", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
+            <div 
+              className="holdings-table-scroll-wrapper"
+              style={{ 
+                overflowX: "auto", 
+                minWidth: 0, 
+                width: "100%", 
+                WebkitOverflowScrolling: "touch",
+                userSelect: "none",
+                WebkitUserSelect: "none",
+              }}
+            >
+              <table 
+                style={{ 
+                  width: "100%", 
+                  minWidth: "820px", 
+                  borderCollapse: "collapse", 
+                  fontSize: "0.8125rem",
+                  userSelect: "none",
+                  WebkitUserSelect: "none",
+                }}
+              >
                 <thead>
                   <tr style={{ borderBottom: "1px solid var(--border)" }}>
                     {[
