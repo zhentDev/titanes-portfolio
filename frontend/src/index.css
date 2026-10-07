@@ -639,48 +639,55 @@ input[type="number"] {
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 229, 255, 0.4) rgba(0, 0, 0, 0.15);
-  padding-bottom: 6px;
+  scrollbar-width: auto;
+  scrollbar-color: rgba(0, 229, 255, 0.5) rgba(0, 0, 0, 0.2);
+  padding-bottom: 10px;
 }
 
 .holdings-table-scroll-wrapper::-webkit-scrollbar {
-  height: 10px; /* Barra horizontal más ancha y fácil de arrastrar */
+  height: 14px; /* Barra horizontal más grande, visible y fácil de agarrar */
 }
 
 .holdings-table-scroll-wrapper::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.15);
-  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
   margin: 0 4px;
 }
 
 .holdings-table-scroll-wrapper::-webkit-scrollbar-thumb {
-  background: rgba(0, 229, 255, 0.35);
-  border-radius: 8px;
-  border: 2px solid transparent;
+  background: rgba(0, 229, 255, 0.45);
+  border-radius: 10px;
+  border: 3px solid transparent;
   background-clip: content-box;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .holdings-table-scroll-wrapper::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 229, 255, 0.65);
+  background: rgba(0, 229, 255, 0.85);
   border: 1px solid transparent;
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
 }
 
 [data-theme="light"] .holdings-table-scroll-wrapper {
-  scrollbar-color: rgba(2, 132, 199, 0.4) rgba(0, 0, 0, 0.06);
+  scrollbar-color: rgba(2, 132, 199, 0.55) rgba(0, 0, 0, 0.08);
 }
 
 [data-theme="light"] .holdings-table-scroll-wrapper::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.06);
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
 }
 
 [data-theme="light"] .holdings-table-scroll-wrapper::-webkit-scrollbar-thumb {
-  background: rgba(2, 132, 199, 0.45);
+  background: rgba(2, 132, 199, 0.55);
+  border-radius: 10px;
+  border: 3px solid transparent;
+  background-clip: content-box;
 }
 
 [data-theme="light"] .holdings-table-scroll-wrapper::-webkit-scrollbar-thumb:hover {
-  background: rgba(2, 132, 199, 0.75);
+  background: rgba(2, 132, 199, 0.9);
+  border: 1px solid transparent;
+  box-shadow: 0 0 10px rgba(2, 132, 199, 0.35);
 }
 
 /* ── Hide Chart Floating Legend on smaller/medium screens to maximize chart canvas ── */
