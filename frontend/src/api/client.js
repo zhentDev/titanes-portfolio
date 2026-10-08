@@ -134,7 +134,7 @@ async function fetchWithFallback(endpoint, staticFile, options = {}) {
 
   // 1. Primary backend try
   const isRenderPrimary = ACTIVE_BASE === RENDER_BACKEND_BASE;
-  const timeout = options.timeoutMs || (isRenderPrimary ? 12000 : TIMEOUT_MS);
+  const timeout = options.timeoutMs || (isRenderPrimary ? 15000 : (IS_LOCAL_HOST ? 15000 : TIMEOUT_MS));
   // If we are already pointing to Render, give it 2 retries to wake up
   resultData = await tryFetchBase(ACTIVE_BASE, timeout, isRenderPrimary ? 2 : 0);
 

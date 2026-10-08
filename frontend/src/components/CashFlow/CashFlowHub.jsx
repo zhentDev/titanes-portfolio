@@ -85,7 +85,15 @@ export default function CashFlowHub() {
   } = useCashFlowStore();
 
   const { accounts: fixedAccounts, cdts: fixedCdts } = useFixedIncomeStore();
-  const { settingsByMode, mode, customStrategies, individualPurchases, purchaseSales, purchasePortfolios } = usePortfolioStore();
+  const {
+    settingsByMode,
+    mode,
+    customStrategies,
+    initFetchCustomStrategies,
+    individualPurchases,
+    purchaseSales,
+    purchasePortfolios,
+  } = usePortfolioStore();
 
   const [fxRate, setFxRate] = useState(4150);
   const [modalOpen, setModalOpen] = useState(false);
@@ -206,7 +214,10 @@ export default function CashFlowHub() {
   // Initialize store on mount
   useEffect(() => {
     initFetchCashFlow();
-  }, [initFetchCashFlow]);
+    if (typeof initFetchCustomStrategies === "function") {
+      initFetchCustomStrategies();
+    }
+  }, [initFetchCashFlow, initFetchCustomStrategies]);
 
   // Live Auto-Sync Passive Yields & Portfolio Equity
   useEffect(() => {
@@ -899,7 +910,7 @@ export default function CashFlowHub() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))",
             gap: 16,
           }}
         >
@@ -909,10 +920,10 @@ export default function CashFlowHub() {
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: 6,
+              gap: 8,
               cursor: "pointer",
-              padding: "8px 12px",
-              borderRadius: "12px",
+              padding: "10px 14px",
+              borderRadius: "14px",
               background: expandedCard === "invested" ? (isLight ? "rgba(2, 132, 199, 0.08)" : "rgba(0, 229, 255, 0.08)") : "transparent",
               transition: "all 0.2s ease",
             }}
@@ -921,8 +932,8 @@ export default function CashFlowHub() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span
                 style={{
-                  fontSize: "0.76rem",
-                  fontWeight: 700,
+                  fontSize: "clamp(0.82rem, 1.1vw, 0.92rem)",
+                  fontWeight: 800,
                   color: isLight ? "#0284c7" : "var(--accent-primary)",
                   textTransform: "uppercase",
                   letterSpacing: "0.5px",
@@ -931,52 +942,48 @@ export default function CashFlowHub() {
                   gap: 6,
                 }}
               >
-                <span>🚀</span> Capital Invertido en Acciones
+                <span>🚀</span> Capital Invertido
               </span>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span
                   style={{
-                    fontSize: "0.66rem",
-                    padding: "2px 8px",
+                    fontSize: "0.7rem",
+                    padding: "3px 8px",
                     borderRadius: "10px",
                     background: "rgba(0, 229, 255, 0.12)",
                     color: "#00e5ff",
                     border: "1px solid rgba(0, 229, 255, 0.3)",
-                    fontWeight: 700,
+                    fontWeight: 800,
                   }}
                 >
                   DINERO REAL
                 </span>
-                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", transform: expandedCard === "invested" ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
+                <span style={{ fontSize: "0.85rem", color: "var(--text-muted)", transform: expandedCard === "invested" ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
                   ▼
                 </span>
               </div>
             </div>
 
-            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 2 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 2, flexWrap: "wrap" }}>
               <span
                 style={{
-                  fontSize: "1.4rem",
+                  fontSize: "clamp(1.4rem, 2vw, 1.7rem)",
                   fontWeight: 800,
                   color: isLight ? "#0f172a" : "#f8fafc",
                   fontFamily: "var(--font-mono, monospace)",
                 }}
               >
-                {currency === "USD"
-                  ? `$${realInvestmentMetrics.totalInvestedUSD.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`
-                  : `$${realInvestmentMetrics.totalInvestedCOP.toLocaleString("es-CO")} COP`}
+                ${realInvestmentMetrics.totalInvestedUSD.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
               </span>
-              <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontFamily: "var(--font-mono, monospace)" }}>
-                {currency === "USD"
-                  ? `(≈$${realInvestmentMetrics.totalInvestedCOP.toLocaleString("es-CO")} COP)`
-                  : `(≈$${realInvestmentMetrics.totalInvestedUSD.toFixed(2)} USD)`}
+              <span style={{ fontSize: "clamp(0.85rem, 1.1vw, 0.95rem)", fontWeight: 600, color: isLight ? "#475569" : "#94a3b8", fontFamily: "var(--font-mono, monospace)" }}>
+                (≈${realInvestmentMetrics.totalInvestedCOP.toLocaleString("es-CO")} COP)
               </span>
             </div>
 
-            <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", display: "flex", gap: 10, flexWrap: "wrap", marginTop: 2 }}>
-              <span>Estrategias Reales ({realInvestmentMetrics.strategiesCount}): <strong>${realInvestmentMetrics.strategiesInvestedUSD.toFixed(0)} USD</strong></span>
+            <div style={{ fontSize: "clamp(0.78rem, 1vw, 0.86rem)", color: "var(--text-muted)", display: "flex", gap: 10, flexWrap: "wrap", marginTop: 2 }}>
+              <span>Estrategias Reales ({realInvestmentMetrics.strategiesCount}): <strong>${realInvestmentMetrics.strategiesInvestedUSD.toFixed(1)} USD</strong></span>
               <span>·</span>
-              <span>Compras ({realInvestmentMetrics.purchaseGroups.length} grupos): <strong>${realInvestmentMetrics.purchasesInvestedUSD.toFixed(0)} USD</strong></span>
+              <span>Compras ({realInvestmentMetrics.purchaseGroups.length} grupos): <strong>${realInvestmentMetrics.purchasesInvestedUSD.toFixed(1)} USD</strong></span>
             </div>
           </div>
 
@@ -986,10 +993,10 @@ export default function CashFlowHub() {
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: 6,
+              gap: 8,
               cursor: "pointer",
-              padding: "8px 12px",
-              borderRadius: "12px",
+              padding: "10px 14px",
+              borderRadius: "14px",
               background: expandedCard === "yield" ? (isLight ? "rgba(16, 185, 129, 0.08)" : "rgba(16, 185, 129, 0.08)") : "transparent",
               borderLeft: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.08)",
               transition: "all 0.2s ease",
@@ -999,8 +1006,8 @@ export default function CashFlowHub() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span
                 style={{
-                  fontSize: "0.76rem",
-                  fontWeight: 700,
+                  fontSize: "clamp(0.82rem, 1.1vw, 0.92rem)",
+                  fontWeight: 800,
                   color: realInvestmentMetrics.totalUnrealizedPnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
                   textTransform: "uppercase",
                   letterSpacing: "0.5px",
@@ -1014,8 +1021,8 @@ export default function CashFlowHub() {
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span
                   style={{
-                    fontSize: "0.66rem",
-                    padding: "2px 8px",
+                    fontSize: "0.7rem",
+                    padding: "3px 8px",
                     borderRadius: "10px",
                     background:
                       realInvestmentMetrics.totalUnrealizedPnlUSD >= 0
@@ -1026,47 +1033,43 @@ export default function CashFlowHub() {
                       realInvestmentMetrics.totalUnrealizedPnlUSD >= 0
                         ? "1px solid rgba(16, 185, 129, 0.3)"
                         : "1px solid rgba(244, 63, 94, 0.3)",
-                    fontWeight: 700,
+                    fontWeight: 800,
                   }}
                 >
                   {realInvestmentMetrics.totalUnrealizedPnlUSD >= 0 ? "GANANCIA" : "PÉRDIDA"} {realInvestmentMetrics.totalUnrealizedPnlPct >= 0 ? "+" : ""}
                   {realInvestmentMetrics.totalUnrealizedPnlPct.toFixed(2)}%
                 </span>
-                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", transform: expandedCard === "yield" ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
+                <span style={{ fontSize: "0.85rem", color: "var(--text-muted)", transform: expandedCard === "yield" ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
                   ▼
                 </span>
               </div>
             </div>
 
-            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 2 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 2, flexWrap: "wrap" }}>
               <span
                 style={{
-                  fontSize: "1.4rem",
+                  fontSize: "clamp(1.4rem, 2vw, 1.7rem)",
                   fontWeight: 800,
                   color: isLight ? "#0f172a" : "#f8fafc",
                   fontFamily: "var(--font-mono, monospace)",
                 }}
               >
-                {currency === "USD"
-                  ? `$${realInvestmentMetrics.totalMarketValueUSD.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`
-                  : `$${realInvestmentMetrics.totalMarketValueCOP.toLocaleString("es-CO")} COP`}
+                ${realInvestmentMetrics.totalMarketValueUSD.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
               </span>
               <span
                 style={{
-                  fontSize: "0.85rem",
+                  fontSize: "clamp(0.85rem, 1.1vw, 0.95rem)",
                   fontWeight: 700,
                   fontFamily: "var(--font-mono, monospace)",
                   color: realInvestmentMetrics.totalUnrealizedPnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
                 }}
               >
                 ({realInvestmentMetrics.totalUnrealizedPnlUSD >= 0 ? "+" : ""}
-                {currency === "USD"
-                  ? `$${realInvestmentMetrics.totalUnrealizedPnlUSD.toFixed(2)} USD`
-                  : `$${realInvestmentMetrics.totalUnrealizedPnlCOP.toLocaleString("es-CO")} COP`})
+                ${realInvestmentMetrics.totalUnrealizedPnlUSD.toFixed(2)} USD · {realInvestmentMetrics.totalUnrealizedPnlUSD >= 0 ? "+" : ""}${realInvestmentMetrics.totalUnrealizedPnlCOP.toLocaleString("es-CO")} COP)
               </span>
             </div>
 
-            <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", display: "flex", gap: 10, flexWrap: "wrap", marginTop: 2 }}>
+            <div style={{ fontSize: "clamp(0.78rem, 1vw, 0.86rem)", color: "var(--text-muted)", display: "flex", gap: 10, flexWrap: "wrap", marginTop: 2 }}>
               <span>
                 En Estrategias:{" "}
                 <strong style={{ color: realInvestmentMetrics.strategiesUnrealizedPnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e" }}>
@@ -1089,10 +1092,10 @@ export default function CashFlowHub() {
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: 6,
+              gap: 8,
               cursor: "pointer",
-              padding: "8px 12px",
-              borderRadius: "12px",
+              padding: "10px 14px",
+              borderRadius: "14px",
               background: expandedCard === "closed" ? (isLight ? "rgba(16, 185, 129, 0.08)" : "rgba(16, 185, 129, 0.08)") : "transparent",
               borderLeft: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.08)",
               transition: "all 0.2s ease",
@@ -1102,8 +1105,8 @@ export default function CashFlowHub() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span
                 style={{
-                  fontSize: "0.76rem",
-                  fontWeight: 700,
+                  fontSize: "clamp(0.82rem, 1.1vw, 0.92rem)",
+                  fontWeight: 800,
                   color: isLight ? "#059669" : "#34d399",
                   textTransform: "uppercase",
                   letterSpacing: "0.5px",
@@ -1117,45 +1120,49 @@ export default function CashFlowHub() {
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span
                   style={{
-                    fontSize: "0.66rem",
-                    padding: "2px 8px",
+                    fontSize: "0.7rem",
+                    padding: "3px 8px",
                     borderRadius: "10px",
                     background:
                       realInvestmentMetrics.closedPnlMonthUSD >= 0
                         ? "rgba(16, 185, 129, 0.12)"
                         : "rgba(244, 63, 94, 0.12)",
                     color: realInvestmentMetrics.closedPnlMonthUSD >= 0 ? (isLight ? "#059669" : "#34d399") : "#fb7185",
-                    fontWeight: 700,
+                    fontWeight: 800,
                   }}
                 >
                   {realInvestmentMetrics.closedCountMonth} {realInvestmentMetrics.closedCountMonth === 1 ? "VENTA" : "VENTAS"}
                 </span>
-                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", transform: expandedCard === "closed" ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
+                <span style={{ fontSize: "0.85rem", color: "var(--text-muted)", transform: expandedCard === "closed" ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
                   ▼
                 </span>
               </div>
             </div>
 
-            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 2 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 2, flexWrap: "wrap" }}>
               <span
                 style={{
-                  fontSize: "1.35rem",
+                  fontSize: "clamp(1.4rem, 2vw, 1.7rem)",
                   fontWeight: 800,
                   color: realInvestmentMetrics.closedPnlMonthUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
                   fontFamily: "var(--font-mono, monospace)",
                 }}
               >
-                {realInvestmentMetrics.closedPnlMonthUSD >= 0 ? "+" : ""}
-                {currency === "USD"
-                  ? `$${realInvestmentMetrics.closedPnlMonthUSD.toFixed(2)} USD`
-                  : `$${realInvestmentMetrics.closedPnlMonthCOP.toLocaleString("es-CO")} COP`}
+                {realInvestmentMetrics.closedPnlMonthUSD >= 0 ? "+" : ""}${realInvestmentMetrics.closedPnlMonthUSD.toFixed(2)} USD
               </span>
-              <span style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}>
-                P&L Realizado
+              <span
+                style={{
+                  fontSize: "clamp(0.85rem, 1.1vw, 0.95rem)",
+                  fontWeight: 700,
+                  fontFamily: "var(--font-mono, monospace)",
+                  color: realInvestmentMetrics.closedPnlMonthUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
+                }}
+              >
+                (≈{realInvestmentMetrics.closedPnlMonthUSD >= 0 ? "+" : ""}${realInvestmentMetrics.closedPnlMonthCOP.toLocaleString("es-CO")} COP)
               </span>
             </div>
 
-            <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: 2 }}>
+            <div style={{ fontSize: "clamp(0.78rem, 1vw, 0.86rem)", color: "var(--text-muted)", marginTop: 2 }}>
               {realInvestmentMetrics.closedCountMonth > 0
                 ? `${realInvestmentMetrics.closedCountMonth} posición(es) cerrada(s) con ganancias en el mes.`
                 : "Sin tomas de ganancia o ventas ejecutadas en este periodo."}
@@ -1167,29 +1174,32 @@ export default function CashFlowHub() {
         {expandedCard === "invested" && (
           <div
             style={{
-              marginTop: 10,
-              paddingTop: 12,
+              marginTop: 12,
+              paddingTop: 16,
               borderTop: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.08)",
               display: "flex",
               flexDirection: "column",
-              gap: 12,
+              gap: 16,
               animation: "fadeIn 0.2s ease-in-out",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontSize: "0.82rem", fontWeight: 700, color: isLight ? "#0f172a" : "#f8fafc" }}>
+              <span style={{ fontSize: "clamp(0.9rem, 1.2vw, 1.05rem)", fontWeight: 700, color: isLight ? "#0f172a" : "#f8fafc" }}>
                 Desglose de Capital Invertido por Estrategia y Grupo de Compra:
               </span>
               <button
                 type="button"
                 onClick={() => setExpandedCard(null)}
                 style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "var(--text-muted)",
-                  fontSize: "0.76rem",
+                  background: isLight ? "rgba(0, 0, 0, 0.05)" : "rgba(255, 255, 255, 0.06)",
+                  border: isLight ? "1px solid rgba(0, 0, 0, 0.1)" : "1px solid rgba(255, 255, 255, 0.1)",
+                  color: isLight ? "#334155" : "#e2e8f0",
+                  fontSize: "0.85rem",
+                  padding: "4px 12px",
+                  borderRadius: "8px",
                   cursor: "pointer",
                   fontWeight: 600,
+                  transition: "all 0.15s ease",
                 }}
               >
                 Contraer ▲
@@ -1198,41 +1208,39 @@ export default function CashFlowHub() {
 
             {/* Sub-bloque 1: Estrategias Reales */}
             <div>
-              <div style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 6 }}>
+              <div style={{ fontSize: "clamp(0.8rem, 1vw, 0.9rem)", fontWeight: 800, color: isLight ? "#0284c7" : "#38bdf8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>
                 Estrategias Reales Activas
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 12 }}>
                 {realInvestmentMetrics.strategiesItems.map((st) => (
                   <div
                     key={st.id}
                     style={{
-                      padding: "8px 12px",
-                      borderRadius: "10px",
-                      background: isLight ? "rgba(0, 0, 0, 0.03)" : "rgba(255, 255, 255, 0.03)",
-                      border: isLight ? "1px solid rgba(0, 0, 0, 0.06)" : "1px solid rgba(255, 255, 255, 0.06)",
+                      padding: "12px 16px",
+                      borderRadius: "12px",
+                      background: isLight ? "#ffffff" : "rgba(255, 255, 255, 0.03)",
+                      border: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.07)",
+                      boxShadow: isLight ? "0 2px 8px rgba(0, 0, 0, 0.04)" : "none",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
+                      gap: 16,
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: "0.8rem", fontWeight: 700, color: isLight ? "#0f172a" : "#f8fafc" }}>
+                      <div style={{ fontSize: "clamp(0.92rem, 1.2vw, 1.05rem)", fontWeight: 800, color: isLight ? "#0f172a" : "#f8fafc" }}>
                         {st.country} {st.name}
                       </div>
-                      <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                        Capital Total: ${st.totalCapitalUSD} USD
+                      <div style={{ fontSize: "clamp(0.78rem, 1vw, 0.88rem)", color: "var(--text-muted)", marginTop: 2 }}>
+                        Capital Total Asignado: ${st.totalCapitalUSD} USD (≈${Math.round(st.totalCapitalUSD * fxRate).toLocaleString("es-CO")} COP)
                       </div>
                     </div>
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: "0.85rem", fontWeight: 700, color: isLight ? "#0284c7" : "var(--accent-primary)", fontFamily: "var(--font-mono, monospace)" }}>
-                        {currency === "USD"
-                          ? `$${st.activeInvestedUSD.toFixed(2)} USD`
-                          : `$${Math.round(st.activeInvestedUSD * fxRate).toLocaleString("es-CO")} COP`}
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <div style={{ fontSize: "clamp(0.98rem, 1.3vw, 1.15rem)", fontWeight: 800, color: isLight ? "#0284c7" : "var(--accent-primary)", fontFamily: "var(--font-mono, monospace)" }}>
+                        ${st.activeInvestedUSD.toFixed(2)} USD
                       </div>
-                      <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
-                        {currency === "USD"
-                          ? `(≈$${Math.round(st.activeInvestedUSD * fxRate).toLocaleString("es-CO")} COP)`
-                          : `(≈$${st.activeInvestedUSD.toFixed(2)} USD)`}
+                      <div style={{ fontSize: "clamp(0.8rem, 1vw, 0.9rem)", fontWeight: 600, color: isLight ? "#475569" : "#94a3b8", fontFamily: "var(--font-mono, monospace)", marginTop: 2 }}>
+                        ${Math.round(st.activeInvestedUSD * fxRate).toLocaleString("es-CO")} COP
                       </div>
                     </div>
                   </div>
@@ -1242,41 +1250,39 @@ export default function CashFlowHub() {
 
             {/* Sub-bloque 2: Grupos de Compra */}
             <div>
-              <div style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 6 }}>
+              <div style={{ fontSize: "clamp(0.8rem, 1vw, 0.9rem)", fontWeight: 800, color: isLight ? "#0284c7" : "#38bdf8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>
                 Grupos de Compra Individual
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 12 }}>
                 {realInvestmentMetrics.purchaseGroups.map((pg) => (
                   <div
                     key={pg.id}
                     style={{
-                      padding: "8px 12px",
-                      borderRadius: "10px",
-                      background: isLight ? "rgba(0, 0, 0, 0.03)" : "rgba(255, 255, 255, 0.03)",
-                      border: isLight ? "1px solid rgba(0, 0, 0, 0.06)" : "1px solid rgba(255, 255, 255, 0.06)",
+                      padding: "12px 16px",
+                      borderRadius: "12px",
+                      background: isLight ? "#ffffff" : "rgba(255, 255, 255, 0.03)",
+                      border: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.07)",
+                      boxShadow: isLight ? "0 2px 8px rgba(0, 0, 0, 0.04)" : "none",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
+                      gap: 16,
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: "0.8rem", fontWeight: 700, color: isLight ? "#0f172a" : "#f8fafc" }}>
+                      <div style={{ fontSize: "clamp(0.92rem, 1.2vw, 1.05rem)", fontWeight: 800, color: isLight ? "#0f172a" : "#f8fafc" }}>
                         📁 {pg.name}
                       </div>
-                      <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                        {pg.count} lote(s)
+                      <div style={{ fontSize: "clamp(0.78rem, 1vw, 0.88rem)", color: "var(--text-muted)", marginTop: 2 }}>
+                        {pg.count} activo(s) / lote(s) en cartera
                       </div>
                     </div>
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: "0.85rem", fontWeight: 700, color: isLight ? "#0284c7" : "var(--accent-primary)", fontFamily: "var(--font-mono, monospace)" }}>
-                        {currency === "USD"
-                          ? `$${pg.investedUSD.toFixed(2)} USD`
-                          : `$${Math.round(pg.investedUSD * fxRate).toLocaleString("es-CO")} COP`}
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <div style={{ fontSize: "clamp(0.98rem, 1.3vw, 1.15rem)", fontWeight: 800, color: isLight ? "#0284c7" : "var(--accent-primary)", fontFamily: "var(--font-mono, monospace)" }}>
+                        ${pg.investedUSD.toFixed(2)} USD
                       </div>
-                      <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
-                        {currency === "USD"
-                          ? `(≈$${Math.round(pg.investedUSD * fxRate).toLocaleString("es-CO")} COP)`
-                          : `(≈$${pg.investedUSD.toFixed(2)} USD)`}
+                      <div style={{ fontSize: "clamp(0.8rem, 1vw, 0.9rem)", fontWeight: 600, color: isLight ? "#475569" : "#94a3b8", fontFamily: "var(--font-mono, monospace)", marginTop: 2 }}>
+                        ${Math.round(pg.investedUSD * fxRate).toLocaleString("es-CO")} COP
                       </div>
                     </div>
                   </div>
@@ -1290,29 +1296,32 @@ export default function CashFlowHub() {
         {expandedCard === "yield" && (
           <div
             style={{
-              marginTop: 10,
-              paddingTop: 12,
+              marginTop: 12,
+              paddingTop: 16,
               borderTop: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.08)",
               display: "flex",
               flexDirection: "column",
-              gap: 12,
+              gap: 16,
               animation: "fadeIn 0.2s ease-in-out",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontSize: "0.82rem", fontWeight: 700, color: isLight ? "#0f172a" : "#f8fafc" }}>
+              <span style={{ fontSize: "clamp(0.9rem, 1.2vw, 1.05rem)", fontWeight: 700, color: isLight ? "#0f172a" : "#f8fafc" }}>
                 Rendimiento Detallado (Base Invertida vs Ganancia/Pérdida por Estrategia y Grupo):
               </span>
               <button
                 type="button"
                 onClick={() => setExpandedCard(null)}
                 style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "var(--text-muted)",
-                  fontSize: "0.76rem",
+                  background: isLight ? "rgba(0, 0, 0, 0.05)" : "rgba(255, 255, 255, 0.06)",
+                  border: isLight ? "1px solid rgba(0, 0, 0, 0.1)" : "1px solid rgba(255, 255, 255, 0.1)",
+                  color: isLight ? "#334155" : "#e2e8f0",
+                  fontSize: "0.85rem",
+                  padding: "4px 12px",
+                  borderRadius: "8px",
                   cursor: "pointer",
                   fontWeight: 600,
+                  transition: "all 0.15s ease",
                 }}
               >
                 Contraer ▲
@@ -1321,48 +1330,57 @@ export default function CashFlowHub() {
 
             {/* Estrategias Rendimiento */}
             <div>
-              <div style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 6 }}>
+              <div style={{ fontSize: "clamp(0.8rem, 1vw, 0.9rem)", fontWeight: 800, color: isLight ? "#059669" : "#34d399", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>
                 Rendimiento en Estrategias Reales
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 12 }}>
                 {realInvestmentMetrics.strategiesItems.map((st) => (
                   <div
                     key={st.id}
                     style={{
-                      padding: "8px 12px",
-                      borderRadius: "10px",
-                      background: isLight ? "rgba(0, 0, 0, 0.03)" : "rgba(255, 255, 255, 0.03)",
-                      border: isLight ? "1px solid rgba(0, 0, 0, 0.06)" : "1px solid rgba(255, 255, 255, 0.06)",
+                      padding: "12px 16px",
+                      borderRadius: "12px",
+                      background: isLight ? "#ffffff" : "rgba(255, 255, 255, 0.03)",
+                      border: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.07)",
+                      boxShadow: isLight ? "0 2px 8px rgba(0, 0, 0, 0.04)" : "none",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
+                      gap: 16,
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: "0.8rem", fontWeight: 700, color: isLight ? "#0f172a" : "#f8fafc" }}>
+                      <div style={{ fontSize: "clamp(0.92rem, 1.2vw, 1.05rem)", fontWeight: 800, color: isLight ? "#0f172a" : "#f8fafc" }}>
                         {st.country} {st.name}
                       </div>
-                      <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                        Base: {currency === "USD" ? `$${st.activeInvestedUSD.toFixed(1)} USD` : `$${Math.round(st.activeInvestedUSD * fxRate).toLocaleString("es-CO")} COP`}
+                      <div style={{ fontSize: "clamp(0.78rem, 1vw, 0.88rem)", color: "var(--text-muted)", marginTop: 3 }}>
+                        Base: <strong>${st.activeInvestedUSD.toFixed(2)} USD</strong> (≈${Math.round(st.activeInvestedUSD * fxRate).toLocaleString("es-CO")} COP)
+                      </div>
+                      <div style={{ fontSize: "clamp(0.78rem, 1vw, 0.88rem)", color: isLight ? "#334155" : "#cbd5e1", marginTop: 2 }}>
+                        Actual: <strong>${st.marketValueUSD.toFixed(2)} USD</strong> (≈${Math.round(st.marketValueUSD * fxRate).toLocaleString("es-CO")} COP)
                       </div>
                     </div>
-                    <div style={{ textAlign: "right" }}>
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
                       <div
                         style={{
-                          fontSize: "0.85rem",
-                          fontWeight: 700,
+                          fontSize: "clamp(1rem, 1.4vw, 1.2rem)",
+                          fontWeight: 800,
                           color: st.pnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
                           fontFamily: "var(--font-mono, monospace)",
                         }}
                       >
-                        {st.pnlUSD >= 0 ? "+" : ""}
-                        {currency === "USD"
-                          ? `$${st.pnlUSD.toFixed(2)} USD`
-                          : `$${Math.round(st.pnlUSD * fxRate).toLocaleString("es-CO")} COP`}{" "}
-                        ({st.pnlPct >= 0 ? "+" : ""}{st.pnlPct.toFixed(1)}%)
+                        {st.pnlUSD >= 0 ? "+" : ""}${st.pnlUSD.toFixed(2)} USD
                       </div>
-                      <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
-                        Valor Actual: {currency === "USD" ? `$${st.marketValueUSD.toFixed(1)} USD` : `$${Math.round(st.marketValueUSD * fxRate).toLocaleString("es-CO")} COP`}
+                      <div
+                        style={{
+                          fontSize: "clamp(0.82rem, 1.1vw, 0.92rem)",
+                          fontWeight: 700,
+                          color: st.pnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
+                          fontFamily: "var(--font-mono, monospace)",
+                          marginTop: 2,
+                        }}
+                      >
+                        {st.pnlUSD >= 0 ? "+" : ""}${Math.round(st.pnlUSD * fxRate).toLocaleString("es-CO")} COP ({st.pnlPct >= 0 ? "+" : ""}{st.pnlPct.toFixed(2)}%)
                       </div>
                     </div>
                   </div>
@@ -1372,48 +1390,57 @@ export default function CashFlowHub() {
 
             {/* Grupos Rendimiento */}
             <div>
-              <div style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 6 }}>
+              <div style={{ fontSize: "clamp(0.8rem, 1vw, 0.9rem)", fontWeight: 800, color: isLight ? "#059669" : "#34d399", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>
                 Rendimiento en Grupos de Compra
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 12 }}>
                 {realInvestmentMetrics.purchaseGroups.map((pg) => (
                   <div
                     key={pg.id}
                     style={{
-                      padding: "8px 12px",
-                      borderRadius: "10px",
-                      background: isLight ? "rgba(0, 0, 0, 0.03)" : "rgba(255, 255, 255, 0.03)",
-                      border: isLight ? "1px solid rgba(0, 0, 0, 0.06)" : "1px solid rgba(255, 255, 255, 0.06)",
+                      padding: "12px 16px",
+                      borderRadius: "12px",
+                      background: isLight ? "#ffffff" : "rgba(255, 255, 255, 0.03)",
+                      border: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.07)",
+                      boxShadow: isLight ? "0 2px 8px rgba(0, 0, 0, 0.04)" : "none",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
+                      gap: 16,
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: "0.8rem", fontWeight: 700, color: isLight ? "#0f172a" : "#f8fafc" }}>
+                      <div style={{ fontSize: "clamp(0.92rem, 1.2vw, 1.05rem)", fontWeight: 800, color: isLight ? "#0f172a" : "#f8fafc" }}>
                         📁 {pg.name}
                       </div>
-                      <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                        Base: {currency === "USD" ? `$${pg.investedUSD.toFixed(1)} USD` : `$${Math.round(pg.investedUSD * fxRate).toLocaleString("es-CO")} COP`}
+                      <div style={{ fontSize: "clamp(0.78rem, 1vw, 0.88rem)", color: "var(--text-muted)", marginTop: 3 }}>
+                        Base: <strong>${pg.investedUSD.toFixed(2)} USD</strong> (≈${Math.round(pg.investedUSD * fxRate).toLocaleString("es-CO")} COP)
+                      </div>
+                      <div style={{ fontSize: "clamp(0.78rem, 1vw, 0.88rem)", color: isLight ? "#334155" : "#cbd5e1", marginTop: 2 }}>
+                        Actual: <strong>${pg.marketValueUSD.toFixed(2)} USD</strong> (≈${Math.round(pg.marketValueUSD * fxRate).toLocaleString("es-CO")} COP)
                       </div>
                     </div>
-                    <div style={{ textAlign: "right" }}>
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
                       <div
                         style={{
-                          fontSize: "0.85rem",
-                          fontWeight: 700,
+                          fontSize: "clamp(1rem, 1.4vw, 1.2rem)",
+                          fontWeight: 800,
                           color: pg.pnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
                           fontFamily: "var(--font-mono, monospace)",
                         }}
                       >
-                        {pg.pnlUSD >= 0 ? "+" : ""}
-                        {currency === "USD"
-                          ? `$${pg.pnlUSD.toFixed(2)} USD`
-                          : `$${Math.round(pg.pnlUSD * fxRate).toLocaleString("es-CO")} COP`}{" "}
-                        ({pg.pnlPct >= 0 ? "+" : ""}{pg.pnlPct.toFixed(1)}%)
+                        {pg.pnlUSD >= 0 ? "+" : ""}${pg.pnlUSD.toFixed(2)} USD
                       </div>
-                      <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
-                        Valor Actual: {currency === "USD" ? `$${pg.marketValueUSD.toFixed(1)} USD` : `$${Math.round(pg.marketValueUSD * fxRate).toLocaleString("es-CO")} COP`}
+                      <div
+                        style={{
+                          fontSize: "clamp(0.82rem, 1.1vw, 0.92rem)",
+                          fontWeight: 700,
+                          color: pg.pnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
+                          fontFamily: "var(--font-mono, monospace)",
+                          marginTop: 2,
+                        }}
+                      >
+                        {pg.pnlUSD >= 0 ? "+" : ""}${Math.round(pg.pnlUSD * fxRate).toLocaleString("es-CO")} COP ({pg.pnlPct >= 0 ? "+" : ""}{pg.pnlPct.toFixed(2)}%)
                       </div>
                     </div>
                   </div>
@@ -1427,29 +1454,32 @@ export default function CashFlowHub() {
         {expandedCard === "closed" && (
           <div
             style={{
-              marginTop: 10,
-              paddingTop: 12,
+              marginTop: 12,
+              paddingTop: 16,
               borderTop: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.08)",
               display: "flex",
               flexDirection: "column",
-              gap: 10,
+              gap: 14,
               animation: "fadeIn 0.2s ease-in-out",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontSize: "0.82rem", fontWeight: 700, color: isLight ? "#0f172a" : "#f8fafc" }}>
+              <span style={{ fontSize: "clamp(0.9rem, 1.2vw, 1.05rem)", fontWeight: 700, color: isLight ? "#0f172a" : "#f8fafc" }}>
                 Detalle de Posiciones Cerradas / Ventas en {formatPeriodName(activePeriod)}:
               </span>
               <button
                 type="button"
                 onClick={() => setExpandedCard(null)}
                 style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "var(--text-muted)",
-                  fontSize: "0.76rem",
+                  background: isLight ? "rgba(0, 0, 0, 0.05)" : "rgba(255, 255, 255, 0.06)",
+                  border: isLight ? "1px solid rgba(0, 0, 0, 0.1)" : "1px solid rgba(255, 255, 255, 0.1)",
+                  color: isLight ? "#334155" : "#e2e8f0",
+                  fontSize: "0.85rem",
+                  padding: "4px 12px",
+                  borderRadius: "8px",
                   cursor: "pointer",
                   fontWeight: 600,
+                  transition: "all 0.15s ease",
                 }}
               >
                 Contraer ▲
@@ -1457,33 +1487,35 @@ export default function CashFlowHub() {
             </div>
 
             {realInvestmentMetrics.closedPositionsMonth.length === 0 ? (
-              <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", fontStyle: "italic", padding: "8px 0" }}>
+              <div style={{ fontSize: "clamp(0.85rem, 1.1vw, 0.95rem)", color: "var(--text-muted)", fontStyle: "italic", padding: "12px 0" }}>
                 No se registraron posiciones cerradas en este mes seleccionado.
               </div>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 12 }}>
                 {realInvestmentMetrics.closedPositionsMonth.map((pos) => (
                   <div
                     key={pos.id}
                     style={{
-                      padding: "8px 12px",
-                      borderRadius: "10px",
-                      background: isLight ? "rgba(0, 0, 0, 0.03)" : "rgba(255, 255, 255, 0.03)",
-                      border: isLight ? "1px solid rgba(0, 0, 0, 0.06)" : "1px solid rgba(255, 255, 255, 0.06)",
+                      padding: "12px 16px",
+                      borderRadius: "12px",
+                      background: isLight ? "#ffffff" : "rgba(255, 255, 255, 0.03)",
+                      border: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.07)",
+                      boxShadow: isLight ? "0 2px 8px rgba(0, 0, 0, 0.04)" : "none",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
+                      gap: 16,
                     }}
                   >
                     <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ fontWeight: 800, fontSize: "0.82rem", color: isLight ? "#0f172a" : "#f8fafc" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontWeight: 800, fontSize: "clamp(0.95rem, 1.3vw, 1.1rem)", color: isLight ? "#0f172a" : "#f8fafc" }}>
                           {pos.ticker}
                         </span>
                         <span
                           style={{
-                            fontSize: "0.65rem",
-                            padding: "1px 6px",
+                            fontSize: "0.7rem",
+                            padding: "2px 8px",
                             borderRadius: "6px",
                             background: "rgba(0, 229, 255, 0.12)",
                             color: "#00e5ff",
@@ -1493,26 +1525,31 @@ export default function CashFlowHub() {
                           {pos.source}
                         </span>
                       </div>
-                      <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                      <div style={{ fontSize: "clamp(0.78rem, 1vw, 0.88rem)", color: "var(--text-muted)", marginTop: 4 }}>
                         Cierre: {pos.exitDate} · {pos.name}
                       </div>
                     </div>
-                    <div style={{ textAlign: "right" }}>
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
                       <div
                         style={{
-                          fontSize: "0.85rem",
-                          fontWeight: 700,
+                          fontSize: "clamp(1rem, 1.4vw, 1.2rem)",
+                          fontWeight: 800,
                           color: pos.realizedPnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
                           fontFamily: "var(--font-mono, monospace)",
                         }}
                       >
-                        {pos.realizedPnlUSD >= 0 ? "+" : ""}
-                        {currency === "USD"
-                          ? `$${pos.realizedPnlUSD.toFixed(2)} USD`
-                          : `$${Math.round(pos.realizedPnlUSD * fxRate).toLocaleString("es-CO")} COP`}
+                        {pos.realizedPnlUSD >= 0 ? "+" : ""}${pos.realizedPnlUSD.toFixed(2)} USD
                       </div>
-                      <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
-                        {pos.realizedReturnPct >= 0 ? "+" : ""}{pos.realizedReturnPct.toFixed(2)}% retorno
+                      <div
+                        style={{
+                          fontSize: "clamp(0.82rem, 1.1vw, 0.92rem)",
+                          fontWeight: 700,
+                          color: pos.realizedPnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
+                          fontFamily: "var(--font-mono, monospace)",
+                          marginTop: 2,
+                        }}
+                      >
+                        {pos.realizedPnlUSD >= 0 ? "+" : ""}${Math.round(pos.realizedPnlUSD * fxRate).toLocaleString("es-CO")} COP ({pos.realizedReturnPct >= 0 ? "+" : ""}{pos.realizedReturnPct.toFixed(2)}%)
                       </div>
                     </div>
                   </div>
