@@ -106,6 +106,7 @@ export default function CashFlowHub() {
   const [showPillars, setShowPillars] = useState(false);
   const [showExpenses, setShowExpenses] = useState(false);
   const [showCreditCards, setShowCreditCards] = useState(false);
+  const [expandedCard, setExpandedCard] = useState(null); // 'invested' | 'yield' | 'closed' | null
 
   // Fetch Live TRM USD/COP on mount
   useEffect(() => {
@@ -338,33 +339,67 @@ export default function CashFlowHub() {
   // ── Flujo en Paralelo: Patrimonio Total Invertido (Solo Dinero Real) ──
   const realInvestmentMetrics = useMemo(() => {
     // 1. Estrategia 1: Titanes Tech (historical)
-    const titanesBaseUSD = Number(settingsByMode?.historical?.investment || 2000);
-    // Rendimiento activo o total de Titanes Tech desde NAV summary
-    const titanesReturnUSD = Number(historicalNavData?.summary?.active_return ?? historicalNavData?.summary?.total_return ?? 0);
-    const titanesCurrentUSD = titanesBaseUSD + titanesReturnUSD;
+    // El dinero invertido activo en acciones reales (excluye reserva/cash no invertido)
+    const titanesActiveInvestedUSD = Number(
+      historicalNavData?.summary?.active_invested ??
+      (settingsByMode?.historical?.investment ? (settingsByMode.historical.investment * 8) / 15 : 1066.67)
+    );
+    const titanesBaseTotalUSD = Number(settingsByMode?.historical?.investment || 2000);
+    const titanesReturnUSD = Number(
+      historicalNavData?.summary?.active_return ?? historicalNavData?.summary?.total_return ?? 0
+    );
+    const titanesMarketValueUSD = titanesActiveInvestedUSD + titanesReturnUSD;
 
     // 2. Estrategia 2: Estrategia Personalizada con Dinero Real (ej. strat_1788304141581)
-    let customRealBaseUSD = 0;
-    let customRealCurrentUSD = 0;
-    let customRealReturnUSD = 0;
     const realStrats = (customStrategies || []).filter((s) => s.isRealMoney);
-
-    realStrats.forEach((strat) => {
-      const base = Number(strat.capital || settingsByMode?.[strat.id]?.investment || 0);
-      customRealBaseUSD += base;
-      // Si tenemos NAV para esta estrategia real, sumamos su retorno
+    const customBreakdowns = realStrats.map((strat) => {
       const stratNav = strat.id === realCustomStrat?.id ? customRealNavData : null;
+      const baseCap = Number(strat.capital || settingsByMode?.[strat.id]?.investment || 1010);
+      const activeInv = Number(
+        stratNav?.summary?.active_invested ?? (baseCap * (strat.numSlots ? 7 / strat.numSlots : 0.35))
+      );
       const ret = Number(stratNav?.summary?.active_return ?? stratNav?.summary?.total_return ?? 0);
-      customRealReturnUSD += ret;
-      customRealCurrentUSD += (base + ret);
+      const mktVal = activeInv + ret;
+      const pnlPct = activeInv > 0 ? (ret / activeInv) * 100 : 0;
+      return {
+        id: strat.id,
+        name: strat.name || "Estrategia Real",
+        country: strat.country || "🌎",
+        activeInvestedUSD: activeInv,
+        marketValueUSD: mktVal,
+        pnlUSD: ret,
+        pnlPct,
+        totalCapitalUSD: baseCap,
+      };
     });
 
-    const strategiesCount = 1 + realStrats.length; // Titanes Tech (1) + Real Custom (1) = 2
-    const strategiesInvestedUSD = titanesBaseUSD + customRealBaseUSD;
-    const strategiesMarketValueUSD = titanesCurrentUSD + (customRealCurrentUSD || customRealBaseUSD);
+    const strategiesItems = [
+      {
+        id: "historical",
+        name: "Titanes Tech",
+        country: "🏆",
+        activeInvestedUSD: titanesActiveInvestedUSD,
+        marketValueUSD: titanesMarketValueUSD,
+        pnlUSD: titanesReturnUSD,
+        pnlPct: titanesActiveInvestedUSD > 0 ? (titanesReturnUSD / titanesActiveInvestedUSD) * 100 : 0,
+        totalCapitalUSD: titanesBaseTotalUSD,
+      },
+      ...customBreakdowns,
+    ];
+
+    const strategiesInvestedUSD = strategiesItems.reduce((acc, s) => acc + s.activeInvestedUSD, 0);
+    const strategiesMarketValueUSD = strategiesItems.reduce((acc, s) => acc + s.marketValueUSD, 0);
     const strategiesUnrealizedPnlUSD = strategiesMarketValueUSD - strategiesInvestedUSD;
 
-    // 3. Compras individuales activas (costo base vs valor actual con cotizaciones en vivo)
+    // 3. Compras individuales activas agrupadas por Grupo / Portafolio de Compra
+    const portMap = {};
+    (purchasePortfolios || []).forEach((p) => {
+      portMap[p.id] = { id: p.id, name: p.name, investedUSD: 0, marketValueUSD: 0, count: 0 };
+    });
+    if (!portMap["hist_default"]) {
+      portMap["hist_default"] = { id: "hist_default", name: "Compras Principales", investedUSD: 0, marketValueUSD: 0, count: 0 };
+    }
+
     let purchasesInvestedUSD = 0;
     let purchasesMarketValueUSD = 0;
     let activeLotsCount = 0;
@@ -381,10 +416,30 @@ export default function CashFlowHub() {
         purchasesInvestedUSD += invested;
         purchasesMarketValueUSD += curVal;
         activeLotsCount += 1;
+
+        const portId = lot.portfolioId || "hist_default";
+        if (!portMap[portId]) {
+          portMap[portId] = { id: portId, name: portId, investedUSD: 0, marketValueUSD: 0, count: 0 };
+        }
+        portMap[portId].investedUSD += invested;
+        portMap[portId].marketValueUSD += curVal;
+        portMap[portId].count += 1;
       }
     });
 
     const purchasesUnrealizedPnlUSD = purchasesMarketValueUSD - purchasesInvestedUSD;
+
+    const purchaseGroups = Object.values(portMap)
+      .filter((g) => g.count > 0 || g.investedUSD > 0)
+      .map((g) => {
+        const pnlUSD = g.marketValueUSD - g.investedUSD;
+        const pnlPct = g.investedUSD > 0 ? (pnlUSD / g.investedUSD) * 100 : 0;
+        return {
+          ...g,
+          pnlUSD,
+          pnlPct,
+        };
+      });
 
     // 4. Totales Combinados (Costo Base vs Valor de Mercado)
     const totalInvestedUSD = strategiesInvestedUSD + purchasesInvestedUSD;
@@ -397,19 +452,66 @@ export default function CashFlowHub() {
     const totalUnrealizedPnlCOP = Math.round(totalUnrealizedPnlUSD * fxRate);
     const totalUnrealizedPnlPct = totalInvestedUSD > 0 ? (totalUnrealizedPnlUSD / totalInvestedUSD) * 100 : 0;
 
-    // 5. Actividad de Posiciones Cerradas / Ventas durante el periodo activo
-    let closedPnlMonthUSD = 0;
-    let closedCountMonth = 0;
+    // 5. Posiciones Cerradas en el mes activo (Estrategias + Ventas individuales de compras)
+    const closedPositionsMonth = [];
+
+    // 5a. De Titanes Tech (historical nav closed holdings)
+    if (historicalNavData?.closed_holdings?.length > 0) {
+      historicalNavData.closed_holdings.forEach((h) => {
+        const exitDate = h.exit_date || "";
+        if (exitDate.startsWith(activePeriod)) {
+          closedPositionsMonth.push({
+            id: `hist_closed_${h.ticker}_${exitDate}`,
+            source: "Titanes Tech",
+            ticker: h.ticker,
+            name: h.name || h.ticker,
+            exitDate,
+            realizedPnlUSD: Number(h.realized_pnl ?? 0),
+            realizedReturnPct: Number(h.realized_return_pct ?? 0),
+          });
+        }
+      });
+    }
+
+    // 5b. De Estrategia Personalizada Real (strat_1788304141581 closed holdings)
+    if (customRealNavData?.closed_holdings?.length > 0) {
+      customRealNavData.closed_holdings.forEach((h) => {
+        const exitDate = h.exit_date || "";
+        if (exitDate.startsWith(activePeriod)) {
+          closedPositionsMonth.push({
+            id: `strat_closed_${h.ticker}_${exitDate}`,
+            source: realCustomStrat?.name || "Estrategia Real",
+            ticker: h.ticker,
+            name: h.name || h.ticker,
+            exitDate,
+            realizedPnlUSD: Number(h.realized_pnl ?? 0),
+            realizedReturnPct: Number(h.realized_return_pct ?? 0),
+          });
+        }
+      });
+    }
+
+    // 5c. De Ventas de Compras Individuales (purchaseSales)
     (purchaseSales || []).forEach((sale) => {
       const saleDateStr = sale.saleDate || sale.sale_date || "";
       if (saleDateStr.startsWith(activePeriod)) {
-        closedPnlMonthUSD += Number(sale.realizedPnl ?? sale.realized_pnl ?? 0);
-        closedCountMonth += 1;
+        closedPositionsMonth.push({
+          id: sale.id || `sale_${saleDateStr}_${sale.ticker}`,
+          source: "Compra Individual",
+          ticker: sale.ticker,
+          name: sale.notes || sale.ticker,
+          exitDate: saleDateStr,
+          realizedPnlUSD: Number(sale.realizedPnl ?? sale.realized_pnl ?? 0),
+          realizedReturnPct: Number(sale.realizedReturnPct ?? 0),
+        });
       }
     });
 
+    const closedPnlMonthUSD = closedPositionsMonth.reduce((acc, c) => acc + c.realizedPnlUSD, 0);
+    const closedCountMonth = closedPositionsMonth.length;
+
     return {
-      // Base Cost Basis
+      // Base Cost Basis (Dinero realmente invertido activo)
       totalInvestedUSD,
       totalInvestedCOP,
       strategiesInvestedUSD,
@@ -426,8 +528,12 @@ export default function CashFlowHub() {
       strategiesUnrealizedPnlUSD,
       purchasesUnrealizedPnlUSD,
       // Counts
-      strategiesCount,
+      strategiesCount: strategiesItems.length,
       activeLotsCount,
+      // Detailed breakdowns for collapsible accordions
+      strategiesItems,
+      purchaseGroups,
+      closedPositionsMonth,
       // Monthly Closed Realized
       closedPnlMonthUSD,
       closedPnlMonthCOP: Math.round(closedPnlMonthUSD * fxRate),
@@ -440,6 +546,7 @@ export default function CashFlowHub() {
     customRealNavData,
     realCustomStrat,
     individualPurchases,
+    purchasePortfolios,
     liveQuotesMap,
     purchaseSales,
     activePeriod,
@@ -774,11 +881,12 @@ export default function CashFlowHub() {
 
       {/* ── Flujo en Paralelo: Patrimonio Invertido Real & Monitor de Posiciones Cerradas ── */}
       {/* ── Flujo en Paralelo: Patrimonio Invertido Real, Valor Actual & Ganancia/Pérdida ── */}
+      {/* ── Flujo en Paralelo: Patrimonio Invertido Real, Valor Actual & Ganancia/Pérdida ── */}
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-          gap: 16,
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
           background: isLight ? "#ffffff" : "rgba(13, 18, 38, 0.75)",
           border: isLight ? "1px solid rgba(2, 132, 199, 0.25)" : "1px solid rgba(0, 229, 255, 0.2)",
           borderRadius: "18px",
@@ -787,224 +895,632 @@ export default function CashFlowHub() {
           backdropFilter: "blur(14px)",
         }}
       >
-        {/* Tarjeta 1: Capital Base Invertido (Costo de adquisición) */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span
-              style={{
-                fontSize: "0.76rem",
-                fontWeight: 700,
-                color: isLight ? "#0284c7" : "var(--accent-primary)",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              <span>🚀</span> Capital Base Invertido
-            </span>
-            <span
-              style={{
-                fontSize: "0.66rem",
-                padding: "2px 8px",
-                borderRadius: "10px",
-                background: "rgba(0, 229, 255, 0.12)",
-                color: "#00e5ff",
-                border: "1px solid rgba(0, 229, 255, 0.3)",
-                fontWeight: 700,
-              }}
-            >
-              DINERO REAL
-            </span>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 2 }}>
-            <span
-              style={{
-                fontSize: "1.4rem",
-                fontWeight: 800,
-                color: isLight ? "#0f172a" : "#f8fafc",
-                fontFamily: "var(--font-mono, monospace)",
-              }}
-            >
-              {currency === "USD"
-                ? `$${realInvestmentMetrics.totalInvestedUSD.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`
-                : `$${realInvestmentMetrics.totalInvestedCOP.toLocaleString("es-CO")} COP`}
-            </span>
-            <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontFamily: "var(--font-mono, monospace)" }}>
-              {currency === "USD"
-                ? `(≈$${realInvestmentMetrics.totalInvestedCOP.toLocaleString("es-CO")} COP)`
-                : `(≈$${realInvestmentMetrics.totalInvestedUSD.toFixed(2)} USD)`}
-            </span>
-          </div>
-
-          <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", display: "flex", gap: 10, flexWrap: "wrap", marginTop: 2 }}>
-            <span>Estrategias Reales ({realInvestmentMetrics.strategiesCount}): <strong>${realInvestmentMetrics.strategiesInvestedUSD.toFixed(0)} USD</strong></span>
-            <span>·</span>
-            <span>Compras Activas ({realInvestmentMetrics.activeLotsCount} lotes): <strong>${realInvestmentMetrics.purchasesInvestedUSD.toFixed(0)} USD</strong></span>
-          </div>
-        </div>
-
-        {/* Tarjeta 2: Valor Actual de Mercado & Ganancia / Pérdida (P&L No Realizado) */}
+        {/* Fila Principal de Tarjetas (Resumen Compacto) */}
         <div
           style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 6,
-            borderLeft: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.08)",
-            paddingLeft: 16,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+            gap: 16,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span
-              style={{
-                fontSize: "0.76rem",
-                fontWeight: 700,
-                color: realInvestmentMetrics.totalUnrealizedPnlUSD >= 0 ? "#10b981" : "#f43f5e",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              <span>📈</span> Valor Actual & Rendimiento
-            </span>
-            <span
-              style={{
-                fontSize: "0.66rem",
-                padding: "2px 8px",
-                borderRadius: "10px",
-                background:
-                  realInvestmentMetrics.totalUnrealizedPnlUSD >= 0
-                    ? "rgba(16, 185, 129, 0.12)"
-                    : "rgba(244, 63, 94, 0.12)",
-                color: realInvestmentMetrics.totalUnrealizedPnlUSD >= 0 ? "#10b981" : "#f43f5e",
-                border:
-                  realInvestmentMetrics.totalUnrealizedPnlUSD >= 0
-                    ? "1px solid rgba(16, 185, 129, 0.3)"
-                    : "1px solid rgba(244, 63, 94, 0.3)",
-                fontWeight: 700,
-              }}
-            >
-              {realInvestmentMetrics.totalUnrealizedPnlUSD >= 0 ? "GANANCIA" : "PÉRDIDA"} {realInvestmentMetrics.totalUnrealizedPnlPct >= 0 ? "+" : ""}
-              {realInvestmentMetrics.totalUnrealizedPnlPct.toFixed(2)}%
-            </span>
+          {/* Tarjeta 1: Capital Base Invertido (Activo en Acciones) */}
+          <div
+            onClick={() => setExpandedCard(expandedCard === "invested" ? null : "invested")}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+              cursor: "pointer",
+              padding: "8px 12px",
+              borderRadius: "12px",
+              background: expandedCard === "invested" ? (isLight ? "rgba(2, 132, 199, 0.08)" : "rgba(0, 229, 255, 0.08)") : "transparent",
+              transition: "all 0.2s ease",
+            }}
+            title="Haz clic para ver el desglose por Estrategias y Grupos de Compra"
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span
+                style={{
+                  fontSize: "0.76rem",
+                  fontWeight: 700,
+                  color: isLight ? "#0284c7" : "var(--accent-primary)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <span>🚀</span> Capital Invertido en Acciones
+              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span
+                  style={{
+                    fontSize: "0.66rem",
+                    padding: "2px 8px",
+                    borderRadius: "10px",
+                    background: "rgba(0, 229, 255, 0.12)",
+                    color: "#00e5ff",
+                    border: "1px solid rgba(0, 229, 255, 0.3)",
+                    fontWeight: 700,
+                  }}
+                >
+                  DINERO REAL
+                </span>
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", transform: expandedCard === "invested" ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
+                  ▼
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 2 }}>
+              <span
+                style={{
+                  fontSize: "1.4rem",
+                  fontWeight: 800,
+                  color: isLight ? "#0f172a" : "#f8fafc",
+                  fontFamily: "var(--font-mono, monospace)",
+                }}
+              >
+                {currency === "USD"
+                  ? `$${realInvestmentMetrics.totalInvestedUSD.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`
+                  : `$${realInvestmentMetrics.totalInvestedCOP.toLocaleString("es-CO")} COP`}
+              </span>
+              <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontFamily: "var(--font-mono, monospace)" }}>
+                {currency === "USD"
+                  ? `(≈$${realInvestmentMetrics.totalInvestedCOP.toLocaleString("es-CO")} COP)`
+                  : `(≈$${realInvestmentMetrics.totalInvestedUSD.toFixed(2)} USD)`}
+              </span>
+            </div>
+
+            <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", display: "flex", gap: 10, flexWrap: "wrap", marginTop: 2 }}>
+              <span>Estrategias Reales ({realInvestmentMetrics.strategiesCount}): <strong>${realInvestmentMetrics.strategiesInvestedUSD.toFixed(0)} USD</strong></span>
+              <span>·</span>
+              <span>Compras ({realInvestmentMetrics.purchaseGroups.length} grupos): <strong>${realInvestmentMetrics.purchasesInvestedUSD.toFixed(0)} USD</strong></span>
+            </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 2 }}>
-            <span
-              style={{
-                fontSize: "1.4rem",
-                fontWeight: 800,
-                color: isLight ? "#0f172a" : "#f8fafc",
-                fontFamily: "var(--font-mono, monospace)",
-              }}
-            >
-              {currency === "USD"
-                ? `$${realInvestmentMetrics.totalMarketValueUSD.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`
-                : `$${realInvestmentMetrics.totalMarketValueCOP.toLocaleString("es-CO")} COP`}
-            </span>
-            <span
-              style={{
-                fontSize: "0.85rem",
-                fontWeight: 700,
-                fontFamily: "var(--font-mono, monospace)",
-                color: realInvestmentMetrics.totalUnrealizedPnlUSD >= 0 ? "#10b981" : "#f43f5e",
-              }}
-            >
-              ({realInvestmentMetrics.totalUnrealizedPnlUSD >= 0 ? "+" : ""}
-              {currency === "USD"
-                ? `$${realInvestmentMetrics.totalUnrealizedPnlUSD.toFixed(2)} USD`
-                : `$${realInvestmentMetrics.totalUnrealizedPnlCOP.toLocaleString("es-CO")} COP`})
-            </span>
+          {/* Tarjeta 2: Valor Actual & Ganancia / Pérdida (P&L No Realizado) */}
+          <div
+            onClick={() => setExpandedCard(expandedCard === "yield" ? null : "yield")}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+              cursor: "pointer",
+              padding: "8px 12px",
+              borderRadius: "12px",
+              background: expandedCard === "yield" ? (isLight ? "rgba(16, 185, 129, 0.08)" : "rgba(16, 185, 129, 0.08)") : "transparent",
+              borderLeft: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.08)",
+              transition: "all 0.2s ease",
+            }}
+            title="Haz clic para ver el desglose de rendimiento por Estrategias y Grupos"
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span
+                style={{
+                  fontSize: "0.76rem",
+                  fontWeight: 700,
+                  color: realInvestmentMetrics.totalUnrealizedPnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <span>📈</span> Valor Actual & Rendimiento
+              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span
+                  style={{
+                    fontSize: "0.66rem",
+                    padding: "2px 8px",
+                    borderRadius: "10px",
+                    background:
+                      realInvestmentMetrics.totalUnrealizedPnlUSD >= 0
+                        ? "rgba(16, 185, 129, 0.12)"
+                        : "rgba(244, 63, 94, 0.12)",
+                    color: realInvestmentMetrics.totalUnrealizedPnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
+                    border:
+                      realInvestmentMetrics.totalUnrealizedPnlUSD >= 0
+                        ? "1px solid rgba(16, 185, 129, 0.3)"
+                        : "1px solid rgba(244, 63, 94, 0.3)",
+                    fontWeight: 700,
+                  }}
+                >
+                  {realInvestmentMetrics.totalUnrealizedPnlUSD >= 0 ? "GANANCIA" : "PÉRDIDA"} {realInvestmentMetrics.totalUnrealizedPnlPct >= 0 ? "+" : ""}
+                  {realInvestmentMetrics.totalUnrealizedPnlPct.toFixed(2)}%
+                </span>
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", transform: expandedCard === "yield" ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
+                  ▼
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 2 }}>
+              <span
+                style={{
+                  fontSize: "1.4rem",
+                  fontWeight: 800,
+                  color: isLight ? "#0f172a" : "#f8fafc",
+                  fontFamily: "var(--font-mono, monospace)",
+                }}
+              >
+                {currency === "USD"
+                  ? `$${realInvestmentMetrics.totalMarketValueUSD.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`
+                  : `$${realInvestmentMetrics.totalMarketValueCOP.toLocaleString("es-CO")} COP`}
+              </span>
+              <span
+                style={{
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  fontFamily: "var(--font-mono, monospace)",
+                  color: realInvestmentMetrics.totalUnrealizedPnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
+                }}
+              >
+                ({realInvestmentMetrics.totalUnrealizedPnlUSD >= 0 ? "+" : ""}
+                {currency === "USD"
+                  ? `$${realInvestmentMetrics.totalUnrealizedPnlUSD.toFixed(2)} USD`
+                  : `$${realInvestmentMetrics.totalUnrealizedPnlCOP.toLocaleString("es-CO")} COP`})
+              </span>
+            </div>
+
+            <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", display: "flex", gap: 10, flexWrap: "wrap", marginTop: 2 }}>
+              <span>
+                En Estrategias:{" "}
+                <strong style={{ color: realInvestmentMetrics.strategiesUnrealizedPnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e" }}>
+                  {realInvestmentMetrics.strategiesUnrealizedPnlUSD >= 0 ? "+" : ""}${realInvestmentMetrics.strategiesUnrealizedPnlUSD.toFixed(2)} USD
+                </strong>
+              </span>
+              <span>·</span>
+              <span>
+                En Compras:{" "}
+                <strong style={{ color: realInvestmentMetrics.purchasesUnrealizedPnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e" }}>
+                  {realInvestmentMetrics.purchasesUnrealizedPnlUSD >= 0 ? "+" : ""}${realInvestmentMetrics.purchasesUnrealizedPnlUSD.toFixed(2)} USD
+                </strong>
+              </span>
+            </div>
           </div>
 
-          <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", display: "flex", gap: 10, flexWrap: "wrap", marginTop: 2 }}>
-            <span>
-              En Estrategias:{" "}
-              <strong style={{ color: realInvestmentMetrics.strategiesUnrealizedPnlUSD >= 0 ? "#10b981" : "#f43f5e" }}>
-                {realInvestmentMetrics.strategiesUnrealizedPnlUSD >= 0 ? "+" : ""}${realInvestmentMetrics.strategiesUnrealizedPnlUSD.toFixed(2)} USD
-              </strong>
-            </span>
-            <span>·</span>
-            <span>
-              En Compras:{" "}
-              <strong style={{ color: realInvestmentMetrics.purchasesUnrealizedPnlUSD >= 0 ? "#10b981" : "#f43f5e" }}>
-                {realInvestmentMetrics.purchasesUnrealizedPnlUSD >= 0 ? "+" : ""}${realInvestmentMetrics.purchasesUnrealizedPnlUSD.toFixed(2)} USD
-              </strong>
-            </span>
+          {/* Tarjeta 3: Posiciones Cerradas / Rotación del Mes */}
+          <div
+            onClick={() => setExpandedCard(expandedCard === "closed" ? null : "closed")}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+              cursor: "pointer",
+              padding: "8px 12px",
+              borderRadius: "12px",
+              background: expandedCard === "closed" ? (isLight ? "rgba(16, 185, 129, 0.08)" : "rgba(16, 185, 129, 0.08)") : "transparent",
+              borderLeft: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.08)",
+              transition: "all 0.2s ease",
+            }}
+            title="Haz clic para ver las posiciones cerradas este mes en Titanes y Compras"
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span
+                style={{
+                  fontSize: "0.76rem",
+                  fontWeight: 700,
+                  color: isLight ? "#059669" : "#34d399",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <span>💼</span> Cerradas en Mes ({formatPeriodName(activePeriod)})
+              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span
+                  style={{
+                    fontSize: "0.66rem",
+                    padding: "2px 8px",
+                    borderRadius: "10px",
+                    background:
+                      realInvestmentMetrics.closedPnlMonthUSD >= 0
+                        ? "rgba(16, 185, 129, 0.12)"
+                        : "rgba(244, 63, 94, 0.12)",
+                    color: realInvestmentMetrics.closedPnlMonthUSD >= 0 ? (isLight ? "#059669" : "#34d399") : "#fb7185",
+                    fontWeight: 700,
+                  }}
+                >
+                  {realInvestmentMetrics.closedCountMonth} {realInvestmentMetrics.closedCountMonth === 1 ? "VENTA" : "VENTAS"}
+                </span>
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", transform: expandedCard === "closed" ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
+                  ▼
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 2 }}>
+              <span
+                style={{
+                  fontSize: "1.35rem",
+                  fontWeight: 800,
+                  color: realInvestmentMetrics.closedPnlMonthUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
+                  fontFamily: "var(--font-mono, monospace)",
+                }}
+              >
+                {realInvestmentMetrics.closedPnlMonthUSD >= 0 ? "+" : ""}
+                {currency === "USD"
+                  ? `$${realInvestmentMetrics.closedPnlMonthUSD.toFixed(2)} USD`
+                  : `$${realInvestmentMetrics.closedPnlMonthCOP.toLocaleString("es-CO")} COP`}
+              </span>
+              <span style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}>
+                P&L Realizado
+              </span>
+            </div>
+
+            <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: 2 }}>
+              {realInvestmentMetrics.closedCountMonth > 0
+                ? `${realInvestmentMetrics.closedCountMonth} posición(es) cerrada(s) con ganancias en el mes.`
+                : "Sin tomas de ganancia o ventas ejecutadas en este periodo."}
+            </div>
           </div>
         </div>
 
-        {/* Tarjeta 3: Posiciones Cerradas / Rotación del Mes */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 6,
-            borderLeft: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.08)",
-            paddingLeft: 16,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span
-              style={{
-                fontSize: "0.76rem",
-                fontWeight: 700,
-                color: isLight ? "#059669" : "#34d399",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              <span>💼</span> Cerradas en Mes ({formatPeriodName(activePeriod)})
-            </span>
-            <span
-              style={{
-                fontSize: "0.66rem",
-                padding: "2px 8px",
-                borderRadius: "10px",
-                background:
-                  realInvestmentMetrics.closedPnlMonthUSD >= 0
-                    ? "rgba(16, 185, 129, 0.12)"
-                    : "rgba(244, 63, 94, 0.12)",
-                color: realInvestmentMetrics.closedPnlMonthUSD >= 0 ? (isLight ? "#059669" : "#34d399") : "#fb7185",
-                fontWeight: 700,
-              }}
-            >
-              {realInvestmentMetrics.closedCountMonth} {realInvestmentMetrics.closedCountMonth === 1 ? "VENTA" : "VENTAS"}
-            </span>
-          </div>
+        {/* ── Desglose Expandible: Modalidad Lista Desplegable ── */}
+        {expandedCard === "invested" && (
+          <div
+            style={{
+              marginTop: 10,
+              paddingTop: 12,
+              borderTop: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.08)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+              animation: "fadeIn 0.2s ease-in-out",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontSize: "0.82rem", fontWeight: 700, color: isLight ? "#0f172a" : "#f8fafc" }}>
+                Desglose de Capital Invertido por Estrategia y Grupo de Compra:
+              </span>
+              <button
+                type="button"
+                onClick={() => setExpandedCard(null)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--text-muted)",
+                  fontSize: "0.76rem",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+              >
+                Contraer ▲
+              </button>
+            </div>
 
-          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 2 }}>
-            <span
-              style={{
-                fontSize: "1.35rem",
-                fontWeight: 800,
-                color: realInvestmentMetrics.closedPnlMonthUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
-                fontFamily: "var(--font-mono, monospace)",
-              }}
-            >
-              {realInvestmentMetrics.closedPnlMonthUSD >= 0 ? "+" : ""}
-              {currency === "USD"
-                ? `$${realInvestmentMetrics.closedPnlMonthUSD.toFixed(2)} USD`
-                : `$${realInvestmentMetrics.closedPnlMonthCOP.toLocaleString("es-CO")} COP`}
-            </span>
-            <span style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}>
-              P&L Realizado
-            </span>
-          </div>
+            {/* Sub-bloque 1: Estrategias Reales */}
+            <div>
+              <div style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 6 }}>
+                Estrategias Reales Activas
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 8 }}>
+                {realInvestmentMetrics.strategiesItems.map((st) => (
+                  <div
+                    key={st.id}
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: "10px",
+                      background: isLight ? "rgba(0, 0, 0, 0.03)" : "rgba(255, 255, 255, 0.03)",
+                      border: isLight ? "1px solid rgba(0, 0, 0, 0.06)" : "1px solid rgba(255, 255, 255, 0.06)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: "0.8rem", fontWeight: 700, color: isLight ? "#0f172a" : "#f8fafc" }}>
+                        {st.country} {st.name}
+                      </div>
+                      <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                        Capital Total: ${st.totalCapitalUSD} USD
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: "0.85rem", fontWeight: 700, color: isLight ? "#0284c7" : "var(--accent-primary)", fontFamily: "var(--font-mono, monospace)" }}>
+                        {currency === "USD"
+                          ? `$${st.activeInvestedUSD.toFixed(2)} USD`
+                          : `$${Math.round(st.activeInvestedUSD * fxRate).toLocaleString("es-CO")} COP`}
+                      </div>
+                      <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                        {currency === "USD"
+                          ? `(≈$${Math.round(st.activeInvestedUSD * fxRate).toLocaleString("es-CO")} COP)`
+                          : `(≈$${st.activeInvestedUSD.toFixed(2)} USD)`}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-          <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: 2 }}>
-            {realInvestmentMetrics.closedCountMonth > 0
-              ? "Fondos rotados / liquidados disponibles en broker para reinversión."
-              : "Sin tomas de ganancia o ventas ejecutadas en este periodo."}
+            {/* Sub-bloque 2: Grupos de Compra */}
+            <div>
+              <div style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 6 }}>
+                Grupos de Compra Individual
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 8 }}>
+                {realInvestmentMetrics.purchaseGroups.map((pg) => (
+                  <div
+                    key={pg.id}
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: "10px",
+                      background: isLight ? "rgba(0, 0, 0, 0.03)" : "rgba(255, 255, 255, 0.03)",
+                      border: isLight ? "1px solid rgba(0, 0, 0, 0.06)" : "1px solid rgba(255, 255, 255, 0.06)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: "0.8rem", fontWeight: 700, color: isLight ? "#0f172a" : "#f8fafc" }}>
+                        📁 {pg.name}
+                      </div>
+                      <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                        {pg.count} lote(s)
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: "0.85rem", fontWeight: 700, color: isLight ? "#0284c7" : "var(--accent-primary)", fontFamily: "var(--font-mono, monospace)" }}>
+                        {currency === "USD"
+                          ? `$${pg.investedUSD.toFixed(2)} USD`
+                          : `$${Math.round(pg.investedUSD * fxRate).toLocaleString("es-CO")} COP`}
+                      </div>
+                      <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                        {currency === "USD"
+                          ? `(≈$${Math.round(pg.investedUSD * fxRate).toLocaleString("es-CO")} COP)`
+                          : `(≈$${pg.investedUSD.toFixed(2)} USD)`}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* ── Desglose Expandible: Rendimiento (Invertido vs Ganado en Pesos/USD) ── */}
+        {expandedCard === "yield" && (
+          <div
+            style={{
+              marginTop: 10,
+              paddingTop: 12,
+              borderTop: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.08)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+              animation: "fadeIn 0.2s ease-in-out",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontSize: "0.82rem", fontWeight: 700, color: isLight ? "#0f172a" : "#f8fafc" }}>
+                Rendimiento Detallado (Base Invertida vs Ganancia/Pérdida por Estrategia y Grupo):
+              </span>
+              <button
+                type="button"
+                onClick={() => setExpandedCard(null)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--text-muted)",
+                  fontSize: "0.76rem",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+              >
+                Contraer ▲
+              </button>
+            </div>
+
+            {/* Estrategias Rendimiento */}
+            <div>
+              <div style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 6 }}>
+                Rendimiento en Estrategias Reales
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 8 }}>
+                {realInvestmentMetrics.strategiesItems.map((st) => (
+                  <div
+                    key={st.id}
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: "10px",
+                      background: isLight ? "rgba(0, 0, 0, 0.03)" : "rgba(255, 255, 255, 0.03)",
+                      border: isLight ? "1px solid rgba(0, 0, 0, 0.06)" : "1px solid rgba(255, 255, 255, 0.06)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: "0.8rem", fontWeight: 700, color: isLight ? "#0f172a" : "#f8fafc" }}>
+                        {st.country} {st.name}
+                      </div>
+                      <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                        Base: {currency === "USD" ? `$${st.activeInvestedUSD.toFixed(1)} USD` : `$${Math.round(st.activeInvestedUSD * fxRate).toLocaleString("es-CO")} COP`}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div
+                        style={{
+                          fontSize: "0.85rem",
+                          fontWeight: 700,
+                          color: st.pnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
+                          fontFamily: "var(--font-mono, monospace)",
+                        }}
+                      >
+                        {st.pnlUSD >= 0 ? "+" : ""}
+                        {currency === "USD"
+                          ? `$${st.pnlUSD.toFixed(2)} USD`
+                          : `$${Math.round(st.pnlUSD * fxRate).toLocaleString("es-CO")} COP`}{" "}
+                        ({st.pnlPct >= 0 ? "+" : ""}{st.pnlPct.toFixed(1)}%)
+                      </div>
+                      <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                        Valor Actual: {currency === "USD" ? `$${st.marketValueUSD.toFixed(1)} USD` : `$${Math.round(st.marketValueUSD * fxRate).toLocaleString("es-CO")} COP`}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Grupos Rendimiento */}
+            <div>
+              <div style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 6 }}>
+                Rendimiento en Grupos de Compra
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 8 }}>
+                {realInvestmentMetrics.purchaseGroups.map((pg) => (
+                  <div
+                    key={pg.id}
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: "10px",
+                      background: isLight ? "rgba(0, 0, 0, 0.03)" : "rgba(255, 255, 255, 0.03)",
+                      border: isLight ? "1px solid rgba(0, 0, 0, 0.06)" : "1px solid rgba(255, 255, 255, 0.06)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: "0.8rem", fontWeight: 700, color: isLight ? "#0f172a" : "#f8fafc" }}>
+                        📁 {pg.name}
+                      </div>
+                      <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                        Base: {currency === "USD" ? `$${pg.investedUSD.toFixed(1)} USD` : `$${Math.round(pg.investedUSD * fxRate).toLocaleString("es-CO")} COP`}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div
+                        style={{
+                          fontSize: "0.85rem",
+                          fontWeight: 700,
+                          color: pg.pnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
+                          fontFamily: "var(--font-mono, monospace)",
+                        }}
+                      >
+                        {pg.pnlUSD >= 0 ? "+" : ""}
+                        {currency === "USD"
+                          ? `$${pg.pnlUSD.toFixed(2)} USD`
+                          : `$${Math.round(pg.pnlUSD * fxRate).toLocaleString("es-CO")} COP`}{" "}
+                        ({pg.pnlPct >= 0 ? "+" : ""}{pg.pnlPct.toFixed(1)}%)
+                      </div>
+                      <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                        Valor Actual: {currency === "USD" ? `$${pg.marketValueUSD.toFixed(1)} USD` : `$${Math.round(pg.marketValueUSD * fxRate).toLocaleString("es-CO")} COP`}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Desglose Expandible: Posiciones Cerradas este Mes ── */}
+        {expandedCard === "closed" && (
+          <div
+            style={{
+              marginTop: 10,
+              paddingTop: 12,
+              borderTop: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.08)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 10,
+              animation: "fadeIn 0.2s ease-in-out",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontSize: "0.82rem", fontWeight: 700, color: isLight ? "#0f172a" : "#f8fafc" }}>
+                Detalle de Posiciones Cerradas / Ventas en {formatPeriodName(activePeriod)}:
+              </span>
+              <button
+                type="button"
+                onClick={() => setExpandedCard(null)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--text-muted)",
+                  fontSize: "0.76rem",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+              >
+                Contraer ▲
+              </button>
+            </div>
+
+            {realInvestmentMetrics.closedPositionsMonth.length === 0 ? (
+              <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", fontStyle: "italic", padding: "8px 0" }}>
+                No se registraron posiciones cerradas en este mes seleccionado.
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 8 }}>
+                {realInvestmentMetrics.closedPositionsMonth.map((pos) => (
+                  <div
+                    key={pos.id}
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: "10px",
+                      background: isLight ? "rgba(0, 0, 0, 0.03)" : "rgba(255, 255, 255, 0.03)",
+                      border: isLight ? "1px solid rgba(0, 0, 0, 0.06)" : "1px solid rgba(255, 255, 255, 0.06)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontWeight: 800, fontSize: "0.82rem", color: isLight ? "#0f172a" : "#f8fafc" }}>
+                          {pos.ticker}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: "0.65rem",
+                            padding: "1px 6px",
+                            borderRadius: "6px",
+                            background: "rgba(0, 229, 255, 0.12)",
+                            color: "#00e5ff",
+                            fontWeight: 700,
+                          }}
+                        >
+                          {pos.source}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                        Cierre: {pos.exitDate} · {pos.name}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div
+                        style={{
+                          fontSize: "0.85rem",
+                          fontWeight: 700,
+                          color: pos.realizedPnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
+                          fontFamily: "var(--font-mono, monospace)",
+                        }}
+                      >
+                        {pos.realizedPnlUSD >= 0 ? "+" : ""}
+                        {currency === "USD"
+                          ? `$${pos.realizedPnlUSD.toFixed(2)} USD`
+                          : `$${Math.round(pos.realizedPnlUSD * fxRate).toLocaleString("es-CO")} COP`}
+                      </div>
+                      <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                        {pos.realizedReturnPct >= 0 ? "+" : ""}{pos.realizedReturnPct.toFixed(2)}% retorno
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── 4. Native SVG Sankey Flow Chart + Quantum Atom Visualizer Side Panel ── */}
