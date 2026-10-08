@@ -23,6 +23,19 @@ export default function CashFlowSankey({
   const formatAmount = (val, cur = currency) => formatCashFlowMoneyWithCode(val, cur, fxRate);
   const [hoveredItem, setHoveredItem] = useState(null);
   const [isExpanded, setIsExpanded] = useState(true);
+  const [viewOrientation, setViewOrientation] = useState("auto"); // 'auto' | 'horizontal' | 'vertical'
+
+  // Detectar pantalla pequeña (< 900px)
+  const [isSmallScreen, setIsSmallScreen] = useState(() => (typeof window !== "undefined" ? window.innerWidth < 900 : false));
+  React.useEffect(() => {
+    const handleResize = () => {
+      setIsSmallScreen(window.innerWidth < 900);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const activeOrientation = viewOrientation === "auto" ? (isSmallScreen ? "vertical" : "horizontal") : viewOrientation;
 
   // ── 1. Calculate Aggregate Financial Values ──────────
   const totalInflow = useMemo(() => {
@@ -283,6 +296,10 @@ export default function CashFlowSankey({
 
     return {
       nodes: [...col0Nodes, col1Node, ...col2Nodes, ...col3Nodes],
+      col0Nodes,
+      col1Node,
+      col2Nodes,
+      col3Nodes,
       links,
       W,
       H,
@@ -301,24 +318,76 @@ export default function CashFlowSankey({
           <h3 className="cashflow-sankey-title" style={{ margin: 0 }}>
             <span>🌊</span> Cascada Dinámica del Flujo de Capital (Sankey Flow)
           </h3>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsExpanded(!isExpanded);
-            }}
-            style={{
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.12)",
-              borderRadius: 6,
-              padding: "2px 8px",
-              color: "var(--text-muted)",
-              fontSize: "0.72rem",
-              cursor: "pointer",
-            }}
-          >
-            {isExpanded ? "▲ Ocultar Cascada" : "▼ Desplegar Cascada"}
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {/* Selector de Orientación: Horizontal vs Vertical (Árbol) */}
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                background: "rgba(255, 255, 255, 0.05)",
+                border: "1px solid rgba(255, 255, 255, 0.12)",
+                borderRadius: "8px",
+                padding: "2px",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => setViewOrientation("horizontal")}
+                style={{
+                  padding: "3px 8px",
+                  borderRadius: "6px",
+                  border: "none",
+                  fontSize: "0.7rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  background: activeOrientation === "horizontal" ? "var(--accent-primary)" : "transparent",
+                  color: activeOrientation === "horizontal" ? "#000" : "var(--text-muted)",
+                  transition: "all 0.15s ease",
+                }}
+                title="Vista Horizontal clásica tipo Río / Sankey"
+              >
+                ↔ Horizontal
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewOrientation("vertical")}
+                style={{
+                  padding: "3px 8px",
+                  borderRadius: "6px",
+                  border: "none",
+                  fontSize: "0.7rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  background: activeOrientation === "vertical" ? "var(--accent-primary)" : "transparent",
+                  color: activeOrientation === "vertical" ? "#000" : "var(--text-muted)",
+                  transition: "all 0.15s ease",
+                }}
+                title="Vista Vertical optimizada para pantallas móviles / estrechas"
+              >
+                ↕ Vertical
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsExpanded(!isExpanded);
+              }}
+              style={{
+                background: "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: 6,
+                padding: "3px 8px",
+                color: "var(--text-muted)",
+                fontSize: "0.72rem",
+                cursor: "pointer",
+              }}
+            >
+              {isExpanded ? "▲ Ocultar" : "▼ Desplegar"}
+            </button>
+          </div>
         </div>
 
         {isExpanded && (
@@ -347,29 +416,189 @@ export default function CashFlowSankey({
         )}
       </div>
 
-      {/* Responsive SVG Canvas */}
+      {/* Responsive SVG Canvas or Vertical Tree Layout */}
       {isExpanded && (
         <>
-        <div className="cashflow-sankey-svg-wrapper" style={{ position: "relative", overflowX: "auto" }}>
-        <svg
-          viewBox={`0 0 ${layout.W} ${layout.H}`}
-          style={{ width: "100%", height: "auto", display: "block" }}
-        >
-          <defs>
-            {/* Dynamic Link Gradients */}
-            {layout.links.map((link) => (
-              <linearGradient
-                key={link.gradId}
-                id={link.gradId}
-                x1="0%"
-                y1="0%"
-                x2="100%"
-                y2="0%"
-              >
-                <stop offset="0%" stopColor={link.colorStart} stopOpacity={isLight ? "0.65" : "0.85"} />
-                <stop offset="100%" stopColor={link.colorEnd} stopOpacity={isLight ? "0.65" : "0.85"} />
-              </linearGradient>
-            ))}
+        {activeOrientation === "vertical" ? (
+          /* ── Cascada Vertical Inteligente (Mobile-First Waterfall) ── */
+          <div
+            className="cashflow-vertical-waterfall"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 16,
+              padding: "16px 12px",
+              background: isLight ? "#f8fafc" : "radial-gradient(circle at 50% 50%, rgba(13, 18, 38, 0.9) 0%, rgba(8, 12, 24, 0.98) 100%)",
+              borderRadius: "16px",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+            }}
+          >
+            {/* 1. Fuentes de Ingreso (Inflows) */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                1. Fuentes de Ingreso
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 8 }}>
+                {layout.col0Nodes.map((node) => (
+                  <div
+                    key={node.id}
+                    onClick={() => onEditNode && onEditNode(node.rawItem, "inflow")}
+                    style={{
+                      background: isLight ? "#ffffff" : "rgba(17, 24, 39, 0.9)",
+                      border: `1.5px solid ${node.color}`,
+                      borderRadius: "12px",
+                      padding: "10px 12px",
+                      cursor: "pointer",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 4,
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                        {node.icon} {node.name}
+                      </span>
+                      <span style={{ fontSize: "0.72rem", color: node.color, fontWeight: 700 }}>
+                        {node.pct}%
+                      </span>
+                    </div>
+                    <div style={{ fontSize: "0.95rem", fontWeight: 800, color: node.color, fontFamily: "var(--font-mono, monospace)" }}>
+                      {formatAmount(node.amount, currency)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Flecha divisoria */}
+            <div style={{ textAlign: "center", color: "var(--accent-primary)", fontSize: "1.1rem", lineHeight: 1 }}>
+              ▼
+            </div>
+
+            {/* 2. Hub Central: Ingreso Neto */}
+            <div
+              style={{
+                background: isLight ? "#ffffff" : "rgba(0, 229, 255, 0.08)",
+                border: "2px solid var(--accent-primary)",
+                borderRadius: "14px",
+                padding: "12px 16px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                boxShadow: "0 4px 16px rgba(0, 229, 255, 0.2)",
+              }}
+            >
+              <div>
+                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                  ⚡ Hub Central
+                </div>
+                <div style={{ fontSize: "1rem", fontWeight: 800, color: "var(--text-primary)" }}>
+                  Ingreso Neto Total
+                </div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--accent-primary)", fontFamily: "var(--font-mono, monospace)" }}>
+                  {formatAmount(totalInflow, currency)}
+                </div>
+                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>100% de la capacidad</div>
+              </div>
+            </div>
+
+            {/* Flecha divisoria */}
+            <div style={{ textAlign: "center", color: "var(--accent-primary)", fontSize: "1.1rem", lineHeight: 1 }}>
+              ▼
+            </div>
+
+            {/* 3. Distribución por Pilares & Destinos Detallados */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                2. Distribución Presupuestaria & Destinos
+              </div>
+
+              {layout.col2Nodes.map((pillar) => {
+                const destinationsOfPillar = layout.col3Nodes.filter((d) => d.pillarId === pillar.id);
+                return (
+                  <div
+                    key={pillar.id}
+                    style={{
+                      background: isLight ? "#ffffff" : "rgba(17, 24, 39, 0.8)",
+                      border: `1.5px solid ${pillar.color}`,
+                      borderRadius: "14px",
+                      padding: "12px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 10,
+                    }}
+                  >
+                    {/* Header del Pilar */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: 6 }}>
+                      <span style={{ fontSize: "0.92rem", fontWeight: 800, color: pillar.color }}>
+                        {pillar.name}
+                      </span>
+                      <span style={{ fontSize: "1rem", fontWeight: 800, color: pillar.color, fontFamily: "var(--font-mono, monospace)" }}>
+                        {formatAmount(pillar.amount, currency)}{" "}
+                        <span style={{ fontSize: "0.75rem", opacity: 0.85 }}>({pillar.pct}%)</span>
+                      </span>
+                    </div>
+
+                    {/* Subcategorías o bolsillos dentro de este pilar */}
+                    {destinationsOfPillar.length > 0 ? (
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 6 }}>
+                        {destinationsOfPillar.map((dest) => (
+                          <div
+                            key={dest.id}
+                            onClick={() => onEditNode && onEditNode(dest.rawItem, dest.pillarType)}
+                            style={{
+                              background: isLight ? "#f1f5f9" : "rgba(255, 255, 255, 0.03)",
+                              border: "1px solid rgba(255, 255, 255, 0.08)",
+                              borderRadius: "8px",
+                              padding: "6px 10px",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-secondary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {dest.icon} {dest.name}
+                            </div>
+                            <div style={{ fontSize: "0.85rem", fontWeight: 700, color: pillar.color, fontFamily: "var(--font-mono, monospace)", marginTop: 2 }}>
+                              {formatAmount(dest.amount, currency)}{" "}
+                              <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>({dest.pct}%)</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontStyle: "italic" }}>
+                        Sin asignaciones específicas registradas
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          /* ── Modo Horizontal Clásico (Sankey SVG) ── */
+          <div className="cashflow-sankey-svg-wrapper" style={{ position: "relative", overflowX: "auto" }}>
+          <svg
+            viewBox={`0 0 ${layout.W} ${layout.H}`}
+            style={{ width: "100%", height: "auto", display: "block" }}
+          >
+            <defs>
+              {/* Dynamic Link Gradients */}
+              {layout.links.map((link) => (
+                <linearGradient
+                  key={link.gradId}
+                  id={link.gradId}
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="0%"
+                >
+                  <stop offset="0%" stopColor={link.colorStart} stopOpacity={isLight ? "0.65" : "0.85"} />
+                  <stop offset="100%" stopColor={link.colorEnd} stopOpacity={isLight ? "0.65" : "0.85"} />
+                </linearGradient>
+              ))}
 
             {/* Glowing Drop Shadows */}
             <filter id="glow-cyan" x="-20%" y="-20%" width="140%" height="140%">
@@ -525,8 +754,9 @@ export default function CashFlowSankey({
           </g>
         </svg>
       </div>
+      )}
 
-      {/* Floating Interactive Details Box */}
+        {/* Floating Interactive Details Box */}
       {hoveredItem && (
         <div
           style={{

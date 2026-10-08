@@ -1,5 +1,5 @@
 {
-  "activePeriod": "2026-08",
+  "activePeriod": "2026-10",
   "startPeriod": "2026-08",
   "currency": "COP",
   "allocationModel": "custom",
@@ -29,7 +29,7 @@
       "id": "in_fixed_yield",
       "name": "Ingreso por Renta Fija",
       "category": "passive_fixed",
-      "amount": 24056,
+      "amount": 23681,
       "currency": "COP",
       "isPassive": true,
       "isAutoSynced": true,
@@ -46,7 +46,7 @@
       "id": "in_stock_div",
       "name": "Ingreso por Renta Variable",
       "category": "passive_equity",
-      "amount": 37212,
+      "amount": 41922,
       "currency": "COP",
       "isPassive": true,
       "isAutoSynced": true,
@@ -170,7 +170,7 @@
       "category": "emergency_fund",
       "targetAmount": 15000000,
       "monthlyContribution": 500000,
-      "currentBalance": 4026007,
+      "currentBalance": 4019708,
       "currency": "COP",
       "linkedModule": "fixed_income",
       "paymentSource": {
@@ -186,7 +186,7 @@
       "category": "equity_investment",
       "targetAmount": 30000000,
       "monthlyContribution": 500000,
-      "currentBalance": 22326935,
+      "currentBalance": 25152982,
       "currency": "COP",
       "linkedModule": "variable_income",
       "paymentSource": {
@@ -202,7 +202,7 @@
       "category": "fixed_savings",
       "targetAmount": 15000000,
       "monthlyContribution": 300000,
-      "currentBalance": 4026007,
+      "currentBalance": 4019708,
       "currency": "COP",
       "linkedModule": "fixed_income",
       "paymentSource": {

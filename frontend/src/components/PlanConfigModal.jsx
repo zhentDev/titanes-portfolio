@@ -94,15 +94,57 @@ export default function PlanConfigModal({ isOpen, onClose, onSave, initialConfig
               marginBottom: 6,
             }}
           >
-            Frecuencia de Inversión (Días)
+            Frecuencia de Inversión
           </label>
-          <input
-            type="number"
-            className="input"
-            value={frequencyDays}
-            onChange={(e) => setFrequencyDays(e.target.value)}
-            min="1"
-          />
+
+          {/* Presets rápidos: Día, Semana, 2 semanas, Mes, 3 meses, 6 meses */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+            {[
+              { label: "Día", days: 1 },
+              { label: "Semana", days: 7 },
+              { label: "2 semanas", days: 14 },
+              { label: "Mes", days: 30 },
+              { label: "3 meses", days: 90 },
+              { label: "6 meses", days: 180 },
+            ].map((preset) => {
+              const isSelected = Number(frequencyDays) === preset.days;
+              return (
+                <button
+                  type="button"
+                  key={preset.label}
+                  onClick={() => setFrequencyDays(preset.days)}
+                  style={{
+                    padding: "5px 11px",
+                    borderRadius: "8px",
+                    fontSize: "0.78rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    border: isSelected ? "1px solid var(--accent-primary, #00e5ff)" : "1px solid rgba(255, 255, 255, 0.1)",
+                    background: isSelected ? "rgba(0, 229, 255, 0.15)" : "rgba(255, 255, 255, 0.04)",
+                    color: isSelected ? "var(--accent-primary, #00e5ff)" : "var(--text-secondary, #94a3b8)",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  {preset.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <input
+              type="number"
+              className="input"
+              value={frequencyDays}
+              onChange={(e) => setFrequencyDays(e.target.value)}
+              min="1"
+              placeholder="Días personalizados"
+              style={{ flex: 1 }}
+            />
+            <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+              días ({Number(frequencyDays) === 1 ? "Diario" : Number(frequencyDays) === 7 ? "Semanal" : Number(frequencyDays) === 14 ? "Cada 2 semanas" : Number(frequencyDays) === 30 ? "Mensual" : Number(frequencyDays) === 90 ? "Trimestral" : Number(frequencyDays) === 180 ? "Semestral" : `Cada ${frequencyDays} días`})
+            </span>
+          </div>
         </div>
 
         <div style={{ marginBottom: 16 }}>

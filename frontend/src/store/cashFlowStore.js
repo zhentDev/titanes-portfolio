@@ -119,13 +119,13 @@ export const useCashFlowStore = create(
           return;
         }
 
-        const payDay = source.payrollAccount?.payDay || 25;
-        // Default start period is 2026-10 (starting from October 25 / nearest business day)
-        const startP = source.startPeriod || "2026-10";
-        let activeP = source.activePeriod || getCurrentPeriod(payDay);
-        if (activeP < startP) {
-          activeP = startP;
-        }
+        // Mes calendario actual en tiempo real (ej. "2026-10", "2026-11", etc.)
+        const now = new Date();
+        const currentCalPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+        // El período activo siempre inicia en el mes actual del sistema
+        const startP = source.startPeriod || currentCalPeriod;
+        const activeP = currentCalPeriod;
 
         const resolvedRatios =
           source.customRatios?.needs !== undefined && source.customRatios?.needs !== null
