@@ -19,6 +19,7 @@ import StrategyChart, { SYNTHETIC_RETURNS } from "./StrategyChart";
 import { InfoTooltip } from "./Common";
 import QuantumOrbitalLoader from "./QuantumOrbitalLoader";
 import HoldingsTable from "./HoldingsTable";
+import { exportPortfolioExcel } from "../utils/exportReport";
 
 const PERIODS = ["1D", "1W", "1M", "3M", "6M", "1Y", "3Y", "5Y", "MAX"];
 
@@ -1772,6 +1773,7 @@ export default function DynamicStrategyView({
               onToggleUnit={() => setUnit((u) => (u === "pct" ? "usd" : "pct"))}
               isRealMoney={true}
               closedOnly={false}
+              onExportExcel={() => exportPortfolioExcel(strategy.id, simulatedCapital, numSlots)}
             />
           </div>
         )
@@ -1788,6 +1790,7 @@ export default function DynamicStrategyView({
               onToggleUnit={() => setUnit((u) => (u === "pct" ? "usd" : "pct"))}
               isRealMoney={false}
               closedOnly={true}
+              onExportExcel={() => exportPortfolioExcel(strategy.id, simulatedCapital, numSlots)}
             />
           </div>
         )

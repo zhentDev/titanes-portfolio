@@ -13,7 +13,12 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
 
-def generate_portfolio_excel(nav_result: dict, investment: float, strategy_name: str = "Titanes Tecnológicos") -> io.BytesIO:
+def generate_portfolio_excel(
+    nav_result: dict,
+    investment: float,
+    strategy_name: str = "Titanes Tecnológicos",
+    comparison_data: list = None,
+) -> io.BytesIO:
     wb = openpyxl.Workbook()
     # Remove default sheet
     default_sheet = wb.active
@@ -308,8 +313,70 @@ def generate_portfolio_excel(nav_result: dict, investment: float, strategy_name:
     else:
         ws3.cell(row=2, column=1, value="No se registran posiciones cerradas aún.").font = subtitle_font
 
+    # ─────────────────────────────────────────────────────────────
+    # HOJA 4: COMPARATIVA REAL VS SIMULADAS
+    # ─────────────────────────────────────────────────────────────
+    sheets_to_adjust = [ws1, ws2, ws3]
+    if comparison_data and len(comparison_data) > 0:
+        ws4 = wb.create_sheet(title="Comparativa Real vs Simulada")
+        ws4.views.sheetView[0].showGridLines = True
+        sheets_to_adjust.append(ws4)
+
+        ws4["A1"] = "COMPARATIVA DE ESTRATEGIAS: REALES VS SIMULADAS"
+        ws4["A1"].font = title_font
+        ws4["A2"] = "Análisis de rendimiento, retorno activo, alfa vs S&P 500 y posiciones cerradas"
+        ws4["A2"].font = subtitle_font
+
+        comp_headers = [
+            "TIPO", "ESTRATEGIA", "PAÍS", "SLOTS", "CAPITAL ($)", 
+            "ACTIVO ACCIONES ($)", "VALOR ACTUAL ($)", "RETORNO ($)", 
+            "RETORNO (%)", "ALFA S&P 500 (%)", "SHARPE", "WIN RATE (%)", "CERRADAS"
+        ]
+        for idx, h_text in enumerate(comp_headers, start=1):
+            cell = ws4.cell(row=4, column=idx, value=h_text)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        c_row_comp = 5
+        for item in comparison_data:
+            s_type = "REAL 💵" if item.get("is_real_money") else "SIMULADA 🧪"
+            c_type = ws4.cell(row=c_row_comp, column=1, value=s_type)
+            c_type.font = bold_font
+            if item.get("is_real_money"):
+                c_type.fill = PatternFill(start_color="D1FAE5", end_color="D1FAE5", fill_type="solid")
+            else:
+                c_type.fill = PatternFill(start_color="F1F5F9", end_color="F1F5F9", fill_type="solid")
+
+            ws4.cell(row=c_row_comp, column=2, value=item.get("name", "")).font = bold_font
+            ws4.cell(row=c_row_comp, column=3, value=item.get("country", "🌎")).font = regular_font
+            ws4.cell(row=c_row_comp, column=4, value=item.get("num_slots", 20)).font = regular_font
+            ws4.cell(row=c_row_comp, column=5, value=f"${item.get('capital', 0):,.2f}").font = regular_font
+            ws4.cell(row=c_row_comp, column=6, value=f"${item.get('active_invested', 0):,.2f}").font = regular_font
+            ws4.cell(row=c_row_comp, column=7, value=f"${item.get('end_value', 0):,.2f}").font = regular_font
+
+            ret_usd = item.get("active_return", 0)
+            c_ret_usd = ws4.cell(row=c_row_comp, column=8, value=f"${ret_usd:+,.2f}")
+            c_ret_usd.font = green_font if ret_usd >= 0 else red_font
+
+            ret_pct = item.get("active_return_pct", 0)
+            c_ret_pct = ws4.cell(row=c_row_comp, column=9, value=f"{ret_pct:+.2f}%")
+            c_ret_pct.font = green_font if ret_pct >= 0 else red_font
+
+            alpha = item.get("alpha_sp500", 0)
+            c_alpha = ws4.cell(row=c_row_comp, column=10, value=f"{alpha:+.2f}%")
+            c_alpha.font = green_font if alpha >= 0 else red_font
+
+            ws4.cell(row=c_row_comp, column=11, value=str(item.get("sharpe_ratio", "N/A"))).font = regular_font
+            ws4.cell(row=c_row_comp, column=12, value=f"{item.get('win_rate_pct', 0):.1f}%").font = regular_font
+            ws4.cell(row=c_row_comp, column=13, value=item.get("closed_count", 0)).font = regular_font
+
+            for col_i in range(1, 14):
+                ws4.cell(row=c_row_comp, column=col_i).border = thin_border
+            c_row_comp += 1
+
     # Auto-ajuste de ancho de columnas para todas las hojas
-    for ws in [ws1, ws2, ws3]:
+    for ws in sheets_to_adjust:
         for col in ws.columns:
             max_len = 0
             col_letter = get_column_letter(col[0].column)

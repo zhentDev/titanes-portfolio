@@ -29,7 +29,7 @@
       "id": "in_fixed_yield",
       "name": "Ingreso por Renta Fija",
       "category": "passive_fixed",
-      "amount": 25834,
+      "amount": 23690,
       "currency": "COP",
       "isPassive": true,
       "isAutoSynced": true,
@@ -170,7 +170,7 @@
       "category": "emergency_fund",
       "targetAmount": 15000000,
       "monthlyContribution": 500000,
-      "currentBalance": 4310846,
+      "currentBalance": 4022832,
       "currency": "COP",
       "linkedModule": "fixed_income",
       "paymentSource": {
@@ -202,7 +202,7 @@
       "category": "fixed_savings",
       "targetAmount": 15000000,
       "monthlyContribution": 300000,
-      "currentBalance": 4310846,
+      "currentBalance": 4022832,
       "currency": "COP",
       "linkedModule": "fixed_income",
       "paymentSource": {

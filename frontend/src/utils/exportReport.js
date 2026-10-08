@@ -19,11 +19,21 @@ export async function exportPortfolioExcel(strategyId = "historical", investment
       throw new Error(`Error en servidor: ${response.status}`);
     }
 
+    // Intentar extraer el nombre del archivo configurado por el backend
+    let fileName = `Reporte_${strategyId}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    const disposition = response.headers.get("Content-Disposition");
+    if (disposition && disposition.includes("filename=")) {
+      const match = disposition.match(/filename=(?:["']?)([^"';]+)(?:["']?)/);
+      if (match && match[1]) {
+        fileName = decodeURIComponent(match[1].trim());
+      }
+    }
+
     const blob = await response.blob();
     const downloadUrl = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = downloadUrl;
-    link.download = `Titanes_Reporte_Completo_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    link.download = fileName;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

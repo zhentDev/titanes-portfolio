@@ -94,17 +94,29 @@ def export_nav_excel(
 ):
     from fastapi.responses import StreamingResponse
     from services.excel_exporter import generate_portfolio_excel
+    from services.db import get_custom_strategies
 
     user = get_optional_current_user(request)
     user_id = user["sub"] if user else None
+    
+    # 1. Determinar el nombre formal de la estrategia seleccionada
+    custom_list = get_custom_strategies(user_id=user_id)
+    strat_meta = next((s for s in custom_list if s["id"] == strategy_id), None)
+    if strat_meta:
+        strategy_name = strat_meta.get("name") or "Estrategia Personalizada"
+    elif strategy_id == "historical":
+        strategy_name = "Titanes Tecnológicos"
+    else:
+        strategy_name = strategy_id
+
     rebalances = get_all_rebalances(strategy_id=strategy_id, user_id=user_id)
     if not rebalances:
         empty_res = calculate_nav(None, investment=investment, num_slots=num_slots, strategy_id=strategy_id, user_id=user_id)
-        excel_stream = generate_portfolio_excel(empty_res, investment=investment)
+        excel_stream = generate_portfolio_excel(empty_res, investment=investment, strategy_name=strategy_name)
         return StreamingResponse(
             excel_stream,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": "attachment; filename=Titanes_Reporte.xlsx"},
+            headers={"Content-Disposition": f"attachment; filename={strategy_name.replace(' ', '_')}_Reporte.xlsx"},
         )
 
     all_tickers = set()
@@ -128,8 +140,77 @@ def export_nav_excel(
         period="MAX",
     )
 
-    excel_stream = generate_portfolio_excel(nav_res, investment=investment)
-    filename = f"Titanes_Portafolio_{date.today().isoformat()}.xlsx"
+    # 2. Generar datos para la Hoja 4: Comparativa de todas las estrategias (Reales vs Simuladas)
+    comparison_data = []
+    
+    # Agregamos primero la estrategia histórica (Titanes Tech)
+    hist_rebalances = get_all_rebalances(strategy_id="historical", user_id=user_id)
+    if hist_rebalances:
+        hist_tickers = list({t for r in hist_rebalances for t in r["tickers"]})
+        hist_start = min([r["date"] for r in hist_rebalances]) if hist_rebalances else None
+        hist_prices = get_historical_prices(hist_tickers, period="MAX", start_date=hist_start)
+        hist_nav = calculate_nav(hist_prices, investment=2000.0, num_slots=15, strategy_id="historical", user_id=user_id, period="MAX")
+        hist_sum = hist_nav.get("summary", {})
+        comparison_data.append({
+            "id": "historical",
+            "name": "Titanes Tech",
+            "country": "🏆",
+            "is_real_money": True,
+            "num_slots": 15,
+            "capital": 2000.0,
+            "active_invested": hist_sum.get("active_invested", 0),
+            "end_value": hist_sum.get("active_stock_value", hist_sum.get("end_value", 0)),
+            "active_return": hist_sum.get("active_return", 0),
+            "active_return_pct": hist_sum.get("active_return_pct", 0),
+            "alpha_sp500": hist_sum.get("alpha_sp500", 0),
+            "sharpe_ratio": hist_sum.get("sharpe_ratio", "N/A"),
+            "win_rate_pct": hist_sum.get("win_rate_pct", 0),
+            "closed_count": len(hist_nav.get("closed_holdings", [])),
+        })
+
+    # Agregamos cada estrategia personalizada registrada (reales y simuladas)
+    for c_strat in custom_list:
+        c_id = c_strat["id"]
+        c_rebalances = get_all_rebalances(strategy_id=c_id, user_id=user_id)
+        if not c_rebalances:
+            continue
+        c_tickers = list({t for r in c_rebalances for t in r["tickers"]})
+        c_start = min([r["date"] for r in c_rebalances]) if c_rebalances else None
+        c_prices = get_historical_prices(c_tickers, period="MAX", start_date=c_start)
+        c_nav = calculate_nav(
+            c_prices,
+            investment=float(c_strat.get("capital") or 1000.0),
+            num_slots=int(c_strat.get("numSlots") or 20),
+            strategy_id=c_id,
+            user_id=user_id,
+            period="MAX",
+        )
+        c_sum = c_nav.get("summary", {})
+        comparison_data.append({
+            "id": c_id,
+            "name": c_strat.get("name", c_id),
+            "country": c_strat.get("country", "🌎"),
+            "is_real_money": bool(c_strat.get("isRealMoney")),
+            "num_slots": int(c_strat.get("numSlots") or 20),
+            "capital": float(c_strat.get("capital") or 1000.0),
+            "active_invested": c_sum.get("active_invested", 0),
+            "end_value": c_sum.get("active_stock_value", c_sum.get("end_value", 0)),
+            "active_return": c_sum.get("active_return", 0),
+            "active_return_pct": c_sum.get("active_return_pct", 0),
+            "alpha_sp500": c_sum.get("alpha_sp500", 0),
+            "sharpe_ratio": c_sum.get("sharpe_ratio", "N/A"),
+            "win_rate_pct": c_sum.get("win_rate_pct", 0),
+            "closed_count": len(c_nav.get("closed_holdings", [])),
+        })
+
+    excel_stream = generate_portfolio_excel(
+        nav_res,
+        investment=investment,
+        strategy_name=strategy_name,
+        comparison_data=comparison_data,
+    )
+    safe_name = "".join(c for c in strategy_name if c.isalnum() or c in (" ", "_", "-")).strip().replace(" ", "_")
+    filename = f"{safe_name}_{date.today().isoformat()}.xlsx"
     return StreamingResponse(
         excel_stream,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
