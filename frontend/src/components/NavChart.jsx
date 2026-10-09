@@ -572,19 +572,26 @@ export default function NavChart({
         let sStrat = [];
 
         // CASE 1: Real NAV series available from backend DuckDB / market data engine
-        if (Array.isArray(realNav) && realNav.length > 1) {
-          const navMap = new Map(realNav.map((pt) => [pt.date || pt.time, pt.value || pt.total_value]));
-          sStrat = navData.map((pt) => {
-            const ptDate = pt.date || pt.time;
-            if (navMap.has(ptDate)) {
-              return { date: ptDate, value: navMap.get(ptDate) };
-            }
-            return null;
-          }).filter(Boolean);
+        if (Array.isArray(realNav) && realNav.length > 0) {
+          const navMap = new Map(
+            realNav.map((pt) => [
+              String(pt.date || pt.time).slice(0, 10),
+              pt.value != null ? Number(pt.value) : (pt.stock_value != null ? Number(pt.stock_value) : Number(pt.total_value))
+            ])
+          );
+          sStrat = navData
+            .map((pt) => {
+              const ptDate = String(pt.date || pt.time).slice(0, 10);
+              if (navMap.has(ptDate)) {
+                return { date: ptDate, value: navMap.get(ptDate) };
+              }
+              return null;
+            })
+            .filter(Boolean);
         }
 
         // CASE 2: No full backend series yet, track real market fluctuations via benchmark + alpha/live quotes
-        if (sStrat.length < 2) {
+        if (sStrat.length === 0) {
           const isMM20 = strat.id === "strat_mm20" || strat.name.toLowerCase().includes("mm20");
           const isNasdaqBench = strat.benchmark === "NASDAQ" || (!isMM20 && strat.name.toLowerCase().includes("acciones"));
           const benchSeries = isNasdaqBench ? nasdaqData : sp500Data;
@@ -612,27 +619,27 @@ export default function NavChart({
 
           let startIdx = 0;
           if (stratStartDate && navData.length) {
-            const found = navData.findIndex((pt) => (pt.date || pt.time) >= stratStartDate);
+            const found = navData.findIndex((pt) => String(pt.date || pt.time).slice(0, 10) >= stratStartDate);
             if (found !== -1) startIdx = found;
           }
 
-          const benchStartNorm = getBenchNorm(benchSeries, startIdx);
+          // Use raw benchmark values at startIdx to compute pure benchmark percentage change since strategy start
+          const benchStartVal = benchSeries?.[startIdx]?.value || 0;
           const effectiveLen = Math.max(1, navData.length - 1 - startIdx);
 
           sStrat = navData.map((pt, idx) => {
-            const ptDate = pt.date || pt.time;
+            const ptDate = String(pt.date || pt.time).slice(0, 10);
             if (stratStartDate && ptDate < stratStartDate) return null;
 
-            // Actual day-to-day market moves relative to benchmark + alpha progression (immune to capital injections)
-            const benchNorm = getBenchNorm(benchSeries, idx);
-            const benchDayReturn = benchStartNorm > 0 ? (benchNorm - benchStartNorm) / benchStartNorm : 0;
+            const curBenchVal = benchSeries?.[idx]?.value || 0;
+            const benchDayReturn = benchStartVal > 0 ? (curBenchVal - benchStartVal) / benchStartVal : 0;
 
             const progress = Math.max(0, idx - startIdx) / effectiveLen;
             const alphaProgress = targetStratReturn * progress;
 
             // Scaled dynamically by the active capital tranche on that specific date!
-            const capOnDate = getStratCap(strat, String(ptDate).slice(0, 10));
-            const stratValue = capOnDate * (1 + benchDayReturn * 1.15 + alphaProgress * 0.5);
+            const capOnDate = getStratCap(strat, ptDate);
+            const stratValue = capOnDate * (1 + benchDayReturn + alphaProgress * 0.5);
             return { date: ptDate, value: stratValue };
           }).filter(Boolean);
         }
@@ -1081,15 +1088,19 @@ export default function NavChart({
 
                   if (hoverValues?.[strat.id] != null) {
                     stratUsd = hoverValues[strat.id];
-                    if (stratBase > 0) {
-                      stratPct = ((stratUsd - stratBase) / stratBase) * 100;
+                    // Find corresponding point in realNav or compute against stratBase
+                    const realPoint = customNavData[strat.id]?.nav?.find(
+                      (p) => String(p.date || p.time).slice(0, 10) === currentDateStr
+                    );
+                    const pointInvested = realPoint?.active_invested || stratBase;
+                    if (pointInvested > 0) {
+                      stratPct = ((stratUsd - pointInvested) / pointInvested) * 100;
+                    } else {
+                      stratPct = 0;
                     }
-                  } else if (backendSumm && backendSumm.active_stock_value != null) {
-                    stratUsd = backendSumm.active_stock_value;
-                    stratPct = backendSumm.active_return_pct ?? (stratBase > 0 ? ((stratUsd - stratBase) / stratBase) * 100 : 0);
-                  } else if (backendSumm && (backendSumm.end_value != null || backendSumm.invested_value != null)) {
-                    stratUsd = backendSumm.end_value ?? backendSumm.invested_value;
-                    stratPct = backendSumm.total_return_pct ?? (stratBase > 0 ? ((stratUsd - stratBase) / stratBase) * 100 : 0);
+                  } else if (backendSumm) {
+                    stratUsd = backendSumm.active_stock_value ?? backendSumm.end_value ?? backendSumm.invested_value ?? stratBase;
+                    stratPct = backendSumm.active_return_pct ?? backendSumm.total_return_pct ?? (stratBase > 0 ? ((stratUsd - stratBase) / stratBase) * 100 : 0);
                   } else if (stratLastValues[strat.id] != null) {
                     stratUsd = stratLastValues[strat.id];
                     if (stratBase > 0) {
@@ -1227,15 +1238,19 @@ export default function NavChart({
 
                   if (hoverValues?.[strat.id] != null) {
                     stratUsd = hoverValues[strat.id];
-                    if (stratBase > 0) {
-                      stratPct = ((stratUsd - stratBase) / stratBase) * 100;
+                    // Find corresponding point in realNav or compute against stratBase
+                    const realPoint = customNavData[strat.id]?.nav?.find(
+                      (p) => String(p.date || p.time).slice(0, 10) === currentDateStr
+                    );
+                    const pointInvested = realPoint?.active_invested || stratBase;
+                    if (pointInvested > 0) {
+                      stratPct = ((stratUsd - pointInvested) / pointInvested) * 100;
+                    } else {
+                      stratPct = 0;
                     }
-                  } else if (backendSumm && backendSumm.active_stock_value != null) {
-                    stratUsd = backendSumm.active_stock_value;
-                    stratPct = backendSumm.active_return_pct ?? (stratBase > 0 ? ((stratUsd - stratBase) / stratBase) * 100 : 0);
-                  } else if (backendSumm && (backendSumm.end_value != null || backendSumm.invested_value != null)) {
-                    stratUsd = backendSumm.end_value ?? backendSumm.invested_value;
-                    stratPct = backendSumm.total_return_pct ?? (stratBase > 0 ? ((stratUsd - stratBase) / stratBase) * 100 : 0);
+                  } else if (backendSumm) {
+                    stratUsd = backendSumm.active_stock_value ?? backendSumm.end_value ?? backendSumm.invested_value ?? stratBase;
+                    stratPct = backendSumm.active_return_pct ?? backendSumm.total_return_pct ?? (stratBase > 0 ? ((stratUsd - stratBase) / stratBase) * 100 : 0);
                   } else if (stratLastValues[strat.id] != null) {
                     stratUsd = stratLastValues[strat.id];
                     if (stratBase > 0) {
