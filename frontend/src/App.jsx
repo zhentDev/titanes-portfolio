@@ -2426,6 +2426,7 @@ export default function App() {
                   rebalances={navData?.rebalances}
                   summary={navData?.summary}
                   holdings={holdings}
+                  closedHoldings={navData?.closed_holdings}
                   onToggleTicker={toggleTicker}
                   selectAll={selectAll}
                   selectGainers={selectGainers}

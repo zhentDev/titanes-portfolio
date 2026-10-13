@@ -218,3 +218,135 @@ def export_nav_excel(
     )
 
 
+@router.get("/nav/holding-chart")
+def get_holding_hourly_chart(
+    ticker: str,
+    start_date: str,
+    exit_date: str | None = None,
+    shares: float = 1.0,
+    cost_basis: float = 100.0,
+    entry_price: float = 100.0,
+):
+    """
+    Returns hourly (1h) price history and position valuation for a single holding
+    (active or closed) between its entry date and exit date (or current day).
+    Calculates pure asset value = shares * price and base line = cost_basis.
+    """
+    import datetime
+    import yfinance as yf
+    import pandas as pd
+    from services.market_data import _yf_session
+
+    ticker_clean = ticker.strip().upper()
+    start_d = str(start_date).slice if hasattr(start_date, "slice") else str(start_date)[:10]
+    
+    # Calculate end date for yfinance download
+    if exit_date and str(exit_date).strip() and str(exit_date) != "None":
+        exit_d = str(exit_date)[:10]
+        try:
+            # yfinance end date is exclusive, so add 1 day
+            end_dt = datetime.date.fromisoformat(exit_d) + datetime.timedelta(days=1)
+            end_d = end_dt.isoformat()
+        except Exception:
+            end_d = None
+    else:
+        end_d = None
+        exit_d = None
+
+    download_kwargs = {
+        "start": start_d,
+        "interval": "1h",
+        "auto_adjust": True,
+        "progress": False,
+        "threads": False,
+        "session": _yf_session,
+    }
+    if end_d:
+        download_kwargs["end"] = end_d
+
+    try:
+        raw_df = yf.download(ticker_clean, **download_kwargs)
+        if isinstance(raw_df.columns, pd.MultiIndex):
+            df = raw_df.xs(ticker_clean, level="Ticker", axis=1).copy() if "Ticker" in raw_df.columns.names else raw_df.droplevel(1, axis=1).copy()
+        else:
+            df = raw_df.copy()
+
+        # If 1h interval returned empty (e.g. beyond 730 days limit), fallback to daily
+        if df.empty:
+            del download_kwargs["interval"]
+            raw_df = yf.download(ticker_clean, **download_kwargs)
+            if isinstance(raw_df.columns, pd.MultiIndex):
+                df = raw_df.xs(ticker_clean, level="Ticker", axis=1).copy() if "Ticker" in raw_df.columns.names else raw_df.droplevel(1, axis=1).copy()
+            else:
+                df = raw_df.copy()
+
+        series = []
+        candles = []
+        shares_flt = float(shares) if float(shares) > 0 else 1.0
+        basis_flt = float(cost_basis) if float(cost_basis) > 0 else (shares_flt * float(entry_price))
+
+        for idx_time, row in df.iterrows():
+            close_val = row.get("Close")
+            if pd.isna(close_val) or close_val is None or float(close_val) <= 0:
+                continue
+            close_flt = float(close_val)
+            open_flt = float(row.get("Open", close_flt))
+            high_flt = float(row.get("High", max(open_flt, close_flt)))
+            low_flt = float(row.get("Low", min(open_flt, close_flt)))
+
+            # UNIX timestamp in seconds
+            ts = int(pd.to_datetime(idx_time).timestamp())
+            iso_date = pd.to_datetime(idx_time).strftime("%Y-%m-%d %H:%M")
+
+            # Pure position valuation: shares * price
+            val = round(shares_flt * close_flt, 4)
+            ret_pct = round(((val - basis_flt) / basis_flt) * 100, 2) if basis_flt > 0 else 0.0
+
+            series.append({
+                "time": ts,
+                "date": iso_date,
+                "price": round(close_flt, 4),
+                "value": val,
+                "return_pct": ret_pct,
+            })
+
+            candles.append({
+                "time": ts,
+                "open": round(open_flt, 4),
+                "high": round(high_flt, 4),
+                "low": round(low_flt, 4),
+                "close": round(close_flt, 4),
+            })
+
+        latest_price = series[-1]["price"] if series else float(entry_price)
+        latest_val = series[-1]["value"] if series else basis_flt
+        total_ret_usd = round(latest_val - basis_flt, 2)
+        total_ret_pct = round(((latest_val - basis_flt) / basis_flt) * 100, 2) if basis_flt > 0 else 0.0
+
+        return {
+            "ticker": ticker_clean,
+            "start_date": start_d,
+            "exit_date": exit_d,
+            "is_closed": bool(exit_d),
+            "shares": shares_flt,
+            "cost_basis": round(basis_flt, 2),
+            "entry_price": round(float(entry_price), 4),
+            "current_price": round(latest_price, 4),
+            "current_value": round(latest_val, 2),
+            "return_usd": total_ret_usd,
+            "return_pct": total_ret_pct,
+            "points_count": len(series),
+            "series": series,
+            "candles": candles,
+        }
+    except Exception as e:
+        return {
+            "error": str(e),
+            "ticker": ticker_clean,
+            "start_date": start_d,
+            "series": [],
+            "candles": [],
+        }
+
+
+

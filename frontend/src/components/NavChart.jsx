@@ -7,6 +7,8 @@ import { InfoTooltip } from "./Common";
 import { useTheme } from "../context/ThemeContext";
 import { getChartColors, applyChartTheme } from "../utils/chartTheme";
 
+import IndividualHoldingChart from "./IndividualHoldingChart";
+
 const COLORS = {
   nav: "#00e5ff",
   sp500: "#f59e0b",
@@ -23,6 +25,7 @@ export default function NavChart({
   rebalances = [],
   summary = null,
   holdings = [],
+  closedHoldings = [],
   onToggleTicker,
   selectAll,
   selectGainers,
@@ -34,6 +37,7 @@ export default function NavChart({
   period = "3M",
   strategyName = null,
 }) {
+  const [activeTab, setActiveTab] = useState("portfolio"); // "portfolio" | "individual"
   const containerRef = useRef(null);
   const chartRef = useRef(null);
   const seriesRef = useRef({});
@@ -742,28 +746,120 @@ export default function NavChart({
         boxShadow: "var(--shadow-card)",
       }}
     >
-      {/* ── Interactive Chart Legend Bar ─── */}
+      {/* ── Top Tabs: Portafolio General vs Acción Individual (Hora a Hora) ── */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
           gap: 10,
-          marginBottom: "14px",
-          paddingBottom: "12px",
+          marginBottom: 16,
+          paddingBottom: 12,
           borderBottom: "1px solid var(--border)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          {/* Titanes Portfolio */}
-          <button
-            onClick={() => handleToggle("nav")}
+        <button
+          onClick={() => setActiveTab("portfolio")}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 7,
+            padding: "8px 16px",
+            borderRadius: 8,
+            border: activeTab === "portfolio"
+              ? `1px solid ${isLight ? "rgba(2, 132, 199, 0.4)" : "rgba(0, 229, 255, 0.4)"}`
+              : "1px solid transparent",
+            background: activeTab === "portfolio"
+              ? isLight ? "rgba(2, 132, 199, 0.12)" : "rgba(0, 229, 255, 0.12)"
+              : "transparent",
+            color: activeTab === "portfolio"
+              ? isLight ? "#0284c7" : "var(--accent-primary)"
+              : "var(--text-secondary)",
+            fontSize: "0.86rem",
+            fontWeight: activeTab === "portfolio" ? 700 : 500,
+            cursor: "pointer",
+            transition: "all 0.18s ease",
+          }}
+        >
+          <span>📊</span>
+          <span>Portafolio General ({strategyName || "Titanes"})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("individual")}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 7,
+            padding: "8px 16px",
+            borderRadius: 8,
+            border: activeTab === "individual"
+              ? `1px solid ${isLight ? "rgba(16, 185, 129, 0.4)" : "rgba(16, 185, 129, 0.4)"}`
+              : "1px solid transparent",
+            background: activeTab === "individual"
+              ? isLight ? "rgba(16, 185, 129, 0.12)" : "rgba(16, 185, 129, 0.12)"
+              : "transparent",
+            color: activeTab === "individual"
+              ? isLight ? "#059669" : "#34d399"
+              : "var(--text-secondary)",
+            fontSize: "0.86rem",
+            fontWeight: activeTab === "individual" ? 700 : 500,
+            cursor: "pointer",
+            transition: "all 0.18s ease",
+          }}
+        >
+          <span>🔍</span>
+          <span>Acción Individual (Hora a Hora)</span>
+          {closedHoldings?.length > 0 && (
+            <span
+              style={{
+                fontSize: "0.68rem",
+                padding: "1px 6px",
+                borderRadius: 4,
+                background: isLight ? "rgba(16, 185, 129, 0.2)" : "rgba(16, 185, 129, 0.25)",
+                color: isLight ? "#047857" : "#34d399",
+                fontWeight: 700,
+              }}
+            >
+              {(holdings?.length || 0) + closedHoldings.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {activeTab === "individual" ? (
+        <IndividualHoldingChart
+          holdings={holdings}
+          closedHoldings={closedHoldings}
+          rebalances={rebalances}
+          investment={investment}
+          numSlots={numSlots}
+          customStrategies={customStrategies}
+          activeStrategyId="historical"
+        />
+      ) : (
+        <>
+          {/* ── Interactive Chart Legend Bar ─── */}
+          <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 6,
-              background: visibleSeries?.nav ? "rgba(0, 229, 255, 0.12)" : "rgba(0, 0, 0, 0.04)",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 10,
+              marginBottom: "14px",
+              paddingBottom: "12px",
+              borderBottom: "1px solid var(--border)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              {/* Titanes Portfolio */}
+              <button
+                onClick={() => handleToggle("nav")}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  background: visibleSeries?.nav ? "rgba(0, 229, 255, 0.12)" : "rgba(0, 0, 0, 0.04)",
               border: `1px solid ${visibleSeries?.nav ? "var(--accent-primary)" : "var(--border)"}`,
               padding: "4px 10px",
               borderRadius: 6,
@@ -1591,6 +1687,8 @@ export default function NavChart({
           </div>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 }

@@ -259,6 +259,20 @@ export async function fetchIntraday(ticker) {
   return fetchWithFallback(`/prices/intraday/${ticker}`, null);
 }
 
+/** GET /api/nav/holding-chart */
+export async function fetchHoldingChart({ ticker, startDate, exitDate, shares, costBasis, entryPrice }) {
+  const params = new URLSearchParams({
+    ticker,
+    start_date: startDate || "2026-08-03",
+  });
+  if (exitDate) params.set("exit_date", exitDate);
+  if (shares != null) params.set("shares", String(shares));
+  if (costBasis != null) params.set("cost_basis", String(costBasis));
+  if (entryPrice != null) params.set("entry_price", String(entryPrice));
+
+  return fetchWithFallback(`/nav/holding-chart?${params}`, null, { timeoutMs: 15000 });
+}
+
 /** GET /api/prices/indices_history?start_date=YYYY-MM-DD */
 export async function fetchIndicesHistory(startDate) {
   try {
