@@ -181,7 +181,7 @@ export default function IndividualHoldingChart({
       lineStyle: LineStyle.Dashed,
       priceLineVisible: false,
       lastValueVisible: true,
-      title: "Inversión Base",
+      title: "",
     });
     baseSeriesRef.current = baseSeries;
 
@@ -194,9 +194,9 @@ export default function IndividualHoldingChart({
       bottomColor: isGain ? "rgba(16, 185, 129, 0.00)" : "rgba(239, 68, 68, 0.00)",
       lineColor: curveColor,
       lineWidth: 2,
-      priceLineVisible: true,
+      priceLineVisible: false,
       lastValueVisible: true,
-      title: selectedItem ? `${selectedItem.ticker} Valor` : "Valor",
+      title: "",
     });
     valSeriesRef.current = valSeries;
 
@@ -407,6 +407,61 @@ export default function IndividualHoldingChart({
           </div>
         )}
         <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+
+        {/* Floating Top-Left Series Indicators Box (Matching Titanes NavChart style) */}
+        <div
+          className="chart-floating-legend"
+          style={{
+            position: "absolute",
+            top: 10,
+            left: 14,
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+            background: isLight ? "rgba(255, 255, 255, 0.88)" : "rgba(15, 23, 42, 0.82)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.12)"}`,
+            borderRadius: 6,
+            padding: "6px 10px",
+            boxShadow: isLight
+              ? "0 4px 12px rgba(0, 0, 0, 0.06)"
+              : "0 4px 12px rgba(0, 0, 0, 0.35)",
+            pointerEvents: "none",
+            zIndex: 10,
+            maxWidth: 220,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.74rem", fontWeight: 700 }}>
+            <span
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                background: (chartData?.return_usd ?? 0) >= 0 ? "#10b981" : "#ef4444",
+                flexShrink: 0,
+              }}
+            />
+            <span style={{ color: isLight ? "#0f172a" : "#f8fafc", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {selectedItem?.ticker} Valor
+            </span>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", fontWeight: 600 }}>
+            <span
+              style={{
+                width: 10,
+                height: 2,
+                background: chartColors.base || "#94a3b8",
+                flexShrink: 0,
+                borderRadius: 1,
+              }}
+            />
+            <span style={{ color: isLight ? "#475569" : "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              Inversión Base
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* ── Info footer de la acción ── */}
