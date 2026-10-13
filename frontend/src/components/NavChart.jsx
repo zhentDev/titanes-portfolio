@@ -358,25 +358,6 @@ export default function NavChart({
   useEffect(() => {
     if (!chartRef.current) return;
 
-    // Ensure custom strategy lines exist on LEFT price scale
-    (customStrategies || []).forEach((strat) => {
-      if (!seriesRef.current[strat.id]) {
-        seriesRef.current[strat.id] = chartRef.current.addLineSeries({
-          color: strat.color || "#10b981",
-          lineWidth: 2,
-          lineStyle: LineStyle.Solid,
-          priceLineVisible: false,
-          lastValueVisible: false,
-          title: "",
-          priceFormat: isMobile
-            ? { type: "price", precision: 0, minMove: 1 }
-            : { type: "price", precision: 2, minMove: 0.01 },
-          visible: visibleSeries?.[strat.id] !== false,
-          priceScaleId: "left", // LEFT AXIS!
-        });
-      }
-    });
-
     if (navData?.length) {
       const sNav = toSeries(navData);
       if (sNav.length) {
