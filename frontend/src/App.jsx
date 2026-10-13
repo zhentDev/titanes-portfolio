@@ -7,6 +7,7 @@ import DynamicStrategyView from "./components/DynamicStrategyView";
 import FixedIncomeHub from "./components/FixedIncome/FixedIncomeHub";
 import CashFlowHub from "./components/CashFlow/CashFlowHub";
 import HoldingsTable from "./components/HoldingsTable";
+import IndividualHoldingChart from "./components/IndividualHoldingChart";
 import IndividualPurchasesView from "./components/IndividualPurchasesView";
 import InflationExplorerModal from "./components/InflationExplorerModal";
 import LiveMode from "./components/LiveMode";
@@ -74,6 +75,7 @@ export default function App() {
   const [isFetchingMainInflation, setIsFetchingMainInflation] = useState(false);
   const [showBreakdownCard, setShowBreakdownCard] = useState(false);
   const [showQuantIntelligence, setShowQuantIntelligence] = useState(false);
+  const [mainChartViewTab, setMainChartViewTab] = useState("portfolio"); // "portfolio" | "individual"
 
   // Theme — managed globally by ThemeProvider in main.jsx
   const { theme, toggleTheme } = useTheme();
@@ -2311,27 +2313,123 @@ export default function App() {
               </div>
             )}
 
-            {/* ── Period selector ──────────────────────────── */}
-            <div className="period-selector fade-up">
-              {PERIODS.map((p) => (
+            {/* ── Chart Mode Tabs (Portafolio vs Acción Individual) ── */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: 12,
+                marginBottom: 12,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  background: isLight ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.03)",
+                  padding: "4px",
+                  borderRadius: 10,
+                  border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.06)"}`,
+                }}
+              >
                 <button
-                  key={p}
-                  className={`period-btn ${p === period ? "active" : ""}`}
-                  onClick={() => setPeriod(p)}
-                  disabled={!periodEnabled[p]}
-                  title={
-                    periodEnabled[p]
-                      ? undefined
-                      : "Requiere más historial desde tu primera inversión"
-                  }
+                  type="button"
+                  onClick={() => setMainChartViewTab("portfolio")}
                   style={{
-                    opacity: periodEnabled[p] ? 1 : 0.35,
-                    cursor: periodEnabled[p] ? "pointer" : "not-allowed",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 7,
+                    padding: "7px 14px",
+                    borderRadius: 7,
+                    border: mainChartViewTab === "portfolio"
+                      ? `1px solid ${isLight ? "rgba(2, 132, 199, 0.4)" : "rgba(0, 229, 255, 0.4)"}`
+                      : "1px solid transparent",
+                    background: mainChartViewTab === "portfolio"
+                      ? isLight ? "rgba(2, 132, 199, 0.12)" : "rgba(0, 229, 255, 0.12)"
+                      : "transparent",
+                    color: mainChartViewTab === "portfolio"
+                      ? isLight ? "#0284c7" : "var(--accent-primary)"
+                      : "var(--text-secondary)",
+                    fontSize: "0.85rem",
+                    fontWeight: mainChartViewTab === "portfolio" ? 700 : 500,
+                    cursor: "pointer",
+                    transition: "all 0.18s ease",
                   }}
                 >
-                  {p}
+                  <span>📊</span>
+                  <span>Portafolio General (Titanes)</span>
                 </button>
-              ))}
+
+                <button
+                  type="button"
+                  onClick={() => setMainChartViewTab("individual")}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 7,
+                    padding: "7px 14px",
+                    borderRadius: 7,
+                    border: mainChartViewTab === "individual"
+                      ? `1px solid ${isLight ? "rgba(16, 185, 129, 0.4)" : "rgba(16, 185, 129, 0.4)"}`
+                      : "1px solid transparent",
+                    background: mainChartViewTab === "individual"
+                      ? isLight ? "rgba(16, 185, 129, 0.12)" : "rgba(16, 185, 129, 0.12)"
+                      : "transparent",
+                    color: mainChartViewTab === "individual"
+                      ? isLight ? "#059669" : "#34d399"
+                      : "var(--text-secondary)",
+                    fontSize: "0.85rem",
+                    fontWeight: mainChartViewTab === "individual" ? 700 : 500,
+                    cursor: "pointer",
+                    transition: "all 0.18s ease",
+                  }}
+                >
+                  <span>🔍</span>
+                  <span>Acción Individual (Hora a Hora)</span>
+                  {((holdings?.length || 0) + (navData?.closed_holdings?.length || 0)) > 0 && (
+                    <span
+                      style={{
+                        fontSize: "0.68rem",
+                        padding: "1px 6px",
+                        borderRadius: 4,
+                        background: isLight ? "rgba(16, 185, 129, 0.2)" : "rgba(16, 185, 129, 0.25)",
+                        color: isLight ? "#047857" : "#34d399",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {(holdings?.length || 0) + (navData?.closed_holdings?.length || 0)}
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {/* Period selector (shown when viewing portfolio) */}
+              {mainChartViewTab === "portfolio" && (
+                <div className="period-selector fade-up" style={{ margin: 0 }}>
+                  {PERIODS.map((p) => (
+                    <button
+                      key={p}
+                      className={`period-btn ${p === period ? "active" : ""}`}
+                      onClick={() => setPeriod(p)}
+                      disabled={!periodEnabled[p]}
+                      title={
+                        periodEnabled[p]
+                          ? undefined
+                          : "Requiere más historial desde tu primera inversión"
+                      }
+                      style={{
+                        opacity: periodEnabled[p] ? 1 : 0.35,
+                        cursor: periodEnabled[p] ? "pointer" : "not-allowed",
+                      }}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* ── Main Chart Card ─────────────────────────────── */}
@@ -2415,6 +2513,16 @@ export default function App() {
                     </div>
                   )}
                 </div>
+              ) : mainChartViewTab === "individual" ? (
+                <IndividualHoldingChart
+                  holdings={holdings}
+                  closedHoldings={navData?.closed_holdings}
+                  rebalances={navData?.rebalances}
+                  investment={investment}
+                  numSlots={numSlots}
+                  customStrategies={customStrategies}
+                  activeStrategyId="historical"
+                />
               ) : (
                 <NavChart
                   navData={navData?.nav}
@@ -2426,7 +2534,6 @@ export default function App() {
                   rebalances={navData?.rebalances}
                   summary={navData?.summary}
                   holdings={holdings}
-                  closedHoldings={navData?.closed_holdings}
                   onToggleTicker={toggleTicker}
                   selectAll={selectAll}
                   selectGainers={selectGainers}

@@ -1,13 +1,9 @@
 import { ColorType, LineStyle, PriceScaleMode, createChart } from "lightweight-charts";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { fetchLiveQuotes, fetchNAV } from "../api/client";
 import { usePortfolioStore } from "../store/portfolioStore";
-import { SYNTHETIC_RETURNS } from "./StrategyChart";
 import { InfoTooltip } from "./Common";
 import { useTheme } from "../context/ThemeContext";
 import { getChartColors, applyChartTheme } from "../utils/chartTheme";
-
-import IndividualHoldingChart from "./IndividualHoldingChart";
 
 const COLORS = {
   nav: "#00e5ff",
@@ -37,7 +33,6 @@ export default function NavChart({
   period = "3M",
   strategyName = null,
 }) {
-  const [activeTab, setActiveTab] = useState("portfolio"); // "portfolio" | "individual"
   const containerRef = useRef(null);
   const chartRef = useRef(null);
   const seriesRef = useRef({});
@@ -46,7 +41,7 @@ export default function NavChart({
   const [manualScaleMode, setManualScaleMode] = useState(null); // null = auto, 'log' = force log, 'normal' = force normal
   const [chartReady, setChartReady] = useState(0);
 
-  const { visibleSeries, toggleSeries, setMultipleSeries, customStrategies, strategyRebalances } = usePortfolioStore();
+  const { visibleSeries, toggleSeries } = usePortfolioStore();
   const { theme } = useTheme();
   const isLight = theme === "light";
 
@@ -62,124 +57,12 @@ export default function NavChart({
   const chartColors = useMemo(() => getChartColors(theme), [theme]);
 
   const baseActive = navData?.[0]?.value ?? investment;
-
-  // Compute capital divergence across visible strategies
-  let maxDivergence = 0;
-  let maxStratCapital = baseActive;
-
-  (customStrategies || []).forEach((strat) => {
-    if (visibleSeries?.[strat.id] !== false) {
-      const stratCap = strat.activeInvested || 1000;
-      const diff = Math.abs(baseActive - stratCap);
-      if (diff > maxDivergence) maxDivergence = diff;
-      if (stratCap > maxStratCapital) maxStratCapital = stratCap;
-    }
-  });
-
-  const autoLogScale = maxDivergence >= 100;
-  const minCap = Math.max(1, Math.min(baseActive, maxStratCapital));
-  const rawRatio = Math.max(baseActive, maxStratCapital) / minCap;
-  const logScaleRatio = rawRatio >= 1.05 ? rawRatio.toFixed(1) : "1.0";
-  const isLogActive = manualScaleMode === "log" || (manualScaleMode === null && autoLogScale);
+  const isLogActive = manualScaleMode === "log";
 
   const handleToggle = (key) => {
     toggleSeries(key);
   };
 
-  const handleToggleStrategiesPanel = () => {
-    const nextState = !showStrategiesPanel;
-    setShowStrategiesPanel(nextState);
-
-    // Si se abre, se activan todas las estrategias; si se cierra, se ocultan todas en el gráfico de golpe
-    if ((customStrategies || []).length > 0) {
-      const updates = {};
-      customStrategies.forEach((strat) => {
-        updates[strat.id] = nextState;
-      });
-      setMultipleSeries(updates);
-    }
-  };
-
-  // State to store real NAV results and live ticker quotes for custom strategies
-  const [customNavData, setCustomNavData] = useState({});
-  const [liveStratQuotes, setLiveStratQuotes] = useState({});
-  const [stratLastValues, setStratLastValues] = useState({});
-  const [showStrategiesPanel, setShowStrategiesPanel] = useState(true);
-
-  // Helper to get active capital for a custom strategy on a given date or latest date
-  const getStratCap = useCallback((strat, dateStr) => {
-    const rebs = strategyRebalances?.[strat.id];
-    const sortedStratRebs = Array.isArray(rebs) && rebs.length > 0
-      ? [...rebs].sort((a, b) => (a.rebalance_date || a.date || "").localeCompare(b.rebalance_date || b.date || ""))
-      : [];
-    const slotVal = (strat.capital || 1000) / (strat.numSlots || 20);
-    if (sortedStratRebs.length > 0 && slotVal > 0) {
-      if (dateStr) {
-        const valid = sortedStratRebs.filter((r) => (r.rebalance_date || r.date || "").slice(0, 10) <= dateStr);
-        if (valid.length > 0) {
-          return (valid[valid.length - 1].tickers?.length || 0) * slotVal;
-        }
-      }
-      return (sortedStratRebs[sortedStratRebs.length - 1].tickers?.length || 0) * slotVal;
-    }
-    // If strategy has activeInvested configured, use it, else default to capital or 0 if slots are empty
-    if (strat.activeInvested != null && strat.activeInvested > 0) {
-      return strat.activeInvested;
-    }
-    return strat.capital || 1000;
-  }, [strategyRebalances]);
-
-  // Helper to extract pure normalized benchmark factor at index idx (immune to Titanes active capital injections)
-  const getBenchNorm = useCallback((benchArr, idx) => {
-    if (!benchArr || !benchArr[idx]) return 1;
-    const val = benchArr[idx].value;
-    const cap = navData?.[idx]?.active_invested || baseActive || 1;
-    return cap > 0 && val != null ? val / cap : 1;
-  }, [navData, baseActive]);
-
-  // Fetch real NAV or live quotes for each visible custom strategy
-  useEffect(() => {
-    if (isLiveMode) return;
-    let isMounted = true;
-
-    (customStrategies || []).forEach((strat) => {
-      const rebs = strategyRebalances?.[strat.id];
-      const activeTickers = Array.isArray(rebs) && rebs.length > 0 ? rebs[rebs.length - 1].tickers || [] : [];
-
-      // Fetch real NAV from backend (omit selectedTickers so backend calculates using full strategy rebalance history)
-      fetchNAV({
-        period,
-        investment: strat.capital || 1000,
-        numSlots: strat.numSlots || 20,
-        strategyId: strat.id,
-      })
-        .then((res) => {
-          if (isMounted && res) {
-            setCustomNavData((prev) => ({ ...prev, [strat.id]: res }));
-          }
-        })
-        .catch(() => {});
-
-      // If active tickers exist, fetch live quotes as supplementary fallback
-      if (activeTickers.length > 0) {
-        fetchLiveQuotes(activeTickers)
-          .then((quotes) => {
-            if (isMounted && Array.isArray(quotes)) {
-              const qMap = {};
-              quotes.forEach((q) => {
-                qMap[q.ticker] = q;
-              });
-              setLiveStratQuotes((prev) => ({ ...prev, [strat.id]: qMap }));
-            }
-          })
-          .catch(() => {});
-      }
-    });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [customStrategies, strategyRebalances, period, isLiveMode]);
 
   // Dedicated effect to toggle line visibility without destroying the chart canvas
   useEffect(() => {
@@ -189,22 +72,12 @@ export default function NavChart({
     });
   }, [visibleSeries]);
 
-  // Dynamically update scale modes on both Left and Right price scales
+  // Dynamically update scale modes on Right price scale
   useEffect(() => {
     if (!chartRef.current) return;
     const mode = isLogActive ? (PriceScaleMode?.Logarithmic ?? 1) : (PriceScaleMode?.Normal ?? 0);
-    const hasVisibleStrategies = (customStrategies || []).some(
-      (s) => visibleSeries?.[s.id] !== false,
-    );
 
     chartRef.current.applyOptions({
-      leftPriceScale: {
-        visible: !isMobile && hasVisibleStrategies,
-        mode: mode,
-        borderColor: chartColors.borderColor,
-        textColor: chartColors.leftScaleText,
-        autoScale: true,
-      },
       rightPriceScale: {
         visible: true,
         mode: mode,
@@ -213,7 +86,7 @@ export default function NavChart({
         autoScale: true,
       },
     });
-  }, [isLogActive, customStrategies, visibleSeries, chartColors, isMobile]);
+  }, [isLogActive, chartColors]);
 
   const initChart = useCallback(() => {
     if (!containerRef.current) return;
@@ -221,8 +94,6 @@ export default function NavChart({
     const initialMode = isLogActive
       ? (PriceScaleMode?.Logarithmic ?? 1)
       : (PriceScaleMode?.Normal ?? 0);
-    const hasVisibleStrategies =
-      !isLiveMode && (customStrategies || []).some((s) => visibleSeries?.[s.id] !== false);
 
     chartRef.current = createChart(containerRef.current, {
       layout: {
@@ -268,13 +139,6 @@ export default function NavChart({
           }
           return String(time);
         },
-      },
-      leftPriceScale: {
-        visible: !isMobile && hasVisibleStrategies,
-        mode: initialMode,
-        borderColor: chartColors.borderColor,
-        textColor: chartColors.leftScaleText,
-        autoScale: true,
       },
       rightPriceScale: {
         visible: true,
@@ -380,27 +244,6 @@ export default function NavChart({
       priceScaleId: "right",
     });
 
-    // Custom Strategies curves (Bound to LEFT Axis for Dual Scale separation!)
-    // Real money strategies use Solid line; Simulated strategies use Dashed line for clear visual distinction
-    if (!isLiveMode) {
-      (customStrategies || []).forEach((strat) => {
-        const isReal = strat.isRealMoney === true;
-        seriesRef.current[strat.id] = chart.addLineSeries({
-          color: strat.color || (isReal ? "#10b981" : "#a855f7"),
-          lineWidth: isReal ? 2.5 : 2,
-          lineStyle: isReal ? LineStyle.Solid : LineStyle.Dashed,
-          priceLineVisible: false,
-          lastValueVisible: false,
-          title: "",
-          priceFormat: isMobile
-            ? { type: "price", precision: 0, minMove: 1 }
-            : { type: "price", precision: 2, minMove: 0.01 },
-          visible: visibleSeries?.[strat.id] !== false,
-          priceScaleId: "left", // LEFT AXIS!
-        });
-      });
-    }
-
     // Base investment line (Right Axis) — highlighted with clear visibility and clean dashed style
     seriesRef.current.base = chart.addLineSeries({
       color: chartColors.base || "#94a3b8",
@@ -432,21 +275,12 @@ export default function NavChart({
         ? param.seriesData.get(seriesRef.current.nasdaq)?.value
         : null;
 
-      const newHover = {
+      setHoverValues({
         date: param.time,
         nav: navVal != null ? navVal : null,
         sp500: spVal != null ? spVal : null,
         nasdaq: nsdVal != null ? nsdVal : null,
-      };
-
-      (customStrategies || []).forEach((strat) => {
-        const stratVal = seriesRef.current[strat.id]
-          ? param.seriesData.get(seriesRef.current[strat.id])?.value
-          : null;
-        newHover[strat.id] = stratVal != null ? stratVal : null;
       });
-
-      setHoverValues(newHover);
     });
 
     const ro = new ResizeObserver(() => {
@@ -464,7 +298,7 @@ export default function NavChart({
     setChartReady((prev) => prev + 1);
 
     return () => ro.disconnect();
-  }, [isLiveMode, customStrategies, chartHeight, isMobile]);
+  }, [isLiveMode, chartHeight, isMobile, chartColors, isLogActive, visibleSeries]);
 
   // Init chart once on component mount or isMobile change
   useEffect(() => {
@@ -564,104 +398,6 @@ export default function NavChart({
       }
     }
 
-    // Custom Strategies curves on LEFT Axis: Plotted with real strategy performance from DuckDB/quotes
-    if (navData && navData.length > 1) {
-      const currentSynthetic = SYNTHETIC_RETURNS[period] || SYNTHETIC_RETURNS["MAX"] || { strat: 0.05 };
-      const newLastValues = {};
-
-      (customStrategies || []).forEach((strat) => {
-        const stratBase = strat.activeInvested || strat.capital || 500;
-        const realNav = customNavData[strat.id]?.nav;
-
-        let sStrat = [];
-
-        // CASE 1: Real NAV series available from backend DuckDB / market data engine
-        if (Array.isArray(realNav) && realNav.length > 0) {
-          const navMap = new Map(
-            realNav.map((pt) => [
-              String(pt.date || pt.time).slice(0, 10),
-              pt.value != null ? Number(pt.value) : (pt.stock_value != null ? Number(pt.stock_value) : Number(pt.total_value))
-            ])
-          );
-          sStrat = navData
-            .map((pt) => {
-              const ptDate = String(pt.date || pt.time).slice(0, 10);
-              if (navMap.has(ptDate)) {
-                return { date: ptDate, value: navMap.get(ptDate) };
-              }
-              return null;
-            })
-            .filter(Boolean);
-        }
-
-        // CASE 2: No full backend series yet, track real market fluctuations via benchmark + alpha/live quotes
-        if (sStrat.length === 0) {
-          const isMM20 = strat.id === "strat_mm20" || strat.name.toLowerCase().includes("mm20");
-          const isNasdaqBench = strat.benchmark === "NASDAQ" || (!isMM20 && strat.name.toLowerCase().includes("acciones"));
-          const benchSeries = isNasdaqBench ? nasdaqData : sp500Data;
-
-          // Target return: prefer live quote change of strategy tickers if available
-          let targetStratReturn = isMM20 ? currentSynthetic.strat : currentSynthetic.strat * 1.1;
-          const quotes = liveStratQuotes[strat.id];
-          if (quotes && Object.keys(quotes).length > 0) {
-            const validChgs = Object.values(quotes).map((q) => q.change_pct).filter((c) => typeof c === "number" && !isNaN(c));
-            if (validChgs.length > 0) {
-              targetStratReturn = (validChgs.reduce((a, b) => a + b, 0) / validChgs.length) / 100;
-            }
-          }
-
-          let stratStartDate = null;
-          const rebs = strategyRebalances?.[strat.id];
-          const sortedStratRebs = Array.isArray(rebs) && rebs.length > 0
-            ? [...rebs].sort((a, b) => (a.rebalance_date || a.date || "").localeCompare(b.rebalance_date || b.date || ""))
-            : [];
-          if (sortedStratRebs.length > 0) {
-            const dates = sortedStratRebs.map((r) => r.rebalance_date || r.date).filter(Boolean);
-            if (dates.length > 0) stratStartDate = dates[0].slice(0, 10);
-          }
-          if (!stratStartDate && strat.createdAt) stratStartDate = strat.createdAt.slice(0, 10);
-
-          let startIdx = 0;
-          if (stratStartDate && navData.length) {
-            const found = navData.findIndex((pt) => String(pt.date || pt.time).slice(0, 10) >= stratStartDate);
-            if (found !== -1) startIdx = found;
-          }
-
-          // Use raw benchmark values at startIdx to compute pure benchmark percentage change since strategy start
-          const benchStartVal = benchSeries?.[startIdx]?.value || 0;
-          const effectiveLen = Math.max(1, navData.length - 1 - startIdx);
-
-          sStrat = navData.map((pt, idx) => {
-            const ptDate = String(pt.date || pt.time).slice(0, 10);
-            if (stratStartDate && ptDate < stratStartDate) return null;
-
-            const curBenchVal = benchSeries?.[idx]?.value || 0;
-            const benchDayReturn = benchStartVal > 0 ? (curBenchVal - benchStartVal) / benchStartVal : 0;
-
-            const progress = Math.max(0, idx - startIdx) / effectiveLen;
-            const alphaProgress = targetStratReturn * progress;
-
-            // Scaled dynamically by the active capital tranche on that specific date!
-            const capOnDate = getStratCap(strat, ptDate);
-            const stratValue = capOnDate * (1 + benchDayReturn + alphaProgress * 0.5);
-            return { date: ptDate, value: stratValue };
-          }).filter(Boolean);
-        }
-
-        const sStratData = toSeries(sStrat);
-        if (sStratData.length) {
-          seriesRef.current[strat.id]?.setData(sStratData);
-          newLastValues[strat.id] = sStratData[sStratData.length - 1].value;
-        }
-      });
-
-      setStratLastValues((prev) => {
-        const keys = Object.keys(newLastValues);
-        const isDiff = keys.some((k) => prev[k] !== newLastValues[k]);
-        return isDiff ? { ...prev, ...newLastValues } : prev;
-      });
-    }
-
     // Base investment line (tracks active capital invested per tranche, e.g. $666.67 in Aug -> $800.00 in Sept)
     if (navData && navData.length > 1) {
       const slotVal = investment / (numSlots || 15);
@@ -701,7 +437,7 @@ export default function NavChart({
     }
 
     chartRef.current.timeScale().fitContent();
-  }, [navData, sp500Data, nasdaqData, customStrategies, strategyRebalances, customNavData, liveStratQuotes, investment, numSlots, rebalances, holdings, period, getStratCap, getBenchNorm, chartReady, isMobile]);
+  }, [navData, sp500Data, nasdaqData, investment, numSlots, rebalances, holdings, chartReady, isMobile]);
 
   const lastNav = navData?.[navData.length - 1]?.value;
   const lastSP = sp500Data?.[sp500Data.length - 1]?.value;
@@ -746,102 +482,10 @@ export default function NavChart({
         boxShadow: "var(--shadow-card)",
       }}
     >
-      {/* ── Top Tabs: Portafolio General vs Acción Individual (Hora a Hora) ── */}
+      {/* ── Interactive Chart Legend Bar ─── */}
       <div
         style={{
           display: "flex",
-          alignItems: "center",
-          gap: 10,
-          marginBottom: 16,
-          paddingBottom: 12,
-          borderBottom: "1px solid var(--border)",
-        }}
-      >
-        <button
-          onClick={() => setActiveTab("portfolio")}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 7,
-            padding: "8px 16px",
-            borderRadius: 8,
-            border: activeTab === "portfolio"
-              ? `1px solid ${isLight ? "rgba(2, 132, 199, 0.4)" : "rgba(0, 229, 255, 0.4)"}`
-              : "1px solid transparent",
-            background: activeTab === "portfolio"
-              ? isLight ? "rgba(2, 132, 199, 0.12)" : "rgba(0, 229, 255, 0.12)"
-              : "transparent",
-            color: activeTab === "portfolio"
-              ? isLight ? "#0284c7" : "var(--accent-primary)"
-              : "var(--text-secondary)",
-            fontSize: "0.86rem",
-            fontWeight: activeTab === "portfolio" ? 700 : 500,
-            cursor: "pointer",
-            transition: "all 0.18s ease",
-          }}
-        >
-          <span>📊</span>
-          <span>Portafolio General ({strategyName || "Titanes"})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab("individual")}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 7,
-            padding: "8px 16px",
-            borderRadius: 8,
-            border: activeTab === "individual"
-              ? `1px solid ${isLight ? "rgba(16, 185, 129, 0.4)" : "rgba(16, 185, 129, 0.4)"}`
-              : "1px solid transparent",
-            background: activeTab === "individual"
-              ? isLight ? "rgba(16, 185, 129, 0.12)" : "rgba(16, 185, 129, 0.12)"
-              : "transparent",
-            color: activeTab === "individual"
-              ? isLight ? "#059669" : "#34d399"
-              : "var(--text-secondary)",
-            fontSize: "0.86rem",
-            fontWeight: activeTab === "individual" ? 700 : 500,
-            cursor: "pointer",
-            transition: "all 0.18s ease",
-          }}
-        >
-          <span>🔍</span>
-          <span>Acción Individual (Hora a Hora)</span>
-          {closedHoldings?.length > 0 && (
-            <span
-              style={{
-                fontSize: "0.68rem",
-                padding: "1px 6px",
-                borderRadius: 4,
-                background: isLight ? "rgba(16, 185, 129, 0.2)" : "rgba(16, 185, 129, 0.25)",
-                color: isLight ? "#047857" : "#34d399",
-                fontWeight: 700,
-              }}
-            >
-              {(holdings?.length || 0) + closedHoldings.length}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {activeTab === "individual" ? (
-        <IndividualHoldingChart
-          holdings={holdings}
-          closedHoldings={closedHoldings}
-          rebalances={rebalances}
-          investment={investment}
-          numSlots={numSlots}
-          customStrategies={customStrategies}
-          activeStrategyId="historical"
-        />
-      ) : (
-        <>
-          {/* ── Interactive Chart Legend Bar ─── */}
-          <div
-            style={{
-              display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               flexWrap: "wrap",
@@ -982,62 +626,11 @@ export default function NavChart({
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {/* Toggle Estrategias Adicionales */}
-          {!isLiveMode && (customStrategies || []).length > 0 && (
-            <button
-              onClick={handleToggleStrategiesPanel}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-                padding: "4px 10px",
-                borderRadius: 6,
-                fontSize: "0.72rem",
-                fontWeight: 700,
-                cursor: "pointer",
-                background: showStrategiesPanel
-                  ? isLight
-                    ? "rgba(147, 51, 234, 0.12)"
-                    : "rgba(192, 132, 252, 0.12)"
-                  : isLight
-                    ? "rgba(0, 0, 0, 0.04)"
-                    : "rgba(255, 255, 255, 0.04)",
-                border: `1px solid ${
-                  showStrategiesPanel
-                    ? isLight
-                      ? "rgba(147, 51, 234, 0.4)"
-                      : "rgba(192, 132, 252, 0.35)"
-                    : isLight
-                      ? "rgba(0, 0, 0, 0.12)"
-                      : "rgba(255, 255, 255, 0.1)"
-                }`,
-                color: showStrategiesPanel
-                  ? isLight
-                    ? "#7e22ce"
-                    : "#c084fc"
-                  : "var(--text-muted)",
-                transition: "all 0.15s ease",
-              }}
-              title="Mostrar / Ocultar panel de estrategias adicionales en el gráfico"
-            >
-              <span>🔬 Estrategias ({(customStrategies || []).length})</span>
-              <span>{showStrategiesPanel ? "▲" : "▼"}</span>
-            </button>
-          )}
-
           {/* Interactive Scale Mode Toggle */}
           <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
             <button
               onClick={() =>
-                setManualScaleMode((prev) =>
-                  prev === "log"
-                    ? "normal"
-                    : prev === "normal"
-                      ? null
-                      : autoLogScale
-                        ? "normal"
-                        : "log",
-                )
+                setManualScaleMode((prev) => (prev === "log" ? "normal" : "log"))
               }
               style={{
                 display: "flex",
@@ -1077,17 +670,13 @@ export default function NavChart({
                   : "none",
               }}
               title={
-                manualScaleMode
-                  ? `Escala forzada a ${isLogActive ? "LOGARÍTMICA" : "LINEAL"} (Clic para cambiar/auto)`
-                  : isLogActive
-                    ? `Escala Logarítmica Automática activa (Divergencia de capital Ratio ${logScaleRatio}:1). Clic para alternar.`
-                    : "Escala Lineal. Clic para forzar Escala Logarítmica."
+                isLogActive
+                  ? "Escala Logarítmica activa. Clic para volver a Escala Lineal."
+                  : "Escala Lineal. Clic para activar Escala Logarítmica."
               }
             >
               <span>⚖️</span>
-              <span>
-                {isLogActive ? `LOG ${logScaleRatio > 1 ? `${logScaleRatio}:1` : ""}` : "LINEAL"}
-              </span>
+              <span>{isLogActive ? "LOG" : "LINEAL"}</span>
               {manualScaleMode && (
                 <span style={{ fontSize: "0.6rem", opacity: 0.7, marginLeft: 2 }}>[Fijada]</span>
               )}
@@ -1136,314 +725,6 @@ export default function NavChart({
           </span>
         </div>
       </div>
-
-      {/* ── Subpanel Colapsable de Estrategias Comparativas (Reales & Simuladas) ── */}
-      {!isLiveMode && showStrategiesPanel && (customStrategies || []).length > 0 && (
-        <div
-          className="fade-up"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: 12,
-            padding: "8px 12px",
-            marginBottom: "14px",
-            background: isLight ? "rgba(241, 245, 249, 0.9)" : "rgba(0, 0, 0, 0.2)",
-            border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.06)"}`,
-            borderRadius: 8,
-          }}
-        >
-          {/* Bloque Reales */}
-          {(() => {
-            const realStrats = (customStrategies || []).filter((s) => s.isRealMoney);
-            if (realStrats.length === 0) return null;
-            return (
-              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                <span
-                  style={{
-                    fontSize: "0.68rem",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                    color: isLight ? "#059669" : "#34d399",
-                    fontWeight: 800,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  💵 Reales:
-                </span>
-                {realStrats.map((strat) => {
-                  const isVisible = visibleSeries?.[strat.id] !== false;
-                  const backendSumm = customNavData[strat.id]?.summary;
-                  const currentDateStr = hoverValues?.date
-                    ? String(hoverValues.date).slice(0, 10)
-                    : (navData?.[navData.length - 1]?.date || "").slice(0, 10);
-                  const stratBase = getStratCap(strat, currentDateStr);
-
-                  let stratPct = null;
-                  let stratUsd = null;
-
-                  if (hoverValues?.[strat.id] != null) {
-                    stratUsd = hoverValues[strat.id];
-                    // Find corresponding point in realNav or compute against stratBase
-                    const realPoint = customNavData[strat.id]?.nav?.find(
-                      (p) => String(p.date || p.time).slice(0, 10) === currentDateStr
-                    );
-                    const pointInvested = realPoint?.active_invested || stratBase;
-                    if (pointInvested > 0) {
-                      stratPct = ((stratUsd - pointInvested) / pointInvested) * 100;
-                    } else {
-                      stratPct = 0;
-                    }
-                  } else if (backendSumm) {
-                    stratUsd = backendSumm.active_stock_value ?? backendSumm.end_value ?? backendSumm.invested_value ?? stratBase;
-                    stratPct = backendSumm.active_return_pct ?? backendSumm.total_return_pct ?? (stratBase > 0 ? ((stratUsd - stratBase) / stratBase) * 100 : 0);
-                  } else if (stratLastValues[strat.id] != null) {
-                    stratUsd = stratLastValues[strat.id];
-                    if (stratBase > 0) {
-                      stratPct = ((stratUsd - stratBase) / stratBase) * 100;
-                    }
-                  } else {
-                    stratUsd = stratBase;
-                    stratPct = 0;
-                  }
-
-                  return (
-                    <button
-                      key={strat.id}
-                      onClick={() => handleToggle(strat.id)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        background: isVisible
-                          ? isLight
-                            ? "rgba(16, 185, 129, 0.16)"
-                            : "rgba(16, 185, 129, 0.12)"
-                          : isLight
-                            ? "rgba(0, 0, 0, 0.04)"
-                            : "rgba(255,255,255,0.02)",
-                        border: `1px solid ${
-                          isVisible
-                            ? isLight
-                              ? "rgba(16, 185, 129, 0.6)"
-                              : "rgba(16, 185, 129, 0.5)"
-                            : isLight
-                              ? "rgba(0, 0, 0, 0.12)"
-                              : "#334155"
-                        }`,
-                        padding: "3px 8px",
-                        borderRadius: 6,
-                        cursor: "pointer",
-                        color: isVisible
-                          ? isLight
-                            ? "#0f172a"
-                            : "#f1f5f9"
-                          : isLight
-                            ? "#64748b"
-                            : "#94a3b8",
-                        fontSize: "0.72rem",
-                        transition: "all 0.15s ease",
-                      }}
-                      title={`Clic para mostrar/ocultar cartera real ${strat.name}`}
-                    >
-                      <span
-                        style={{
-                          width: 10,
-                          height: 3,
-                          borderRadius: 2,
-                          background: "#10b981",
-                          opacity: isVisible ? 1 : 0.3,
-                          flexShrink: 0,
-                        }}
-                      />
-                      <span style={{ fontSize: "0.68rem" }}>{strat.country || "💵"}</span>
-                      <strong style={{ color: isVisible ? (isLight ? "#0f172a" : "#f1f5f9") : undefined }}>{strat.name}</strong>
-                      <span
-                        style={{
-                          fontSize: "0.6rem",
-                          padding: "1px 4px",
-                          borderRadius: 3,
-                          background: isLight ? "rgba(16, 185, 129, 0.25)" : "rgba(16, 185, 129, 0.2)",
-                          color: isLight ? "#047857" : "#34d399",
-                          fontWeight: 700,
-                        }}
-                      >
-                        REAL
-                      </span>
-                      {stratUsd != null && (
-                        <span className="mono" style={{ color: isLight ? "#059669" : "#34d399", fontWeight: 700 }}>
-                          ${stratUsd.toFixed(2)}
-                        </span>
-                      )}
-                      {stratPct != null && (
-                        <span
-                          style={{
-                            color: stratPct >= 0 ? (isLight ? "#16a34a" : "#22c55e") : (isLight ? "#dc2626" : "#ef4444"),
-                            fontSize: "0.68rem",
-                            fontWeight: 600,
-                          }}
-                        >
-                          ({stratPct >= 0 ? "+" : ""}
-                          {stratPct.toFixed(2)}%)
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            );
-          })()}
-
-          {/* Bloque Simuladas */}
-          {(() => {
-            const simStrats = (customStrategies || []).filter((s) => !s.isRealMoney);
-            if (simStrats.length === 0) return null;
-            return (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  flexWrap: "wrap",
-                  paddingLeft: 8,
-                  borderLeft: `1px solid ${isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.1)"}`,
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: "0.68rem",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                    color: isLight ? "#7e22ce" : "#c084fc",
-                    fontWeight: 700,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  🧪 Simuladas:
-                </span>
-                {simStrats.map((strat) => {
-                  const isVisible = visibleSeries?.[strat.id] !== false;
-                  const backendSumm = customNavData[strat.id]?.summary;
-                  const currentDateStr = hoverValues?.date
-                    ? String(hoverValues.date).slice(0, 10)
-                    : (navData?.[navData.length - 1]?.date || "").slice(0, 10);
-                  const stratBase = getStratCap(strat, currentDateStr);
-
-                  let stratPct = null;
-                  let stratUsd = null;
-
-                  if (hoverValues?.[strat.id] != null) {
-                    stratUsd = hoverValues[strat.id];
-                    // Find corresponding point in realNav or compute against stratBase
-                    const realPoint = customNavData[strat.id]?.nav?.find(
-                      (p) => String(p.date || p.time).slice(0, 10) === currentDateStr
-                    );
-                    const pointInvested = realPoint?.active_invested || stratBase;
-                    if (pointInvested > 0) {
-                      stratPct = ((stratUsd - pointInvested) / pointInvested) * 100;
-                    } else {
-                      stratPct = 0;
-                    }
-                  } else if (backendSumm) {
-                    stratUsd = backendSumm.active_stock_value ?? backendSumm.end_value ?? backendSumm.invested_value ?? stratBase;
-                    stratPct = backendSumm.active_return_pct ?? backendSumm.total_return_pct ?? (stratBase > 0 ? ((stratUsd - stratBase) / stratBase) * 100 : 0);
-                  } else if (stratLastValues[strat.id] != null) {
-                    stratUsd = stratLastValues[strat.id];
-                    if (stratBase > 0) {
-                      stratPct = ((stratUsd - stratBase) / stratBase) * 100;
-                    }
-                  } else {
-                    stratUsd = stratBase;
-                    stratPct = 0;
-                  }
-
-                  return (
-                    <button
-                      key={strat.id}
-                      onClick={() => handleToggle(strat.id)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        background: isVisible
-                          ? isLight
-                            ? `${strat.color}25`
-                            : `${strat.color}1A`
-                          : isLight
-                            ? "rgba(0, 0, 0, 0.04)"
-                            : "rgba(255,255,255,0.02)",
-                        border: `1px solid ${
-                          isVisible
-                            ? isLight
-                              ? `${strat.color}88`
-                              : `${strat.color}66`
-                            : isLight
-                              ? "rgba(0, 0, 0, 0.12)"
-                              : "#334155"
-                        }`,
-                        padding: "3px 8px",
-                        borderRadius: 6,
-                        cursor: "pointer",
-                        color: isVisible
-                          ? isLight
-                            ? "#0f172a"
-                            : "#f1f5f9"
-                          : isLight
-                            ? "#64748b"
-                            : "#94a3b8",
-                        fontSize: "0.72rem",
-                        transition: "all 0.15s ease",
-                      }}
-                      title={`Clic para mostrar/ocultar simulación ${strat.name}`}
-                    >
-                      <span
-                        style={{
-                          width: 10,
-                          height: 0,
-                          borderTop: `2.5px dashed ${strat.color || "#a855f7"}`,
-                          opacity: isVisible ? 1 : 0.35,
-                          flexShrink: 0,
-                        }}
-                      />
-                      <span style={{ fontSize: "0.68rem" }}>{strat.country || "🌎"}</span>
-                      <strong style={{ color: isVisible ? (isLight ? "#0f172a" : "#f1f5f9") : undefined }}>{strat.name}</strong>
-                      <span
-                        style={{
-                          fontSize: "0.6rem",
-                          padding: "1px 4px",
-                          borderRadius: 3,
-                          background: `${strat.color}22`,
-                          color: isLight ? "#6b21a8" : strat.color,
-                          fontWeight: 700,
-                        }}
-                      >
-                        {strat.isSystem ? "PRO" : "SIM"}
-                      </span>
-                      {stratUsd != null && (
-                        <span className="mono" style={{ color: isLight ? "#059669" : strat.color, fontWeight: 700 }}>
-                          ${stratUsd.toFixed(2)}
-                        </span>
-                      )}
-                      {stratPct != null && (
-                        <span
-                          style={{
-                            color: stratPct >= 0 ? (isLight ? "#16a34a" : "#22c55e") : (isLight ? "#dc2626" : "#ef4444"),
-                            fontSize: "0.68rem",
-                            fontWeight: 600,
-                          }}
-                        >
-                          ({stratPct >= 0 ? "+" : ""}
-                          {stratPct.toFixed(2)}%)
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            );
-          })()}
-        </div>
-      )}
 
       {/* ── Integrated Interactive Ticker Activator Bar (Position Switchers with Smooth Animations) ── */}
       {holdings && holdings.length > 0 && onToggleTicker && (
@@ -1595,7 +876,7 @@ export default function NavChart({
             style={{
               position: "absolute",
               top: 10,
-              left: !isLiveMode && (customStrategies || []).some((s) => visibleSeries?.[s.id] !== false) ? 70 : 14,
+              left: 14,
               display: "flex",
               flexDirection: "column",
               gap: 4,
@@ -1637,45 +918,6 @@ export default function NavChart({
                 </span>
               </div>
             )}
-            {!isLiveMode &&
-              (customStrategies || []).map((strat) => {
-                if (visibleSeries?.[strat.id] === false) return null;
-                const isReal = strat.isRealMoney === true;
-                // Simplify strategy name
-                const shortName = strat.name.length > 13
-                  ? strat.name.split(" ")[0] + (strat.name.split(" ")[1] ? " " + strat.name.split(" ")[1].slice(0, 4) : "")
-                  : strat.name;
-                return (
-                  <div key={strat.id} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.72rem", fontWeight: 600 }}>
-                    {isReal ? (
-                      <span style={{ width: 10, height: 3, borderRadius: 2, background: strat.color || "#10b981", flexShrink: 0 }} />
-                    ) : (
-                      <span style={{ width: 10, height: 0, borderTop: `2px dashed ${strat.color || "#a855f7"}`, flexShrink: 0 }} />
-                    )}
-                    <span style={{ color: isLight ? "#475569" : "#cbd5e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {shortName}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: "0.55rem",
-                        padding: "1px 3px",
-                        borderRadius: 3,
-                        lineHeight: 1,
-                        background: isReal
-                          ? isLight ? "rgba(16, 185, 129, 0.2)" : "rgba(16, 185, 129, 0.25)"
-                          : isLight ? "rgba(168, 85, 247, 0.2)" : "rgba(168, 85, 247, 0.25)",
-                        color: isReal
-                          ? isLight ? "#047857" : "#34d399"
-                          : isLight ? "#7e22ce" : "#c084fc",
-                        fontWeight: 700,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {isReal ? "REAL" : "SIM"}
-                    </span>
-                  </div>
-                );
-              })}
             {visibleSeries?.base !== false && (
               <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", fontWeight: 600 }}>
                 <span style={{ width: 10, height: 2, background: chartColors.base || "#94a3b8", flexShrink: 0, borderRadius: 1 }} />
@@ -1687,8 +929,6 @@ export default function NavChart({
           </div>
         )}
       </div>
-        </>
-      )}
     </div>
   );
 }
