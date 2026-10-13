@@ -79,6 +79,7 @@ export default function App() {
 
   // Theme — managed globally by ThemeProvider in main.jsx
   const { theme, toggleTheme } = useTheme();
+  const isLight = theme === "light";
 
   // Auth state & User Dropdown
   const { user, isInitialized, openAuthModal, logout, fetchMe } = useAuthStore();
