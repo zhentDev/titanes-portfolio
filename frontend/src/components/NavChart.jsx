@@ -477,359 +477,441 @@ export default function NavChart({
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              {/* Titanes Portfolio */}
-              <button
-                onClick={() => handleToggle("nav")}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  background: visibleSeries?.nav ? "rgba(0, 229, 255, 0.12)" : "rgba(0, 0, 0, 0.04)",
-              border: `1px solid ${visibleSeries?.nav ? "var(--accent-primary)" : "var(--border)"}`,
-              padding: "4px 10px",
-              borderRadius: 6,
-              cursor: "pointer",
-              color: visibleSeries?.nav ? "var(--text-primary)" : "var(--text-muted)",
-              fontSize: "0.75rem",
-              transition: "all 0.15s ease",
-            }}
-            title="Clic para mostrar/ocultar curva de Titanes"
-          >
-            <span
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                background: chartColors.nav,
-                opacity: visibleSeries?.nav ? 1 : 0.3,
-              }}
-            />
-            <strong>{isLiveMode ? (strategyName ? `En Vivo: ${strategyName}` : "Portafolio En Vivo") : (strategyName || "Titanes")}</strong>
-            <InfoTooltip conceptKey="nav" />
-            {currentNav != null && (
-              <span className="mono" style={{ color: chartColors.nav, fontWeight: 700 }}>
-                ${currentNav.toFixed(2)}
-              </span>
-            )}
-            {navPct != null && (
-              <span style={{ color: navPct >= 0 ? "#22c55e" : "#ef4444", fontSize: "0.7rem" }}>
-                ({navPct >= 0 ? "+" : ""}
-                {navPct.toFixed(2)}%)
-              </span>
-            )}
-          </button>
-
-          {/* S&P 500 Benchmark */}
-          <button
-            onClick={() => handleToggle("sp500")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              background: visibleSeries?.sp500
-                ? "rgba(245, 158, 11, 0.12)"
-                : "rgba(0, 0, 0, 0.04)",
-              border: `1px solid ${visibleSeries?.sp500 ? "rgba(245, 158, 11, 0.4)" : "var(--border)"}`,
-              padding: "4px 10px",
-              borderRadius: 6,
-              cursor: "pointer",
-              color: visibleSeries?.sp500 ? "var(--text-primary)" : "var(--text-muted)",
-              fontSize: "0.75rem",
-              transition: "all 0.15s ease",
-            }}
-            title="Clic para mostrar/ocultar curva de S&P 500"
-          >
-            <span
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                background: chartColors.sp500,
-                opacity: visibleSeries?.sp500 ? 1 : 0.3,
-              }}
-            />
-            <strong>S&P 500</strong>
-            {currentSP != null && (
-              <span className="mono" style={{ color: chartColors.sp500, fontWeight: 700 }}>
-                ${currentSP.toFixed(2)}
-              </span>
-            )}
-            {spPct != null && (
-              <span style={{ color: spPct >= 0 ? "#22c55e" : "#ef4444", fontSize: "0.7rem" }}>
-                ({spPct >= 0 ? "+" : ""}
-                {spPct.toFixed(2)}%)
-              </span>
-            )}
-          </button>
-
-          {/* NASDAQ Benchmark */}
-          <button
-            onClick={() => handleToggle("nasdaq")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              background: visibleSeries?.nasdaq
-                ? "rgba(168, 85, 247, 0.12)"
-                : "rgba(0, 0, 0, 0.04)",
-              border: `1px solid ${visibleSeries?.nasdaq ? "rgba(168, 85, 247, 0.4)" : "var(--border)"}`,
-              padding: "4px 10px",
-              borderRadius: 6,
-              cursor: "pointer",
-              color: visibleSeries?.nasdaq ? "var(--text-primary)" : "var(--text-muted)",
-              fontSize: "0.75rem",
-              transition: "all 0.15s ease",
-            }}
-            title="Clic para mostrar/ocultar curva de NASDAQ"
-          >
-            <span
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                background: chartColors.nasdaq,
-                opacity: visibleSeries?.nasdaq ? 1 : 0.3,
-              }}
-            />
-            <strong>NASDAQ</strong>
-            {currentNasdaq != null && (
-              <span className="mono" style={{ color: chartColors.nasdaq, fontWeight: 700 }}>
-                ${currentNasdaq.toFixed(2)}
-              </span>
-            )}
-            {nasdaqPct != null && (
-              <span style={{ color: nasdaqPct >= 0 ? "#22c55e" : "#ef4444", fontSize: "0.7rem" }}>
-                ({nasdaqPct >= 0 ? "+" : ""}
-                {nasdaqPct.toFixed(2)}%)
-              </span>
-            )}
-          </button>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {/* Interactive Scale Mode Toggle */}
-          <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+            {/* Titanes Portfolio */}
             <button
-              onClick={() =>
-                setManualScaleMode((prev) => (prev === "log" ? "normal" : "log"))
-              }
+              onClick={() => handleToggle("nav")}
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 5,
-                padding: "3px 9px",
+                gap: 6,
+                background: visibleSeries?.nav ? "rgba(0, 229, 255, 0.12)" : "rgba(0, 0, 0, 0.04)",
+                border: `1px solid ${visibleSeries?.nav ? "var(--accent-primary)" : "var(--border)"}`,
+                padding: "4px 10px",
                 borderRadius: 6,
-                fontSize: "0.72rem",
-                fontWeight: 700,
                 cursor: "pointer",
-                background: isLogActive
-                  ? isLight
-                    ? "rgba(2, 132, 199, 0.12)"
-                    : "rgba(56, 189, 248, 0.12)"
-                  : isLight
-                    ? "rgba(0, 0, 0, 0.04)"
-                    : "rgba(255, 255, 255, 0.04)",
-                border: `1px solid ${
-                  isLogActive
-                    ? isLight
-                      ? "rgba(2, 132, 199, 0.4)"
-                      : "rgba(56, 189, 248, 0.35)"
-                    : isLight
-                      ? "rgba(0, 0, 0, 0.12)"
-                      : "rgba(255, 255, 255, 0.1)"
-                }`,
-                color: isLogActive
-                  ? isLight
-                    ? "#0369a1"
-                    : "#38bdf8"
-                  : "var(--text-muted)",
+                color: visibleSeries?.nav ? "var(--text-primary)" : "var(--text-muted)",
+                fontSize: "0.75rem",
                 transition: "all 0.15s ease",
-                boxShadow: isLogActive
-                  ? isLight
-                    ? "0 0 10px rgba(2, 132, 199, 0.15)"
-                    : "0 0 10px rgba(56, 189, 248, 0.15)"
-                  : "none",
+                fontVariantNumeric: "tabular-nums",
               }}
-              title={
-                isLogActive
-                  ? "Escala Logarítmica activa. Clic para volver a Escala Lineal."
-                  : "Escala Lineal. Clic para activar Escala Logarítmica."
-              }
+              title="Clic para mostrar/ocultar curva de Titanes"
             >
-              <span>⚖️</span>
-              <span>{isLogActive ? "LOG" : "LINEAL"}</span>
-              {manualScaleMode && (
-                <span style={{ fontSize: "0.6rem", opacity: 0.7, marginLeft: 2 }}>[Fijada]</span>
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: chartColors.nav,
+                  opacity: visibleSeries?.nav ? 1 : 0.3,
+                  flexShrink: 0,
+                }}
+              />
+              <strong>{isLiveMode ? (strategyName ? `En Vivo: ${strategyName}` : "Portafolio En Vivo") : (strategyName || "Titanes")}</strong>
+              <InfoTooltip conceptKey="nav" />
+              {currentNav != null && (
+                <span
+                  className="mono"
+                  style={{
+                    color: chartColors.nav,
+                    fontWeight: 700,
+                    minWidth: "62px",
+                    textAlign: "right",
+                    display: "inline-block",
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
+                  ${currentNav.toFixed(2)}
+                </span>
+              )}
+              {navPct != null && (
+                <span
+                  style={{
+                    color: navPct >= 0 ? "#22c55e" : "#ef4444",
+                    fontSize: "0.7rem",
+                    minWidth: "64px",
+                    textAlign: "right",
+                    display: "inline-block",
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
+                  ({navPct >= 0 ? "+" : ""}
+                  {navPct.toFixed(2)}%)
+                </span>
               )}
             </button>
-            <InfoTooltip conceptKey="log_scale" position="bottom" />
+
+            {/* S&P 500 Benchmark */}
+            <button
+              onClick={() => handleToggle("sp500")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                background: visibleSeries?.sp500
+                  ? "rgba(245, 158, 11, 0.12)"
+                  : "rgba(0, 0, 0, 0.04)",
+                border: `1px solid ${visibleSeries?.sp500 ? "rgba(245, 158, 11, 0.4)" : "var(--border)"}`,
+                padding: "4px 10px",
+                borderRadius: 6,
+                cursor: "pointer",
+                color: visibleSeries?.sp500 ? "var(--text-primary)" : "var(--text-muted)",
+                fontSize: "0.75rem",
+                transition: "all 0.15s ease",
+                fontVariantNumeric: "tabular-nums",
+              }}
+              title="Clic para mostrar/ocultar curva de S&P 500"
+            >
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: chartColors.sp500,
+                  opacity: visibleSeries?.sp500 ? 1 : 0.3,
+                  flexShrink: 0,
+                }}
+              />
+              <strong>S&P 500</strong>
+              {currentSP != null && (
+                <span
+                  className="mono"
+                  style={{
+                    color: chartColors.sp500,
+                    fontWeight: 700,
+                    minWidth: "62px",
+                    textAlign: "right",
+                    display: "inline-block",
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
+                  ${currentSP.toFixed(2)}
+                </span>
+              )}
+              {spPct != null && (
+                <span
+                  style={{
+                    color: spPct >= 0 ? "#22c55e" : "#ef4444",
+                    fontSize: "0.7rem",
+                    minWidth: "64px",
+                    textAlign: "right",
+                    display: "inline-block",
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
+                  ({spPct >= 0 ? "+" : ""}
+                  {spPct.toFixed(2)}%)
+                </span>
+              )}
+            </button>
+
+            {/* NASDAQ Benchmark */}
+            <button
+              onClick={() => handleToggle("nasdaq")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                background: visibleSeries?.nasdaq
+                  ? "rgba(168, 85, 247, 0.12)"
+                  : "rgba(0, 0, 0, 0.04)",
+                border: `1px solid ${visibleSeries?.nasdaq ? "rgba(168, 85, 247, 0.4)" : "var(--border)"}`,
+                padding: "4px 10px",
+                borderRadius: 6,
+                cursor: "pointer",
+                color: visibleSeries?.nasdaq ? "var(--text-primary)" : "var(--text-muted)",
+                fontSize: "0.75rem",
+                transition: "all 0.15s ease",
+                fontVariantNumeric: "tabular-nums",
+              }}
+              title="Clic para mostrar/ocultar curva de NASDAQ"
+            >
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: chartColors.nasdaq,
+                  opacity: visibleSeries?.nasdaq ? 1 : 0.3,
+                  flexShrink: 0,
+                }}
+              />
+              <strong>NASDAQ</strong>
+              {currentNasdaq != null && (
+                <span
+                  className="mono"
+                  style={{
+                    color: chartColors.nasdaq,
+                    fontWeight: 700,
+                    minWidth: "62px",
+                    textAlign: "right",
+                    display: "inline-block",
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
+                  ${currentNasdaq.toFixed(2)}
+                </span>
+              )}
+              {nasdaqPct != null && (
+                <span
+                  style={{
+                    color: nasdaqPct >= 0 ? "#22c55e" : "#ef4444",
+                    fontSize: "0.7rem",
+                    minWidth: "64px",
+                    textAlign: "right",
+                    display: "inline-block",
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
+                  ({nasdaqPct >= 0 ? "+" : ""}
+                  {nasdaqPct.toFixed(2)}%)
+                </span>
+              )}
+            </button>
           </div>
 
-          <span
-            style={{
-              fontSize: "0.75rem",
-              color: isLight ? "#475569" : "#94a3b8",
-              fontFamily: "'JetBrains Mono', monospace",
-              opacity: hoverValues?.date ? 1 : 0,
-              transition: "opacity 0.15s ease",
-              pointerEvents: "none",
-              whiteSpace: "nowrap",
-            }}
-          >
-            📅 {(() => {
-              const dateVal = hoverValues?.date;
-              if (!dateVal) return "";
-              if (typeof dateVal === "number") {
-                const d = new Date(dateVal * 1000);
-                return d.toLocaleDateString("es-CO", {
-                  timeZone: "America/Bogota",
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: true,
-                });
-              }
-              const str = String(dateVal);
-              if (str.length >= 10 && str.includes("-")) {
-                const [y, m, d] = str.split("-");
-                const dateObj = new Date(Number(y), Number(m) - 1, Number(d));
-                return dateObj.toLocaleDateString("es-CO", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                });
-              }
-              return str;
-            })()}
-          </span>
-        </div>
-      </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {/* Interactive Scale Mode Toggle */}
+            <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+              <button
+                onClick={() =>
+                  setManualScaleMode((prev) => (prev === "log" ? "normal" : "log"))
+                }
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 5,
+                  padding: "3px 9px",
+                  borderRadius: 6,
+                  fontSize: "0.72rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  background: isLogActive
+                    ? isLight
+                      ? "rgba(2, 132, 199, 0.12)"
+                      : "rgba(56, 189, 248, 0.12)"
+                    : isLight
+                      ? "rgba(0, 0, 0, 0.04)"
+                      : "rgba(255, 255, 255, 0.04)",
+                  border: `1px solid ${
+                    isLogActive
+                      ? isLight
+                        ? "rgba(2, 132, 199, 0.4)"
+                        : "rgba(56, 189, 248, 0.35)"
+                      : isLight
+                        ? "rgba(0, 0, 0, 0.12)"
+                        : "rgba(255, 255, 255, 0.1)"
+                  }`,
+                  color: isLogActive
+                    ? isLight
+                      ? "#0369a1"
+                      : "#38bdf8"
+                    : "var(--text-muted)",
+                  transition: "all 0.15s ease",
+                  boxShadow: isLogActive
+                    ? isLight
+                      ? "0 0 10px rgba(2, 132, 199, 0.15)"
+                      : "0 0 10px rgba(56, 189, 248, 0.15)"
+                    : "none",
+                }}
+                title={
+                  isLogActive
+                    ? "Escala Logarítmica activa. Clic para volver a Escala Lineal."
+                    : "Escala Lineal. Clic para activar Escala Logarítmica."
+                }
+              >
+                <span>⚖️</span>
+                <span>{isLogActive ? "LOG" : "LINEAL"}</span>
+                {manualScaleMode && (
+                  <span style={{ fontSize: "0.6rem", opacity: 0.7, marginLeft: 2 }}>[Fijada]</span>
+                )}
+              </button>
+              <InfoTooltip conceptKey="log_scale" position="bottom" />
+            </div>
 
-      {/* ── Integrated Interactive Ticker Activator Bar (Position Switchers with Smooth Animations) ── */}
-      {holdings && holdings.length > 0 && onToggleTicker && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            flexWrap: "wrap",
-            padding: "10px 14px",
-            background: isLight ? "rgba(241, 245, 249, 0.75)" : "rgba(255, 255, 255, 0.02)",
-            border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.06)"}`,
-            borderRadius: "var(--radius)",
-            marginBottom: "14px",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span
               style={{
                 fontSize: "0.75rem",
-                fontWeight: 700,
-                color: isSimulating ? "var(--accent-primary)" : "var(--text-secondary)",
+                color: isLight ? "#475569" : "#94a3b8",
+                fontFamily: "'JetBrains Mono', monospace",
+                opacity: hoverValues?.date ? 1 : 0,
+                transition: "opacity 0.15s ease",
+                pointerEvents: "none",
+                whiteSpace: "nowrap",
+                minWidth: "125px",
+                display: "inline-block",
+                textAlign: "right",
               }}
             >
-              🎯 Posiciones:
+              📅 {(() => {
+                const dateVal = hoverValues?.date;
+                if (!dateVal) return "";
+                if (typeof dateVal === "number") {
+                  const d = new Date(dateVal * 1000);
+                  return d.toLocaleDateString("es-CO", {
+                    timeZone: "America/Bogota",
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: true,
+                  });
+                }
+                const str = String(dateVal);
+                if (str.length >= 10 && str.includes("-")) {
+                  const [y, m, d] = str.split("-");
+                  const dateObj = new Date(Number(y), Number(m) - 1, Number(d));
+                  return dateObj.toLocaleDateString("es-CO", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  });
+                }
+                return str;
+              })()}
             </span>
-            {isSimulating && (
+          </div>
+        </div>
+
+        {/* ── Integrated Interactive Ticker Activator Bar (Position Switchers with Smooth Animations) ── */}
+        {holdings && holdings.length > 0 && onToggleTicker && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              flexWrap: "wrap",
+              padding: "10px 14px",
+              background: isLight ? "rgba(241, 245, 249, 0.75)" : "rgba(255, 255, 255, 0.02)",
+              border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.06)"}`,
+              borderRadius: "var(--radius)",
+              marginBottom: "14px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  color: isSimulating ? "var(--accent-primary)" : "var(--text-secondary)",
+                }}
+              >
+                🎯 Posiciones:
+              </span>
               <span
                 style={{
                   fontSize: "0.68rem",
                   padding: "2px 7px",
                   borderRadius: 4,
-                  background: isLight ? "rgba(2, 132, 199, 0.12)" : "rgba(0,229,255,0.1)",
-                  color: isLight ? "#0284c7" : "var(--accent-primary)",
+                  background: isSimulating
+                    ? isLight ? "rgba(2, 132, 199, 0.12)" : "rgba(0,229,255,0.1)"
+                    : isLight ? "rgba(0, 0, 0, 0.05)" : "rgba(255, 255, 255, 0.05)",
+                  color: isSimulating
+                    ? isLight ? "#0284c7" : "var(--accent-primary)"
+                    : "var(--text-muted)",
                   fontWeight: 700,
+                  minWidth: "85px",
+                  display: "inline-block",
+                  textAlign: "center",
+                  fontVariantNumeric: "tabular-nums",
                 }}
               >
                 {holdings.filter((h) => h.selected !== false).length} de {holdings.length} activas
               </span>
-            )}
-          </div>
+            </div>
 
-          <div style={{ display: "flex", gap: 5 }}>
-            <button className="btn-chip" onClick={selectAll} title="Incluir todas las posiciones">
-              ⚡ Todos
-            </button>
-            <button
-              className="btn-chip gainer"
-              onClick={selectGainers}
-              title="Solo posiciones ganadoras"
-            >
-              🚀 Ganadoras
-            </button>
-            <button
-              className="btn-chip loser"
-              onClick={selectLosers}
-              title="Solo posiciones perdedoras"
-            >
-              🔴 Perdedoras
-            </button>
-            <button
-              className="btn-chip"
-              onClick={invertSelection}
-              title="Invertir selección actual"
-            >
-              🔄 Invertir
-            </button>
-          </div>
+            <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
+              <button className="btn-chip" onClick={selectAll} title="Incluir todas las posiciones">
+                ⚡ Todos
+              </button>
+              <button
+                className="btn-chip gainer"
+                onClick={selectGainers}
+                title="Solo posiciones ganadoras"
+              >
+                🚀 Ganadoras
+              </button>
+              <button
+                className="btn-chip loser"
+                onClick={selectLosers}
+                title="Solo posiciones perdedoras"
+              >
+                🔴 Perdedoras
+              </button>
+              <button
+                className="btn-chip"
+                onClick={invertSelection}
+                title="Invertir selección actual"
+              >
+                🔄 Invertir
+              </button>
+            </div>
 
-          <div
-            style={{
-              width: 1,
-              height: 16,
-              background: isLight ? "rgba(0, 0, 0, 0.1)" : "rgba(255, 255, 255, 0.1)",
-              margin: "0 4px",
-            }}
-          />
+            <div
+              style={{
+                width: 1,
+                height: 16,
+                background: isLight ? "rgba(0, 0, 0, 0.1)" : "rgba(255, 255, 255, 0.1)",
+                margin: "0 4px",
+                flexShrink: 0,
+              }}
+            />
 
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {holdings.map((h) => {
-              const isSelected = h.selected !== false;
-              const isGain = (h.unrealized_pnl ?? 0) >= 0;
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+              {holdings.map((h) => {
+                const isSelected = h.selected !== false;
+                const isGain = (h.unrealized_pnl ?? 0) >= 0;
 
-              return (
-                <button
-                  key={h.ticker}
-                  onClick={() => onToggleTicker(h.ticker)}
-                  className={`ticker-chip ${isSelected ? "active" : "inactive"} ${isGain ? "gain" : "loss"}`}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 5,
-                    padding: "4px 9px",
-                    borderRadius: 6,
-                    fontSize: "0.72rem",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                    background: isSelected
-                      ? isGain
-                        ? "rgba(0, 229, 255, 0.08)"
-                        : "rgba(239, 68, 68, 0.08)"
-                      : "rgba(255, 255, 255, 0.02)",
-                    border: `1px solid ${isSelected ? (isGain ? "rgba(0, 229, 255, 0.35)" : "rgba(239, 68, 68, 0.35)") : "rgba(255, 255, 255, 0.05)"}`,
-                    color: isSelected ? (isGain ? "#00e5ff" : "#f87171") : "#64748b",
-                    opacity: isSelected ? 1 : 0.45,
-                    transform: isSelected ? "scale(1)" : "scale(0.96)",
-                  }}
-                  title={`Clic para ${isSelected ? "excluir" : "incluir"} ${h.ticker}`}
-                >
-                  <span style={{ fontSize: "0.65rem" }}>{isSelected ? "✓" : "✗"}</span>
-                  <span>{h.ticker}</span>
-                  {h.unrealized_pnl_pct != null && (
-                    <span style={{ fontSize: "0.65rem", opacity: 0.85 }}>
-                      {h.unrealized_pnl_pct >= 0 ? "+" : ""}
-                      {h.unrealized_pnl_pct.toFixed(1)}%
+                return (
+                  <button
+                    key={h.ticker}
+                    onClick={() => onToggleTicker(h.ticker)}
+                    className={`ticker-chip ${isSelected ? "active" : "inactive"} ${isGain ? "gain" : "loss"}`}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 4,
+                      padding: "4px 8px",
+                      borderRadius: 6,
+                      fontSize: "0.72rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      boxSizing: "border-box",
+                      minWidth: "68px",
+                      height: "26px",
+                      transition: "background 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease",
+                      background: isSelected
+                        ? isGain
+                          ? isLight ? "rgba(2, 132, 199, 0.1)" : "rgba(0, 229, 255, 0.08)"
+                          : "rgba(239, 68, 68, 0.08)"
+                        : isLight ? "rgba(0, 0, 0, 0.03)" : "rgba(255, 255, 255, 0.02)",
+                      border: `1px solid ${
+                        isSelected
+                          ? isGain
+                            ? isLight ? "rgba(2, 132, 199, 0.35)" : "rgba(0, 229, 255, 0.35)"
+                            : "rgba(239, 68, 68, 0.35)"
+                          : isLight ? "rgba(0, 0, 0, 0.1)" : "rgba(255, 255, 255, 0.08)"
+                      }`,
+                      color: isSelected
+                        ? isGain
+                          ? isLight ? "#0284c7" : "#00e5ff"
+                          : "#f87171"
+                        : isLight ? "#94a3b8" : "#64748b",
+                      opacity: isSelected ? 1 : 0.55,
+                    }}
+                    title={`Clic para ${isSelected ? "excluir" : "incluir"} ${h.ticker}`}
+                  >
+                    <span style={{ fontSize: "0.65rem", width: "10px", textAlign: "center", flexShrink: 0 }}>
+                      {isSelected ? "✓" : "✗"}
                     </span>
-                  )}
-                </button>
-              );
-            })}
+                    <span style={{ flexShrink: 0 }}>{h.ticker}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* ── Main Canvas & Floating Top-Right Indicator Box ─── */}
       <div
