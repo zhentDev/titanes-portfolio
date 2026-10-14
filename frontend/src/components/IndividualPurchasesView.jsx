@@ -3284,6 +3284,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                                 alignItems: "center",
                                 gap: 4,
                                 fontWeight: 500,
+                                flexShrink: 0,
                                 transition: "all 0.15s ease",
                               }}
                               title="Cambiar Acción o ETF a todos los lotes de esta posición"
@@ -3306,6 +3307,8 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                                 padding: "2px 6px",
                                 borderRadius: 4,
                                 color: "var(--text-secondary)",
+                                whiteSpace: "nowrap",
+                                flexShrink: 0,
                               }}
                             >
                               {group.lots.length} Lote{group.lots.length !== 1 ? "s" : ""}
@@ -3315,7 +3318,17 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                             const lq = liveQuotes[group.ticker];
                             return (
                               <>
-                                <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+                                <div
+                                  style={{
+                                    fontSize: "0.75rem",
+                                    color: "var(--text-secondary)",
+                                    whiteSpace: "nowrap",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    maxWidth: 320,
+                                  }}
+                                  title={lq?.name || group.name}
+                                >
                                   {lq?.name || group.name}
                                 </div>
                                 {lq && (lq.exchange || lq.quoteType || lq.currency) && (
@@ -3337,6 +3350,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                                           fontSize: "0.65rem",
                                           fontWeight: 500,
                                           color: "var(--text-secondary)",
+                                          whiteSpace: "nowrap",
                                         }}
                                       >
                                         🏛️ {lq.exchange}
@@ -3352,6 +3366,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                                           fontSize: "0.65rem",
                                           fontWeight: 500,
                                           color: "var(--text-secondary)",
+                                          whiteSpace: "nowrap",
                                         }}
                                       >
                                         📊 {lq.quoteType}
@@ -3375,6 +3390,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                                           color: lq.currency !== (portfolio.assetCurrency || "USD")
                                             ? (theme === "light" ? "#dc2626" : "#fca5a5")
                                             : "var(--text-secondary)",
+                                          whiteSpace: "nowrap",
                                         }}
                                         title={
                                           lq.currency !== (portfolio.assetCurrency || "USD")
@@ -3397,17 +3413,16 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                         <div
                           style={{
                             textAlign: "right",
-                            flex: 1,
                             display: "flex",
                             justifyContent: "flex-end",
                             alignItems: "center",
-                            flexWrap: "wrap",
-                            gap: 14,
-                            marginRight: 8,
+                            flexWrap: "nowrap",
+                            gap: 16,
+                            flexShrink: 0,
                           }}
                         >
-                          <div style={{ minWidth: 80 }}>
-                            <div style={{ color: "var(--text-secondary)", fontSize: "0.7rem" }}>
+                          <div style={{ width: 110, textAlign: "right", flexShrink: 0 }}>
+                            <div style={{ color: "var(--text-secondary)", fontSize: "0.7rem", whiteSpace: "nowrap" }}>
                               Total Invertido
                             </div>
                             <div className="mono" style={{ fontWeight: 700, color: "var(--text-primary)" }}>
@@ -3416,17 +3431,17 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                                 ? group.totalInvested.toFixed(2)
                                 : group.totalInvestedFx.toFixed(2)}
                             </div>
-                            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
+                            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
                               Vol: {group.totalShares.toFixed(4)}
                             </div>
                             {group.totalCommission > 0 && (
-                              <div style={{ fontSize: "0.65rem", color: "#f59e0b", fontWeight: 600 }}>
+                              <div style={{ fontSize: "0.65rem", color: "#f59e0b", fontWeight: 600, whiteSpace: "nowrap" }}>
                                 Fees: -${group.totalCommission.toFixed(2)}
                               </div>
                             )}
                           </div>
-                          <div style={{ minWidth: 80 }}>
-                            <div style={{ color: "var(--text-secondary)", fontSize: "0.7rem" }}>
+                          <div style={{ width: 115, textAlign: "right", flexShrink: 0 }}>
+                            <div style={{ color: "var(--text-secondary)", fontSize: "0.7rem", whiteSpace: "nowrap" }}>
                               Valor Mercado
                             </div>
                             <div
@@ -3445,7 +3460,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                                   ? group.totalCurrentValueFx.toFixed(2)
                                   : group.totalCurrentValueReal.toFixed(2)}
                             </div>
-                            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
+                            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
                               Apertura: ${group.avgOpenPrice.toFixed(2)}
                             </div>
                           </div>
@@ -3461,8 +3476,8 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                             const isUp1d = chg1d >= 0;
 
                             return (
-                              <div style={{ minWidth: 95, textAlign: "right" }}>
-                                <div style={{ color: "var(--text-secondary)", fontSize: "0.7rem" }}>
+                              <div style={{ width: 110, textAlign: "right", flexShrink: 0 }}>
+                                <div style={{ color: "var(--text-secondary)", fontSize: "0.7rem", whiteSpace: "nowrap" }}>
                                   Hoy (24h)
                                 </div>
                                 {has1d ? (
@@ -3475,11 +3490,12 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                                         color: isUp1d
                                           ? theme === "light" ? "#16a34a" : "#4ade80"
                                           : theme === "light" ? "#dc2626" : "#f87171",
+                                        whiteSpace: "nowrap",
                                       }}
                                     >
                                       {isUp1d ? "+" : ""}{chg1d.toFixed(2)}%
                                     </div>
-                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, marginTop: 1 }}>
+                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, marginTop: 1, whiteSpace: "nowrap" }}>
                                       <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }} className="mono">
                                         {chgUsd1d >= 0 ? "+" : ""}${chgUsd1d.toFixed(2)}
                                       </span>
@@ -3538,8 +3554,8 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                                   : group.profitPctReal;
                             const isPositive = profit >= 0;
                             return (
-                              <div style={{ minWidth: 100 }}>
-                                <div style={{ color: "var(--text-secondary)", fontSize: "0.7rem" }}>
+                              <div style={{ width: 125, textAlign: "right", flexShrink: 0 }}>
+                                <div style={{ color: "var(--text-secondary)", fontSize: "0.7rem", whiteSpace: "nowrap" }}>
                                   {yieldViewMode === "REAL"
                                     ? "Beneficio Real"
                                     : "Beneficio"}
@@ -3553,6 +3569,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                                       : (theme === "light" ? "#dc2626" : "#f87171"),
                                     fontWeight: 700,
                                     fontSize: "0.9rem",
+                                    whiteSpace: "nowrap",
                                   }}
                                 >
                                   {isPositive ? "+" : ""}${profit.toFixed(2)}
@@ -3564,7 +3581,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                                 </div>
                                 {yieldViewMode === "REAL" && (
                                   <div
-                                    style={{ fontSize: "0.65rem", color: "#f87171", marginTop: 2 }}
+                                    style={{ fontSize: "0.65rem", color: "#f87171", marginTop: 2, whiteSpace: "nowrap" }}
                                   >
                                     📉 -${(group.totalInflationLoss || 0).toFixed(2)} por IPC
                                   </div>
@@ -3572,10 +3589,10 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                               </div>
                             );
                           })()}
-                        </div>
 
-                        <div style={{ fontSize: "1.2rem", color: "var(--text-muted)" }}>
-                          {isExpanded ? "🔽" : "▶️"}
+                          <div style={{ width: 32, textAlign: "center", fontSize: "1.1rem", color: "var(--text-muted)", flexShrink: 0 }}>
+                            {isExpanded ? "🔽" : "▶️"}
+                          </div>
                         </div>
                       </div>
 
