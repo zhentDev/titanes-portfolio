@@ -93,7 +93,7 @@ export default function IndividualHoldingChart({
     fetchHoldingChart({
       ticker: selectedItem.ticker,
       startDate: selectedItem.entryDate,
-      exitDate: selectedItem.exitDate,
+      exitDate: null, // Always fetch up to present day
       shares: selectedItem.shares,
       costBasis: selectedItem.costBasis,
       entryPrice: selectedItem.startPrice,
@@ -236,6 +236,41 @@ export default function IndividualHoldingChart({
 
       baseSeries.setData(basePoints);
       valSeries.setData(valPoints);
+
+      // If holding was closed/sold, place an explicit prominent marker on the exit day
+      const exitDateStr = selectedItem?.exitDate || chartData?.exit_date;
+      if (selectedItem?.status === "CLOSED" && exitDateStr) {
+        // Find closest point on or just before exitDate
+        let markerPt = null;
+        for (let i = 0; i < valPoints.length; i++) {
+          const pt = valPoints[i];
+          const ptIso = chartData.series.find((s) => s.time === pt.time)?.date || "";
+          if (ptIso.slice(0, 10) <= exitDateStr) {
+            markerPt = pt;
+          } else {
+            break;
+          }
+        }
+        if (!markerPt && valPoints.length > 0) {
+          markerPt = valPoints[0];
+        }
+
+        if (markerPt) {
+          valSeries.setMarkers([
+            {
+              time: markerPt.time,
+              position: "aboveBar",
+              color: "#ef4444",
+              shape: "arrowDown",
+              text: `🔻 VENDIDA (${exitDateStr})`,
+              size: 2,
+            },
+          ]);
+        }
+      } else {
+        valSeries.setMarkers([]);
+      }
+
       chart.timeScale().fitContent();
     }
 
@@ -361,9 +396,23 @@ export default function IndividualHoldingChart({
             </span>
           </div>
 
+          {selectedItem?.status === "CLOSED" && (
+            <div>
+              <span style={{ fontSize: "0.68rem", color: "#f87171", textTransform: "uppercase", display: "block", fontWeight: 700 }}>
+                Valor al Vender ({selectedItem?.exitDate})
+              </span>
+              <span className="mono" style={{ fontSize: "0.95rem", fontWeight: 800, color: (selectedItem?.returnUsd ?? 0) >= 0 ? (isLight ? "#059669" : "#34d399") : (isLight ? "#dc2626" : "#f87171") }}>
+                ${Number(selectedItem?.currentValue ?? chartData?.exit_value ?? 0).toFixed(2)}
+                <span style={{ fontSize: "0.75rem", marginLeft: 4 }}>
+                  ({(selectedItem?.returnPct ?? 0) >= 0 ? "+" : ""}{Number(selectedItem?.returnPct ?? 0).toFixed(2)}%)
+                </span>
+              </span>
+            </div>
+          )}
+
           <div>
             <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", textTransform: "uppercase", display: "block" }}>
-              {selectedItem?.status === "CLOSED" ? "Valor de Salida" : "Valor Actual (Hora a Hora)"}
+              {selectedItem?.status === "CLOSED" ? "Valor de Mercado Hoy (Si siguiera)" : "Valor Actual (Hora a Hora)"}
             </span>
             <span className="mono" style={{ fontSize: "0.95rem", fontWeight: 800, color: displayRetUsd >= 0 ? (isLight ? "#059669" : "#34d399") : (isLight ? "#dc2626" : "#f87171") }}>
               ${Number(displayVal).toFixed(2)}
@@ -372,7 +421,7 @@ export default function IndividualHoldingChart({
 
           <div>
             <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", textTransform: "uppercase", display: "block" }}>
-              Rendimiento Puro
+              {selectedItem?.status === "CLOSED" ? "Rendimiento Teórico Total" : "Rendimiento Puro"}
             </span>
             <span className="mono" style={{ fontSize: "0.95rem", fontWeight: 800, color: displayRetUsd >= 0 ? (isLight ? "#16a34a" : "#22c55e") : (isLight ? "#dc2626" : "#ef4444") }}>
               {displayRetUsd >= 0 ? "+" : ""}${Number(displayRetUsd).toFixed(2)} ({displayRetPct >= 0 ? "+" : ""}{Number(displayRetPct).toFixed(2)}%)

@@ -261,8 +261,6 @@ def get_holding_hourly_chart(
         "threads": False,
         "session": _yf_session,
     }
-    if end_d:
-        download_kwargs["end"] = end_d
 
     try:
         raw_df = yf.download(ticker_clean, **download_kwargs)
@@ -285,6 +283,9 @@ def get_holding_hourly_chart(
         shares_flt = float(shares) if float(shares) > 0 else 1.0
         basis_flt = float(cost_basis) if float(cost_basis) > 0 else (shares_flt * float(entry_price))
 
+        exit_point = None
+        exit_date_str = str(exit_d) if exit_d else None
+
         for idx_time, row in df.iterrows():
             close_val = row.get("Close")
             if pd.isna(close_val) or close_val is None or float(close_val) <= 0:
@@ -297,18 +298,20 @@ def get_holding_hourly_chart(
             # UNIX timestamp in seconds
             ts = int(pd.to_datetime(idx_time).timestamp())
             iso_date = pd.to_datetime(idx_time).strftime("%Y-%m-%d %H:%M")
+            date_prefix = pd.to_datetime(idx_time).strftime("%Y-%m-%d")
 
             # Pure position valuation: shares * price
             val = round(shares_flt * close_flt, 4)
             ret_pct = round(((val - basis_flt) / basis_flt) * 100, 2) if basis_flt > 0 else 0.0
 
-            series.append({
+            pt_dict = {
                 "time": ts,
                 "date": iso_date,
                 "price": round(close_flt, 4),
                 "value": val,
                 "return_pct": ret_pct,
-            })
+            }
+            series.append(pt_dict)
 
             candles.append({
                 "time": ts,
@@ -318,15 +321,29 @@ def get_holding_hourly_chart(
                 "close": round(close_flt, 4),
             })
 
+            # Detect the exact exit point on the day of the sale
+            if exit_date_str and date_prefix <= exit_date_str:
+                exit_point = pt_dict
+
         latest_price = series[-1]["price"] if series else float(entry_price)
         latest_val = series[-1]["value"] if series else basis_flt
         total_ret_usd = round(latest_val - basis_flt, 2)
         total_ret_pct = round(((latest_val - basis_flt) / basis_flt) * 100, 2) if basis_flt > 0 else 0.0
 
+        exit_val = exit_point["value"] if exit_point else latest_val
+        exit_price_val = exit_point["price"] if exit_point else latest_price
+        exit_ret_usd = round(exit_val - basis_flt, 2)
+        exit_ret_pct = round(((exit_val - basis_flt) / basis_flt) * 100, 2) if basis_flt > 0 else 0.0
+
         return {
             "ticker": ticker_clean,
             "start_date": start_d,
             "exit_date": exit_d,
+            "exit_time": exit_point["time"] if exit_point else None,
+            "exit_price": round(exit_price_val, 4),
+            "exit_value": round(exit_val, 2),
+            "exit_return_usd": exit_ret_usd,
+            "exit_return_pct": exit_ret_pct,
             "is_closed": bool(exit_d),
             "shares": shares_flt,
             "cost_basis": round(basis_flt, 2),
