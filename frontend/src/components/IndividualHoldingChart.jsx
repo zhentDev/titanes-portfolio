@@ -25,7 +25,9 @@ export default function IndividualHoldingChart({
   // Group options by Active and Closed
   const availableOptions = useMemo(() => {
     const list = [];
-    // Active holdings
+    const slotVal = investment / (numSlots || 15);
+
+    // 1. Active holdings from props
     (holdings || []).forEach((h) => {
       list.push({
         ticker: h.ticker,
@@ -35,7 +37,7 @@ export default function IndividualHoldingChart({
         startPrice: h.start_price,
         entryDate: h.entry_date || "2026-08-03",
         exitDate: null,
-        costBasis: (h.shares || 0) * (h.start_price || 0) || (investment / (numSlots || 15)),
+        costBasis: (h.shares || 0) * (h.start_price || 0) || slotVal,
         currentPrice: h.current_price,
         currentValue: h.current_value,
         returnPct: h.return_pct,
@@ -43,7 +45,34 @@ export default function IndividualHoldingChart({
       });
     });
 
-    // Closed holdings
+    // 1b. Fallback for simulated strategies where holdings might be empty or partial:
+    // derive active tickers from the latest rebalance if not already in list
+    if (Array.isArray(rebalances) && rebalances.length > 0) {
+      const latestReb = rebalances[rebalances.length - 1];
+      const rebTickers = Array.isArray(latestReb?.tickers) ? latestReb.tickers : [];
+      const rebDate = latestReb?.rebalance_date || latestReb?.date || "2026-08-03";
+
+      rebTickers.forEach((t) => {
+        if (!list.some((item) => item.ticker === t && item.status === "ACTIVE")) {
+          list.push({
+            ticker: t,
+            name: t,
+            status: "ACTIVE",
+            shares: 1.0,
+            startPrice: slotVal,
+            entryDate: rebDate,
+            exitDate: null,
+            costBasis: slotVal,
+            currentPrice: null,
+            currentValue: null,
+            returnPct: 0,
+            returnUsd: 0,
+          });
+        }
+      });
+    }
+
+    // 2. Closed holdings
     (closedHoldings || []).forEach((c) => {
       list.push({
         ticker: c.ticker,
@@ -62,7 +91,7 @@ export default function IndividualHoldingChart({
     });
 
     return list;
-  }, [holdings, closedHoldings, investment, numSlots]);
+  }, [holdings, closedHoldings, rebalances, investment, numSlots]);
 
   // Selected item state
   const [selectedKey, setSelectedKey] = useState(() => {

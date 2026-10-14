@@ -19,7 +19,9 @@ import StrategyChart, { SYNTHETIC_RETURNS } from "./StrategyChart";
 import { InfoTooltip } from "./Common";
 import QuantumOrbitalLoader from "./QuantumOrbitalLoader";
 import HoldingsTable from "./HoldingsTable";
+import IndividualHoldingChart from "./IndividualHoldingChart";
 import { exportPortfolioExcel } from "../utils/exportReport";
+import { useTheme } from "../context/ThemeContext";
 
 const PERIODS = ["1D", "1W", "1M", "3M", "6M", "1Y", "3Y", "5Y", "MAX"];
 
@@ -65,6 +67,10 @@ export default function DynamicStrategyView({
   const [isFetchingInflation, setIsFetchingInflation] = useState(false);
   const [showBreakdownCard, setShowBreakdownCard] = useState(false);
   const [showQuantIntelligence, setShowQuantIntelligence] = useState(false);
+  const [stratChartTab, setStratChartTab] = useState("portfolio"); // "portfolio" | "individual"
+
+  const { theme } = useTheme();
+  const isLight = theme === "light";
 
   useEffect(() => {
     localStorage.setItem(settingsKey, JSON.stringify(stratSettings));
@@ -1669,49 +1675,100 @@ export default function DynamicStrategyView({
         startDate={effectiveFirstInvestDate}
       />
 
-      <div className="card fade-up" style={{ padding: "20px" }}>
+      {/* ── Chart Mode Tabs (Portafolio vs Acción Individual) ── */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 12,
+          marginBottom: 12,
+        }}
+      >
         <div
           style={{
             display: "flex",
-            justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: 14,
+            gap: 8,
+            background: isLight ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.03)",
+            padding: "4px",
+            borderRadius: 10,
+            border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.06)"}`,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700 }}>📊 Crecimiento Histórico</h3>
-            <span
-              style={{
-                fontSize: "0.72rem",
-                color: period === "1D" ? "#10b981" : "var(--text-muted)",
-                background: period === "1D" ? "rgba(16, 185, 129, 0.12)" : "rgba(255,255,255,0.04)",
-                padding: "2px 8px",
-                borderRadius: "12px",
-                border: period === "1D" ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(255,255,255,0.08)",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 5,
-              }}
-              title={
-                period === "1D"
-                  ? "Actualización en vivo cada 1 minuto (barras horarias de 9:30 a 16:00 ET)"
-                  : "Actualización de cierre automático cada 1 hora"
-              }
-            >
+          <button
+            type="button"
+            onClick={() => setStratChartTab("portfolio")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 7,
+              padding: "7px 14px",
+              borderRadius: 7,
+              border: stratChartTab === "portfolio"
+                ? `1px solid ${isLight ? "rgba(2, 132, 199, 0.4)" : "rgba(0, 229, 255, 0.4)"}`
+                : "1px solid transparent",
+              background: stratChartTab === "portfolio"
+                ? isLight ? "rgba(2, 132, 199, 0.12)" : "rgba(0, 229, 255, 0.12)"
+                : "transparent",
+              color: stratChartTab === "portfolio"
+                ? isLight ? "#0284c7" : "var(--accent-primary)"
+                : "var(--text-secondary)",
+              fontSize: "0.85rem",
+              fontWeight: stratChartTab === "portfolio" ? 700 : 500,
+              cursor: "pointer",
+              transition: "all 0.18s ease",
+            }}
+          >
+            <span>📊</span>
+            <span>Portafolio General ({strategy.name || "Estrategia"})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStratChartTab("individual")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 7,
+              padding: "7px 14px",
+              borderRadius: 7,
+              border: stratChartTab === "individual"
+                ? `1px solid ${isLight ? "rgba(16, 185, 129, 0.4)" : "rgba(16, 185, 129, 0.4)"}`
+                : "1px solid transparent",
+              background: stratChartTab === "individual"
+                ? isLight ? "rgba(16, 185, 129, 0.12)" : "rgba(16, 185, 129, 0.12)"
+                : "transparent",
+              color: stratChartTab === "individual"
+                ? isLight ? "#059669" : "#34d399"
+                : "var(--text-secondary)",
+              fontSize: "0.85rem",
+              fontWeight: stratChartTab === "individual" ? 700 : 500,
+              cursor: "pointer",
+              transition: "all 0.18s ease",
+            }}
+          >
+            <span>🔍</span>
+            <span>Acción Individual (Hora a Hora)</span>
+            {((navData?.holdings?.length || activeTickers.length || 0) + (navData?.closed_holdings?.length || 0)) > 0 && (
               <span
                 style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  backgroundColor: period === "1D" ? "#10b981" : "#64748b",
-                  display: "inline-block",
-                  animation: period === "1D" ? "pulse 2s infinite" : "none",
+                  fontSize: "0.68rem",
+                  padding: "1px 6px",
+                  borderRadius: 4,
+                  background: isLight ? "rgba(16, 185, 129, 0.2)" : "rgba(16, 185, 129, 0.25)",
+                  color: isLight ? "#047857" : "#34d399",
+                  fontWeight: 700,
                 }}
-              />
-              {period === "1D" ? "En vivo (1m)" : "Auto-actualización (1h)"}
-              {isNavLoading && " ⏳"}
-            </span>
-          </div>
+              >
+                {(navData?.holdings?.length || activeTickers.length || 0) + (navData?.closed_holdings?.length || 0)}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {stratChartTab === "portfolio" && (
           <div
             className="period-selector"
             style={{ margin: 0, padding: 0, background: "transparent" }}
@@ -1738,24 +1795,85 @@ export default function DynamicStrategyView({
               </button>
             ))}
           </div>
-        </div>
-        {isNavLoading && !navData ? (
-          <QuantumOrbitalLoader
-            message={`Cargando modelo cuantitativo (${period})…`}
-            submessage="Transición cuántica de Schrödinger (orbitales 1s ➔ 2s ➔ 2p ➔ 3d ➔ 4f)"
-            height={420}
+        )}
+      </div>
+
+      <div className="card fade-up" style={{ padding: "20px" }}>
+        {stratChartTab === "individual" ? (
+          <IndividualHoldingChart
+            holdings={navData?.holdings || []}
+            closedHoldings={navData?.closed_holdings || []}
+            rebalances={rebalances}
+            investment={simulatedCapital}
+            numSlots={numSlots}
+            customStrategies={customStrategies}
+            activeStrategyId={strategy.id}
           />
         ) : (
-          <StrategyChart
-            strategy={strategy}
-            activeInvested={activeInvested}
-            period={period}
-            firstInvestDate={effectiveFirstInvestDate}
-            rebalances={rebalances}
-            slotValue={slotValue}
-            targetReturns={currentReturns}
-            navData={navData}
-          />
+          <>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 14,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700 }}>📊 Crecimiento Histórico</h3>
+                <span
+                  style={{
+                    fontSize: "0.72rem",
+                    color: period === "1D" ? "#10b981" : "var(--text-muted)",
+                    background: period === "1D" ? "rgba(16, 185, 129, 0.12)" : "rgba(255,255,255,0.04)",
+                    padding: "2px 8px",
+                    borderRadius: "12px",
+                    border: period === "1D" ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(255,255,255,0.08)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                  }}
+                  title={
+                    period === "1D"
+                      ? "Actualización en vivo cada 1 minuto (barras horarias de 9:30 a 16:00 ET)"
+                      : "Actualización de cierre automático cada 1 hora"
+                  }
+                >
+                  <span
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: "50%",
+                      backgroundColor: period === "1D" ? "#10b981" : "#64748b",
+                      display: "inline-block",
+                      animation: period === "1D" ? "pulse 2s infinite" : "none",
+                    }}
+                  />
+                  {period === "1D" ? "En vivo (1m)" : "Auto-actualización (1h)"}
+                  {isNavLoading && " ⏳"}
+                </span>
+              </div>
+            </div>
+
+            {isNavLoading && !navData ? (
+              <QuantumOrbitalLoader
+                message={`Cargando modelo cuantitativo (${period})…`}
+                submessage="Transición cuántica de Schrödinger (orbitales 1s ➔ 2s ➔ 2p ➔ 3d ➔ 4f)"
+                height={420}
+              />
+            ) : (
+              <StrategyChart
+                strategy={strategy}
+                activeInvested={activeInvested}
+                period={period}
+                firstInvestDate={effectiveFirstInvestDate}
+                rebalances={rebalances}
+                slotValue={slotValue}
+                targetReturns={currentReturns}
+                navData={navData}
+              />
+            )}
+          </>
         )}
       </div>
 
