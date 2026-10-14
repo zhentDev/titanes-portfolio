@@ -1219,7 +1219,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
 
   return (
     <>
-      <div style={{ maxWidth: 1000, margin: "0 auto", paddingBottom: 60, padding: 20 }}>
+      <div style={{ maxWidth: 1600, width: "100%", margin: "0 auto", paddingBottom: 60, padding: 20, boxSizing: "border-box" }}>
         {/* HEADER & SUMMARY */}
         <div className="card fade-up" style={{ padding: "24px", marginBottom: "24px" }}>
           <div
@@ -3224,6 +3224,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                   gap: 12,
                   maxHeight: 650,
                   overflowY: "auto",
+                  overflowX: "auto",
                 }}
               >
                 {groupedLots.map((group) => {
@@ -3231,7 +3232,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                   return (
                     <div
                       key={group.ticker}
-                      style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                      style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 640 }}
                     >
                       {/* TICKER SUMMARY CARD */}
                       <div
@@ -3247,6 +3248,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                           alignItems: "center",
                           cursor: "pointer",
                           transition: "background 0.2s",
+                          gap: 16,
                         }}
                         onClick={() => toggleExpand(group.ticker)}
                         onMouseEnter={(e) =>
