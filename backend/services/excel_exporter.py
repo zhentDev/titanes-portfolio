@@ -11,6 +11,7 @@ from datetime import datetime
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
+from openpyxl.chart import PieChart, BarChart, LineChart, AreaChart, Reference
 
 
 def generate_portfolio_excel(
@@ -133,21 +134,62 @@ def generate_portfolio_excel(
         ws1.cell(row=h_row, column=5, value=h.get("name", h.get("ticker"))).font = regular_font
         ws1.cell(row=h_row, column=6, value=h.get("sector", "Tecnología")).font = regular_font
         ws1.cell(row=h_row, column=7, value=round(h.get("shares", 0), 4)).font = regular_font
-        ws1.cell(row=h_row, column=8, value=f"${h.get('start_price', 0):,.2f}").font = regular_font
-        ws1.cell(row=h_row, column=9, value=f"${h.get('current_price', 0):,.2f}").font = regular_font
-        ws1.cell(row=h_row, column=10, value=f"${h.get('current_value', 0):,.2f}").font = bold_font
         
-        ret_pct = h.get("return_pct", 0)
-        c_pct = ws1.cell(row=h_row, column=11, value=f"{ret_pct:+.2f}%")
+        c_pstart = ws1.cell(row=h_row, column=8, value=round(h.get("start_price", 0), 2))
+        c_pstart.font = regular_font
+        c_pstart.number_format = "$#,##0.00"
+        
+        c_pcurr = ws1.cell(row=h_row, column=9, value=round(h.get("current_price", 0), 2))
+        c_pcurr.font = regular_font
+        c_pcurr.number_format = "$#,##0.00"
+        
+        c_val = ws1.cell(row=h_row, column=10, value=round(h.get("current_value", 0), 2))
+        c_val.font = bold_font
+        c_val.number_format = "$#,##0.00"
+        
+        ret_pct = round(h.get("return_pct", 0), 2)
+        c_pct = ws1.cell(row=h_row, column=11, value=ret_pct)
         c_pct.font = green_font if ret_pct >= 0 else red_font
+        c_pct.number_format = "+0.00%;-0.00%;0.00%"
         
-        ret_usd = h.get("return_usd", 0)
-        c_usd = ws1.cell(row=h_row, column=12, value=f"${ret_usd:+,.2f}")
+        ret_usd = round(h.get("return_usd", 0), 2)
+        c_usd = ws1.cell(row=h_row, column=12, value=ret_usd)
         c_usd.font = green_font if ret_usd >= 0 else red_font
+        c_usd.number_format = "+$#,##0.00;-$#,##0.00;$0.00"
 
         for col_i in range(4, 13):
             ws1.cell(row=h_row, column=col_i).border = thin_border
         h_row += 1
+
+    # Inyección de Gráficas Profesionales en Hoja 1 (Resumen Ejecutivo)
+    if holdings and len(holdings) > 0:
+        max_h_row = max(h_row - 1, 5)
+
+        # Gráfica 1: Distribución / Asset Allocation (Donut / Pie Chart)
+        pie = PieChart()
+        pie.title = "Distribución de Capital Activo por Acción"
+        pie.width = 17
+        pie.height = 10
+        data_pie = Reference(ws1, min_col=10, min_row=4, max_row=max_h_row)
+        labels_pie = Reference(ws1, min_col=4, min_row=5, max_row=max_h_row)
+        pie.add_data(data_pie, titles_from_data=True)
+        pie.set_categories(labels_pie)
+        ws1.add_chart(pie, "N4")
+
+        # Gráfica 2: Retorno Individual por Posición (Bar Chart)
+        bar = BarChart()
+        bar.title = "Rendimiento Individual por Acción Activa (%)"
+        bar.style = 10
+        bar.width = 17
+        bar.height = 10
+        bar.y_axis.title = "Rendimiento (%)"
+        bar.x_axis.title = "Ticker"
+        bar.legend = None
+        data_bar = Reference(ws1, min_col=11, min_row=4, max_row=max_h_row)
+        bar.add_data(data_bar, titles_from_data=True)
+        bar.set_categories(labels_pie)
+        ws1.add_chart(bar, "N22")
+
 
     # ─────────────────────────────────────────────────────────────
     # HOJA 2: COMPORTAMIENTO DIARIO (TIMELINE INTEGRAL)
@@ -183,14 +225,15 @@ def generate_portfolio_excel(
     ws2["C1"] = "VARIACIÓN DÍA (%)"
     ws2["D1"] = "S&P 500 BENCHMARK ($)"
     ws2["E1"] = "NASDAQ BENCHMARK ($)"
+    ws2["F1"] = "DRAWDOWN (%)"
     
-    base_headers = ["A1", "B1", "C1", "D1", "E1"]
+    base_headers = ["A1", "B1", "C1", "D1", "E1", "F1"]
     for bh in base_headers:
         ws2[bh].fill = header_fill
         ws2[bh].font = header_font
         ws2[bh].alignment = Alignment(horizontal="center", vertical="center")
 
-    curr_col = 6
+    curr_col = 7
     ticker_col_map = {}
     for t in active_tickers:
         col_letter_p = get_column_letter(curr_col)
@@ -211,27 +254,47 @@ def generate_portfolio_excel(
     # Llenamos datos diarios
     row_num = 2
     prev_val = None
+    peak_val = 0.0
     prev_ticker_prices = {}
 
     for pt in nav_series:
         d = str(pt["date"])[:10]
-        val = pt.get("value", 0)
+        val = round(float(pt.get("value", 0)), 2)
         
         # Rendimiento diario del portafolio
-        daily_chg = ((val - prev_val) / prev_val * 100) if (prev_val and prev_val > 0) else 0.0
+        daily_chg = round(((val - prev_val) / prev_val * 100), 2) if (prev_val and prev_val > 0) else 0.0
         prev_val = val
 
-        ws2.cell(row=row_num, column=1, value=d).font = bold_font
-        ws2.cell(row=row_num, column=2, value=f"${val:,.2f}").font = regular_font
-        
-        c_chg = ws2.cell(row=row_num, column=3, value=f"{daily_chg:+.2f}%")
-        c_chg.font = green_font if daily_chg >= 0 else red_font
+        # Cálculo de Drawdown histórico (%)
+        if val > peak_val:
+            peak_val = val
+        dd_pct = round(((val - peak_val) / peak_val * 100), 2) if peak_val > 0 else 0.0
 
-        sp_val = sp500_map.get(d, 0)
-        ws2.cell(row=row_num, column=4, value=f"${sp_val:,.2f}" if sp_val > 0 else "N/A").font = regular_font
+        ws2.cell(row=row_num, column=1, value=d).font = bold_font
         
-        nd_val = nasdaq_map.get(d, 0)
-        ws2.cell(row=row_num, column=5, value=f"${nd_val:,.2f}" if nd_val > 0 else "N/A").font = regular_font
+        c_val = ws2.cell(row=row_num, column=2, value=val)
+        c_val.font = bold_font
+        c_val.number_format = "$#,##0.00"
+        
+        c_chg = ws2.cell(row=row_num, column=3, value=daily_chg)
+        c_chg.font = green_font if daily_chg >= 0 else red_font
+        c_chg.number_format = "+0.00%;-0.00%;0.00%"
+
+        sp_val = sp500_map.get(d)
+        c_sp = ws2.cell(row=row_num, column=4, value=round(float(sp_val), 2) if sp_val is not None else "")
+        c_sp.font = regular_font
+        if sp_val is not None:
+            c_sp.number_format = "$#,##0.00"
+        
+        nd_val = nasdaq_map.get(d)
+        c_nd = ws2.cell(row=row_num, column=5, value=round(float(nd_val), 2) if nd_val is not None else "")
+        c_nd.font = regular_font
+        if nd_val is not None:
+            c_nd.number_format = "$#,##0.00"
+
+        c_dd = ws2.cell(row=row_num, column=6, value=dd_pct)
+        c_dd.font = red_font if dd_pct < 0 else regular_font
+        c_dd.number_format = "0.00%"
 
         # Tickers individuales: SOLO graficar y registrar a partir de su fecha de entrada efectiva
         for t in active_tickers:
@@ -246,26 +309,77 @@ def generate_portfolio_excel(
 
             t_price = ticker_history_map[t].get(d)
             if t_price is not None:
-                ws2.cell(row=row_num, column=col_p, value=f"${t_price:,.2f}").font = regular_font
+                t_price_clean = round(float(t_price), 2)
+                c_tp = ws2.cell(row=row_num, column=col_p, value=t_price_clean)
+                c_tp.font = regular_font
+                c_tp.number_format = "$#,##0.00"
+
                 prev_p = prev_ticker_prices.get(t)
-                t_chg = ((t_price - prev_p) / prev_p * 100) if (prev_p and prev_p > 0) else 0.0
-                prev_ticker_prices[t] = t_price
+                t_chg = round(((t_price_clean - prev_p) / prev_p * 100), 2) if (prev_p and prev_p > 0) else 0.0
+                prev_ticker_prices[t] = t_price_clean
 
                 # Si es el primer día de compra, marcar como Entrada
                 if prev_p is None:
                     c_tchg = ws2.cell(row=row_num, column=col_v, value="Entrada")
                     c_tchg.font = bold_font
                 else:
-                    c_tchg = ws2.cell(row=row_num, column=col_v, value=f"{t_chg:+.2f}%")
+                    c_tchg = ws2.cell(row=row_num, column=col_v, value=t_chg)
                     c_tchg.font = green_font if t_chg >= 0 else red_font
+                    c_tchg.number_format = "+0.00%;-0.00%;0.00%"
             else:
-                ws2.cell(row=row_num, column=col_p, value="-").font = regular_font
-                ws2.cell(row=row_num, column=col_v, value="-").font = regular_font
+                ws2.cell(row=row_num, column=col_p, value="").font = regular_font
+                ws2.cell(row=row_num, column=col_v, value="").font = regular_font
 
         for c_i in range(1, curr_col):
             ws2.cell(row=row_num, column=c_i).border = thin_border
 
         row_num += 1
+
+    # Inyección de Gráficas Profesionales en Hoja 2 (Comportamiento Diario)
+    if nav_series and len(nav_series) > 1:
+        max_d_row = row_num - 1
+
+        # Gráfica 3: Evolución Histórica NAV vs Benchmarks (Line Chart)
+        chart_line = LineChart()
+        chart_line.title = f"Evolución Histórica NAV vs Benchmarks ({strategy_name})"
+        chart_line.style = 13
+        chart_line.width = 24
+        chart_line.height = 12
+        chart_line.y_axis.title = "Valor de la Cartera ($)"
+        chart_line.x_axis.title = "Fecha"
+        
+        # Series: Col 2 (NAV), Col 4 (S&P 500), Col 5 (NASDAQ)
+        # Add NAV
+        nav_data = Reference(ws2, min_col=2, min_row=1, max_row=max_d_row)
+        dates_cat = Reference(ws2, min_col=1, min_row=2, max_row=max_d_row)
+        chart_line.add_data(nav_data, titles_from_data=True)
+        
+        # Add Benchmarks if they have data
+        if any(sp500_map.values()):
+            sp_data = Reference(ws2, min_col=4, min_row=1, max_row=max_d_row)
+            chart_line.add_data(sp_data, titles_from_data=True)
+        if any(nasdaq_map.values()):
+            nd_data = Reference(ws2, min_col=5, min_row=1, max_row=max_d_row)
+            chart_line.add_data(nd_data, titles_from_data=True)
+
+        chart_line.set_categories(dates_cat)
+        ws2.add_chart(chart_line, f"{get_column_letter(curr_col + 1)}2")
+
+        # Gráfica 4: Curva Underwater / Drawdown Histórico (Area Chart)
+        chart_dd = AreaChart()
+        chart_dd.title = "Curva Underwater: Drawdown Histórico (%)"
+        chart_dd.style = 13
+        chart_dd.width = 24
+        chart_dd.height = 10
+        chart_dd.y_axis.title = "Drawdown (%)"
+        chart_dd.x_axis.title = "Fecha"
+        chart_dd.legend = None
+
+        dd_data = Reference(ws2, min_col=6, min_row=1, max_row=max_d_row)
+        chart_dd.add_data(dd_data, titles_from_data=True)
+        chart_dd.set_categories(dates_cat)
+        ws2.add_chart(chart_dd, f"{get_column_letter(curr_col + 1)}26")
+
 
     # ─────────────────────────────────────────────────────────────
     # HOJA 3: POSICIONES CERRADAS & ROTACIONES
@@ -351,29 +465,64 @@ def generate_portfolio_excel(
             ws4.cell(row=c_row_comp, column=2, value=item.get("name", "")).font = bold_font
             ws4.cell(row=c_row_comp, column=3, value=item.get("country", "🌎")).font = regular_font
             ws4.cell(row=c_row_comp, column=4, value=item.get("num_slots", 20)).font = regular_font
-            ws4.cell(row=c_row_comp, column=5, value=f"${item.get('capital', 0):,.2f}").font = regular_font
-            ws4.cell(row=c_row_comp, column=6, value=f"${item.get('active_invested', 0):,.2f}").font = regular_font
-            ws4.cell(row=c_row_comp, column=7, value=f"${item.get('end_value', 0):,.2f}").font = regular_font
+            
+            c_cap = ws4.cell(row=c_row_comp, column=5, value=round(float(item.get('capital', 0)), 2))
+            c_cap.font = regular_font
+            c_cap.number_format = "$#,##0.00"
+            
+            c_act = ws4.cell(row=c_row_comp, column=6, value=round(float(item.get('active_invested', 0)), 2))
+            c_act.font = regular_font
+            c_act.number_format = "$#,##0.00"
+            
+            c_end = ws4.cell(row=c_row_comp, column=7, value=round(float(item.get('end_value', 0)), 2))
+            c_end.font = bold_font
+            c_end.number_format = "$#,##0.00"
 
-            ret_usd = item.get("active_return", 0)
-            c_ret_usd = ws4.cell(row=c_row_comp, column=8, value=f"${ret_usd:+,.2f}")
+            ret_usd = round(float(item.get("active_return", 0)), 2)
+            c_ret_usd = ws4.cell(row=c_row_comp, column=8, value=ret_usd)
             c_ret_usd.font = green_font if ret_usd >= 0 else red_font
+            c_ret_usd.number_format = "+$#,##0.00;-$#,##0.00;$0.00"
 
-            ret_pct = item.get("active_return_pct", 0)
-            c_ret_pct = ws4.cell(row=c_row_comp, column=9, value=f"{ret_pct:+.2f}%")
+            ret_pct = round(float(item.get("active_return_pct", 0)), 2)
+            c_ret_pct = ws4.cell(row=c_row_comp, column=9, value=ret_pct)
             c_ret_pct.font = green_font if ret_pct >= 0 else red_font
+            c_ret_pct.number_format = "+0.00%;-0.00%;0.00%"
 
-            alpha = item.get("alpha_sp500", 0)
-            c_alpha = ws4.cell(row=c_row_comp, column=10, value=f"{alpha:+.2f}%")
+            alpha = round(float(item.get("alpha_sp500", 0)), 2)
+            c_alpha = ws4.cell(row=c_row_comp, column=10, value=alpha)
             c_alpha.font = green_font if alpha >= 0 else red_font
+            c_alpha.number_format = "+0.00%;-0.00%;0.00%"
 
             ws4.cell(row=c_row_comp, column=11, value=str(item.get("sharpe_ratio", "N/A"))).font = regular_font
-            ws4.cell(row=c_row_comp, column=12, value=f"{item.get('win_rate_pct', 0):.1f}%").font = regular_font
+            
+            c_wr = ws4.cell(row=c_row_comp, column=12, value=round(float(item.get('win_rate_pct', 0)), 1))
+            c_wr.font = regular_font
+            c_wr.number_format = "0.0%"
+            
             ws4.cell(row=c_row_comp, column=13, value=item.get("closed_count", 0)).font = regular_font
 
             for col_i in range(1, 14):
                 ws4.cell(row=c_row_comp, column=col_i).border = thin_border
             c_row_comp += 1
+
+        # Inyección de Gráfica 5: Comparativa de Rendimiento y Alfa vs S&P 500
+        if len(comparison_data) > 0:
+            max_comp_row = c_row_comp - 1
+            comp_chart = BarChart()
+            comp_chart.title = "Comparativa de Rendimiento y Alfa vs S&P 500 (%)"
+            comp_chart.style = 11
+            comp_chart.width = 20
+            comp_chart.height = 11
+            comp_chart.y_axis.title = "Porcentaje (%)"
+            comp_chart.x_axis.title = "Estrategia"
+            
+            # Series: Retorno (%) [Col 9] y Alfa S&P 500 (%) [Col 10]
+            d_comp = Reference(ws4, min_col=9, min_row=4, max_col=10, max_row=max_comp_row)
+            l_comp = Reference(ws4, min_col=2, min_row=5, max_row=max_comp_row)
+            comp_chart.add_data(d_comp, titles_from_data=True)
+            comp_chart.set_categories(l_comp)
+            ws4.add_chart(comp_chart, f"O4")
+
 
     # Auto-ajuste de ancho de columnas para todas las hojas
     for ws in sheets_to_adjust:
