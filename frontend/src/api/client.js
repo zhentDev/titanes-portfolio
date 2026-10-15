@@ -255,8 +255,9 @@ export async function fetchLiveQuotes(tickers) {
 }
 
 /** GET /api/prices/intraday/:ticker */
-export async function fetchIntraday(ticker) {
-  return fetchWithFallback(`/prices/intraday/${ticker}`, null);
+export async function fetchIntraday(ticker, date = null) {
+  const url = date ? `/prices/intraday/${ticker}?date=${encodeURIComponent(date)}` : `/prices/intraday/${ticker}`;
+  return fetchWithFallback(url, null);
 }
 
 /** GET /api/nav/holding-chart */

@@ -445,24 +445,40 @@ def get_live_quotes(tickers: list[str]) -> list[dict]:
     return results
 
 
-def get_intraday(ticker: str) -> list[dict]:
+def get_intraday(ticker: str, target_date: str | None = None) -> list[dict]:
     """
-    Return intraday 5-minute prices for a single ticker (today).
+    Return intraday 5-minute prices for a single ticker (today or a specific historical date YYYY-MM-DD).
     """
-    cache_key = f"intraday:{ticker}"
+    t_clean = ticker.strip().upper()
+    cache_key = f"intraday:{t_clean}:{target_date or 'today'}"
     cached = _cache_get(cache_key)
     if cached is not None:
         return cached  # type: ignore[return-value]
 
     try:
-        df = yf.download(
-            ticker,
-            period="1d",
-            interval="5m",
-            auto_adjust=True,
-            progress=False,
-            session=_yf_session,
-        )
+        if target_date:
+            from datetime import datetime, timedelta
+            start_dt = datetime.strptime(target_date, "%Y-%m-%d")
+            end_dt = start_dt + timedelta(days=1)
+            df = yf.download(
+                t_clean,
+                start=start_dt.strftime("%Y-%m-%d"),
+                end=end_dt.strftime("%Y-%m-%d"),
+                interval="5m",
+                auto_adjust=True,
+                progress=False,
+                session=_yf_session,
+            )
+        else:
+            df = yf.download(
+                t_clean,
+                period="1d",
+                interval="5m",
+                auto_adjust=True,
+                progress=False,
+                session=_yf_session,
+            )
+
         records = []
         for idx, row in df.iterrows():
             # Check for NaN safely

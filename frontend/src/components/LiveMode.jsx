@@ -3,6 +3,8 @@ import { fetchIntraday, fetchLiveQuotes, fetchNAV } from "../api/client";
 import { usePortfolioStore } from "../store/portfolioStore";
 import NavChart from "./NavChart";
 import QuantumOrbitalLoader from "./QuantumOrbitalLoader";
+import LiveHistoryCalendar from "./Common/LiveHistoryCalendar";
+import { useTheme } from "../context/ThemeContext";
 
 const POLL_INTERVAL = 60_000;
 
@@ -71,6 +73,8 @@ function isStockMarketOpen(ticker, exchange) {
 }
 
 export default function LiveMode({ navData: initialNavData, investment = 2000 }) {
+  const { theme } = useTheme();
+  const isLight = theme === "light";
   const { customStrategies } = usePortfolioStore();
 
   // Filter all strategies that have isRealMoney === true (Dinero Real)
@@ -103,6 +107,8 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
   const [marketOpen, setMarketOpen] = useState(false);
   const [error, setError] = useState(null);
   const [driftThreshold, setDriftThreshold] = useState(2.0); // Threshold in percent (e.g. ±2%)
+  const [selectedHistoricalDate, setSelectedHistoricalDate] = useState(null); // null = Live today, "YYYY-MM-DD" = historical day
+  const [showCalendar, setShowCalendar] = useState(false);
 
   // Ref mirror of marketOpen so the polling interval reads the latest value without stale closures
   const marketOpenRef = useRef(false);
@@ -110,20 +116,22 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
     marketOpenRef.current = marketOpen;
   }, [marketOpen]);
 
-  // Reset navData & intraday chart when user switches portfolio
+  // Reset navData, historical date & intraday chart when user switches portfolio
   useEffect(() => {
     if (selectedRealId === "titanes" && initialNavData) {
       setNavData(initialNavData);
     } else {
       setNavData(null);
     }
+    setSelectedHistoricalDate(null);
+    setShowCalendar(false);
     setIntradayChart([]);
     setQuotes([]);
     setLoading(true);
   }, [selectedRealId, initialNavData]);
 
   const load = useCallback(
-    async (isManual = false) => {
+    async (isManual = false, targetDate = null) => {
       if (isManual) setRefreshing(true);
 
       try {
@@ -181,10 +189,11 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
         setMarketOpen(anyStockOpenReported || anyMarketOpenByHours);
         setLastUpdate(new Date());
 
-        // 3. Intraday chart: Carga la trayectoria completa de la sesión más reciente (tanto abierta como cerrada)
+        // 3. Intraday chart: Carga la trayectoria completa de la sesión seleccionada (o la más reciente en vivo)
         let chartLoaded = false;
         try {
-          const intradayPromises = activeTickers.map((t) => fetchIntraday(t).catch(() => []));
+          const targetDateToFetch = targetDate || selectedHistoricalDate;
+          const intradayPromises = activeTickers.map((t) => fetchIntraday(t, targetDateToFetch).catch(() => []));
           const intradayResults = await Promise.all(intradayPromises);
 
           // Verificar si hay datos intradía válidos en al menos una parte de los tickers
@@ -286,11 +295,14 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
         setRefreshing(false);
       }
     },
-    [navData, selectedRealId, activeInvestment, activeNumSlots],
+    [navData, selectedRealId, activeInvestment, activeNumSlots, selectedHistoricalDate],
   );
 
   useEffect(() => {
-    load();
+    load(false, selectedHistoricalDate);
+    // Polling only applies if viewing today's live session
+    if (selectedHistoricalDate) return;
+
     const interval = setInterval(() => {
       // 1. Si el mercado ya está abierto según cotizaciones previas, consultar actualización
       if (marketOpenRef.current) {
@@ -309,7 +321,7 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
       }
     }, POLL_INTERVAL);
     return () => clearInterval(interval);
-  }, [load, navData]);
+  }, [load, navData, selectedHistoricalDate]);
 
   // Derived metrics — ONLY ACTIVE INVESTED CAPITAL (no flat uninvested cash)
   const holdings = navData?.holdings || [];
@@ -625,39 +637,150 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
         </div>
       )}
 
-      {/* ── Live Curve (always visible; flat constant when market closed) ── */}
+      {/* ── Live Curve & Calendar Historical Day Inspector ── */}
       {intradayChart.length > 1 && (
-        <div className="card" style={{ paddingBottom: "20px", overflow: "hidden" }}>
-          <h3
+        <div className="card" style={{ paddingBottom: "20px", overflow: "hidden", position: "relative" }}>
+          <div
             style={{
-              marginBottom: 16,
-              fontSize: "1rem",
-              fontWeight: 600,
               display: "flex",
+              justifyContent: "space-between",
               alignItems: "center",
-              gap: 8,
               flexWrap: "wrap",
+              gap: 12,
+              marginBottom: 16,
             }}
           >
-            <span>
-              {marketOpen ? "Gráfica Intradía de Hoy (5m)" : "Trayectoria Intradía (Última Sesión Cerrada)"}
-            </span>
-            {!marketOpen && (
-              <span
-                style={{
-                  fontSize: "0.68rem",
-                  padding: "2px 8px",
-                  borderRadius: 4,
-                  background: "rgba(148, 163, 184, 0.12)",
-                  color: "#94a3b8",
-                  fontWeight: 600,
-                  border: "1px solid rgba(148, 163, 184, 0.2)",
-                }}
-              >
-                Mercado Cerrado — Historial de la sesión preservado
+            <h3
+              style={{
+                margin: 0,
+                fontSize: "1rem",
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                flexWrap: "wrap",
+              }}
+            >
+              <span>
+                {selectedHistoricalDate
+                  ? `📅 Trayectoria Intradía del ${selectedHistoricalDate}`
+                  : marketOpen
+                  ? "⚡ Gráfica Intradía de Hoy (5m - En Vivo)"
+                  : "Trayectoria Intradía (Última Sesión Cerrada)"}
               </span>
-            )}
-          </h3>
+
+              {selectedHistoricalDate ? (
+                <span
+                  style={{
+                    fontSize: "0.68rem",
+                    padding: "2px 8px",
+                    borderRadius: 4,
+                    background: isLight ? "rgba(2, 132, 199, 0.12)" : "rgba(0, 229, 255, 0.12)",
+                    color: isLight ? "#0284c7" : "var(--accent-primary)",
+                    fontWeight: 700,
+                    border: `1px solid ${isLight ? "rgba(2, 132, 199, 0.3)" : "rgba(0, 229, 255, 0.3)"}`,
+                  }}
+                >
+                  Historial de Sesión Pasada
+                </span>
+              ) : !marketOpen ? (
+                <span
+                  style={{
+                    fontSize: "0.68rem",
+                    padding: "2px 8px",
+                    borderRadius: 4,
+                    background: "rgba(148, 163, 184, 0.12)",
+                    color: "#94a3b8",
+                    fontWeight: 600,
+                    border: "1px solid rgba(148, 163, 184, 0.2)",
+                  }}
+                >
+                  Mercado Cerrado — Historial de la sesión preservado
+                </span>
+              ) : null}
+            </h3>
+
+            {/* Calendar toggle button */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, position: "relative" }}>
+              {selectedHistoricalDate && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedHistoricalDate(null)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 5,
+                    padding: "5px 10px",
+                    borderRadius: 6,
+                    background: isLight ? "rgba(244, 63, 94, 0.1)" : "rgba(244, 63, 94, 0.15)",
+                    border: `1px solid ${isLight ? "rgba(244, 63, 94, 0.3)" : "rgba(244, 63, 94, 0.3)"}`,
+                    color: isLight ? "#e11d48" : "#fb7185",
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                  title="Restablecer a la jornada de Hoy en vivo"
+                >
+                  <span>✕</span>
+                  <span>Volver a Hoy Live</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setShowCalendar((prev) => !prev)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 7,
+                  padding: "6px 12px",
+                  borderRadius: 8,
+                  border: `1px solid ${showCalendar || selectedHistoricalDate
+                    ? isLight ? "rgba(2, 132, 199, 0.5)" : "rgba(0, 229, 255, 0.5)"
+                    : isLight ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.1)"}`,
+                  background: showCalendar || selectedHistoricalDate
+                    ? isLight ? "rgba(2, 132, 199, 0.12)" : "rgba(0, 229, 255, 0.12)"
+                    : isLight ? "#ffffff" : "rgba(255, 255, 255, 0.04)",
+                  color: showCalendar || selectedHistoricalDate
+                    ? isLight ? "#0284c7" : "var(--accent-primary)"
+                    : "var(--text-secondary)",
+                  fontSize: "0.8rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  boxShadow: isLight ? "0 2px 6px rgba(0,0,0,0.04)" : "none",
+                }}
+                title="Explorar el historial de todos los días de negociación en el calendario"
+              >
+                <span>📅</span>
+                <span>{selectedHistoricalDate ? selectedHistoricalDate : "Ver Historial por Día"}</span>
+                <span style={{ fontSize: "0.7rem", opacity: 0.8 }}>{showCalendar ? "▲" : "▼"}</span>
+              </button>
+
+              {/* Popover Calendar */}
+              {showCalendar && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 8px)",
+                    right: 0,
+                    zIndex: 999,
+                  }}
+                >
+                  <LiveHistoryCalendar
+                    selectedDate={selectedHistoricalDate}
+                    onSelectDate={(newDate) => {
+                      setSelectedHistoricalDate(newDate);
+                      setShowCalendar(false);
+                    }}
+                    minDate={navData?.summary?.first_rebalance_date || navData?.nav?.[0]?.date || "2026-08-03"}
+                    activeDates={(navData?.nav || []).map((pt) => pt.date)}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
           <div style={{ width: "100%", minHeight: "320px", overflow: "hidden" }}>
             <NavChart
               navData={intradayChart}

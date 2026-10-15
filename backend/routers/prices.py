@@ -35,12 +35,12 @@ def live_quotes(
 
 
 @router.get("/prices/intraday/{ticker}")
-def intraday(ticker: str):
+def intraday(ticker: str, date: str | None = None):
     """
-    Returns 5-minute intraday candles for the current trading day.
-    Useful for the Live mode sparkline chart.
+    Returns 5-minute intraday candles for the given date (YYYY-MM-DD) or current trading day.
+    Useful for the Live mode sparkline chart and calendar historical day inspector.
     """
-    return get_intraday(ticker.upper())
+    return get_intraday(ticker.upper(), target_date=date)
 
 
 import time
