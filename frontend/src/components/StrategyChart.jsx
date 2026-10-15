@@ -498,6 +498,64 @@ export default function StrategyChart({
     return arr;
   };
 
+  const purchaseMarkers = useMemo(() => {
+    if (!chartData || !chartData.strat || chartData.strat.length === 0) return [];
+    const dateSet = new Set();
+    (rebalances || []).forEach((r) => {
+      const d = r.rebalance_date || r.date;
+      if (d) dateSet.add(String(d).split("T")[0]);
+    });
+    (navData?.holdings || []).forEach((h) => {
+      const d = h.purchase_date || h.date;
+      if (d) dateSet.add(String(d).split("T")[0]);
+    });
+
+    if (dateSet.size === 0) return [];
+
+    const availableTimes = new Set(chartData.strat.map((d) => String(d.time || "").split("T")[0]));
+    const sortedTimes = Array.from(availableTimes).sort();
+    if (sortedTimes.length === 0) return [];
+    const minTime = sortedTimes[0];
+    const maxTime = sortedTimes[sortedTimes.length - 1];
+
+    const markers = [];
+    const usedTimes = new Set();
+
+    dateSet.forEach((dStr) => {
+      if (dStr < minTime || dStr > maxTime) return;
+      let matchedTime = null;
+      if (availableTimes.has(dStr)) {
+        matchedTime = dStr;
+      } else {
+        const targetMs = new Date(`${dStr}T00:00:00Z`).getTime();
+        let closest = null;
+        let minDiff = 4 * 86400000;
+        for (const t of sortedTimes) {
+          const diff = Math.abs(new Date(`${t}T00:00:00Z`).getTime() - targetMs);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closest = t;
+          }
+        }
+        matchedTime = closest;
+      }
+
+      if (matchedTime && !usedTimes.has(matchedTime)) {
+        usedTimes.add(matchedTime);
+        markers.push({
+          time: matchedTime,
+          position: "inBar",
+          color: theme === "light" ? "#d97706" : "#fbbf24",
+          shape: "circle",
+          size: 2,
+        });
+      }
+    });
+
+    markers.sort((a, b) => (a.time < b.time ? -1 : 1));
+    return markers;
+  }, [chartData, rebalances, navData, theme]);
+
   useEffect(() => {
     if (!chartRef.current || !chartData) return;
     const isIntraday = period === "1D";
@@ -511,8 +569,13 @@ export default function StrategyChart({
     seriesRef.current.nasdaq?.setData(sampleArr(chartData.nasdaq));
     seriesRef.current.baseLine?.setData(sampleArr(chartData.baseLine));
     seriesRef.current.strat?.setData(sampleArr(chartData.strat));
+    if (purchaseMarkers.length > 0) {
+      seriesRef.current.strat?.setMarkers(purchaseMarkers);
+    } else {
+      seriesRef.current.strat?.setMarkers([]);
+    }
     chartRef.current.timeScale().fitContent();
-  }, [chartData, period, isMobile]);
+  }, [chartData, period, isMobile, purchaseMarkers]);
 
   const lastSP = chartData.sp500[chartData.sp500.length - 1]?.value;
   const lastNasdaq = chartData.nasdaq[chartData.nasdaq.length - 1]?.value;

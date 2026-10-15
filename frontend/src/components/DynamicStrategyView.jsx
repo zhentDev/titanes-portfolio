@@ -195,6 +195,19 @@ export default function DynamicStrategyView({
     return firstInvestDate;
   }, [rebalances, firstInvestDate]);
 
+  const purchaseDates = useMemo(() => {
+    const dates = new Set();
+    (rebalances || []).forEach((r) => {
+      const d = r.rebalance_date || r.date;
+      if (d) dates.add(String(d).split("T")[0]);
+    });
+    (navData?.holdings || []).forEach((h) => {
+      const d = h.purchase_date || h.date;
+      if (d) dates.add(String(d).split("T")[0]);
+    });
+    return Array.from(dates).sort();
+  }, [rebalances, navData]);
+
   // Umbrales de desbloqueo: un periodo se activa al tener al menos estos días de historial
   // desde la primera inversión. Escala progresiva: cada periodo se desbloquea con una fracción
   // de su ventana (p. ej. 1M desde la 1ra semana), evitando saltos bruscos entre niveles.
@@ -1987,6 +2000,7 @@ export default function DynamicStrategyView({
             defaultLocal="COP"
             period={period}
             onPeriodChange={setPeriod}
+            purchaseDates={purchaseDates}
             minDate={firstInvestDate}
           />
         ) : stratChartTab === "individual" ? (

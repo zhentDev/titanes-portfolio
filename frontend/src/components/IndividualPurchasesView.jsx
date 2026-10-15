@@ -338,6 +338,15 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
     return sorted[0].date;
   }, [currentPurchases]);
 
+  const purchaseDates = useMemo(() => {
+    const dates = new Set();
+    (currentPurchases || []).forEach((p) => {
+      const d = p.purchaseDate || p.date;
+      if (d) dates.add(String(d).split("T")[0]);
+    });
+    return Array.from(dates).sort();
+  }, [currentPurchases]);
+
   useEffect(() => {
     if (earliestDate) {
       // Subtract 7 days to ensure we catch the previous valid trading day if earliestDate is a weekend/holiday
@@ -1243,6 +1252,52 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
 
     seriesRefs.current.invested.setData(investedData);
     seriesRefs.current.value.setData(valueData);
+
+    // Apply markers to highlight stock/ETF purchase points
+    if (valueData.length > 0 && purchaseDates.length > 0) {
+      const availableTimes = new Set(valueData.map((d) => d.time));
+      const sortedTimes = valueData.map((d) => d.time);
+      const minTime = sortedTimes[0];
+      const maxTime = sortedTimes[sortedTimes.length - 1];
+      const markers = [];
+      const usedTimes = new Set();
+
+      purchaseDates.forEach((dStr) => {
+        if (dStr < minTime || dStr > maxTime) return;
+        let matchedTime = null;
+        if (availableTimes.has(dStr)) {
+          matchedTime = dStr;
+        } else {
+          const targetMs = new Date(`${dStr}T00:00:00Z`).getTime();
+          let closest = null;
+          let minDiff = 4 * 86400000;
+          for (const t of sortedTimes) {
+            const diff = Math.abs(new Date(`${t}T00:00:00Z`).getTime() - targetMs);
+            if (diff < minDiff) {
+              minDiff = diff;
+              closest = t;
+            }
+          }
+          matchedTime = closest;
+        }
+
+        if (matchedTime && !usedTimes.has(matchedTime)) {
+          usedTimes.add(matchedTime);
+          markers.push({
+            time: matchedTime,
+            position: "inBar",
+            color: theme === "light" ? "#d97706" : "#fbbf24",
+            shape: "circle",
+            size: 2,
+          });
+        }
+      });
+      markers.sort((a, b) => (a.time < b.time ? -1 : 1));
+      seriesRefs.current.value.setMarkers(markers);
+    } else if (seriesRefs.current.value) {
+      seriesRefs.current.value.setMarkers([]);
+    }
+
     seriesRefs.current.sp500.setData(sp500Data);
     seriesRefs.current.nasdaq.setData(nasdaqData);
 
@@ -2441,6 +2496,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
               defaultLocal="COP"
               period={selectedTimeRange}
               onPeriodChange={handleTimeRange}
+              purchaseDates={purchaseDates}
               minDate={earliestDate}
             />
           ) : (

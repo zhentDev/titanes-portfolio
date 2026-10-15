@@ -48,6 +48,7 @@ export default function FxRateExplorer({
   minDate = null,
   period = null,
   onPeriodChange = null,
+  purchaseDates = [],
 }) {
   const { theme } = useTheme();
   const isLight = theme === "light";
@@ -205,6 +206,58 @@ export default function FxRateExplorer({
     };
   }, [rawFxData, isInverted, selectedRange, minDate]);
 
+  // Compute purchase markers for highlighted stock/ETF points
+  const purchaseMarkers = useMemo(() => {
+    if (!historyList || historyList.length === 0 || !purchaseDates || purchaseDates.length === 0) {
+      return [];
+    }
+
+    const availableTimes = new Set(historyList.map((pt) => pt.time));
+    const sortedTimes = historyList.map((pt) => pt.time);
+    const minTime = sortedTimes[0];
+    const maxTime = sortedTimes[sortedTimes.length - 1];
+
+    const markers = [];
+    const usedTimes = new Set();
+
+    purchaseDates.forEach((rawDate) => {
+      if (!rawDate) return;
+      const dStr = String(rawDate).split("T")[0];
+      if (dStr < minTime || dStr > maxTime) return;
+
+      let matchedTime = null;
+      if (availableTimes.has(dStr)) {
+        matchedTime = dStr;
+      } else {
+        const targetMs = new Date(`${dStr}T00:00:00Z`).getTime();
+        let closest = null;
+        let minDiff = 4 * 86400000;
+        for (const t of sortedTimes) {
+          const diff = Math.abs(new Date(`${t}T00:00:00Z`).getTime() - targetMs);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closest = t;
+          }
+        }
+        matchedTime = closest;
+      }
+
+      if (matchedTime && !usedTimes.has(matchedTime)) {
+        usedTimes.add(matchedTime);
+        markers.push({
+          time: matchedTime,
+          position: "inBar",
+          color: isLight ? "#d97706" : "#fbbf24",
+          shape: "circle",
+          size: 2,
+        });
+      }
+    });
+
+    markers.sort((a, b) => (a.time < b.time ? -1 : 1));
+    return markers;
+  }, [historyList, purchaseDates, isLight]);
+
   // Handle Chart Creation & Updates
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -266,6 +319,9 @@ export default function FxRateExplorer({
 
     if (historyList.length > 0) {
       areaSeries.setData(historyList);
+      if (purchaseMarkers.length > 0) {
+        areaSeries.setMarkers(purchaseMarkers);
+      }
       chart.timeScale().fitContent();
     }
 
@@ -274,6 +330,7 @@ export default function FxRateExplorer({
         chartInstanceRef.current.applyOptions({
           width: container.clientWidth,
         });
+        chartInstanceRef.current.timeScale().fitContent();
       }
     });
     ro.observe(container);
@@ -285,15 +342,20 @@ export default function FxRateExplorer({
         chartInstanceRef.current = null;
       }
     };
-  }, [isInverted, theme, chartColors, isLight]);
+  }, [isInverted, theme, chartColors, isLight, isLoading]);
 
-  // Update chart data whenever historyList changes without recreating the chart if possible
+  // Update chart data whenever historyList or purchaseMarkers changes without recreating the chart
   useEffect(() => {
     if (areaSeriesRef.current && chartInstanceRef.current && historyList.length > 0) {
       areaSeriesRef.current.setData(historyList);
+      if (purchaseMarkers.length > 0) {
+        areaSeriesRef.current.setMarkers(purchaseMarkers);
+      } else {
+        areaSeriesRef.current.setMarkers([]);
+      }
       chartInstanceRef.current.timeScale().fitContent();
     }
-  }, [historyList]);
+  }, [historyList, purchaseMarkers]);
 
   // Switch / Toggle inversion
   const handleToggleInversion = () => {
@@ -663,33 +725,41 @@ export default function FxRateExplorer({
         </div>
 
         {/* Chart View Container */}
-        {isLoading ? (
-          <div
-            style={{
-              height: 380,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "var(--text-muted)",
-              fontSize: "0.85rem",
-            }}
-          >
-            Cargando histórico de tipo de cambio...
-          </div>
-        ) : error ? (
-          <div
-            style={{
-              height: 380,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#f43f5e",
-              fontSize: "0.85rem",
-            }}
-          >
-            {error}
-          </div>
-        ) : (
+        <div style={{ position: "relative", width: "100%", height: 380 }}>
+          {isLoading && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: isLight ? "rgba(255,255,255,0.75)" : "rgba(13, 18, 38, 0.75)",
+                color: "var(--text-muted)",
+                fontSize: "0.85rem",
+                zIndex: 5,
+                borderRadius: 8,
+              }}
+            >
+              Cargando histórico de tipo de cambio...
+            </div>
+          )}
+          {error && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#f43f5e",
+                fontSize: "0.85rem",
+                zIndex: 5,
+              }}
+            >
+              {error}
+            </div>
+          )}
           <div
             ref={chartContainerRef}
             style={{
@@ -697,7 +767,7 @@ export default function FxRateExplorer({
               height: 380,
             }}
           />
-        )}
+        </div>
       </div>
     </div>
   );

@@ -358,6 +358,64 @@ export default function NavChart({
     return raw;
   };
 
+  const purchaseMarkers = useMemo(() => {
+    if (!navData || navData.length === 0) return [];
+    const dateSet = new Set();
+    (rebalances || []).forEach((r) => {
+      const d = r.rebalance_date || r.date;
+      if (d) dateSet.add(String(d).split("T")[0]);
+    });
+    (holdings || []).forEach((h) => {
+      const d = h.purchase_date || h.date;
+      if (d) dateSet.add(String(d).split("T")[0]);
+    });
+
+    if (dateSet.size === 0) return [];
+
+    const availableTimes = new Set(navData.map((d) => String(d.date || d.time || "").split("T")[0]));
+    const sortedTimes = Array.from(availableTimes).sort();
+    if (sortedTimes.length === 0) return [];
+    const minTime = sortedTimes[0];
+    const maxTime = sortedTimes[sortedTimes.length - 1];
+
+    const markers = [];
+    const usedTimes = new Set();
+
+    dateSet.forEach((dStr) => {
+      if (dStr < minTime || dStr > maxTime) return;
+      let matchedTime = null;
+      if (availableTimes.has(dStr)) {
+        matchedTime = dStr;
+      } else {
+        const targetMs = new Date(`${dStr}T00:00:00Z`).getTime();
+        let closest = null;
+        let minDiff = 4 * 86400000;
+        for (const t of sortedTimes) {
+          const diff = Math.abs(new Date(`${t}T00:00:00Z`).getTime() - targetMs);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closest = t;
+          }
+        }
+        matchedTime = closest;
+      }
+
+      if (matchedTime && !usedTimes.has(matchedTime)) {
+        usedTimes.add(matchedTime);
+        markers.push({
+          time: matchedTime,
+          position: "inBar",
+          color: isLight ? "#d97706" : "#fbbf24",
+          shape: "circle",
+          size: 2,
+        });
+      }
+    });
+
+    markers.sort((a, b) => (a.time < b.time ? -1 : 1));
+    return markers;
+  }, [navData, rebalances, holdings, isLight]);
+
   // Update series data with real price action
   useEffect(() => {
     if (!chartRef.current) return;
@@ -366,6 +424,11 @@ export default function NavChart({
       const sNav = toSeries(navData);
       if (sNav.length) {
         seriesRef.current.nav?.setData(sNav);
+        if (purchaseMarkers.length > 0) {
+          seriesRef.current.nav?.setMarkers(purchaseMarkers);
+        } else {
+          seriesRef.current.nav?.setMarkers([]);
+        }
       }
     }
 

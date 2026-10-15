@@ -477,6 +477,21 @@ export default function App() {
   const activeHoldings = holdings.filter((h) => h.selected !== false);
   const allTickers = holdings.map((h) => h.ticker);
 
+  const purchaseDates = useMemo(() => {
+    const dates = new Set();
+    const localRebs = strategyRebalances[mode] || [];
+    const navRebs = navData?.rebalances || [];
+    [...localRebs, ...navRebs].forEach((r) => {
+      const d = r.rebalance_date || r.date;
+      if (d) dates.add(String(d).split("T")[0]);
+    });
+    (holdings || []).forEach((h) => {
+      const d = h.purchase_date || h.date;
+      if (d) dates.add(String(d).split("T")[0]);
+    });
+    return Array.from(dates).sort();
+  }, [strategyRebalances, mode, navData, holdings]);
+
   // Toggle single ticker
   const toggleTicker = (ticker) => {
     const current = selectedTickers ?? allTickers;
@@ -2624,6 +2639,7 @@ export default function App() {
                   defaultLocal="COP"
                   period={period}
                   onPeriodChange={setPeriod}
+                  purchaseDates={purchaseDates}
                   minDate={navData?.summary?.first_rebalance_date || navData?.nav?.[0]?.date || "2026-08-03"}
                 />
               ) : mainChartViewTab === "individual" ? (
