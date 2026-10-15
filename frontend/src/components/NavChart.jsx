@@ -274,12 +274,16 @@ export default function NavChart({
       const nsdVal = seriesRef.current.nasdaq
         ? param.seriesData.get(seriesRef.current.nasdaq)?.value
         : null;
+      const baseVal = seriesRef.current.base
+        ? param.seriesData.get(seriesRef.current.base)?.value
+        : null;
 
       setHoverValues({
         date: param.time,
         nav: navVal != null ? navVal : null,
         sp500: spVal != null ? spVal : null,
         nasdaq: nsdVal != null ? nsdVal : null,
+        base: baseVal != null ? baseVal : null,
       });
     });
 
@@ -428,28 +432,35 @@ export default function NavChart({
   const currentSP = hoverValues?.sp500 ?? lastSP;
   const currentNasdaq = hoverValues?.nasdaq ?? lastNasdaq;
 
-  // Active invested capital for the latest period
-  const activeBase = summary?.active_invested || baseActive;
+  // Active invested capital for the latest period or the hovered point in time
+  const currentBase = hoverValues?.base ?? summary?.active_invested ?? baseActive;
 
-  // Real % returns from base active capital
-  const navPct =
-    summary?.active_return_pct != null
-      ? summary.active_return_pct
-      : activeBase && currentNav != null
-        ? ((currentNav - activeBase) / activeBase) * 100
-        : null;
-  const spPct =
-    summary?.sp500_return_pct != null
-      ? summary.sp500_return_pct
-      : activeBase && currentSP != null
-        ? ((currentSP - activeBase) / activeBase) * 100
-        : null;
-  const nasdaqPct =
-    summary?.nasdaq_return_pct != null
-      ? summary.nasdaq_return_pct
-      : activeBase && currentNasdaq != null
-        ? ((currentNasdaq - activeBase) / activeBase) * 100
-        : null;
+  // Real % returns:
+  // When hovering, dynamically compute return against the active base capital on that date.
+  // When not hovering, use the official summary active return if available.
+  const navPct = hoverValues
+    ? (currentBase && currentNav != null ? ((currentNav - currentBase) / currentBase) * 100 : null)
+    : (summary?.active_return_pct != null
+        ? summary.active_return_pct
+        : currentBase && currentNav != null
+          ? ((currentNav - currentBase) / currentBase) * 100
+          : null);
+
+  const spPct = hoverValues
+    ? (currentBase && currentSP != null ? ((currentSP - currentBase) / currentBase) * 100 : null)
+    : (summary?.sp500_return_pct != null
+        ? summary.sp500_return_pct
+        : currentBase && currentSP != null
+          ? ((currentSP - currentBase) / currentBase) * 100
+          : null);
+
+  const nasdaqPct = hoverValues
+    ? (currentBase && currentNasdaq != null ? ((currentNasdaq - currentBase) / currentBase) * 100 : null)
+    : (summary?.nasdaq_return_pct != null
+        ? summary.nasdaq_return_pct
+        : currentBase && currentNasdaq != null
+          ? ((currentNasdaq - currentBase) / currentBase) * 100
+          : null);
 
   return (
     <div
