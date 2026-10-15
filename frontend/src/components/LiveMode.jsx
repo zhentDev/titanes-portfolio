@@ -1009,8 +1009,8 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-            gap: "14px",
+            gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+            gap: "16px",
           }}
         >
           {holdings.map((h) => {
@@ -1059,10 +1059,11 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "flex-start",
+                    gap: "8px",
                   }}
                 >
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                       <span
                         style={{
                           fontWeight: 700,
@@ -1103,6 +1104,7 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
                             display: "inline-flex",
                             alignItems: "center",
                             gap: "4px",
+                            whiteSpace: "nowrap",
                           }}
                         >
                           <span
@@ -1128,7 +1130,7 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
                         whiteSpace: "nowrap",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
-                        maxWidth: "160px",
+                        maxWidth: "180px",
                       }}
                       title={h.name}
                     >
@@ -1138,7 +1140,17 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
 
                   <span
                     className={`badge ${isChangeGain ? "gain" : "loss"}`}
-                    style={{ fontSize: "0.72rem", padding: "3px 8px" }}
+                    style={{
+                      fontSize: "0.72rem",
+                      padding: "4px 8px",
+                      whiteSpace: "nowrap",
+                      flexShrink: 0,
+                      alignSelf: "flex-start",
+                      lineHeight: 1.2,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 3,
+                    }}
                     title="Variación intradía en vivo de la sesión de hoy"
                   >
                     Hoy: {isChangeGain ? "▲" : "▼"} {Math.abs(changePct).toFixed(2)}%

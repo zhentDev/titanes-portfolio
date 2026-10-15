@@ -20,6 +20,7 @@ import { InfoTooltip } from "./Common";
 import QuantumOrbitalLoader from "./QuantumOrbitalLoader";
 import HoldingsTable from "./HoldingsTable";
 import IndividualHoldingChart from "./IndividualHoldingChart";
+import FxRateExplorer from "./Common/FxRateExplorer";
 import { exportPortfolioExcel } from "../utils/exportReport";
 import { useTheme } from "../context/ThemeContext";
 
@@ -1766,6 +1767,34 @@ export default function DynamicStrategyView({
               </span>
             )}
           </button>
+
+          <button
+            type="button"
+            onClick={() => setStratChartTab("fx")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 7,
+              padding: "7px 14px",
+              borderRadius: 7,
+              border: stratChartTab === "fx"
+                ? `1px solid ${isLight ? "rgba(245, 158, 11, 0.5)" : "rgba(245, 158, 11, 0.5)"}`
+                : "1px solid transparent",
+              background: stratChartTab === "fx"
+                ? isLight ? "rgba(245, 158, 11, 0.12)" : "rgba(245, 158, 11, 0.15)"
+                : "transparent",
+              color: stratChartTab === "fx"
+                ? isLight ? "#d97706" : "#fbbf24"
+                : "var(--text-secondary)",
+              fontSize: "0.85rem",
+              fontWeight: stratChartTab === "fx" ? 700 : 500,
+              cursor: "pointer",
+              transition: "all 0.18s ease",
+            }}
+          >
+            <span>💱</span>
+            <span>Divisa USD / COP</span>
+          </button>
         </div>
 
         {stratChartTab === "portfolio" && (
@@ -1799,7 +1828,9 @@ export default function DynamicStrategyView({
       </div>
 
       <div className="card fade-up" style={{ padding: "20px" }}>
-        {stratChartTab === "individual" ? (
+        {stratChartTab === "fx" ? (
+          <FxRateExplorer defaultAsset="USD" defaultLocal="COP" />
+        ) : stratChartTab === "individual" ? (
           <IndividualHoldingChart
             holdings={navData?.holdings || []}
             closedHoldings={navData?.closed_holdings || []}

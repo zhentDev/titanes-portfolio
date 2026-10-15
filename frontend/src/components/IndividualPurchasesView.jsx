@@ -23,6 +23,7 @@ import InflationExplorerModal from "./InflationExplorerModal";
 import PlanConfigModal from "./PlanConfigModal";
 import PlanExecutionModal from "./PlanExecutionModal";
 import XtbImportModal from "./XtbImportModal";
+import FxRateExplorer from "./Common/FxRateExplorer";
 
 export default function IndividualPurchasesView({ portfolioId = "hist_default", onSelectPortfolio }) {
   const {
@@ -257,6 +258,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
   const purchaseTranslationInfo = useMemo(() => {
     return translateBrokerTicker(ticker);
   }, [ticker]);
+
+  // Chart Subtab State: "portfolio" | "fx"
+  const [purchasesChartTab, setPurchasesChartTab] = useState("portfolio");
 
   // Visibility state
   const [visibleSeries, setVisibleSeries] = useState({
@@ -2286,19 +2290,103 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
           </div>
         )}
 
-        {/* GRAPH CONTAINER */}
-        <div className="card fade-up" style={{ padding: "20px", marginBottom: "24px" }}>
+        {/* ── Chart Mode Tabs (Portafolio vs Divisa USD/COP) ── */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 12,
+            marginBottom: 12,
+          }}
+        >
           <div
-            className="purchases-chart-header"
             style={{
               display: "flex",
-              justifyContent: "space-between",
               alignItems: "center",
-              flexWrap: "wrap",
-              gap: 12,
-              marginBottom: 16,
+              gap: 8,
+              background: theme === "light" ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.03)",
+              padding: "4px",
+              borderRadius: 10,
+              border: `1px solid ${theme === "light" ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.06)"}`,
             }}
           >
+            <button
+              type="button"
+              onClick={() => setPurchasesChartTab("portfolio")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 7,
+                padding: "7px 14px",
+                borderRadius: 7,
+                border: purchasesChartTab === "portfolio"
+                  ? `1px solid ${theme === "light" ? "rgba(2, 132, 199, 0.4)" : "rgba(0, 229, 255, 0.4)"}`
+                  : "1px solid transparent",
+                background: purchasesChartTab === "portfolio"
+                  ? theme === "light" ? "rgba(2, 132, 199, 0.12)" : "rgba(0, 229, 255, 0.12)"
+                  : "transparent",
+                color: purchasesChartTab === "portfolio"
+                  ? theme === "light" ? "#0284c7" : "var(--accent-primary)"
+                  : "var(--text-secondary)",
+                fontSize: "0.85rem",
+                fontWeight: purchasesChartTab === "portfolio" ? 700 : 500,
+                cursor: "pointer",
+                transition: "all 0.18s ease",
+              }}
+            >
+              <span>📈</span>
+              <span>Portafolio General ({portfolio.name || "Compras"})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setPurchasesChartTab("fx")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 7,
+                padding: "7px 14px",
+                borderRadius: 7,
+                border: purchasesChartTab === "fx"
+                  ? `1px solid ${theme === "light" ? "rgba(245, 158, 11, 0.5)" : "rgba(245, 158, 11, 0.5)"}`
+                  : "1px solid transparent",
+                background: purchasesChartTab === "fx"
+                  ? theme === "light" ? "rgba(245, 158, 11, 0.12)" : "rgba(245, 158, 11, 0.15)"
+                  : "transparent",
+                color: purchasesChartTab === "fx"
+                  ? theme === "light" ? "#d97706" : "#fbbf24"
+                  : "var(--text-secondary)",
+                fontSize: "0.85rem",
+                fontWeight: purchasesChartTab === "fx" ? 700 : 500,
+                cursor: "pointer",
+                transition: "all 0.18s ease",
+              }}
+            >
+              <span>💱</span>
+              <span>Divisa USD / COP</span>
+            </button>
+          </div>
+        </div>
+
+        {/* GRAPH CONTAINER */}
+        <div className="card fade-up" style={{ padding: "20px", marginBottom: "24px" }}>
+          {purchasesChartTab === "fx" ? (
+            <FxRateExplorer defaultAsset="USD" defaultLocal="COP" />
+          ) : (
+            <>
+              <div
+                className="purchases-chart-header"
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: 12,
+                  marginBottom: 16,
+                }}
+              >
             <h3
               style={{
                 margin: 0,
@@ -2484,6 +2572,8 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                 height: typeof window !== "undefined" && window.innerWidth <= 640 ? 280 : typeof window !== "undefined" && window.innerWidth <= 1024 ? 350 : 460,
               }}
             />
+          )}
+            </>
           )}
         </div>
 
