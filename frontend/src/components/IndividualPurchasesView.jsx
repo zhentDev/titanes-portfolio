@@ -364,7 +364,10 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
       seriesRefs.current.nasdaq.applyOptions({ visible: visibleSeries.nasdaq });
   }, [visibleSeries]);
 
+  const [selectedTimeRange, setSelectedTimeRange] = useState("ALL");
+
   const handleTimeRange = (range) => {
+    setSelectedTimeRange(range);
     if (!chartInstanceRef.current) return;
     const timeScale = chartInstanceRef.current.timeScale();
     if (range === "ALL") {
@@ -2433,7 +2436,13 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
         {/* GRAPH CONTAINER */}
         <div className="card fade-up" style={{ padding: "20px", marginBottom: "24px" }}>
           {purchasesChartTab === "fx" ? (
-            <FxRateExplorer defaultAsset="USD" defaultLocal="COP" />
+            <FxRateExplorer
+              defaultAsset="USD"
+              defaultLocal="COP"
+              period={selectedTimeRange}
+              onPeriodChange={handleTimeRange}
+              minDate={earliestDate}
+            />
           ) : (
             <>
               <div
@@ -2576,36 +2585,44 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                   maxWidth: "100%",
                 }}
               >
-                {["1M", "3M", "6M", "YTD", "1Y", "5Y", "ALL"].map((range) => (
-                  <button
-                    key={range}
-                    onClick={() => handleTimeRange(range)}
-                    disabled={!isRangeEnabled(range)}
-                    style={{
-                      background: "rgba(255,255,255,0.05)",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      color: "var(--text-secondary)",
-                      borderRadius: 4,
-                      padding: "3px 8px",
-                      fontSize: "0.72rem",
-                      cursor: isRangeEnabled(range) ? "pointer" : "not-allowed",
-                      opacity: isRangeEnabled(range) ? 1 : 0.35,
-                      transition: "all 0.2s",
-                      minHeight: 26,
-                    }}
-                    onMouseOver={(e) => {
-                      if (!isRangeEnabled(range)) return;
-                      e.currentTarget.style.background = "rgba(255,255,255,0.1)";
-                      e.currentTarget.style.color = "#fff";
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.background = "rgba(255,255,255,0.05)";
-                      e.currentTarget.style.color = "var(--text-secondary)";
-                    }}
-                  >
-                    {range}
-                  </button>
-                ))}
+                {["1M", "3M", "6M", "YTD", "1Y", "5Y", "ALL"].map((range) => {
+                  const isSelected = selectedTimeRange === range;
+                  const isEnabled = isRangeEnabled(range);
+                  return (
+                    <button
+                      key={range}
+                      onClick={() => handleTimeRange(range)}
+                      disabled={!isEnabled}
+                      style={{
+                        background: isSelected
+                          ? theme === "light"
+                            ? "#0284c7"
+                            : "var(--accent-primary)"
+                          : theme === "light"
+                          ? "rgba(0,0,0,0.05)"
+                          : "rgba(255,255,255,0.05)",
+                        border: isSelected
+                          ? `1px solid ${theme === "light" ? "#0284c7" : "var(--accent-primary)"}`
+                          : `1px solid ${theme === "light" ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.1)"}`,
+                        color: isSelected
+                          ? theme === "light"
+                            ? "#ffffff"
+                            : "#0d1117"
+                          : "var(--text-secondary)",
+                        borderRadius: 4,
+                        padding: "3px 8px",
+                        fontSize: "0.72rem",
+                        fontWeight: isSelected ? 700 : 500,
+                        cursor: isEnabled ? "pointer" : "not-allowed",
+                        opacity: isEnabled ? 1 : 0.35,
+                        transition: "all 0.2s",
+                        minHeight: 26,
+                      }}
+                    >
+                      {range}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>

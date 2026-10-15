@@ -1,20 +1,54 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { createChart } from "lightweight-charts";
+import { ColorType, createChart } from "lightweight-charts";
 import { fetchFxHistory } from "../../api/client";
 import { useTheme } from "../../context/ThemeContext";
 import { getChartColors } from "../../utils/chartTheme";
 
 const RANGES = [
+  { label: "1D", days: 1 },
   { label: "1S", days: 7 },
   { label: "1M", days: 30 },
   { label: "3M", days: 90 },
   { label: "6M", days: 180 },
+  { label: "YTD", days: "YTD" },
   { label: "1A", days: 365 },
+  { label: "3A", days: 1095 },
   { label: "5A", days: 1825 },
   { label: "TODO", days: null },
 ];
 
-export default function FxRateExplorer({ defaultAsset = "USD", defaultLocal = "COP" }) {
+const normalizePeriodToRange = (p) => {
+  if (!p) return "1A";
+  const s = String(p).trim().toUpperCase();
+  if (s === "1D") return "1D";
+  if (s === "1W" || s === "1S") return "1S";
+  if (s === "1M") return "1M";
+  if (s === "3M") return "3M";
+  if (s === "6M") return "6M";
+  if (s === "YTD") return "YTD";
+  if (s === "1Y" || s === "1A") return "1A";
+  if (s === "3Y" || s === "3A") return "3A";
+  if (s === "5Y" || s === "5A") return "5A";
+  if (s === "MAX" || s === "ALL" || s === "TODO") return "TODO";
+  return "1A";
+};
+
+const mapRangeToParentPeriod = (rangeLabel) => {
+  if (rangeLabel === "1S") return "1W";
+  if (rangeLabel === "1A") return "1Y";
+  if (rangeLabel === "3A") return "3Y";
+  if (rangeLabel === "5A") return "5Y";
+  if (rangeLabel === "TODO") return "MAX";
+  return rangeLabel;
+};
+
+export default function FxRateExplorer({
+  defaultAsset = "USD",
+  defaultLocal = "COP",
+  minDate = null,
+  period = null,
+  onPeriodChange = null,
+}) {
   const { theme } = useTheme();
   const isLight = theme === "light";
   const chartColors = useMemo(() => getChartColors(theme), [theme]);
@@ -29,8 +63,21 @@ export default function FxRateExplorer({ defaultAsset = "USD", defaultLocal = "C
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Time range filter
-  const [selectedRange, setSelectedRange] = useState("1A");
+  // Time range filter - synchronized with parent period if provided
+  const [selectedRange, setSelectedRange] = useState(() => normalizePeriodToRange(period));
+
+  useEffect(() => {
+    if (period) {
+      setSelectedRange(normalizePeriodToRange(period));
+    }
+  }, [period]);
+
+  const handleSelectRange = (rangeLabel) => {
+    setSelectedRange(rangeLabel);
+    if (onPeriodChange) {
+      onPeriodChange(mapRangeToParentPeriod(rangeLabel));
+    }
+  };
 
   // Converter state
   const [convertAmount, setConvertAmount] = useState(100);
@@ -40,7 +87,7 @@ export default function FxRateExplorer({ defaultAsset = "USD", defaultLocal = "C
   const chartInstanceRef = useRef(null);
   const areaSeriesRef = useRef(null);
 
-  // Fetch FX data (always fetches standard USD-COP from backend cache/yfinance)
+  // Fetch FX data (lazy: only loads when component is mounted / tab activated)
   useEffect(() => {
     let isMounted = true;
     setIsLoading(true);
@@ -69,7 +116,7 @@ export default function FxRateExplorer({ defaultAsset = "USD", defaultLocal = "C
     };
   }, []);
 
-  // Compute active rate and transformed historical series based on inversion
+  // Compute active rate and transformed historical series based on inversion, period range, and minDate
   const { currentRate, historyList, stats } = useMemo(() => {
     const hist = rawFxData?.history || {};
     const dates = Object.keys(hist).sort();
@@ -78,7 +125,7 @@ export default function FxRateExplorer({ defaultAsset = "USD", defaultLocal = "C
       return { currentRate: 0, historyList: [], stats: null };
     }
 
-    const list = dates
+    const fullList = dates
       .map((d) => {
         const rawVal = Number(hist[d]);
         if (!rawVal || isNaN(rawVal) || rawVal <= 0) return null;
@@ -91,19 +138,44 @@ export default function FxRateExplorer({ defaultAsset = "USD", defaultLocal = "C
       })
       .filter(Boolean);
 
-    const latestRaw = rawFxData.current || (list.length > 0 ? list[list.length - 1].rawVal : 0);
+    if (fullList.length === 0) {
+      return { currentRate: 0, historyList: [], stats: null };
+    }
+
+    const latestRaw = rawFxData.current || fullList[fullList.length - 1].rawVal;
     const curr = isInverted ? (latestRaw > 0 ? 1 / latestRaw : 0) : latestRaw;
 
-    // Filter by selected range
-    let filteredList = list;
+    // Filter by selected range (particular del periodo de graficación)
+    let filteredList = fullList;
     const rangeObj = RANGES.find((r) => r.label === selectedRange);
-    if (rangeObj && rangeObj.days && list.length > 0) {
-      const lastDate = new Date(list[list.length - 1].time);
-      const cutoff = new Date(lastDate);
-      cutoff.setDate(cutoff.getDate() - rangeObj.days);
-      const cutoffStr = cutoff.toISOString().split("T")[0];
-      filteredList = list.filter((item) => item.time >= cutoffStr);
-      if (filteredList.length === 0) filteredList = list;
+
+    if (selectedRange === "TODO") {
+      if (minDate) {
+        filteredList = fullList.filter((item) => item.time >= minDate);
+        if (filteredList.length === 0) filteredList = fullList;
+      }
+    } else if (rangeObj && fullList.length > 0) {
+      const lastItemDate = new Date(`${fullList[fullList.length - 1].time}T00:00:00Z`);
+      let cutoffStr = "";
+
+      if (rangeObj.days === "YTD") {
+        const startOfYear = new Date(Date.UTC(lastItemDate.getUTCFullYear(), 0, 1));
+        cutoffStr = startOfYear.toISOString().split("T")[0];
+      } else if (typeof rangeObj.days === "number") {
+        const cutoff = new Date(lastItemDate);
+        cutoff.setUTCDate(cutoff.getUTCDate() - rangeObj.days);
+        cutoffStr = cutoff.toISOString().split("T")[0];
+      }
+
+      // Respetar minDate si el periodo seleccionado va más atrás que la primera compra
+      if (minDate && cutoffStr && cutoffStr < minDate) {
+        cutoffStr = minDate;
+      }
+
+      if (cutoffStr) {
+        filteredList = fullList.filter((item) => item.time >= cutoffStr);
+      }
+      if (filteredList.length === 0) filteredList = fullList;
     }
 
     // High / Low / Change stats
@@ -131,7 +203,7 @@ export default function FxRateExplorer({ defaultAsset = "USD", defaultLocal = "C
         lastTime: lastPt?.time,
       },
     };
-  }, [rawFxData, isInverted, selectedRange]);
+  }, [rawFxData, isInverted, selectedRange, minDate]);
 
   // Handle Chart Creation & Updates
   useEffect(() => {
@@ -147,7 +219,7 @@ export default function FxRateExplorer({ defaultAsset = "USD", defaultLocal = "C
       width: container.clientWidth || 600,
       height: 380,
       layout: {
-        background: { type: "solid", color: "transparent" },
+        background: { type: ColorType.Solid, color: "transparent" },
         textColor: chartColors.textColor,
         fontFamily: "'JetBrains Mono', monospace",
         fontSize: 11,
@@ -197,18 +269,17 @@ export default function FxRateExplorer({ defaultAsset = "USD", defaultLocal = "C
       chart.timeScale().fitContent();
     }
 
-    const handleResize = () => {
+    const ro = new ResizeObserver(() => {
       if (container && chartInstanceRef.current) {
         chartInstanceRef.current.applyOptions({
           width: container.clientWidth,
         });
       }
-    };
-
-    window.addEventListener("resize", handleResize);
+    });
+    ro.observe(container);
 
     return () => {
-      window.removeEventListener("resize", handleResize);
+      ro.disconnect();
       if (chartInstanceRef.current) {
         chartInstanceRef.current.remove();
         chartInstanceRef.current = null;
@@ -565,7 +636,7 @@ export default function FxRateExplorer({ defaultAsset = "USD", defaultLocal = "C
                 <button
                   key={r.label}
                   type="button"
-                  onClick={() => setSelectedRange(r.label)}
+                  onClick={() => handleSelectRange(r.label)}
                   style={{
                     border: "none",
                     background: isSelected

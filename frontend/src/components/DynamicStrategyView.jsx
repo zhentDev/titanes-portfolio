@@ -1946,39 +1946,49 @@ export default function DynamicStrategyView({
           </button>
         </div>
 
-        {stratChartTab === "portfolio" && (
+        {(stratChartTab === "portfolio" || stratChartTab === "fx") && (
           <div
             className="period-selector"
             style={{ margin: 0, padding: 0, background: "transparent" }}
           >
-            {PERIODS.map((p) => (
-              <button
-                key={p}
-                className={`period-btn ${p === period ? "active" : ""}`}
-                onClick={() => setPeriod(p)}
-                disabled={!periodEnabled[p]}
-                title={
-                  periodEnabled[p]
-                    ? undefined
-                    : "Requiere más historial desde tu primera inversión"
-                }
-                style={{
-                  padding: "4px 10px",
-                  fontSize: "0.75rem",
-                  opacity: periodEnabled[p] ? 1 : 0.35,
-                  cursor: periodEnabled[p] ? "pointer" : "not-allowed",
-                }}
-              >
-                {p}
-              </button>
-            ))}
+            {PERIODS.map((p) => {
+              const isFx = stratChartTab === "fx";
+              const isEnabled = isFx || periodEnabled[p];
+              return (
+                <button
+                  key={p}
+                  className={`period-btn ${p === period ? "active" : ""}`}
+                  onClick={() => setPeriod(p)}
+                  disabled={!isEnabled}
+                  title={
+                    !isEnabled
+                      ? "Requiere más historial desde tu primera inversión"
+                      : undefined
+                  }
+                  style={{
+                    padding: "4px 10px",
+                    fontSize: "0.75rem",
+                    opacity: isEnabled ? 1 : 0.35,
+                    cursor: isEnabled ? "pointer" : "not-allowed",
+                  }}
+                >
+                  {p}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
 
       <div className="card fade-up" style={{ padding: "20px" }}>
         {stratChartTab === "fx" ? (
-          <FxRateExplorer defaultAsset="USD" defaultLocal="COP" />
+          <FxRateExplorer
+            defaultAsset="USD"
+            defaultLocal="COP"
+            period={period}
+            onPeriodChange={setPeriod}
+            minDate={firstInvestDate}
+          />
         ) : stratChartTab === "individual" ? (
           <IndividualHoldingChart
             holdings={navData?.holdings || []}

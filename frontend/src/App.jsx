@@ -23,6 +23,7 @@ import WasmNavSimulator from "./components/WasmNavSimulator";
 import { InfoTooltip } from "./components/Common";
 import AffiliateBanner from "./components/Common/AffiliateBanner";
 import AuthModal from "./components/AuthModal";
+import FxRateExplorer from "./components/Common/FxRateExplorer";
 import AuthWall from "./components/AuthWall";
 import StrategyPaywall from "./components/StrategyPaywall";
 import QuantumOrbitalLoader from "./components/QuantumOrbitalLoader";
@@ -2476,30 +2477,62 @@ export default function App() {
                     </span>
                   )}
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => setMainChartViewTab("fx")}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 7,
+                    padding: "7px 14px",
+                    borderRadius: 7,
+                    border: mainChartViewTab === "fx"
+                      ? `1px solid ${isLight ? "rgba(245, 158, 11, 0.5)" : "rgba(245, 158, 11, 0.5)"}`
+                      : "1px solid transparent",
+                    background: mainChartViewTab === "fx"
+                      ? isLight ? "rgba(245, 158, 11, 0.12)" : "rgba(245, 158, 11, 0.15)"
+                      : "transparent",
+                    color: mainChartViewTab === "fx"
+                      ? isLight ? "#d97706" : "#fbbf24"
+                      : "var(--text-secondary)",
+                    fontSize: "0.85rem",
+                    fontWeight: mainChartViewTab === "fx" ? 700 : 500,
+                    cursor: "pointer",
+                    transition: "all 0.18s ease",
+                  }}
+                >
+                  <span>💱</span>
+                  <span>Divisa USD / COP</span>
+                </button>
               </div>
 
-              {/* Period selector (shown when viewing portfolio) */}
-              {mainChartViewTab === "portfolio" && (
+              {/* Period selector (shown when viewing portfolio or fx) */}
+              {(mainChartViewTab === "portfolio" || mainChartViewTab === "fx") && (
                 <div className="period-selector fade-up" style={{ margin: 0 }}>
-                  {PERIODS.map((p) => (
-                    <button
-                      key={p}
-                      className={`period-btn ${p === period ? "active" : ""}`}
-                      onClick={() => setPeriod(p)}
-                      disabled={!periodEnabled[p]}
-                      title={
-                        periodEnabled[p]
-                          ? undefined
-                          : "Requiere más historial desde tu primera inversión"
-                      }
-                      style={{
-                        opacity: periodEnabled[p] ? 1 : 0.35,
-                        cursor: periodEnabled[p] ? "pointer" : "not-allowed",
-                      }}
-                    >
-                      {p}
-                    </button>
-                  ))}
+                  {PERIODS.map((p) => {
+                    const isFx = mainChartViewTab === "fx";
+                    const isEnabled = isFx || periodEnabled[p];
+                    return (
+                      <button
+                        key={p}
+                        className={`period-btn ${p === period ? "active" : ""}`}
+                        onClick={() => setPeriod(p)}
+                        disabled={!isEnabled}
+                        title={
+                          !isEnabled
+                            ? "Requiere más historial desde tu primera inversión"
+                            : undefined
+                        }
+                        style={{
+                          opacity: isEnabled ? 1 : 0.35,
+                          cursor: isEnabled ? "pointer" : "not-allowed",
+                        }}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -2585,6 +2618,14 @@ export default function App() {
                     </div>
                   )}
                 </div>
+              ) : mainChartViewTab === "fx" ? (
+                <FxRateExplorer
+                  defaultAsset="USD"
+                  defaultLocal="COP"
+                  period={period}
+                  onPeriodChange={setPeriod}
+                  minDate={navData?.summary?.first_rebalance_date || navData?.nav?.[0]?.date || "2026-08-03"}
+                />
               ) : mainChartViewTab === "individual" ? (
                 <IndividualHoldingChart
                   holdings={holdings}
