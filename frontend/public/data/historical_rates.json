@@ -80,15 +80,15 @@
         },
         {
           "from": "2026-02-06",
-          "to": "2026-04-08",
-          "rateEA": 8.75,
-          "notes": "Subida: 8.25% → 8.75% E.A. (6 feb 2026)"
+          "to": "2026-10-05",
+          "rateEA": 9.25,
+          "notes": "Tasa previa: 9.25% E.A."
         },
         {
-          "from": "2026-04-09",
+          "from": "2026-10-06",
           "to": "2099-12-31",
-          "rateEA": 9.3,
-          "notes": "Tasa vigente: 9.30% E.A."
+          "rateEA": 9.35,
+          "notes": "Subida: 9.25% → 9.35% E.A. (6 oct 2026)"
         }
       ],
       "cdt_term_rates_history": [

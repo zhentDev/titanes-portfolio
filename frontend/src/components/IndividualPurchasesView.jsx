@@ -1339,7 +1339,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                 Registra y trackea compras reales de ETFs, ETCs, Acciones y Criptos / Oro Digital (XAUt, PAXG, BTC) con sus valores de
                 apertura exactos y descuento de comisiones.
               </p>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14, marginBottom: 8, flexWrap: "wrap" }}>
                 <label
                   style={{
                     display: "flex",
@@ -1348,8 +1348,8 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                     cursor: "pointer",
                     fontSize: "0.85rem",
                     color: portfolio.isPlan ? "var(--accent-primary)" : "var(--text-secondary)",
-                    padding: "4px 8px",
-                    borderRadius: "8px",
+                    padding: "6px 12px",
+                    borderRadius: "10px",
                     background: "var(--bg-card-hover)",
                     border: "1px solid var(--border)",
                   }}
@@ -1378,16 +1378,16 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                   style={{
                     background: "rgba(245, 158, 11, 0.12)",
                     border: "1px solid rgba(245, 158, 11, 0.35)",
-                    color: "#d97706",
-                    padding: "6px 12px",
-                    borderRadius: "12px",
+                    color: theme === "light" ? "#b45309" : "#f59e0b",
+                    padding: "6px 14px",
+                    borderRadius: "10px",
                     fontSize: "0.8rem",
                     fontWeight: 600,
                     display: "flex",
                     alignItems: "center",
                     gap: 6,
                     cursor: "pointer",
-                    minHeight: 32,
+                    minHeight: 34,
                   }}
                 >
                   🔍 Ver Historial IPC (
@@ -1397,17 +1397,17 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                 <button
                   onClick={() => setShowSettingsModal(true)}
                   style={{
-                    background: "transparent",
-                    border: "1px solid rgba(255,255,255,0.2)",
+                    background: theme === "light" ? "rgba(0,0,0,0.03)" : "transparent",
+                    border: theme === "light" ? "1px solid var(--border)" : "1px solid rgba(255,255,255,0.2)",
                     color: "var(--text-secondary)",
-                    padding: "6px 12px",
-                    borderRadius: "12px",
+                    padding: "6px 14px",
+                    borderRadius: "10px",
                     fontSize: "0.8rem",
                     display: "flex",
                     alignItems: "center",
                     gap: 6,
                     cursor: "pointer",
-                    minHeight: 32,
+                    minHeight: 34,
                   }}
                 >
                   ⚙️ Configurar Divisa/Inflación
@@ -1416,17 +1416,17 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                 <button
                   onClick={() => setShowXtbModal(true)}
                   style={{
-                    background: "rgba(0, 229, 255, 0.08)",
-                    border: "1px solid rgba(0, 229, 255, 0.35)",
-                    color: "#00e5ff",
-                    padding: "6px 12px",
-                    borderRadius: "12px",
+                    background: theme === "light" ? "rgba(2, 132, 199, 0.08)" : "rgba(0, 229, 255, 0.08)",
+                    border: theme === "light" ? "1px solid rgba(2, 132, 199, 0.3)" : "1px solid rgba(0, 229, 255, 0.35)",
+                    color: theme === "light" ? "#0284c7" : "#00e5ff",
+                    padding: "6px 14px",
+                    borderRadius: "10px",
                     fontSize: "0.8rem",
                     display: "flex",
                     alignItems: "center",
                     gap: 6,
                     cursor: "pointer",
-                    minHeight: 32,
+                    minHeight: 34,
                     fontWeight: 700,
                   }}
                   title="Importar compras copiadas desde xStation 5 de XTB"
@@ -1458,7 +1458,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
             )}
           </div>
 
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
+          <div style={{ display: "flex", justifyContent: "center", margin: "16px 0 24px 0" }}>
             <div
               style={{
                 display: "flex",
@@ -1663,9 +1663,10 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
             style={{
               marginTop: 16,
               padding: "16px 20px",
-              background: "rgba(0,0,0,0.25)",
+              background: theme === "light" ? "var(--bg-card)" : "rgba(0,0,0,0.25)",
               borderRadius: "var(--radius)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              border: theme === "light" ? "1px solid var(--border)" : "1px solid rgba(255,255,255,0.08)",
+              boxShadow: theme === "light" ? "var(--shadow-card)" : "none",
             }}
           >
             <div
@@ -1688,10 +1689,11 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                 <span
                   style={{
                     fontSize: "0.74rem",
-                    color: "#f59e0b",
-                    background: "rgba(245,158,11,0.1)",
+                    color: theme === "light" ? "#b45309" : "#f59e0b",
+                    background: theme === "light" ? "rgba(245,158,11,0.15)" : "rgba(245,158,11,0.1)",
                     padding: "2px 8px",
                     borderRadius: 6,
+                    fontWeight: 600,
                   }}
                 >
                   {portfolio.useAutoColInflation
@@ -1706,13 +1708,14 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                   setShowBreakdownCard(!showBreakdownCard);
                 }}
                 style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: theme === "light" ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.06)",
+                  border: theme === "light" ? "1px solid var(--border)" : "1px solid rgba(255,255,255,0.12)",
                   borderRadius: 6,
-                  padding: "2px 8px",
+                  padding: "3px 10px",
                   color: "var(--text-muted)",
                   fontSize: "0.72rem",
                   cursor: "pointer",
+                  fontWeight: 600,
                 }}
               >
                 {showBreakdownCard ? "▲ Ocultar" : "▼ Desplegar"}
@@ -1731,12 +1734,12 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
               <div
                 style={{
                   padding: 12,
-                  background: "rgba(255,255,255,0.02)",
+                  background: theme === "light" ? "rgba(0,0,0,0.02)" : "rgba(255,255,255,0.02)",
                   borderRadius: 8,
-                  border: "1px solid rgba(255,255,255,0.06)",
+                  border: theme === "light" ? "1px solid var(--border)" : "1px solid rgba(255,255,255,0.06)",
                 }}
               >
-                <div style={{ fontSize: "0.72rem", color: "#94a3b8", textTransform: "uppercase" }}>
+                <div style={{ fontSize: "0.72rem", color: theme === "light" ? "#64748b" : "#94a3b8", textTransform: "uppercase", fontWeight: 700 }}>
                   1. Nominal ({portfolio.assetCurrency || "USD"})
                 </div>
                 <div
@@ -1744,7 +1747,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                   style={{
                     fontSize: "1.15rem",
                     fontWeight: 800,
-                    color: summary.netReturn >= 0 ? "#4ade80" : "#f87171",
+                    color: summary.netReturn >= 0 ? (theme === "light" ? "#16a34a" : "#4ade80") : (theme === "light" ? "#dc2626" : "#f87171"),
                     marginTop: 4,
                   }}
                 >
@@ -1763,12 +1766,12 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
               <div
                 style={{
                   padding: 12,
-                  background: "rgba(0, 229, 255, 0.03)",
+                  background: theme === "light" ? "rgba(2, 132, 199, 0.05)" : "rgba(0, 229, 255, 0.03)",
                   borderRadius: 8,
-                  border: "1px solid rgba(0, 229, 255, 0.15)",
+                  border: theme === "light" ? "1px solid rgba(2, 132, 199, 0.2)" : "1px solid rgba(0, 229, 255, 0.15)",
                 }}
               >
-                <div style={{ fontSize: "0.72rem", color: "#00e5ff", textTransform: "uppercase" }}>
+                <div style={{ fontSize: "0.72rem", color: theme === "light" ? "#0284c7" : "#00e5ff", textTransform: "uppercase", fontWeight: 700 }}>
                   2. Al Cambio Divisa ({portfolio.localCurrency || "COP"})
                 </div>
                 <div
@@ -1776,7 +1779,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                   style={{
                     fontSize: "1.15rem",
                     fontWeight: 800,
-                    color: summary.netReturnFx >= 0 ? "#4ade80" : "#f87171",
+                    color: summary.netReturnFx >= 0 ? (theme === "light" ? "#16a34a" : "#4ade80") : (theme === "light" ? "#dc2626" : "#f87171"),
                     marginTop: 4,
                   }}
                 >
@@ -1794,12 +1797,12 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
               <div
                 style={{
                   padding: 12,
-                  background: "rgba(245, 158, 11, 0.03)",
+                  background: theme === "light" ? "rgba(245, 158, 11, 0.05)" : "rgba(245, 158, 11, 0.03)",
                   borderRadius: 8,
-                  border: "1px solid rgba(245, 158, 11, 0.15)",
+                  border: theme === "light" ? "1px solid rgba(245, 158, 11, 0.25)" : "1px solid rgba(245, 158, 11, 0.15)",
                 }}
               >
-                <div style={{ fontSize: "0.72rem", color: "#f59e0b", textTransform: "uppercase" }}>
+                <div style={{ fontSize: "0.72rem", color: theme === "light" ? "#b45309" : "#f59e0b", textTransform: "uppercase", fontWeight: 700 }}>
                   3. Poder Adquisitivo Real (Neto)
                 </div>
                 <div
@@ -1807,7 +1810,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                   style={{
                     fontSize: "1.15rem",
                     fontWeight: 800,
-                    color: summary.netReturnReal >= 0 ? "#f59e0b" : "#f87171",
+                    color: summary.netReturnReal >= 0 ? (theme === "light" ? "#d97706" : "#f59e0b") : (theme === "light" ? "#dc2626" : "#f87171"),
                     marginTop: 4,
                   }}
                 >
@@ -1828,13 +1831,13 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                 style={{
                   marginTop: 12,
                   padding: "10px 14px",
-                  background: "rgba(0, 229, 255, 0.04)",
+                  background: theme === "light" ? "rgba(2, 132, 199, 0.05)" : "rgba(0, 229, 255, 0.04)",
                   borderRadius: 8,
-                  border: "1px dashed rgba(0, 229, 255, 0.2)",
+                  border: theme === "light" ? "1px dashed rgba(2, 132, 199, 0.25)" : "1px dashed rgba(0, 229, 255, 0.2)",
                   fontSize: "0.78rem",
                 }}
               >
-                <div style={{ fontWeight: 700, color: "#00e5ff", marginBottom: 6 }}>
+                <div style={{ fontWeight: 700, color: theme === "light" ? "#0284c7" : "#00e5ff", marginBottom: 6 }}>
                   💱 Efecto Cambiario Aislado (USD→{portfolio.localCurrency || "COP"})
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
@@ -1845,7 +1848,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                     className="mono"
                     style={{
                       fontWeight: 700,
-                      color: summary.assetGainInCop >= 0 ? "#4ade80" : "#f87171",
+                      color: summary.assetGainInCop >= 0 ? (theme === "light" ? "#16a34a" : "#4ade80") : (theme === "light" ? "#dc2626" : "#f87171"),
                     }}
                   >
                     {summary.assetGainInCop >= 0 ? "+" : ""}
@@ -1853,12 +1856,12 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                     {summary.assetGainInCopPct.toFixed(2)}%)
                   </span>
                   <span style={{ color: "var(--text-muted)" }}>+</span>
-                  <span style={{ color: "#00e5ff", fontWeight: 600 }}>Movimiento divisa:</span>
+                  <span style={{ color: theme === "light" ? "#0284c7" : "#00e5ff", fontWeight: 600 }}>Movimiento divisa:</span>
                   <span
                     className="mono"
                     style={{
                       fontWeight: 700,
-                      color: summary.totalFxEffect >= 0 ? "#4ade80" : "#f87171",
+                      color: summary.totalFxEffect >= 0 ? (theme === "light" ? "#16a34a" : "#4ade80") : (theme === "light" ? "#dc2626" : "#f87171"),
                     }}
                   >
                     {summary.totalFxEffect >= 0 ? "+" : ""}
@@ -1870,7 +1873,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                     className="mono"
                     style={{
                       fontWeight: 800,
-                      color: summary.netReturnFx >= 0 ? "#4ade80" : "#f87171",
+                      color: summary.netReturnFx >= 0 ? (theme === "light" ? "#16a34a" : "#4ade80") : (theme === "light" ? "#dc2626" : "#f87171"),
                     }}
                   >
                     {summary.netReturnFx >= 0 ? "+" : ""}
@@ -1886,9 +1889,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
               style={{
                 marginTop: 12,
                 padding: "10px 14px",
-                background: "rgba(245, 158, 11, 0.06)",
+                background: theme === "light" ? "rgba(245, 158, 11, 0.08)" : "rgba(245, 158, 11, 0.06)",
                 borderRadius: 8,
-                border: "1px dashed rgba(245, 158, 11, 0.25)",
+                border: theme === "light" ? "1px dashed rgba(245, 158, 11, 0.35)" : "1px dashed rgba(245, 158, 11, 0.25)",
                 display: "flex",
                 flexWrap: "wrap",
                 alignItems: "center",
@@ -1898,32 +1901,32 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                <span style={{ color: "#00e5ff", fontWeight: 700 }}>
+                <span style={{ color: theme === "light" ? "#0284c7" : "#00e5ff", fontWeight: 700 }}>
                   Ganancia Bruta ({portfolio.localCurrency || "COP"}):
                 </span>
                 <span
                   className="mono"
                   style={{
-                    color: summary.netReturnFx >= 0 ? "#4ade80" : "#f87171",
+                    color: summary.netReturnFx >= 0 ? (theme === "light" ? "#16a34a" : "#4ade80") : (theme === "light" ? "#dc2626" : "#f87171"),
                     fontWeight: 700,
                   }}
                 >
                   {summary.netReturnFx >= 0 ? "+" : ""}${summary.netReturnFx.toFixed(2)}
                 </span>
                 <span style={{ color: "var(--text-muted)" }}>➖</span>
-                <span style={{ color: "#f87171", fontWeight: 700 }}>
+                <span style={{ color: theme === "light" ? "#dc2626" : "#f87171", fontWeight: 700 }}>
                   Descuento Inflación (IPC):
                 </span>
-                <span className="mono" style={{ color: "#f87171", fontWeight: 700 }}>
+                <span className="mono" style={{ color: theme === "light" ? "#dc2626" : "#f87171", fontWeight: 700 }}>
                   -${summary.totalInflationLoss.toFixed(2)} (
                   {summary.totalInflationLossPct.toFixed(2)}%)
                 </span>
                 <span style={{ color: "var(--text-muted)" }}>🟰</span>
-                <span style={{ color: "#f59e0b", fontWeight: 700 }}>Ganancia Real Neta:</span>
+                <span style={{ color: theme === "light" ? "#b45309" : "#f59e0b", fontWeight: 700 }}>Ganancia Real Neta:</span>
                 <span
                   className="mono"
                   style={{
-                    color: summary.netReturnReal >= 0 ? "#f59e0b" : "#f87171",
+                    color: summary.netReturnReal >= 0 ? (theme === "light" ? "#d97706" : "#f59e0b") : (theme === "light" ? "#dc2626" : "#f87171"),
                     fontWeight: 800,
                   }}
                 >

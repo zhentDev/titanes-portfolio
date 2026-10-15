@@ -393,6 +393,7 @@ export default function App() {
       : datePoints.map((pt) => ({
           ...pt,
           value: Number((pt.value * filterRatio).toFixed(4)),
+          active_invested: typeof pt.active_invested === "number" ? Number((pt.active_invested * filterRatio).toFixed(4)) : undefined,
         }));
 
     // Rescaled S&P 500 and NASDAQ:

@@ -257,6 +257,8 @@ export default function DynamicStrategyView({
   const numSlots = strategy.numSlots || 20;
   const [unit, setUnit] = useState("pct");
 
+  const [selectedTickers, setSelectedTickers] = useState(null); // null = all active by default
+
   // Form state to add new dated rebalance
   const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [formTickers, setFormTickers] = useState(() => {
@@ -366,6 +368,142 @@ export default function DynamicStrategyView({
     };
   }, [strategy?.id, period, simulatedCapital, numSlots, activeTickers.join(","), navRefreshKey]);
 
+  // Client-side instantaneous filtering & scaling when user toggles positions
+  const { filteredNavData, filteredHoldings, effectiveActiveInvested, effectiveSlotValue } = useMemo(() => {
+    const rawHoldings = navData?.holdings || [];
+    const allHoldings = rawHoldings.length > 0
+      ? rawHoldings
+      : activeTickers.map((t) => ({
+          ticker: t,
+          shares: 1,
+          current_price: tickerMetadata[t]?.price || 100,
+          start_price: tickerMetadata[t]?.price || 100,
+          unrealized_pnl: (tickerMetadata[t]?.change_pct || 0) >= 0 ? 1 : -1,
+          return_pct: tickerMetadata[t]?.change_pct || 0,
+        }));
+
+    const currentSelected = selectedTickers ?? allHoldings.map((h) => h.ticker);
+    const updatedHoldings = allHoldings.map((h) => ({
+      ...h,
+      selected: currentSelected.includes(h.ticker),
+    }));
+
+    const activeList = updatedHoldings.filter((h) => h.selected);
+    const currSlotVal = slotValue;
+    const computedActiveInvested = activeList.length * currSlotVal;
+
+    if (!navData) {
+      return {
+        filteredNavData: null,
+        filteredHoldings: updatedHoldings,
+        effectiveActiveInvested: computedActiveInvested,
+        effectiveSlotValue: currSlotVal,
+      };
+    }
+
+    const defaultActiveInvested = navData?.summary?.active_invested || activeInvested || computedActiveInvested;
+    const filterRatio = defaultActiveInvested > 0 ? computedActiveInvested / defaultActiveInvested : 1;
+    const isAllSelected = !selectedTickers || activeList.length === allHoldings.length;
+
+    const datePoints = navData.nav || [];
+    const scaledNav = isAllSelected
+      ? [...datePoints]
+      : datePoints.map((pt) => ({
+          ...pt,
+          value: Number((pt.value * filterRatio).toFixed(4)),
+          stock_value: typeof pt.stock_value === "number" ? Number((pt.stock_value * filterRatio).toFixed(4)) : undefined,
+          active_invested: typeof pt.active_invested === "number"
+            ? Number((pt.active_invested * filterRatio).toFixed(4))
+            : computedActiveInvested,
+        }));
+
+    const scaledSP500 = [...(navData.sp500 || [])].map((pt) => ({
+      ...pt,
+      value: Number((pt.value * filterRatio).toFixed(4)),
+    }));
+
+    const scaledNasdaq = [...(navData.nasdaq || [])].map((pt) => ({
+      ...pt,
+      value: Number((pt.value * filterRatio).toFixed(4)),
+    }));
+
+    const scaledMm20 = [...(navData.mm20 || [])].map((pt) => ({
+      ...pt,
+      value: Number((pt.value * filterRatio).toFixed(4)),
+    }));
+
+    const scaledData = {
+      ...navData,
+      nav: scaledNav,
+      sp500: scaledSP500,
+      nasdaq: scaledNasdaq,
+      mm20: scaledMm20,
+      holdings: updatedHoldings,
+      summary: {
+        ...navData.summary,
+        active_invested: computedActiveInvested,
+      },
+    };
+
+    return {
+      filteredNavData: scaledData,
+      filteredHoldings: updatedHoldings,
+      effectiveActiveInvested: computedActiveInvested,
+      effectiveSlotValue: currSlotVal,
+    };
+  }, [navData, selectedTickers, activeTickers, tickerMetadata, slotValue, activeInvested]);
+
+  const handleToggleTicker = (ticker) => {
+    const all = (filteredHoldings || []).map((h) => h.ticker);
+    const curr = selectedTickers ?? all;
+    if (curr.includes(ticker)) {
+      if (curr.length <= 1) {
+        toast("Debes mantener al menos una posición activa", { icon: "⚠️" });
+        return;
+      }
+      setSelectedTickers(curr.filter((t) => t !== ticker));
+    } else {
+      setSelectedTickers([...curr, ticker]);
+    }
+  };
+
+  const handleSelectAll = () => {
+    setSelectedTickers((filteredHoldings || []).map((h) => h.ticker));
+  };
+
+  const handleSelectGainers = () => {
+    const gainers = (filteredHoldings || [])
+      .filter((h) => (h.unrealized_pnl ?? h.return_pct ?? 0) >= 0)
+      .map((h) => h.ticker);
+    if (gainers.length === 0) {
+      toast("No hay posiciones con ganancia activa", { icon: "ℹ️" });
+      return;
+    }
+    setSelectedTickers(gainers);
+  };
+
+  const handleSelectLosers = () => {
+    const losers = (filteredHoldings || [])
+      .filter((h) => (h.unrealized_pnl ?? h.return_pct ?? 0) < 0)
+      .map((h) => h.ticker);
+    if (losers.length === 0) {
+      toast("No hay posiciones en pérdida", { icon: "ℹ️" });
+      return;
+    }
+    setSelectedTickers(losers);
+  };
+
+  const handleInvertSelection = () => {
+    const all = (filteredHoldings || []).map((h) => h.ticker);
+    const curr = selectedTickers ?? all;
+    const inverted = all.filter((t) => !curr.includes(t));
+    if (inverted.length === 0) {
+      toast("La inversión dejaría 0 posiciones activas", { icon: "⚠️" });
+      return;
+    }
+    setSelectedTickers(inverted);
+  };
+
   // Compute real market returns instead of hardcoded percentages
   const currentReturns = useMemo(() => {
     let realStratReturn = null;
@@ -374,18 +512,19 @@ export default function DynamicStrategyView({
     let realMm20Return = null;
 
     // 1. If backend returned summary metrics for this strategy
-    if (navData?.summary) {
-      if (typeof navData.summary.active_return_pct === "number" && !isNaN(navData.summary.active_return_pct)) {
-        realStratReturn = navData.summary.active_return_pct / 100;
+    const activeNav = filteredNavData || navData;
+    if (activeNav?.summary) {
+      if (typeof activeNav.summary.active_return_pct === "number" && !isNaN(activeNav.summary.active_return_pct)) {
+        realStratReturn = activeNav.summary.active_return_pct / 100;
       }
-      if (typeof navData.summary.sp500_return_pct === "number" && !isNaN(navData.summary.sp500_return_pct)) {
-        realSpReturn = navData.summary.sp500_return_pct / 100;
+      if (typeof activeNav.summary.sp500_return_pct === "number" && !isNaN(activeNav.summary.sp500_return_pct)) {
+        realSpReturn = activeNav.summary.sp500_return_pct / 100;
       }
-      if (typeof navData.summary.nasdaq_return_pct === "number" && !isNaN(navData.summary.nasdaq_return_pct)) {
-        realNasdaqReturn = navData.summary.nasdaq_return_pct / 100;
+      if (typeof activeNav.summary.nasdaq_return_pct === "number" && !isNaN(activeNav.summary.nasdaq_return_pct)) {
+        realNasdaqReturn = activeNav.summary.nasdaq_return_pct / 100;
       }
-      if (typeof navData.summary.mm20_return_pct === "number" && !isNaN(navData.summary.mm20_return_pct)) {
-        realMm20Return = navData.summary.mm20_return_pct / 100;
+      if (typeof activeNav.summary.mm20_return_pct === "number" && !isNaN(activeNav.summary.mm20_return_pct)) {
+        realMm20Return = activeNav.summary.mm20_return_pct / 100;
       }
     }
 
@@ -415,7 +554,7 @@ export default function DynamicStrategyView({
       points: baseSynthetic.points,
       isReal: realStratReturn !== null,
     };
-  }, [navData, period, activeTickers, tickerMetadata, strategy?.benchmark, strategy?.id]);
+  }, [filteredNavData, navData, period, activeTickers, tickerMetadata, strategy?.benchmark, strategy?.id]);
 
   const handleSearchAndAdd = async (e) => {
     e?.preventDefault();
@@ -585,8 +724,11 @@ export default function DynamicStrategyView({
         className="card"
         style={{
           padding: "24px",
-          background: `linear-gradient(135deg, ${strategy.color}14 0%, rgba(0, 0, 0, 0.4) 100%)`,
-          border: `1px solid ${strategy.color}40`,
+          background: isLight
+            ? "var(--bg-card)"
+            : `linear-gradient(135deg, ${strategy.color}14 0%, rgba(0, 0, 0, 0.4) 100%)`,
+          border: isLight ? "1px solid var(--border)" : `1px solid ${strategy.color}40`,
+          boxShadow: isLight ? "var(--shadow-card)" : "none",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -605,7 +747,7 @@ export default function DynamicStrategyView({
             }}
           >
             <span style={{ fontSize: "1.5rem" }}>{strategy.country || "🌎"}</span>
-            <h2 style={{ margin: 0, fontSize: "1.35rem", fontWeight: 800, color: "#f1f5f9" }}>
+            <h2 style={{ margin: 0, fontSize: "1.35rem", fontWeight: 800, color: "var(--text-primary)" }}>
               {strategy.name}
             </h2>
 
@@ -614,10 +756,10 @@ export default function DynamicStrategyView({
                 value={strategy.id}
                 onChange={(e) => onSelectStrategy(e.target.value)}
                 style={{
-                  background: "rgba(255, 255, 255, 0.08)",
-                  border: "1px solid var(--border-accent)",
+                  background: isLight ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.08)",
+                  border: isLight ? "1px solid var(--border)" : "1px solid var(--border-accent)",
                   borderRadius: 8,
-                  color: "var(--accent-primary)",
+                  color: isLight ? "#0284c7" : "var(--accent-primary)",
                   padding: "4px 10px",
                   fontSize: "0.8rem",
                   fontWeight: 600,
@@ -646,13 +788,13 @@ export default function DynamicStrategyView({
                   fontWeight: 800,
                   padding: "3px 10px",
                   borderRadius: "6px",
-                  background: "rgba(16, 185, 129, 0.2)",
-                  color: "#34d399",
-                  border: "1px solid rgba(16, 185, 129, 0.5)",
+                  background: isLight ? "rgba(16, 185, 129, 0.12)" : "rgba(16, 185, 129, 0.2)",
+                  color: isLight ? "#047857" : "#34d399",
+                  border: isLight ? "1px solid rgba(16, 185, 129, 0.35)" : "1px solid rgba(16, 185, 129, 0.5)",
                   display: "inline-flex",
                   alignItems: "center",
                   gap: 5,
-                  boxShadow: "0 0 10px rgba(16, 185, 129, 0.3)",
+                  boxShadow: isLight ? "0 1px 4px rgba(16, 185, 129, 0.15)" : "0 0 10px rgba(16, 185, 129, 0.3)",
                 }}
               >
                 <span>🟢</span> 💵 DINERO REAL
@@ -664,9 +806,9 @@ export default function DynamicStrategyView({
                   fontWeight: 800,
                   padding: "2px 8px",
                   borderRadius: "4px",
-                  background: "rgba(168, 85, 247, 0.15)",
-                  color: "#c084fc",
-                  border: "1px solid rgba(168, 85, 247, 0.4)",
+                  background: isLight ? "rgba(124, 58, 237, 0.1)" : "rgba(168, 85, 247, 0.15)",
+                  color: isLight ? "#7c3aed" : "#c084fc",
+                  border: isLight ? "1px solid rgba(124, 58, 237, 0.3)" : "1px solid rgba(168, 85, 247, 0.4)",
                   display: "inline-flex",
                   alignItems: "center",
                   gap: 4,
@@ -696,9 +838,9 @@ export default function DynamicStrategyView({
                 fontWeight: 800,
                 padding: "2px 8px",
                 borderRadius: "4px",
-                background: "rgba(255,255,255,0.1)",
-                color: "#fff",
-                border: "1px solid rgba(255,255,255,0.2)",
+                background: isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.1)",
+                color: isLight ? "#334155" : "#fff",
+                border: isLight ? "1px solid rgba(0,0,0,0.12)" : "1px solid rgba(255,255,255,0.2)",
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 4,
@@ -712,14 +854,16 @@ export default function DynamicStrategyView({
                 fontSize: "0.72rem",
                 padding: "2px 8px",
                 borderRadius: "4px",
-                background: "rgba(245, 158, 11, 0.15)",
-                color: "#fbbf24",
+                background: isLight ? "rgba(245, 158, 11, 0.12)" : "rgba(245, 158, 11, 0.15)",
+                color: isLight ? "#b45309" : "#fbbf24",
+                fontWeight: 600,
+                border: isLight ? "1px solid rgba(245, 158, 11, 0.25)" : "none",
               }}
             >
               Benchmark: {strategy.benchmark || "S&P 500"}
             </span>
           </div>
-          <p style={{ margin: 0, fontSize: "0.8125rem", color: "#94a3b8" }}>
+          <p style={{ margin: 0, fontSize: "0.8125rem", color: "var(--text-muted)" }}>
             {strategy.isRealMoney
               ? `Portafolio de dinero real activo con ${numSlots} posiciones equiponderadas (${weightPerSlot}% por slot).`
               : `Estrategia simulada / modelo con ${numSlots} posiciones equiponderadas (${weightPerSlot}% por slot).`}
@@ -732,19 +876,21 @@ export default function DynamicStrategyView({
               display: "flex",
               alignItems: "center",
               gap: 8,
-              background: "var(--bg-surface)",
+              background: isLight ? "var(--bg-card)" : "var(--bg-surface)",
               padding: "6px 14px",
               borderRadius: "var(--radius)",
               border: strategy.isRealMoney
-                ? "1px solid rgba(16, 185, 129, 0.5)"
+                ? (isLight ? "1px solid rgba(16, 185, 129, 0.4)" : "1px solid rgba(16, 185, 129, 0.5)")
                 : "1px solid var(--border)",
-              boxShadow: strategy.isRealMoney ? "0 0 12px rgba(16, 185, 129, 0.15)" : "none",
+              boxShadow: strategy.isRealMoney
+                ? (isLight ? "0 2px 8px rgba(16, 185, 129, 0.1)" : "0 0 12px rgba(16, 185, 129, 0.15)")
+                : "none",
             }}
           >
             <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
               {strategy.isRealMoney ? "Capital Real Invertido:" : "Capital Simulado:"}
             </span>
-            <span style={{ color: strategy.isRealMoney ? "#10b981" : strategy.color, fontWeight: 700 }}>$</span>
+            <span style={{ color: strategy.isRealMoney ? (isLight ? "#047857" : "#10b981") : strategy.color, fontWeight: 700 }}>$</span>
             <input
               type="number"
               min={1}
@@ -753,11 +899,11 @@ export default function DynamicStrategyView({
               onChange={(e) => setLocalSimulatedCapital(e.target.value === "" ? "" : Number(e.target.value))}
               style={{
                 width: 90,
-                background: "rgba(0,0,0,0.25)",
+                background: isLight ? "var(--bg-surface)" : "rgba(0,0,0,0.25)",
                 border: "1px solid var(--border)",
                 borderRadius: 4,
                 padding: "3px 8px",
-                color: strategy.isRealMoney ? "#34d399" : strategy.color,
+                color: strategy.isRealMoney ? (isLight ? "#047857" : "#34d399") : strategy.color,
                 fontWeight: 700,
                 fontFamily: "'JetBrains Mono', monospace",
                 fontSize: "0.9rem",
@@ -1189,9 +1335,10 @@ export default function DynamicStrategyView({
               marginTop: 12,
               marginBottom: 16,
               padding: "14px 20px",
-              background: "rgba(0,0,0,0.25)",
+              background: isLight ? "var(--bg-card)" : "rgba(0,0,0,0.25)",
               borderRadius: "var(--radius)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              border: isLight ? "1px solid var(--border)" : "1px solid rgba(255,255,255,0.08)",
+              boxShadow: isLight ? "var(--shadow-card)" : "none",
             }}
           >
             <div
@@ -1214,10 +1361,11 @@ export default function DynamicStrategyView({
                 <span
                   style={{
                     fontSize: "0.74rem",
-                    color: "#f59e0b",
-                    background: "rgba(245,158,11,0.1)",
+                    color: isLight ? "#b45309" : "#f59e0b",
+                    background: isLight ? "rgba(245,158,11,0.15)" : "rgba(245,158,11,0.1)",
                     padding: "2px 8px",
                     borderRadius: 6,
+                    fontWeight: 600,
                   }}
                 >
                   {stratSettings.useAutoColInflation
@@ -1232,13 +1380,14 @@ export default function DynamicStrategyView({
                   setShowBreakdownCard(!showBreakdownCard);
                 }}
                 style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: isLight ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.06)",
+                  border: isLight ? "1px solid var(--border)" : "1px solid rgba(255,255,255,0.12)",
                   borderRadius: 6,
-                  padding: "2px 8px",
+                  padding: "3px 10px",
                   color: "var(--text-muted)",
                   fontSize: "0.72rem",
                   cursor: "pointer",
+                  fontWeight: 600,
                 }}
               >
                 {showBreakdownCard ? "▲ Ocultar" : "▼ Desplegar"}
@@ -1257,12 +1406,12 @@ export default function DynamicStrategyView({
               <div
                 style={{
                   padding: 10,
-                  background: "rgba(255,255,255,0.02)",
+                  background: isLight ? "rgba(0,0,0,0.02)" : "rgba(255,255,255,0.02)",
                   borderRadius: 8,
-                  border: "1px solid rgba(255,255,255,0.06)",
+                  border: isLight ? "1px solid var(--border)" : "1px solid rgba(255,255,255,0.06)",
                 }}
               >
-                <div style={{ fontSize: "0.72rem", color: "#94a3b8", textTransform: "uppercase" }}>
+                <div style={{ fontSize: "0.72rem", color: isLight ? "#64748b" : "#94a3b8", textTransform: "uppercase", fontWeight: 700 }}>
                   1. Nominal ({stratSettings.assetCurrency || "USD"})
                 </div>
                 <div
@@ -1270,7 +1419,7 @@ export default function DynamicStrategyView({
                   style={{
                     fontSize: "1.1rem",
                     fontWeight: 800,
-                    color: nomReturnUsd >= 0 ? "#4ade80" : "#f87171",
+                    color: nomReturnUsd >= 0 ? (isLight ? "#16a34a" : "#4ade80") : (isLight ? "#dc2626" : "#f87171"),
                     marginTop: 4,
                   }}
                 >
@@ -1287,12 +1436,12 @@ export default function DynamicStrategyView({
               <div
                 style={{
                   padding: 10,
-                  background: "rgba(0, 229, 255, 0.03)",
+                  background: isLight ? "rgba(2, 132, 199, 0.05)" : "rgba(0, 229, 255, 0.03)",
                   borderRadius: 8,
-                  border: "1px solid rgba(0, 229, 255, 0.15)",
+                  border: isLight ? "1px solid rgba(2, 132, 199, 0.2)" : "1px solid rgba(0, 229, 255, 0.15)",
                 }}
               >
-                <div style={{ fontSize: "0.72rem", color: "#00e5ff", textTransform: "uppercase" }}>
+                <div style={{ fontSize: "0.72rem", color: isLight ? "#0284c7" : "#00e5ff", textTransform: "uppercase", fontWeight: 700 }}>
                   2. Al Cambio Divisa ({stratSettings.localCurrency || "COP"})
                 </div>
                 <div
@@ -1300,7 +1449,7 @@ export default function DynamicStrategyView({
                   style={{
                     fontSize: "1.1rem",
                     fontWeight: 800,
-                    color: fxReturnNet >= 0 ? "#4ade80" : "#f87171",
+                    color: fxReturnNet >= 0 ? (isLight ? "#16a34a" : "#4ade80") : (isLight ? "#dc2626" : "#f87171"),
                     marginTop: 4,
                   }}
                 >
@@ -1317,12 +1466,12 @@ export default function DynamicStrategyView({
               <div
                 style={{
                   padding: 10,
-                  background: "rgba(245, 158, 11, 0.03)",
+                  background: isLight ? "rgba(245, 158, 11, 0.05)" : "rgba(245, 158, 11, 0.03)",
                   borderRadius: 8,
-                  border: "1px solid rgba(245, 158, 11, 0.15)",
+                  border: isLight ? "1px solid rgba(245, 158, 11, 0.25)" : "1px solid rgba(245, 158, 11, 0.15)",
                 }}
               >
-                <div style={{ fontSize: "0.72rem", color: "#f59e0b", textTransform: "uppercase" }}>
+                <div style={{ fontSize: "0.72rem", color: isLight ? "#b45309" : "#f59e0b", textTransform: "uppercase", fontWeight: 700 }}>
                   3. Poder Adquisitivo Real
                 </div>
                 <div
@@ -1330,7 +1479,7 @@ export default function DynamicStrategyView({
                   style={{
                     fontSize: "1.1rem",
                     fontWeight: 800,
-                    color: realReturnNet >= 0 ? "#f59e0b" : "#f87171",
+                    color: realReturnNet >= 0 ? (isLight ? "#d97706" : "#f59e0b") : (isLight ? "#dc2626" : "#f87171"),
                     marginTop: 4,
                   }}
                 >
@@ -1351,16 +1500,16 @@ export default function DynamicStrategyView({
                   style={{
                     marginTop: 12,
                     padding: "10px 14px",
-                    background: "rgba(0, 229, 255, 0.04)",
+                    background: isLight ? "rgba(2, 132, 199, 0.05)" : "rgba(0, 229, 255, 0.04)",
                     borderRadius: 8,
-                    border: "1px dashed rgba(0, 229, 255, 0.2)",
+                    border: isLight ? "1px dashed rgba(2, 132, 199, 0.25)" : "1px dashed rgba(0, 229, 255, 0.2)",
                     fontSize: "0.78rem",
                   }}
                 >
                   <div
                     style={{
                       fontWeight: 700,
-                      color: "#00e5ff",
+                      color: isLight ? "#0284c7" : "#00e5ff",
                       marginBottom: 6,
                       display: "flex",
                       justifyContent: "space-between",
@@ -1393,14 +1542,14 @@ export default function DynamicStrategyView({
                       gap: 8,
                     }}
                   >
-                    <span style={{ color: "#94a3b8", fontWeight: 600 }}>
+                    <span style={{ color: isLight ? "#475569" : "#94a3b8", fontWeight: 600 }}>
                       Ganancia activo puro ({stratSettings.localCurrency || "COP"}):
                     </span>
                     <span
                       className="mono"
                       style={{
                         fontWeight: 700,
-                        color: pureAssetGainCOP >= 0 ? "#4ade80" : "#f87171",
+                        color: pureAssetGainCOP >= 0 ? (isLight ? "#16a34a" : "#4ade80") : (isLight ? "#dc2626" : "#f87171"),
                       }}
                     >
                       {pureAssetGainCOP >= 0 ? "+" : ""}$
@@ -1414,14 +1563,14 @@ export default function DynamicStrategyView({
                       </span>
                     </span>
                     <span style={{ color: "var(--text-muted)" }}>➕</span>
-                    <span style={{ color: "#00e5ff", fontWeight: 600 }}>
+                    <span style={{ color: isLight ? "#0284c7" : "#00e5ff", fontWeight: 600 }}>
                       Efecto variación divisa:
                     </span>
                     <span
                       className="mono"
                       style={{
                         fontWeight: 700,
-                        color: fxEffectCOP >= 0 ? "#4ade80" : "#f87171",
+                        color: fxEffectCOP >= 0 ? (isLight ? "#16a34a" : "#4ade80") : (isLight ? "#dc2626" : "#f87171"),
                       }}
                     >
                       {fxEffectCOP >= 0 ? "+" : ""}$
@@ -1435,14 +1584,14 @@ export default function DynamicStrategyView({
                       </span>
                     </span>
                     <span style={{ color: "var(--text-muted)" }}>🟰</span>
-                    <span style={{ color: "#f1f5f9", fontWeight: 700 }}>
+                    <span style={{ color: isLight ? "#0f172a" : "#f1f5f9", fontWeight: 700 }}>
                       Ganancia Bruta {stratSettings.localCurrency || "COP"}:
                     </span>
                     <span
                       className="mono"
                       style={{
                         fontWeight: 800,
-                        color: fxReturnNet >= 0 ? "#4ade80" : "#f87171",
+                        color: fxReturnNet >= 0 ? (isLight ? "#16a34a" : "#4ade80") : (isLight ? "#dc2626" : "#f87171"),
                       }}
                     >
                       {fxReturnNet >= 0 ? "+" : ""}$
@@ -1460,9 +1609,9 @@ export default function DynamicStrategyView({
               style={{
                 marginTop: 12,
                 padding: "10px 14px",
-                background: "rgba(245, 158, 11, 0.06)",
+                background: isLight ? "rgba(245, 158, 11, 0.08)" : "rgba(245, 158, 11, 0.06)",
                 borderRadius: 8,
-                border: "1px dashed rgba(245, 158, 11, 0.25)",
+                border: isLight ? "1px dashed rgba(245, 158, 11, 0.35)" : "1px dashed rgba(245, 158, 11, 0.25)",
                 display: "flex",
                 flexWrap: "wrap",
                 alignItems: "center",
@@ -1472,27 +1621,27 @@ export default function DynamicStrategyView({
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                <span style={{ color: "#00e5ff", fontWeight: 700 }}>
+                <span style={{ color: isLight ? "#0284c7" : "#00e5ff", fontWeight: 700 }}>
                   Ganancia Bruta ({stratSettings.localCurrency || "COP"}):
                 </span>
                 <span
                   className="mono"
-                  style={{ color: fxReturnNet >= 0 ? "#4ade80" : "#f87171", fontWeight: 700 }}
+                  style={{ color: fxReturnNet >= 0 ? (isLight ? "#16a34a" : "#4ade80") : (isLight ? "#dc2626" : "#f87171"), fontWeight: 700 }}
                 >
                   {fxReturnNet >= 0 ? "+" : ""}${fxReturnNet.toFixed(2)}
                 </span>
                 <span style={{ color: "var(--text-muted)" }}>➖</span>
-                <span style={{ color: "#f87171", fontWeight: 700 }}>
+                <span style={{ color: isLight ? "#dc2626" : "#f87171", fontWeight: 700 }}>
                   Descuento Inflación (IPC):
                 </span>
-                <span className="mono" style={{ color: "#f87171", fontWeight: 700 }}>
+                <span className="mono" style={{ color: isLight ? "#dc2626" : "#f87171", fontWeight: 700 }}>
                   -${inflationLossAmount.toFixed(2)} ({inflationLossPct.toFixed(2)}%)
                 </span>
                 <span style={{ color: "var(--text-muted)" }}>🟰</span>
-                <span style={{ color: "#f59e0b", fontWeight: 700 }}>Ganancia Real Neta:</span>
+                <span style={{ color: isLight ? "#b45309" : "#f59e0b", fontWeight: 700 }}>Ganancia Real Neta:</span>
                 <span
                   className="mono"
-                  style={{ color: realReturnNet >= 0 ? "#f59e0b" : "#f87171", fontWeight: 800 }}
+                  style={{ color: realReturnNet >= 0 ? (isLight ? "#d97706" : "#f59e0b") : (isLight ? "#dc2626" : "#f87171"), fontWeight: 800 }}
                 >
                   {realReturnNet >= 0 ? "+" : ""}${realReturnNet.toFixed(2)} (
                   {realReturnPct >= 0 ? "+" : ""}
@@ -1886,6 +2035,147 @@ export default function DynamicStrategyView({
               </div>
             </div>
 
+            {/* ── Integrated Interactive Ticker Activator Bar (Position Switchers with Smooth Animations) ── */}
+            {filteredHoldings && filteredHoldings.length > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  flexWrap: "wrap",
+                  padding: "10px 14px",
+                  background: isLight ? "rgba(241, 245, 249, 0.75)" : "rgba(255, 255, 255, 0.02)",
+                  border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.06)"}`,
+                  borderRadius: "var(--radius)",
+                  marginBottom: "14px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      color: selectedTickers ? "var(--accent-primary)" : "var(--text-secondary)",
+                    }}
+                  >
+                    🎯 Posiciones:
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "0.68rem",
+                      padding: "2px 7px",
+                      borderRadius: 4,
+                      background: selectedTickers
+                        ? isLight ? "rgba(2, 132, 199, 0.12)" : "rgba(0,229,255,0.1)"
+                        : isLight ? "rgba(0, 0, 0, 0.05)" : "rgba(255, 255, 255, 0.05)",
+                      color: selectedTickers
+                        ? isLight ? "#0284c7" : "var(--accent-primary)"
+                        : "var(--text-muted)",
+                      fontWeight: 700,
+                      minWidth: "85px",
+                      display: "inline-block",
+                      textAlign: "center",
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    {filteredHoldings.filter((h) => h.selected !== false).length} de {filteredHoldings.length} activas
+                  </span>
+                </div>
+
+                <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
+                  <button className="btn-chip" onClick={handleSelectAll} title="Incluir todas las posiciones">
+                    ⚡ Todos
+                  </button>
+                  <button
+                    className="btn-chip gainer"
+                    onClick={handleSelectGainers}
+                    title="Solo posiciones ganadoras"
+                  >
+                    🚀 Ganadoras
+                  </button>
+                  <button
+                    className="btn-chip loser"
+                    onClick={handleSelectLosers}
+                    title="Solo posiciones perdedoras"
+                  >
+                    🔴 Perdedoras
+                  </button>
+                  <button
+                    className="btn-chip"
+                    onClick={handleInvertSelection}
+                    title="Invertir selección actual"
+                  >
+                    🔄 Invertir
+                  </button>
+                </div>
+
+                <div
+                  style={{
+                    width: 1,
+                    height: 16,
+                    background: isLight ? "rgba(0, 0, 0, 0.1)" : "rgba(255, 255, 255, 0.1)",
+                    margin: "0 4px",
+                    flexShrink: 0,
+                  }}
+                />
+
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                  {filteredHoldings.map((h) => {
+                    const isSelected = h.selected !== false;
+                    const isGain = (h.unrealized_pnl ?? h.return_pct ?? 0) >= 0;
+
+                    return (
+                      <button
+                        key={h.ticker}
+                        onClick={() => handleToggleTicker(h.ticker)}
+                        className={`ticker-chip ${isSelected ? "active" : "inactive"} ${isGain ? "gain" : "loss"}`}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 4,
+                          padding: "4px 8px",
+                          borderRadius: 6,
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          boxSizing: "border-box",
+                          minWidth: "68px",
+                          height: "26px",
+                          transition: "background 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease",
+                          background: isSelected
+                            ? isGain
+                              ? isLight ? "rgba(2, 132, 199, 0.1)" : "rgba(0, 229, 255, 0.08)"
+                              : "rgba(239, 68, 68, 0.08)"
+                            : isLight ? "rgba(0, 0, 0, 0.03)" : "rgba(255, 255, 255, 0.02)",
+                          border: `1px solid ${
+                            isSelected
+                              ? isGain
+                                ? isLight ? "rgba(2, 132, 199, 0.35)" : "rgba(0, 229, 255, 0.3)"
+                                : "rgba(239, 68, 68, 0.3)"
+                              : isLight ? "rgba(0, 0, 0, 0.1)" : "rgba(255, 255, 255, 0.08)"
+                          }`,
+                          color: isSelected
+                            ? isGain
+                              ? isLight ? "#0284c7" : "var(--accent-primary)"
+                              : "#ef4444"
+                            : "var(--text-muted)",
+                          opacity: isSelected ? 1 : 0.45,
+                        }}
+                      >
+                        <span>{h.ticker}</span>
+                        {typeof h.return_pct === "number" && (
+                          <span style={{ fontSize: "0.62rem", opacity: isSelected ? 0.9 : 0.6 }}>
+                            {h.return_pct >= 0 ? "+" : ""}{h.return_pct.toFixed(0)}%
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {isNavLoading && !navData ? (
               <QuantumOrbitalLoader
                 message={`Cargando modelo cuantitativo (${period})…`}
@@ -1895,13 +2185,13 @@ export default function DynamicStrategyView({
             ) : (
               <StrategyChart
                 strategy={strategy}
-                activeInvested={activeInvested}
+                activeInvested={effectiveActiveInvested}
                 period={period}
                 firstInvestDate={effectiveFirstInvestDate}
                 rebalances={rebalances}
-                slotValue={slotValue}
+                slotValue={effectiveSlotValue}
                 targetReturns={currentReturns}
-                navData={navData}
+                navData={filteredNavData || navData}
               />
             )}
           </>
@@ -1910,16 +2200,20 @@ export default function DynamicStrategyView({
 
       {/* ── Detalle de Posiciones (Posiciones Reales vs Ganancias Cerradas en Simuladas) ── */}
       {strategy.isRealMoney ? (
-        (navData?.holdings?.length > 0 || navData?.closed_holdings?.length > 0) && (
+        (filteredHoldings.length > 0 || navData?.closed_holdings?.length > 0) && (
           <div className="card fade-up" style={{ padding: "20px" }}>
             <HoldingsTable
-              holdings={navData?.holdings || []}
+              holdings={filteredHoldings}
               closedHoldings={navData?.closed_holdings || []}
-              summary={navData?.summary || {}}
+              summary={{
+                ...(navData?.summary || {}),
+                active_invested: effectiveActiveInvested,
+              }}
               investment={simulatedCapital}
               numSlots={numSlots}
               unit={unit}
               onToggleUnit={() => setUnit((u) => (u === "pct" ? "usd" : "pct"))}
+              onToggleTicker={handleToggleTicker}
               isRealMoney={true}
               closedOnly={false}
               onExportExcel={() => exportPortfolioExcel(strategy.id, simulatedCapital, numSlots)}
@@ -1933,11 +2227,15 @@ export default function DynamicStrategyView({
             <HoldingsTable
               holdings={[]}
               closedHoldings={navData?.closed_holdings || []}
-              summary={navData?.summary || {}}
+              summary={{
+                ...(navData?.summary || {}),
+                active_invested: effectiveActiveInvested,
+              }}
               investment={simulatedCapital}
               numSlots={numSlots}
               unit={unit}
               onToggleUnit={() => setUnit((u) => (u === "pct" ? "usd" : "pct"))}
+              onToggleTicker={handleToggleTicker}
               isRealMoney={false}
               closedOnly={true}
               onExportExcel={() => exportPortfolioExcel(strategy.id, simulatedCapital, numSlots)}

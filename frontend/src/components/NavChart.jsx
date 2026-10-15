@@ -390,18 +390,26 @@ export default function NavChart({
         ? [...rebalances].sort((a, b) => (a.date || "").localeCompare(b.date || ""))
         : [];
 
+      const activeHoldingsList = holdings.filter((h) => h.selected !== false && h.shares > 0);
+      const isFiltered = holdings.length > 0 && activeHoldingsList.length < holdings.length;
+      const selectedTickersSet = new Set(activeHoldingsList.map((h) => h.ticker));
+
       const baseLine = navData.map((pt) => {
         const ptDate = pt.date || pt.time;
-        if (typeof pt.active_invested === "number" && pt.active_invested > 0) {
-          return { date: ptDate, value: pt.active_invested };
-        }
         if (sortedRebs.length > 0 && slotVal > 0) {
           const ptStr = String(ptDate).slice(0, 10);
           const validRebs = sortedRebs.filter((r) => (r.date || "") <= ptStr);
           if (validRebs.length > 0) {
-            const count = validRebs[validRebs.length - 1].tickers?.length || 0;
+            const rawTickers = validRebs[validRebs.length - 1].tickers || [];
+            // Si el usuario filtró acciones, contar solo los tickers del rebalanceo que estén seleccionados
+            const count = isFiltered
+              ? rawTickers.filter((t) => selectedTickersSet.has(t)).length
+              : rawTickers.length;
             return { date: ptDate, value: count * slotVal };
           }
+        }
+        if (typeof pt.active_invested === "number" && pt.active_invested > 0) {
+          return { date: ptDate, value: pt.active_invested };
         }
         let activeCount = 0;
         for (const h of holdings) {
