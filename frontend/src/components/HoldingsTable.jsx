@@ -1,5 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { InfoTooltip, MarketScheduleBadge } from "./Common";
+import StockAlertModal from "./StockAlertModal";
+import { fetchStockAlerts, saveStockAlert, deleteStockAlert } from "../api/client";
+import { useAuthStore } from "../store/authStore";
+import { useTheme } from "../context/ThemeContext";
+import toast from "react-hot-toast";
 
 export default function HoldingsTable({
   holdings = [],
@@ -16,9 +21,64 @@ export default function HoldingsTable({
   onOpenWarren,
   onExportExcel,
   onExportPyScript,
+  strategyId = "historical",
 }) {
   const [activeTab, setActiveTab] = useState(closedOnly ? "closed" : "active"); // 'active' | 'closed'
   const [mobileViewMode, setMobileViewMode] = useState("auto"); // 'auto' | 'card' | 'table'
+  const { user } = useAuthStore();
+  const { theme } = useTheme();
+  const isLight = theme === "light";
+
+  // Alerts State
+  const [alerts, setAlerts] = useState([]);
+  const [selectedAlertHolding, setSelectedAlertHolding] = useState(null);
+  const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchStockAlerts("strategy", strategyId)
+      .then((data) => {
+        if (isMounted && Array.isArray(data)) {
+          setAlerts(data);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [strategyId]);
+
+  const handleOpenAlertModal = (holding, e) => {
+    if (e) e.stopPropagation();
+    setSelectedAlertHolding(holding);
+    setIsAlertModalOpen(true);
+  };
+
+  const handleSaveAlert = async (alertPayload) => {
+    try {
+      const saved = await saveStockAlert(alertPayload);
+      setAlerts((prev) => {
+        const filtered = prev.filter((a) => a.id !== saved.id && a.ticker !== saved.ticker);
+        return [...filtered, saved];
+      });
+      toast.success(
+        `Alerta ${saved.alert_type === "STOP_LOSS" ? "Stop Loss" : "Take Profit"} guardada para ${saved.ticker}`,
+        { icon: "🔔" }
+      );
+    } catch {
+      toast.error("Error al guardar la alerta");
+    }
+  };
+
+  const handleDeleteAlert = async (alertId) => {
+    try {
+      await deleteStockAlert(alertId);
+      setAlerts((prev) => prev.filter((a) => a.id !== alertId));
+      toast.success("Alerta eliminada correctamente", { icon: "🗑️" });
+    } catch {
+      toast.error("Error al eliminar la alerta");
+    }
+  };
 
   if (closedOnly && !closedHoldings?.length) return null;
   if (!holdings?.length && !closedHoldings?.length) return null;
@@ -369,12 +429,54 @@ export default function HoldingsTable({
                     </div>
                   </div>
 
-                  <span
-                    className={`badge ${isGain ? "gain" : "loss"}`}
-                    style={{ fontSize: "0.85rem", padding: "4px 8px" }}
-                  >
-                    {isGain ? "▲" : "▼"} {unit === "pct" ? `${Math.abs(returnPct).toFixed(2)}%` : `$${Math.abs(returnUsd).toFixed(2)}`}
-                  </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    {isSelected && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleOpenAlertModal(h, e)}
+                        title={
+                          alerts.some((a) => a.ticker === h.ticker && a.is_active && !a.triggered_at)
+                            ? `Alerta activa: ${
+                                alerts.find((a) => a.ticker === h.ticker)?.alert_type === "STOP_LOSS" ? "Stop Loss" : "Take Profit"
+                              } (${alerts.find((a) => a.ticker === h.ticker)?.target_value >= 0 ? "+" : ""}${alerts.find((a) => a.ticker === h.ticker)?.target_value}%)`
+                            : "Configurar alerta de venta o stop loss"
+                        }
+                        style={{
+                          background: alerts.some((a) => a.ticker === h.ticker && a.is_active && !a.triggered_at)
+                            ? (isLight ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.2)")
+                            : (isLight ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.06)"),
+                          border: alerts.some((a) => a.ticker === h.ticker && a.is_active && !a.triggered_at)
+                            ? "1px solid rgba(16, 185, 129, 0.4)"
+                            : `1px solid ${isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.1)"}`,
+                          borderRadius: "8px",
+                          padding: "3px 7px",
+                          fontSize: "0.75rem",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                          color: alerts.some((a) => a.ticker === h.ticker && a.is_active && !a.triggered_at)
+                            ? "#10b981"
+                            : "var(--text-muted)",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        <span>🔔</span>
+                        {alerts.some((a) => a.ticker === h.ticker && a.is_active && !a.triggered_at) && (
+                          <span style={{ fontSize: "0.68rem", fontWeight: 700 }}>
+                            {alerts.find((a) => a.ticker === h.ticker)?.target_value >= 0 ? "+" : ""}
+                            {alerts.find((a) => a.ticker === h.ticker)?.target_value}%
+                          </span>
+                        )}
+                      </button>
+                    )}
+                    <span
+                      className={`badge ${isGain ? "gain" : "loss"}`}
+                      style={{ fontSize: "0.85rem", padding: "4px 8px" }}
+                    >
+                      {isGain ? "▲" : "▼"} {unit === "pct" ? `${Math.abs(returnPct).toFixed(2)}%` : `$${Math.abs(returnUsd).toFixed(2)}`}
+                    </span>
+                  </div>
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, paddingTop: 6, borderTop: "1px solid var(--border)" }}>
@@ -486,6 +588,22 @@ export default function HoldingsTable({
                   {h}
                 </th>
               ))}
+              <th
+                style={{
+                  padding: "10px 12px",
+                  textAlign: "center",
+                  color: "var(--text-muted)",
+                  fontWeight: 500,
+                  fontSize: "0.72rem",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.04em",
+                  whiteSpace: "nowrap",
+                  width: "90px",
+                }}
+                title="Configura alertas de Profit Target o Stop Loss con aviso por correo"
+              >
+                🔔 Alerta
+              </th>
               <th
                 style={{
                   padding: "10px 12px",
@@ -743,6 +861,52 @@ export default function HoldingsTable({
                     </span>
                   </td>
 
+                  {/* Stock Alert Bell */}
+                  <td style={{ padding: "10px 12px", textAlign: "center" }}>
+                    {isSelected ? (
+                      <button
+                        type="button"
+                        onClick={(e) => handleOpenAlertModal(h, e)}
+                        title={
+                          alerts.some((a) => a.ticker === h.ticker && a.is_active && !a.triggered_at)
+                            ? `Alerta activa: ${
+                                alerts.find((a) => a.ticker === h.ticker)?.alert_type === "STOP_LOSS" ? "Stop Loss" : "Take Profit"
+                              } (${alerts.find((a) => a.ticker === h.ticker)?.target_value >= 0 ? "+" : ""}${alerts.find((a) => a.ticker === h.ticker)?.target_value}%)`
+                            : "Configurar alerta de venta o stop loss"
+                        }
+                        style={{
+                          background: alerts.some((a) => a.ticker === h.ticker && a.is_active && !a.triggered_at)
+                            ? (isLight ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.2)")
+                            : "transparent",
+                          border: alerts.some((a) => a.ticker === h.ticker && a.is_active && !a.triggered_at)
+                            ? "1px solid rgba(16, 185, 129, 0.4)"
+                            : `1px solid ${isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.08)"}`,
+                          borderRadius: "6px",
+                          padding: "3px 8px",
+                          fontSize: "0.75rem",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                          color: alerts.some((a) => a.ticker === h.ticker && a.is_active && !a.triggered_at)
+                            ? "#10b981"
+                            : "var(--text-muted)",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        <span style={{ fontSize: "0.85rem" }}>🔔</span>
+                        {alerts.some((a) => a.ticker === h.ticker && a.is_active && !a.triggered_at) && (
+                          <span style={{ fontSize: "0.68rem", fontWeight: 700, whiteSpace: "nowrap" }}>
+                            {alerts.find((a) => a.ticker === h.ticker)?.target_value >= 0 ? "+" : ""}
+                            {alerts.find((a) => a.ticker === h.ticker)?.target_value}%
+                          </span>
+                        )}
+                      </button>
+                    ) : (
+                      <span style={{ color: "var(--text-muted)", fontSize: "0.7rem" }}>—</span>
+                    )}
+                  </td>
+
                   {/* Return % or $ */}
                   <td style={{ padding: "10px 12px", textAlign: "right" }}>
                     {isSelected ? (
@@ -812,6 +976,9 @@ export default function HoldingsTable({
                 <span className="mono" style={{ fontWeight: 600 }}>
                   ${(slotValue * (numSlots - holdings.length)).toFixed(2)}
                 </span>
+              </td>
+              <td style={{ padding: "10px 12px", textAlign: "center", color: "var(--text-muted)", fontSize: "0.7rem" }}>
+                —
               </td>
               <td style={{ padding: "10px 12px", textAlign: "right" }}>
                 <span
@@ -1208,6 +1375,30 @@ export default function HoldingsTable({
           )}
         </div>
       )}
+
+      {/* ── Stock Alert Modal ── */}
+      <StockAlertModal
+        isOpen={isAlertModalOpen}
+        onClose={() => {
+          setIsAlertModalOpen(false);
+          setSelectedAlertHolding(null);
+        }}
+        initialAlert={
+          selectedAlertHolding
+            ? alerts.find((a) => a.ticker === selectedAlertHolding.ticker)
+            : null
+        }
+        ticker={selectedAlertHolding?.ticker || ""}
+        companyName={selectedAlertHolding?.name || selectedAlertHolding?.ticker || ""}
+        currentPrice={selectedAlertHolding?.current_price || 0}
+        entryPrice={selectedAlertHolding?.start_price || 0}
+        currentReturnPct={selectedAlertHolding?.return_pct || 0}
+        scope="strategy"
+        targetId={strategyId}
+        userEmail={user?.email || ""}
+        onSave={handleSaveAlert}
+        onDelete={handleDeleteAlert}
+      />
     </div>
   );
 }

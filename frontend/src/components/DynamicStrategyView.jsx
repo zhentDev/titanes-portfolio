@@ -1923,6 +1923,7 @@ export default function DynamicStrategyView({
               isRealMoney={true}
               closedOnly={false}
               onExportExcel={() => exportPortfolioExcel(strategy.id, simulatedCapital, numSlots)}
+              strategyId={strategy.id}
             />
           </div>
         )
@@ -1940,6 +1941,7 @@ export default function DynamicStrategyView({
               isRealMoney={false}
               closedOnly={true}
               onExportExcel={() => exportPortfolioExcel(strategy.id, simulatedCapital, numSlots)}
+              strategyId={strategy.id}
             />
           </div>
         )

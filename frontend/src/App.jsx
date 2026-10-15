@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
-import { fetchColInflationHistory, fetchFxHistory, fetchNAV, fetchLiveQuotes } from "./api/client";
+import { fetchColInflationHistory, fetchFxHistory, fetchNAV, fetchLiveQuotes, evaluateStockAlerts } from "./api/client";
 import CorrelationHeatmap from "./components/CorrelationHeatmap";
 import CreateStrategyModal from "./components/CreateStrategyModal";
 import DynamicStrategyView from "./components/DynamicStrategyView";
@@ -246,6 +246,76 @@ export default function App() {
       clearInterval(interval);
     };
   }, [baseNavData]);
+
+  // Evaluate Stock Alerts automatically when holdings data updates
+  const evaluatedAlertsRef = useRef(new Set());
+  useEffect(() => {
+    if (!baseNavData?.holdings?.length) return;
+    const positions = baseNavData.holdings.map((h) => {
+      const live = liveQuotesMap[h.ticker];
+      const curP = live?.price ?? h.current_price;
+      const startP = h.start_price || curP;
+      const retPct = startP > 0 ? ((curP - startP) / startP) * 100 : (h.return_pct || 0);
+      return {
+        ticker: h.ticker,
+        entry_price: startP,
+        current_price: curP,
+        return_pct: retPct,
+        name: h.name || h.ticker,
+        scope_title: `Estrategia Titanes (${mode})`,
+      };
+    });
+
+    evaluateStockAlerts({
+      scope: "strategy",
+      targetId: mode,
+      positions,
+    })
+      .then((res) => {
+        if (res?.triggered?.length > 0) {
+          res.triggered.forEach((t) => {
+            if (!evaluatedAlertsRef.current.has(t.alert_id)) {
+              evaluatedAlertsRef.current.add(t.alert_id);
+              toast(
+                (toastInstance) => (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700 }}>
+                      <span style={{ fontSize: "1.2rem" }}>
+                        {t.alert_type === "STOP_LOSS" ? "🛑" : "🎯"}
+                      </span>
+                      <span>
+                        ¡Objetivo alcanzado en {t.ticker}! (
+                        {t.current_return_pct >= 0 ? "+" : ""}
+                        {t.current_return_pct.toFixed(2)}%)
+                      </span>
+                    </div>
+                    <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                      {t.alert_type === "STOP_LOSS" ? "Stop Loss activado" : "Take Profit alcanzado"} a $
+                      {t.current_price.toFixed(2)}.{" "}
+                      {t.email_dispatched
+                        ? `Se envió notificación al correo registrado.`
+                        : `Revisa tu posición para ejecutar la orden de venta.`}
+                    </div>
+                  </div>
+                ),
+                {
+                  duration: 9000,
+                  position: "top-right",
+                  style: {
+                    background: t.alert_type === "STOP_LOSS" ? "#1e131d" : "#0d1b2a",
+                    color: "#f8fafc",
+                    border: `1px solid ${t.alert_type === "STOP_LOSS" ? "#f43f5e" : "#10b981"}`,
+                    boxShadow: "0 8px 30px rgba(0,0,0,0.5)",
+                    borderRadius: "12px",
+                  },
+                }
+              );
+            }
+          });
+        }
+      })
+      .catch(() => {});
+  }, [baseNavData, liveQuotesMap, mode]);
 
   // Client-side instant recalculation: 0ms latency, no spinner, no page reload, pure butter-smooth animation!
   const navData = useMemo(() => {
@@ -2653,6 +2723,7 @@ export default function App() {
                     onOpenWarren={() => setShowWarrenModal(true)}
                     onExportExcel={() => exportPortfolioExcel(mode, investment, numSlots)}
                     onExportPyScript={() => exportPortfolioPyScript(navData, investment)}
+                    strategyId={mode}
                   />
                 ) : loading ? (
                   <div style={{ display: "flex", justifyContent: "center", padding: 40 }}>

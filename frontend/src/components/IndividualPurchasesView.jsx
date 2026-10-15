@@ -9,10 +9,14 @@ import {
   fetchHistoricalPrice,
   fetchIndicesHistory,
   fetchLiveQuotes,
+  fetchStockAlerts,
+  saveStockAlert,
+  deleteStockAlert,
   searchTicker,
   searchTickersMultiple,
 } from "../api/client";
 import { usePortfolioStore } from "../store/portfolioStore";
+import { useAuthStore } from "../store/authStore";
 import { analyzeInvestmentPlan } from "../utils/investmentPlanAnalyzer";
 import { toastConfirm, toastPrompt } from "../utils/toastAlerts";
 import { getBrokerEquivalenceInfo, getMarketOpenTime, MARKET_REGIONS, translateBrokerTicker } from "../utils/marketHours";
@@ -24,6 +28,7 @@ import PlanConfigModal from "./PlanConfigModal";
 import PlanExecutionModal from "./PlanExecutionModal";
 import XtbImportModal from "./XtbImportModal";
 import FxRateExplorer from "./Common/FxRateExplorer";
+import StockAlertModal from "./StockAlertModal";
 
 export default function IndividualPurchasesView({ portfolioId = "hist_default", onSelectPortfolio }) {
   const {
@@ -66,6 +71,58 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
   const [showInflationExplorer, setShowInflationExplorer] = useState(false);
   const [showXtbModal, setShowXtbModal] = useState(false);
   const [changingTickerGroup, setChangingTickerGroup] = useState(null);
+
+  // Stock Alerts state
+  const { user } = useAuthStore();
+  const [alerts, setAlerts] = useState([]);
+  const [selectedAlertItem, setSelectedAlertItem] = useState(null);
+  const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchStockAlerts("purchase", portfolioId)
+      .then((data) => {
+        if (isMounted && Array.isArray(data)) {
+          setAlerts(data);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [portfolioId]);
+
+  const handleOpenAlertModal = (item, e) => {
+    if (e) e.stopPropagation();
+    setSelectedAlertItem(item);
+    setIsAlertModalOpen(true);
+  };
+
+  const handleSaveAlert = async (alertPayload) => {
+    try {
+      const saved = await saveStockAlert(alertPayload);
+      setAlerts((prev) => {
+        const filtered = prev.filter((a) => a.id !== saved.id && a.ticker !== saved.ticker);
+        return [...filtered, saved];
+      });
+      toast.success(
+        `Alerta ${saved.alert_type === "STOP_LOSS" ? "Stop Loss" : "Take Profit"} guardada para ${saved.ticker}`,
+        { icon: "🔔" }
+      );
+    } catch {
+      toast.error("Error al guardar la alerta");
+    }
+  };
+
+  const handleDeleteAlert = async (alertId) => {
+    try {
+      await deleteStockAlert(alertId);
+      setAlerts((prev) => prev.filter((a) => a.id !== alertId));
+      toast.success("Alerta eliminada correctamente", { icon: "🗑️" });
+    } catch {
+      toast.error("Error al eliminar la alerta");
+    }
+  };
 
   // Selling state
   const [sellingLot, setSellingLot] = useState(null);
@@ -3391,6 +3448,56 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                             >
                               <span>🔄</span> Cambiar activo
                             </button>
+                            <button
+                              type="button"
+                              onClick={(e) =>
+                                handleOpenAlertModal(
+                                  {
+                                    ticker: group.ticker,
+                                    name: group.name,
+                                    currentPrice: group.currentPrice,
+                                    entryPrice: group.avgOpenPrice,
+                                    returnPct: group.profitPct,
+                                  },
+                                  e
+                                )
+                              }
+                              title={
+                                alerts.some((a) => a.ticker === group.ticker && a.is_active && !a.triggered_at)
+                                  ? `Alerta activa en posición ${group.ticker}: ${
+                                      alerts.find((a) => a.ticker === group.ticker)?.alert_type === "STOP_LOSS" ? "Stop Loss" : "Take Profit"
+                                    } (${alerts.find((a) => a.ticker === group.ticker)?.target_value >= 0 ? "+" : ""}${alerts.find((a) => a.ticker === group.ticker)?.target_value}%)`
+                                  : `Configurar alerta de venta o stop loss para toda la posición de ${group.ticker}`
+                              }
+                              style={{
+                                background: alerts.some((a) => a.ticker === group.ticker && a.is_active && !a.triggered_at)
+                                  ? (theme === "light" ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.2)")
+                                  : (theme === "light" ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.06)"),
+                                border: alerts.some((a) => a.ticker === group.ticker && a.is_active && !a.triggered_at)
+                                  ? "1px solid rgba(16, 185, 129, 0.4)"
+                                  : `1px solid ${theme === "light" ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.1)"}`,
+                                borderRadius: "6px",
+                                padding: "2px 7px",
+                                fontSize: "0.75rem",
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 4,
+                                color: alerts.some((a) => a.ticker === group.ticker && a.is_active && !a.triggered_at)
+                                  ? "#10b981"
+                                  : "var(--text-muted)",
+                                flexShrink: 0,
+                                transition: "all 0.15s ease",
+                              }}
+                            >
+                              <span>🔔</span>
+                              {alerts.some((a) => a.ticker === group.ticker && a.is_active && !a.triggered_at) && (
+                                <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#10b981" }}>
+                                  {alerts.find((a) => a.ticker === group.ticker)?.target_value >= 0 ? "+" : ""}
+                                  {alerts.find((a) => a.ticker === group.ticker)?.target_value}%
+                                </span>
+                              )}
+                            </button>
                             <span
                               style={{
                                 fontSize: "0.7rem",
@@ -3931,6 +4038,55 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                               </div>
 
                                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 16 }}>
+                                  <button
+                                    type="button"
+                                    onClick={(e) =>
+                                      handleOpenAlertModal(
+                                        {
+                                          ticker: p.ticker,
+                                          name: p.name || p.ticker,
+                                          currentPrice: p.currentPrice,
+                                          entryPrice: p.purchasePrice,
+                                          returnPct: p.profitPct,
+                                        },
+                                        e
+                                      )
+                                    }
+                                    title={
+                                      alerts.some((a) => a.ticker === p.ticker && a.is_active && !a.triggered_at)
+                                        ? `Alerta activa: ${
+                                            alerts.find((a) => a.ticker === p.ticker)?.alert_type === "STOP_LOSS" ? "Stop Loss" : "Take Profit"
+                                          } (${alerts.find((a) => a.ticker === p.ticker)?.target_value >= 0 ? "+" : ""}${alerts.find((a) => a.ticker === p.ticker)?.target_value}%)`
+                                        : `Configurar alerta de venta o stop loss para este lote de ${p.ticker}`
+                                    }
+                                    style={{
+                                      background: alerts.some((a) => a.ticker === p.ticker && a.is_active && !a.triggered_at)
+                                        ? (theme === "light" ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.2)")
+                                        : "transparent",
+                                      border: alerts.some((a) => a.ticker === p.ticker && a.is_active && !a.triggered_at)
+                                        ? "1px solid rgba(16, 185, 129, 0.4)"
+                                        : `1px solid ${theme === "light" ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.1)"}`,
+                                      borderRadius: "6px",
+                                      padding: "3px 8px",
+                                      fontSize: "0.75rem",
+                                      cursor: "pointer",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: 4,
+                                      color: alerts.some((a) => a.ticker === p.ticker && a.is_active && !a.triggered_at)
+                                        ? "#10b981"
+                                        : "var(--text-muted)",
+                                      transition: "all 0.15s ease",
+                                    }}
+                                  >
+                                    <span>🔔</span>
+                                    {alerts.some((a) => a.ticker === p.ticker && a.is_active && !a.triggered_at) && (
+                                      <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#10b981" }}>
+                                        {alerts.find((a) => a.ticker === p.ticker)?.target_value >= 0 ? "+" : ""}
+                                        {alerts.find((a) => a.ticker === p.ticker)?.target_value}%
+                                      </span>
+                                    )}
+                                  </button>
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -4822,6 +4978,28 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
           onImportPurchases={handleImportXtbPurchases}
           onCreatePortfolio={addPurchasePortfolio}
           onSelectPortfolio={onSelectPortfolio}
+        />
+        <StockAlertModal
+          isOpen={isAlertModalOpen}
+          onClose={() => {
+            setIsAlertModalOpen(false);
+            setSelectedAlertItem(null);
+          }}
+          initialAlert={
+            selectedAlertItem
+              ? alerts.find((a) => a.ticker === selectedAlertItem.ticker)
+              : null
+          }
+          ticker={selectedAlertItem?.ticker || ""}
+          companyName={selectedAlertItem?.name || selectedAlertItem?.ticker || ""}
+          currentPrice={selectedAlertItem?.currentPrice || 0}
+          entryPrice={selectedAlertItem?.entryPrice || 0}
+          currentReturnPct={selectedAlertItem?.returnPct || 0}
+          scope="purchase"
+          targetId={portfolioId}
+          userEmail={user?.email || ""}
+          onSave={handleSaveAlert}
+          onDelete={handleDeleteAlert}
         />
       </div>
     </>

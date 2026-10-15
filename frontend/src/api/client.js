@@ -478,6 +478,45 @@ export async function fetchColInflationHistory() {
   return res.json();
 }
 
+/** ── Stock Sell Alerts (Profit Target / Stop Loss) ── **/
+export async function fetchStockAlerts(scope = null, targetId = null) {
+  const params = new URLSearchParams();
+  if (scope) params.set("scope", scope);
+  if (targetId) params.set("target_id", targetId);
+  const q = params.toString() ? `?${params.toString()}` : "";
+  const res = await safeFetch(`${BASE}/alerts${q}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function saveStockAlert(alertData) {
+  const res = await safeFetch(`${BASE}/alerts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(alertData),
+  });
+  if (!res.ok) throw new Error("Error guardando alerta");
+  return res.json();
+}
+
+export async function deleteStockAlert(alertId) {
+  const res = await safeFetch(`${BASE}/alerts/${alertId}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Error eliminando alerta");
+  return res.json();
+}
+
+export async function evaluateStockAlerts({ scope, targetId, positions }) {
+  const res = await safeFetch(`${BASE}/alerts/check`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ scope, target_id: targetId, positions }),
+  });
+  if (!res.ok) return { triggered: [] };
+  return res.json();
+}
+
 export async function createPurchaseLot(lot) {
   const res = await safeFetch(`${BASE}/purchases/lots`, {
     method: "POST",

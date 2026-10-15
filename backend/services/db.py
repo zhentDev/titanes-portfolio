@@ -337,6 +337,25 @@ def init_db():
             )
         """)
 
+        con.execute("""
+            CREATE TABLE IF NOT EXISTS user_stock_alerts (
+                id VARCHAR PRIMARY KEY,
+                user_id VARCHAR NOT NULL,
+                scope VARCHAR NOT NULL DEFAULT 'strategy', -- 'strategy' or 'purchase'
+                target_id VARCHAR NOT NULL, -- strategy_id (e.g. 'historical') or purchase lot_id/portfolio_id
+                ticker VARCHAR NOT NULL,
+                alert_type VARCHAR NOT NULL DEFAULT 'PROFIT_TARGET', -- 'PROFIT_TARGET' or 'STOP_LOSS'
+                target_value DOUBLE NOT NULL, -- e.g. 15.0 for +15% or -10.0 for -10%
+                is_active BOOLEAN DEFAULT TRUE,
+                notify_email BOOLEAN DEFAULT TRUE,
+                notify_app BOOLEAN DEFAULT TRUE,
+                user_email VARCHAR,
+                triggered_at TIMESTAMP,
+                last_checked_price DOUBLE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
         # Auto-Restore users from persistent JSON backup (to prevent Docker rebuild wipes)
         _restore_users_from_backup(con)
 
@@ -452,6 +471,24 @@ def init_db():
                                     user_id VARCHAR(64),
                                     purchase_date DATE,
                                     cost_basis DOUBLE PRECISION DEFAULT 0.0,
+                                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                                );
+                            """)
+                            cur.execute("""
+                                CREATE TABLE IF NOT EXISTS user_stock_alerts (
+                                    id VARCHAR(64) PRIMARY KEY,
+                                    user_id VARCHAR(64) NOT NULL,
+                                    scope VARCHAR(32) NOT NULL DEFAULT 'strategy',
+                                    target_id VARCHAR(64) NOT NULL,
+                                    ticker VARCHAR(32) NOT NULL,
+                                    alert_type VARCHAR(32) NOT NULL DEFAULT 'PROFIT_TARGET',
+                                    target_value DOUBLE PRECISION NOT NULL,
+                                    is_active BOOLEAN DEFAULT TRUE,
+                                    notify_email BOOLEAN DEFAULT TRUE,
+                                    notify_app BOOLEAN DEFAULT TRUE,
+                                    user_email VARCHAR(255),
+                                    triggered_at TIMESTAMP,
+                                    last_checked_price DOUBLE PRECISION,
                                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                                 );
                             """)
@@ -1553,6 +1590,172 @@ def save_user_cash_flow_db(user_id: str, data: dict[str, Any]) -> None:
                 data = EXCLUDED.data,
                 updated_at = now()
         """, [user_id, json_str])
+
+
+# ── Stock Alerts Database Operations ──────────────────────────────────────────
+
+def get_stock_alerts_db(user_id: str | None = None, scope: str | None = None, target_id: str | None = None) -> list[dict]:
+    """Retrieve stock alerts filtered by user_id and optional scope/target_id."""
+    sql = "SELECT id, user_id, scope, target_id, ticker, alert_type, target_value, is_active, notify_email, notify_app, user_email, triggered_at, last_checked_price, created_at FROM user_stock_alerts WHERE 1=1"
+    params = []
+    if user_id:
+        sql += " AND user_id = ?"
+        params.append(user_id)
+    if scope:
+        sql += " AND scope = ?"
+        params.append(scope)
+    if target_id:
+        sql += " AND target_id = ?"
+        params.append(target_id)
+    sql += " ORDER BY created_at DESC"
+
+    # PostgreSQL try
+    if DATABASE_URL:
+        try:
+            with pg_session() as conn:
+                if conn:
+                    with conn.cursor() as cur:
+                        pg_sql = sql.replace("?", "%s")
+                        cur.execute(pg_sql, params)
+                        cols = [desc[0] for desc in cur.description]
+                        return [dict(zip(cols, row)) for row in cur.fetchall()]
+        except Exception as e:
+            print(f"[POSTGRES] get_stock_alerts_db error: {e}")
+
+    with get_connection() as con:
+        try:
+            rows = con.execute(sql, params).fetchall()
+            cols = [
+                "id", "user_id", "scope", "target_id", "ticker", "alert_type",
+                "target_value", "is_active", "notify_email", "notify_app",
+                "user_email", "triggered_at", "last_checked_price", "created_at"
+            ]
+            return [dict(zip(cols, row)) for row in rows]
+        except Exception as e:
+            print(f"[DUCKDB] get_stock_alerts_db error: {e}")
+            return []
+
+
+def upsert_stock_alert_db(alert: dict) -> dict:
+    """Create or update a stock alert in PostgreSQL and DuckDB."""
+    alert_id = alert.get("id")
+    user_id = alert.get("user_id", "usr_9487dd2209d2")
+    scope = alert.get("scope", "strategy")
+    target_id = alert.get("target_id", "historical")
+    ticker = alert.get("ticker", "").upper().strip()
+    alert_type = alert.get("alert_type", "PROFIT_TARGET")
+    target_value = float(alert.get("target_value", 10.0))
+    is_active = bool(alert.get("is_active", True))
+    notify_email = bool(alert.get("notify_email", True))
+    notify_app = bool(alert.get("notify_app", True))
+    user_email = alert.get("user_email")
+
+    if not alert_id:
+        import uuid
+        alert_id = f"alt_{uuid.uuid4().hex[:12]}"
+
+    if DATABASE_URL:
+        try:
+            with pg_session() as conn:
+                if conn:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            INSERT INTO user_stock_alerts (
+                                id, user_id, scope, target_id, ticker, alert_type, target_value,
+                                is_active, notify_email, notify_app, user_email, created_at
+                            )
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+                            ON CONFLICT (id) DO UPDATE SET
+                                scope = EXCLUDED.scope,
+                                target_id = EXCLUDED.target_id,
+                                ticker = EXCLUDED.ticker,
+                                alert_type = EXCLUDED.alert_type,
+                                target_value = EXCLUDED.target_value,
+                                is_active = EXCLUDED.is_active,
+                                notify_email = EXCLUDED.notify_email,
+                                notify_app = EXCLUDED.notify_app,
+                                user_email = EXCLUDED.user_email
+                        """, [alert_id, user_id, scope, target_id, ticker, alert_type, target_value, is_active, notify_email, notify_app, user_email])
+        except Exception as e:
+            print(f"[POSTGRES] upsert_stock_alert_db error: {e}")
+
+    with get_connection() as con:
+        con.execute("""
+            INSERT INTO user_stock_alerts (
+                id, user_id, scope, target_id, ticker, alert_type, target_value,
+                is_active, notify_email, notify_app, user_email, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())
+            ON CONFLICT (id) DO UPDATE SET
+                scope = EXCLUDED.scope,
+                target_id = EXCLUDED.target_id,
+                ticker = EXCLUDED.ticker,
+                alert_type = EXCLUDED.alert_type,
+                target_value = EXCLUDED.target_value,
+                is_active = EXCLUDED.is_active,
+                notify_email = EXCLUDED.notify_email,
+                notify_app = EXCLUDED.notify_app,
+                user_email = EXCLUDED.user_email
+        """, [alert_id, user_id, scope, target_id, ticker, alert_type, target_value, is_active, notify_email, notify_app, user_email])
+
+    return {
+        "id": alert_id,
+        "user_id": user_id,
+        "scope": scope,
+        "target_id": target_id,
+        "ticker": ticker,
+        "alert_type": alert_type,
+        "target_value": target_value,
+        "is_active": is_active,
+        "notify_email": notify_email,
+        "notify_app": notify_app,
+        "user_email": user_email,
+    }
+
+
+def delete_stock_alert_db(alert_id: str, user_id: str | None = None) -> bool:
+    """Delete an alert by id."""
+    if DATABASE_URL:
+        try:
+            with pg_session() as conn:
+                if conn:
+                    with conn.cursor() as cur:
+                        if user_id:
+                            cur.execute("DELETE FROM user_stock_alerts WHERE id = %s AND user_id = %s", [alert_id, user_id])
+                        else:
+                            cur.execute("DELETE FROM user_stock_alerts WHERE id = %s", [alert_id])
+        except Exception as e:
+            print(f"[POSTGRES] delete_stock_alert_db error: {e}")
+
+    with get_connection() as con:
+        if user_id:
+            con.execute("DELETE FROM user_stock_alerts WHERE id = ? AND user_id = ?", [alert_id, user_id])
+        else:
+            con.execute("DELETE FROM user_stock_alerts WHERE id = ?", [alert_id])
+    return True
+
+
+def trigger_stock_alert_db(alert_id: str, current_price: float) -> None:
+    """Mark an alert as triggered and deactivate it."""
+    if DATABASE_URL:
+        try:
+            with pg_session() as conn:
+                if conn:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            UPDATE user_stock_alerts
+                            SET triggered_at = CURRENT_TIMESTAMP, is_active = FALSE, last_checked_price = %s
+                            WHERE id = %s
+                        """, [current_price, alert_id])
+        except Exception as e:
+            print(f"[POSTGRES] trigger_stock_alert_db error: {e}")
+
+    with get_connection() as con:
+        con.execute("""
+            UPDATE user_stock_alerts
+            SET triggered_at = now(), is_active = FALSE, last_checked_price = ?
+            WHERE id = ?
+        """, [current_price, alert_id])
 
 
 # Initialize database schema and run migrations
