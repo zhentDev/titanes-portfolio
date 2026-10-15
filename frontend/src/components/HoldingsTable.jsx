@@ -480,6 +480,7 @@ export default function HoldingsTable({
                     textTransform: "uppercase",
                     letterSpacing: "0.04em",
                     whiteSpace: "nowrap",
+                    ...(h.startsWith("Empresa") ? { width: "230px", minWidth: "210px", maxWidth: "250px" } : {}),
                   }}
                 >
                   {h}
@@ -556,32 +557,38 @@ export default function HoldingsTable({
                   </td>
 
                   {/* Ticker + Company Name */}
-                  <td style={{ padding: "10px 12px" }}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        <span
-                          style={{
-                            fontWeight: 700,
-                            color: isSelected ? "var(--accent-primary)" : "var(--text-muted)",
-                            fontSize: "0.875rem",
-                          }}
-                        >
-                          {h.ticker}
-                        </span>
-                        {h.exchange && (
+                  <td style={{ padding: "10px 12px", width: "230px", minWidth: "210px", maxWidth: "250px" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "2px", width: "100%" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: "8px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: 0, flexShrink: 1 }}>
                           <span
                             style={{
-                              fontSize: "0.65rem",
-                              color: "var(--text-muted)",
-                              background: "rgba(255,255,255,0.05)",
-                              padding: "1px 6px",
-                              borderRadius: "4px",
+                              fontWeight: 700,
+                              color: isSelected ? "var(--accent-primary)" : "var(--text-muted)",
+                              fontSize: "0.875rem",
+                              whiteSpace: "nowrap",
                             }}
                           >
-                            {h.exchange}
+                            {h.ticker}
                           </span>
-                        )}
-                        <MarketScheduleBadge ticker={h.ticker} exchange={h.exchange} size="xs" />
+                          {h.exchange && (
+                            <span
+                              style={{
+                                fontSize: "0.65rem",
+                                color: "var(--text-muted)",
+                                background: "rgba(255,255,255,0.05)",
+                                padding: "1px 6px",
+                                borderRadius: "4px",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {h.exchange}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ marginLeft: "auto", flexShrink: 0, display: "flex", alignItems: "center" }}>
+                          <MarketScheduleBadge ticker={h.ticker} exchange={h.exchange} size="xs" />
+                        </div>
                       </div>
                       <span
                         style={{
@@ -590,7 +597,7 @@ export default function HoldingsTable({
                           whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
-                          maxWidth: "180px",
+                          maxWidth: "200px",
                         }}
                       >
                         {h.name || h.ticker}
@@ -1047,6 +1054,7 @@ export default function HoldingsTable({
                           textTransform: "uppercase",
                           letterSpacing: "0.04em",
                           whiteSpace: "nowrap",
+                          ...(h.startsWith("Empresa") ? { width: "230px", minWidth: "210px", maxWidth: "250px" } : {}),
                         }}
                       >
                         {h}
@@ -1090,22 +1098,26 @@ export default function HoldingsTable({
                         onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.01)")}
                       >
                         {/* Ticker & Name */}
-                        <td style={{ padding: "10px 12px" }}>
-                          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                              <span style={{ fontWeight: 700, color: "var(--text-primary)", fontSize: "0.875rem" }}>
-                                {c.ticker}
-                              </span>
-                              {c.exchange && (
-                                <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", background: "rgba(255,255,255,0.05)", padding: "1px 6px", borderRadius: "4px" }}>
-                                  {c.exchange}
+                        <td style={{ padding: "10px 12px", width: "230px", minWidth: "210px", maxWidth: "250px" }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "2px", width: "100%" }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: "8px" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: 0, flexShrink: 1 }}>
+                                <span style={{ fontWeight: 700, color: "var(--text-primary)", fontSize: "0.875rem", whiteSpace: "nowrap" }}>
+                                  {c.ticker}
                                 </span>
-                              )}
-                              <span style={{ fontSize: "0.65rem", fontWeight: 700, color: "#10b981", background: "rgba(16, 185, 129, 0.12)", padding: "1px 6px", borderRadius: 4 }}>
-                                Vendida
-                              </span>
+                                {c.exchange && (
+                                  <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", background: "rgba(255,255,255,0.05)", padding: "1px 6px", borderRadius: "4px", whiteSpace: "nowrap" }}>
+                                    {c.exchange}
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ marginLeft: "auto", flexShrink: 0, display: "flex", alignItems: "center" }}>
+                                <span style={{ fontSize: "0.65rem", fontWeight: 700, color: "#10b981", background: "rgba(16, 185, 129, 0.12)", padding: "1px 6px", borderRadius: 4, whiteSpace: "nowrap" }}>
+                                  Vendida
+                                </span>
+                              </div>
                             </div>
-                            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "160px" }}>
+                            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "200px" }}>
                               {c.name || c.ticker}
                             </span>
                           </div>
