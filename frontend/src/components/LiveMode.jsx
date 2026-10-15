@@ -221,14 +221,8 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
               intradayResults.forEach((series, i) => {
                 const ticker = activeTickers[i];
                 const holding = activeHoldings.find((h) => h.ticker === ticker);
-                const numSlots = currentNav?.summary?.total_slots || activeNumSlots;
-                const slotValue = activeInvestment / numSlots;
-                const shares =
-                  holding && holding.start_price > 0
-                    ? slotValue / holding.start_price
-                    : holding
-                      ? holding.shares
-                      : 0;
+                // Usar exactamente las acciones reales del holding activo consolidado
+                const shares = holding ? (Number(holding.shares) || 0) : 0;
 
                 const safeSeries = Array.isArray(series) ? series : [];
                 // Buscar el punto exacto o el precio más cercano anterior (stepwise holding)
@@ -789,6 +783,8 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
               chartHeight={300}
               isLiveMode={true}
               strategyName={activeStrategyName}
+              summary={{ active_invested: activeInvested }}
+              holdings={holdings}
             />
           </div>
         </div>
