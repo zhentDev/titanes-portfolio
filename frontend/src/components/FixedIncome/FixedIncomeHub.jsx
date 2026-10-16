@@ -1538,87 +1538,165 @@ export default function FixedIncomeHub() {
                 border: `1px solid ${entity.color}33`,
                 overflow: "hidden",
                 boxShadow: "var(--shadow-card)",
-                breakInside: "avoid",
-                WebkitColumnBreakInside: "avoid",
-                marginBottom: 20,
               }}
             >
               {/* Entity Card Header */}
               <div
                 style={{
-                  padding: "16px 20px",
+                  padding: "14px 18px",
                   background: `${entity.color}15`,
-                  borderBottom: `1px solid ${entity.color}33`,
+                  borderBottom: isEntityCollapsed ? "none" : `1px solid ${entity.color}33`,
                   display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  flexWrap: "wrap",
+                  flexDirection: "column",
                   gap: 10,
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div
-                    style={{
-                      width: 38,
-                      height: 38,
-                      borderRadius: 10,
-                      overflow: "hidden",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background: `${entity.color}22`,
-                      border: `1px solid ${entity.color}44`,
-                      flexShrink: 0,
-                    }}
-                  >
-                    <img
-                      src={entity.logoUrl || svgToDataUri(getBankPreset(entity.name).logoSvg)}
-                      alt={entity.name}
-                      style={{ width: "100%", height: "100%", objectFit: "contain" }}
-                    />
+                {/* Fila 1: Identidad de la entidad (Izquierda) + Acciones rápidas y Botón Desplegar/Ocultar fijo (Derecha) */}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 10,
+                    width: "100%",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+                    <div
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: 10,
+                        overflow: "hidden",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: `${entity.color}22`,
+                        border: `1px solid ${entity.color}44`,
+                        flexShrink: 0,
+                      }}
+                    >
+                      <img
+                        src={entity.logoUrl || svgToDataUri(getBankPreset(entity.name).logoSvg)}
+                        alt={entity.name}
+                        style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                      />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "1.05rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {entity.name} <span style={{ fontSize: "0.8rem" }}>{entity.country}</span>
+                      </div>
+                      <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)" }}>
+                        {entityAccounts.length} cajita(s) / cuenta(s) • {entityCDTs.length} CDT(s)
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "1.05rem" }}>
-                      {entity.name} <span style={{ fontSize: "0.8rem" }}>{entity.country}</span>
-                    </div>
-                    <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)" }}>
-                      {entityAccounts.length} cajita(s) / cuenta(s) • {entityCDTs.length} CDT(s)
-                    </div>
+
+                  {/* Controles fijos a la derecha (Eliminar, Migrar y Botón Desplegar/Ocultar resaltado) */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0, marginLeft: "auto" }}>
+                    <button
+                      onClick={() => handleDeleteEntity(entity)}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "var(--text-muted)",
+                        cursor: "pointer",
+                        fontSize: "0.9rem",
+                        padding: "4px",
+                        opacity: 0.75,
+                      }}
+                      title="Eliminar Entidad"
+                    >
+                      🗑️
+                    </button>
+                    {entities.length > 1 && (
+                      <button
+                        onClick={() => setMigrateFrom(migrateFrom === entity.id ? null : entity.id)}
+                        style={{
+                          background: migrateFrom === entity.id ? "rgba(59,130,246,0.15)" : "transparent",
+                          border: migrateFrom === entity.id ? "1px solid #3b82f6" : "1px solid transparent",
+                          color: migrateFrom === entity.id ? "#3b82f6" : "var(--text-secondary)",
+                          cursor: "pointer",
+                          fontSize: "0.72rem",
+                          borderRadius: 6,
+                          padding: "4px 7px",
+                          fontWeight: 600,
+                        }}
+                        title="Migrar todos los productos a otra entidad"
+                      >
+                        🔄 Migrar
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => toggleEntityCollapse(entity.id)}
+                      style={{
+                        background: isEntityCollapsed
+                          ? "var(--bg-surface)"
+                          : "rgba(16, 185, 129, 0.14)",
+                        border: isEntityCollapsed
+                          ? `1.5px solid ${entity.color || "var(--accent-primary)"}88`
+                          : "1.5px solid rgba(16, 185, 129, 0.55)",
+                        borderRadius: 8,
+                        color: isEntityCollapsed ? "var(--text-primary)" : "#10b981",
+                        cursor: "pointer",
+                        fontSize: "0.76rem",
+                        padding: "5px 12px",
+                        fontWeight: 700,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 5,
+                        boxShadow: "0 2px 6px rgba(0, 0, 0, 0.08)",
+                        transition: "all 0.18s ease",
+                      }}
+                      title={isEntityCollapsed ? "Desplegar productos de la entidad" : "Ocultar productos de la entidad"}
+                    >
+                      <span style={{ fontSize: "0.68rem" }}>{isEntityCollapsed ? "▼" : "▲"}</span>
+                      <span>{isEntityCollapsed ? "Desplegar" : "Ocultar"}</span>
+                    </button>
                   </div>
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  {/* Botón de Referido / Beneficio de Bienvenida si existe para esta entidad */}
-                  {(() => {
-                    const ref = getReferralForEntity(entity.name || entity.id);
-                    if (!ref) return null;
-                    return (
-                      <a
-                        href={ref.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          textDecoration: "none",
-                          background: "linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(16, 185, 129, 0.2) 100%)",
-                          border: "1px solid rgba(245, 158, 11, 0.4)",
-                          color: "#fbbf24",
-                          borderRadius: 6,
-                          padding: "4px 8px",
-                          fontSize: "0.72rem",
-                          fontWeight: 800,
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 4,
-                        }}
-                        title={`Abrir cuenta en ${entity.name} con beneficios y tasas preferenciales`}
-                      >
-                        🎁 Abrir Cuenta
-                      </a>
-                    );
-                  })()}
-
-                  {/* Direct Add Object Buttons for this Entity */}
-                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                {/* Fila 2: Botones de Creación (+ Cuenta / + CDT / Referido) a la izquierda y Balance Total a la derecha */}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 8,
+                    width: "100%",
+                  }}
+                >
+                  <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                    {/* Botón de Referido / Beneficio de Bienvenida si existe para esta entidad */}
+                    {(() => {
+                      const ref = getReferralForEntity(entity.name || entity.id);
+                      if (!ref) return null;
+                      return (
+                        <a
+                          href={ref.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            textDecoration: "none",
+                            background: "linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(16, 185, 129, 0.2) 100%)",
+                            border: "1px solid rgba(245, 158, 11, 0.4)",
+                            color: "#fbbf24",
+                            borderRadius: 6,
+                            padding: "4px 8px",
+                            fontSize: "0.72rem",
+                            fontWeight: 800,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
+                          title={`Abrir cuenta en ${entity.name} con beneficios y tasas preferenciales`}
+                        >
+                          🎁 Abrir Cuenta
+                        </a>
+                      );
+                    })()}
                     <button
                       onClick={() => {
                         setSelectedModalEntityId(entity.id);
@@ -1665,7 +1743,7 @@ export default function FixedIncomeHub() {
                     </button>
                   </div>
 
-                  <div style={{ textAlign: "right", marginLeft: 8, minWidth: 150 }}>
+                  <div style={{ textAlign: "right", marginLeft: "auto" }}>
                     <div
                       className="mono"
                       style={{ fontWeight: 800, color: "#10b981", fontSize: "1.15rem", letterSpacing: "0.2px" }}
@@ -1685,55 +1763,6 @@ export default function FixedIncomeHub() {
                       </div>
                     )}
                   </div>
-
-                  <button
-                    onClick={() => handleDeleteEntity(entity)}
-                    style={{
-                      background: "transparent",
-                      border: "none",
-                      color: "#64748b",
-                      cursor: "pointer",
-                      fontSize: "0.95rem",
-                      padding: "4px",
-                    }}
-                    title="Eliminar Entidad"
-                  >
-                    🗑️
-                  </button>
-                  {entities.length > 1 && (
-                    <button
-                      onClick={() => setMigrateFrom(migrateFrom === entity.id ? null : entity.id)}
-                      style={{
-                        background: migrateFrom === entity.id ? "rgba(59,130,246,0.15)" : "transparent",
-                        border: migrateFrom === entity.id ? "1px solid #3b82f6" : "none",
-                        color: migrateFrom === entity.id ? "#3b82f6" : "#64748b",
-                        cursor: "pointer",
-                        fontSize: "0.7rem",
-                        borderRadius: 6,
-                        padding: "2px 6px",
-                      }}
-                      title="Migrar todos los productos a otra entidad"
-                    >
-                      🔄 Migrar
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => toggleEntityCollapse(entity.id)}
-                    style={{
-                      background: "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      borderRadius: 6,
-                      color: "var(--text-muted)",
-                      cursor: "pointer",
-                      fontSize: "0.7rem",
-                      padding: "3px 8px",
-                      fontWeight: 600,
-                    }}
-                    title={isEntityCollapsed ? "Desplegar entidad" : "Ocultar entidad"}
-                  >
-                    {isEntityCollapsed ? "▼ Desplegar" : "▲ Ocultar"}
-                  </button>
                 </div>
 
                 {/* Migration Target Selector */}
@@ -3057,8 +3086,10 @@ export default function FixedIncomeHub() {
         return (
           <div
             style={{
-              columns: "2 460px",
-              columnGap: 20,
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 460px), 1fr))",
+              gap: 20,
+              alignItems: "start",
             }}
           >
             {activeEntities.map((entity) => renderEntityCard(entity))}
