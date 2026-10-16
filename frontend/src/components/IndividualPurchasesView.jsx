@@ -12,6 +12,7 @@ import {
   fetchStockAlerts,
   saveStockAlert,
   deleteStockAlert,
+  evaluateStockAlerts,
   searchTicker,
   searchTickersMultiple,
 } from "../api/client";
@@ -995,6 +996,76 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
   const [expandedTickers, setExpandedTickers] = useState({});
   const toggleExpand = (ticker) =>
     setExpandedTickers((prev) => ({ ...prev, [ticker]: !prev[ticker] }));
+
+  // Evaluar alertas de venta / recuperación / stop loss automáticamente cuando se actualizan las cotizaciones
+  const evaluatedAlertsRef = useRef(new Set());
+  useEffect(() => {
+    if (!groupedLots.length || !alerts.some((a) => a.is_active && !a.triggered_at)) return;
+    const positions = groupedLots.map((g) => ({
+      ticker: g.ticker,
+      entry_price: g.avgOpenPrice,
+      current_price: g.currentPrice,
+      return_pct: g.profitPct,
+      name: g.name || g.ticker,
+      scope_title: `Compras (${portfolio.name || portfolioId})`,
+    }));
+
+    evaluateStockAlerts({
+      scope: "purchase",
+      targetId: portfolioId,
+      positions,
+    })
+      .then((res) => {
+        if (res?.triggered?.length > 0) {
+          res.triggered.forEach((t) => {
+            if (!evaluatedAlertsRef.current.has(t.alert_id)) {
+              evaluatedAlertsRef.current.add(t.alert_id);
+              setAlerts((prev) =>
+                prev.map((a) =>
+                  a.id === t.alert_id ? { ...a, triggered_at: new Date().toISOString() } : a
+                )
+              );
+              toast(
+                () => (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700 }}>
+                      <span style={{ fontSize: "1.2rem" }}>
+                        {t.alert_type === "STOP_LOSS" ? "🛑" : "🎯"}
+                      </span>
+                      <span>
+                        ¡Alerta alcanzada en {t.ticker}! (
+                        {t.current_return_pct >= 0 ? "+" : ""}
+                        {t.current_return_pct.toFixed(2)}%)
+                      </span>
+                    </div>
+                    <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                      Cotización actual: ${t.current_price.toFixed(2)} (Umbral:{" "}
+                      {t.target_value >= 0 ? "+" : ""}
+                      {t.target_value}%).{" "}
+                      {t.email_sent
+                        ? `Se envió aviso a ${t.recipient}.`
+                        : `Revisa tu posición en ${t.scope_title}.`}
+                    </div>
+                  </div>
+                ),
+                {
+                  duration: 9000,
+                  position: "top-right",
+                  style: {
+                    background: theme === "light" ? "#ffffff" : "#0d1b2a",
+                    color: theme === "light" ? "#0f172a" : "#f8fafc",
+                    border: `1.5px solid ${t.alert_type === "STOP_LOSS" ? "#f43f5e" : "#10b981"}`,
+                    boxShadow: "0 8px 30px rgba(0,0,0,0.35)",
+                    borderRadius: "12px",
+                  },
+                }
+              );
+            }
+          });
+        }
+      })
+      .catch(() => {});
+  }, [groupedLots, alerts, portfolioId, portfolio.name, theme]);
 
   const handleEditParentTicker = (group, e) => {
     if (e) e.stopPropagation();

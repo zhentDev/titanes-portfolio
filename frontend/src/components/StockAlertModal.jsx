@@ -240,7 +240,7 @@ export default function StockAlertModal({
             </label>
           </div>
 
-          {/* Alert Type: Profit Target vs Stop Loss */}
+          {/* Alert Type: Profit Target / Recovery vs Stop Loss */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
               Tipo de Disparador
@@ -250,7 +250,9 @@ export default function StockAlertModal({
                 type="button"
                 onClick={() => {
                   setAlertType("PROFIT_TARGET");
-                  if (targetValue < 0) setTargetValue(Math.abs(targetValue) || 15.0);
+                  if (Number(targetValue) <= Number(currentReturnPct)) {
+                    setTargetValue(Number(currentReturnPct) < -20 ? -20 : 15.0);
+                  }
                 }}
                 style={{
                   padding: "10px",
@@ -272,14 +274,14 @@ export default function StockAlertModal({
                 }}
               >
                 <span>🎯</span>
-                <span>Objetivo Ganancia</span>
+                <span>{Number(targetValue) < 0 ? "Objetivo Recuperación" : "Objetivo Ganancia"}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => {
                   setAlertType("STOP_LOSS");
-                  if (targetValue > 0) setTargetValue(-Math.abs(targetValue) || -10.0);
+                  if (Number(targetValue) > 0) setTargetValue(-Math.abs(targetValue) || -10.0);
                 }}
                 style={{
                   padding: "10px",
@@ -301,7 +303,7 @@ export default function StockAlertModal({
                 }}
               >
                 <span>🛑</span>
-                <span>Stop Loss (Riesgo)</span>
+                <span>Stop Loss (Caída)</span>
               </button>
             </div>
           </div>
@@ -334,7 +336,18 @@ export default function StockAlertModal({
                 type="number"
                 step="0.5"
                 value={targetValue}
-                onChange={(e) => setTargetValue(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setTargetValue(val);
+                  const num = Number(val);
+                  if (!Number.isNaN(num)) {
+                    if (num > Number(currentReturnPct)) {
+                      setAlertType("PROFIT_TARGET");
+                    } else if (num < Number(currentReturnPct)) {
+                      setAlertType("STOP_LOSS");
+                    }
+                  }
+                }}
                 required
                 style={{
                   width: "100%",
@@ -351,22 +364,34 @@ export default function StockAlertModal({
 
             {/* Quick Preset Buttons */}
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
-              {(alertType === "PROFIT_TARGET" ? [5, 10, 15, 20, 30] : [-5, -8, -10, -15, -20]).map((preset) => (
+              {(Number(currentReturnPct) < -15
+                ? [-30, -25, -20, -15, -10, 5, 15]
+                : alertType === "PROFIT_TARGET"
+                  ? [5, 10, 15, 20, 30]
+                  : [-5, -8, -10, -15, -20]
+              ).map((preset) => (
                 <button
                   key={preset}
                   type="button"
-                  onClick={() => setTargetValue(preset)}
+                  onClick={() => {
+                    setTargetValue(preset);
+                    if (preset > Number(currentReturnPct)) {
+                      setAlertType("PROFIT_TARGET");
+                    } else {
+                      setAlertType("STOP_LOSS");
+                    }
+                  }}
                   style={{
                     padding: "3px 9px",
                     borderRadius: 6,
                     fontSize: "0.72rem",
                     fontWeight: 700,
                     cursor: "pointer",
-                    border: `1px solid ${targetValue === preset ? "var(--accent-primary)" : isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.08)"}`,
-                    background: targetValue === preset
+                    border: `1px solid ${Number(targetValue) === preset ? "var(--accent-primary)" : isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.08)"}`,
+                    background: Number(targetValue) === preset
                       ? isLight ? "rgba(2, 132, 199, 0.15)" : "rgba(0, 229, 255, 0.15)"
                       : "transparent",
-                    color: targetValue === preset
+                    color: Number(targetValue) === preset
                       ? isLight ? "#0284c7" : "var(--accent-primary)"
                       : "var(--text-secondary)",
                   }}
@@ -374,6 +399,41 @@ export default function StockAlertModal({
                   {preset > 0 ? `+${preset}%` : `${preset}%`}
                 </button>
               ))}
+            </div>
+
+            {/* Explicación inteligente en vivo de cómo actuará el disparador */}
+            <div
+              style={{
+                marginTop: 4,
+                padding: "8px 12px",
+                borderRadius: 8,
+                fontSize: "0.74rem",
+                lineHeight: 1.4,
+                background: Number(targetValue) > Number(currentReturnPct)
+                  ? isLight ? "rgba(16, 185, 129, 0.08)" : "rgba(16, 185, 129, 0.1)"
+                  : isLight ? "rgba(239, 68, 68, 0.08)" : "rgba(239, 68, 68, 0.1)",
+                border: `1px solid ${
+                  Number(targetValue) > Number(currentReturnPct)
+                    ? "rgba(16, 185, 129, 0.25)"
+                    : "rgba(239, 68, 68, 0.25)"
+                }`,
+                color: "var(--text-secondary)",
+              }}
+            >
+              {Number(targetValue) > Number(currentReturnPct) ? (
+                <>
+                  📈 <strong>Disparo por Subida / Recuperación:</strong> Como tu posición hoy está en{" "}
+                  <strong>{Number(currentReturnPct).toFixed(2)}%</strong> (${Number(currentPrice).toFixed(2)}), te notificaremos apenas el precio{" "}
+                  <strong>suba a ~${calculatedTriggerPrice.toFixed(2)}</strong> y alcance{" "}
+                  <strong>{Number(targetValue) > 0 ? `+${targetValue}%` : `${targetValue}%`}</strong>.
+                </>
+              ) : (
+                <>
+                  📉 <strong>Disparo por Caída (Stop Loss):</strong> Te notificaremos si la posición cae desde{" "}
+                  <strong>{Number(currentReturnPct).toFixed(2)}%</strong> hasta{" "}
+                  <strong>{Number(targetValue)}%</strong> (~${calculatedTriggerPrice.toFixed(2)} o menos).
+                </>
+              )}
             </div>
           </div>
 
