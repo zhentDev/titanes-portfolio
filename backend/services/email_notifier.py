@@ -9,17 +9,38 @@ import os
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import Optional
+from typing import Optional, Tuple
+from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
-# SMTP configuration via environment variables
-SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
-SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
-SMTP_USER = os.environ.get("SMTP_USER", "")
-SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
-SMTP_FROM = os.environ.get("SMTP_FROM", SMTP_USER or "alerts@titanes-portfolio.com")
-SMTP_ENABLED = bool(SMTP_USER and SMTP_PASSWORD)
+# Ensure .env is loaded
+load_dotenv()
+
+
+def get_smtp_config() -> dict:
+    load_dotenv(override=True)
+    host = os.environ.get("SMTP_HOST", "smtp.gmail.com").strip()
+    port = int(os.environ.get("SMTP_PORT", "587"))
+    user = os.environ.get("SMTP_USER", "").strip()
+    raw_password = os.environ.get("SMTP_PASSWORD", "").strip()
+    # Strip quotes if user wrote SMTP_PASSWORD="..." in .env
+    password = raw_password.strip('"').strip("'")
+    from_email = os.environ.get("SMTP_FROM", "").strip()
+    # If SMTP_FROM is the placeholder or empty, fallback to user
+    if not from_email or from_email == "tu_correo@gmail.com":
+        from_email = user or "alerts@titanes-portfolio.com"
+
+    enabled = bool(user and password)
+    return {
+        "host": host,
+        "port": port,
+        "user": user,
+        "password": password,
+        "from_email": from_email,
+        "enabled": enabled,
+    }
+
 
 
 def send_sell_alert_email(
@@ -196,35 +217,125 @@ def send_sell_alert_email(
     </html>
     """
 
-    if not SMTP_ENABLED:
+    cfg = get_smtp_config()
+    if not cfg["enabled"]:
         logger.info(
             f"[EMAIL SIMULATION] SMTP not configured. Notification simulated for {to_email}: "
             f"{ticker} reached {current_return_pct:.2f}% (Target: {target_value}%)"
         )
-        # Return True so simulated alerts don't fail in dev/test
         return True
 
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
-        msg["From"] = SMTP_FROM
+        msg["From"] = cfg["from_email"]
         msg["To"] = to_email
 
         part = MIMEText(html_body, "html")
         msg.attach(part)
 
-        if SMTP_PORT == 465:
-            with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=10) as server:
-                server.login(SMTP_USER, SMTP_PASSWORD)
-                server.sendmail(SMTP_FROM, [to_email], msg.as_string())
+        if cfg["port"] == 465:
+            with smtplib.SMTP_SSL(cfg["host"], cfg["port"], timeout=12) as server:
+                server.login(cfg["user"], cfg["password"])
+                server.sendmail(cfg["from_email"], [to_email], msg.as_string())
         else:
-            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as server:
+            with smtplib.SMTP(cfg["host"], cfg["port"], timeout=12) as server:
                 server.starttls()
-                server.login(SMTP_USER, SMTP_PASSWORD)
-                server.sendmail(SMTP_FROM, [to_email], msg.as_string())
+                server.login(cfg["user"], cfg["password"])
+                server.sendmail(cfg["from_email"], [to_email], msg.as_string())
 
         logger.info(f"[EMAIL] Alert email successfully sent to {to_email} for {ticker}")
         return True
     except Exception as e:
         logger.error(f"[EMAIL ERROR] Failed to send email to {to_email}: {e}")
         return False
+
+
+def send_test_email(to_email: str) -> dict:
+    """
+    Sends a test verification email and returns detailed status and diagnosis if it fails.
+    """
+    cfg = get_smtp_config()
+    if not cfg["user"] or not cfg["password"]:
+        return {
+            "success": False,
+            "error": "Faltan credenciales SMTP. Por favor verifica SMTP_USER y SMTP_PASSWORD en el archivo .env",
+            "config": {
+                "host": cfg["host"],
+                "port": cfg["port"],
+                "user": cfg["user"],
+                "from": cfg["from_email"],
+            },
+        }
+
+    target_email = to_email or cfg["user"]
+    try:
+        subject = "🧪 Verificación Exitosa: Alertas Kpital Zhent Portfolio"
+        html_body = f"""
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="utf-8"></head>
+        <body style="font-family: sans-serif; background-color: #0b0f19; color: #f1f5f9; padding: 24px;">
+          <div style="max-width: 520px; margin: 0 auto; background: #131b2e; border: 1px solid #10b981; border-radius: 12px; padding: 24px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+              <span style="font-size: 2.5rem;">🎉</span>
+              <h2 style="color: #10b981; margin: 8px 0 0 0;">¡Servicio de Alertas Conectado!</h2>
+              <p style="color: #94a3b8; font-size: 0.9rem;">Prueba de verificación SMTP completada con éxito</p>
+            </div>
+            <p style="font-size: 0.9rem; line-height: 1.5; color: #e2e8f0;">
+              Tu terminal <strong>Kpital Zhent</strong> está configurada correctamente. A partir de ahora, cuando cualquiera de tus acciones o lotes alcance el objetivo de ganancia o límite de stop loss configurado, recibirás la notificación al instante aquí.
+            </p>
+            <div style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 12px 16px; margin: 18px 0; font-size: 0.8rem; color: #cbd5e1;">
+              <div><strong>Servidor SMTP:</strong> {cfg['host']}:{cfg['port']}</div>
+              <div><strong>Remitente:</strong> {cfg['from_email']}</div>
+              <div><strong>Destinatario:</strong> {target_email}</div>
+            </div>
+            <p style="font-size: 0.75rem; color: #64748b; text-align: center; margin: 0;">
+              Kpital Zhent Terminal • Sistema Inteligente de Notificaciones
+            </p>
+          </div>
+        </body>
+        </html>
+        """
+
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = cfg["from_email"]
+        msg["To"] = target_email
+        msg.attach(MIMEText(html_body, "html"))
+
+        if cfg["port"] == 465:
+            with smtplib.SMTP_SSL(cfg["host"], cfg["port"], timeout=12) as server:
+                server.login(cfg["user"], cfg["password"])
+                server.sendmail(cfg["from_email"], [target_email], msg.as_string())
+        else:
+            with smtplib.SMTP(cfg["host"], cfg["port"], timeout=12) as server:
+                server.starttls()
+                server.login(cfg["user"], cfg["password"])
+                server.sendmail(cfg["from_email"], [target_email], msg.as_string())
+
+        return {
+            "success": True,
+            "message": f"Correo de prueba enviado con éxito a {target_email}",
+            "config": {
+                "host": cfg["host"],
+                "port": cfg["port"],
+                "user": cfg["user"],
+                "from": cfg["from_email"],
+            },
+        }
+    except (smtplib.SMTPAuthenticationError, smtplib.SMTPServerDisconnected) as e:
+        return {
+            "success": False,
+            "error": "Error de autenticación SMTP con Gmail (BadCredentials). Google no permite usar tu contraseña personal habitual para aplicaciones externas; requiere una 'Contraseña de Aplicación' de 16 letras.",
+            "raw_error": str(e),
+            "instructions": "Pasos para habilitarlo en 1 minuto:\n1. Ve a https://myaccount.google.com/apppasswords\n2. Si te lo pide, activa 'Verificación en dos pasos'.\n3. Crea un nombre (ej: 'Titanes') y pulsa 'Crear'.\n4. Copia el código de 16 caracteres generado (ej: 'xxxx xxxx xxxx xxxx').\n5. En tu archivo .env, coloca: SMTP_PASSWORD=tu_codigo_de_16_letras (sin espacios).\n6. Asegúrate de tener SMTP_FROM=zhendev@gmail.com.",
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Error conectando con el servidor SMTP: {str(e)}",
+            "raw_error": str(e),
+        }
+
+

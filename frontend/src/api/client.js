@@ -517,6 +517,20 @@ export async function evaluateStockAlerts({ scope, targetId, positions }) {
   return res.json();
 }
 
+export async function testStockAlertEmail(email = null) {
+  const res = await safeFetch(`${BASE}/alerts/test-email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.detail || "Error en el servidor al enviar correo de prueba");
+  }
+  return res.json();
+}
+
+
 export async function createPurchaseLot(lot) {
   const res = await safeFetch(`${BASE}/purchases/lots`, {
     method: "POST",

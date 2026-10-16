@@ -10,6 +10,9 @@ logging.basicConfig(level=logging.DEBUG, format="%(asctime)s [%(name)s] %(leveln
 import os
 import traceback
 import warnings
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Suppress ALL noisy DeprecationWarnings & FutureWarnings (from pandas, yfinance, numpy, etc)
 warnings.filterwarnings("ignore")

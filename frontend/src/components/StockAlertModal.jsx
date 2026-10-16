@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useTheme } from "../context/ThemeContext";
 import InfoTooltip from "./Common/InfoTooltip";
+import { testStockAlertEmail } from "../api/client";
 
 export default function StockAlertModal({
   isOpen,
@@ -48,6 +49,9 @@ export default function StockAlertModal({
   const [notifyApp, setNotifyApp] = useState(true);
   const [customEmail, setCustomEmail] = useState(userEmail || "");
   const [isSaving, setIsSaving] = useState(false);
+  const [testingEmail, setTestingEmail] = useState(false);
+  const [emailTestResult, setEmailTestResult] = useState(null);
+
 
   useEffect(() => {
     if (!isOpen) return;
@@ -112,6 +116,22 @@ export default function StockAlertModal({
     (alertType === "PROFIT_TARGET" && numTarget <= curRet) ||
     (alertType === "STOP_LOSS" && numTarget >= curRet);
 
+  const handleTestEmail = async () => {
+    setTestingEmail(true);
+    setEmailTestResult(null);
+    try {
+      const res = await testStockAlertEmail(customEmail.trim() || undefined);
+      setEmailTestResult(res);
+    } catch (err) {
+      setEmailTestResult({
+        success: false,
+        error: err.message || "Error al conectar con el servidor",
+      });
+    } finally {
+      setTestingEmail(false);
+    }
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     setIsSaving(true);
@@ -137,6 +157,7 @@ export default function StockAlertModal({
       setIsSaving(false);
     }
   };
+
 
   return (
     <div
@@ -653,21 +674,77 @@ export default function StockAlertModal({
               </label>
 
               {notifyEmail && (
-                <input
-                  type="email"
-                  value={customEmail}
-                  onChange={(e) => setCustomEmail(e.target.value)}
-                  placeholder="ejemplo@correo.com"
-                  style={{
-                    marginLeft: 26,
-                    padding: "6px 12px",
-                    borderRadius: 6,
-                    border: `1px solid ${isLight ? "rgba(0,0,0,0.15)" : "rgba(255,255,255,0.12)"}`,
-                    background: isLight ? "#ffffff" : "rgba(13, 18, 38, 0.5)",
-                    color: "var(--text-primary)",
-                    fontSize: "0.8rem",
-                  }}
-                />
+                <div style={{ marginLeft: 26, display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      type="email"
+                      value={customEmail}
+                      onChange={(e) => {
+                        setCustomEmail(e.target.value);
+                        if (emailTestResult) setEmailTestResult(null);
+                      }}
+                      placeholder="ejemplo@correo.com"
+                      style={{
+                        flex: 1,
+                        padding: "6px 12px",
+                        borderRadius: 6,
+                        border: `1px solid ${isLight ? "rgba(0,0,0,0.15)" : "rgba(255,255,255,0.12)"}`,
+                        background: isLight ? "#ffffff" : "rgba(13, 18, 38, 0.5)",
+                        color: "var(--text-primary)",
+                        fontSize: "0.8rem",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleTestEmail}
+                      disabled={testingEmail}
+                      title="Enviar un correo de prueba ahora para comprobar la conexión SMTP"
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 6,
+                        border: `1px solid ${isLight ? "rgba(2, 132, 199, 0.35)" : "rgba(0, 229, 255, 0.35)"}`,
+                        background: isLight ? "rgba(2, 132, 199, 0.08)" : "rgba(0, 229, 255, 0.12)",
+                        color: isLight ? "#0284c7" : "#00e5ff",
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        cursor: testingEmail ? "not-allowed" : "pointer",
+                        whiteSpace: "nowrap",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      {testingEmail ? "⏳ Probando..." : "🧪 Probar Envío"}
+                    </button>
+                  </div>
+
+                  {emailTestResult && (
+                    <div
+                      style={{
+                        padding: "8px 12px",
+                        borderRadius: 6,
+                        fontSize: "0.74rem",
+                        lineHeight: 1.4,
+                        background: emailTestResult.success
+                          ? isLight ? "rgba(16, 185, 129, 0.12)" : "rgba(16, 185, 129, 0.2)"
+                          : isLight ? "rgba(239, 68, 68, 0.1)" : "rgba(239, 68, 68, 0.2)",
+                        border: `1px solid ${emailTestResult.success ? "rgba(16, 185, 129, 0.4)" : "rgba(239, 68, 68, 0.4)"}`,
+                        color: emailTestResult.success
+                          ? isLight ? "#047857" : "#34d399"
+                          : isLight ? "#b91c1c" : "#fca5a5",
+                      }}
+                    >
+                      <div style={{ fontWeight: 700, marginBottom: emailTestResult.instructions ? 4 : 0 }}>
+                        {emailTestResult.success ? "✅ " : "⚠️ "}{emailTestResult.message || emailTestResult.error}
+                      </div>
+                      {emailTestResult.instructions && (
+                        <div style={{ whiteSpace: "pre-line", fontSize: "0.7rem", opacity: 0.9 }}>
+                          {emailTestResult.instructions}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>

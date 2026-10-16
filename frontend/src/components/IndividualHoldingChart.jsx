@@ -203,11 +203,16 @@ export default function IndividualHoldingChart({
   const [loading, setLoading] = useState(false);
   const [chartData, setChartData] = useState(null);
   const [hoverPoint, setHoverPoint] = useState(null);
+  const lastFetchedKeyRef = useRef("");
 
-  // Fetch hourly data whenever selectedItem changes
+  // Fetch hourly data ONLY when selectedItem identity changes
+  const selectedKey = selectedItem?.key || "";
   useEffect(() => {
-    if (!selectedItem) return;
+    if (!selectedItem || !selectedKey) return;
+    if (lastFetchedKeyRef.current === selectedKey && chartData) return;
+
     let isCancelled = false;
+    lastFetchedKeyRef.current = selectedKey;
     setLoading(true);
 
     fetchHoldingChart({
@@ -233,9 +238,9 @@ export default function IndividualHoldingChart({
     return () => {
       isCancelled = true;
     };
-  }, [selectedItem]);
+  }, [selectedKey, selectedItem?.ticker, selectedItem?.entryDate, selectedItem?.shares, selectedItem?.costBasis, selectedItem?.startPrice]);
 
-  // Initialize and update Lightweight Charts
+  // Effect 1: Initialize chart instance ONCE (or on theme change)
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -306,13 +311,10 @@ export default function IndividualHoldingChart({
     baseSeriesRef.current = baseSeries;
 
     // 2. Valuation curve of the stock position (shares * price)
-    const isGain = (chartData?.return_usd ?? 0) >= 0;
-    const curveColor = isGain ? "#10b981" : "#ef4444";
-
     const valSeries = chart.addAreaSeries({
-      topColor: isGain ? "rgba(16, 185, 129, 0.28)" : "rgba(239, 68, 68, 0.28)",
-      bottomColor: isGain ? "rgba(16, 185, 129, 0.00)" : "rgba(239, 68, 68, 0.00)",
-      lineColor: curveColor,
+      topColor: "rgba(16, 185, 129, 0.28)",
+      bottomColor: "rgba(16, 185, 129, 0.00)",
+      lineColor: "#10b981",
       lineWidth: 2,
       priceLineVisible: false,
       lastValueVisible: true,
@@ -344,56 +346,6 @@ export default function IndividualHoldingChart({
       }
     });
 
-    // Populate data
-    if (chartData && Array.isArray(chartData.series) && chartData.series.length > 0) {
-      const valPoints = chartData.series
-        .map((pt) => ({ time: pt.time, value: pt.value }))
-        .sort((a, b) => a.time - b.time)
-        .filter((v, idx, arr) => idx === 0 || v.time !== arr[idx - 1].time);
-
-      const costBasis = chartData.cost_basis || selectedItem?.costBasis || 100;
-      const basePoints = valPoints.map((pt) => ({ time: pt.time, value: costBasis }));
-
-      baseSeries.setData(basePoints);
-      valSeries.setData(valPoints);
-
-      // If holding was closed/sold, place an explicit prominent marker on the exit day
-      const exitDateStr = selectedItem?.exitDate || chartData?.exit_date;
-      if (selectedItem?.status === "CLOSED" && exitDateStr) {
-        // Find closest point on or just before exitDate
-        let markerPt = null;
-        for (let i = 0; i < valPoints.length; i++) {
-          const pt = valPoints[i];
-          const ptIso = chartData.series.find((s) => s.time === pt.time)?.date || "";
-          if (ptIso.slice(0, 10) <= exitDateStr) {
-            markerPt = pt;
-          } else {
-            break;
-          }
-        }
-        if (!markerPt && valPoints.length > 0) {
-          markerPt = valPoints[0];
-        }
-
-        if (markerPt) {
-          valSeries.setMarkers([
-            {
-              time: markerPt.time,
-              position: "aboveBar",
-              color: "#ef4444",
-              shape: "arrowDown",
-              text: `🔻 VENDIDA (${exitDateStr})`,
-              size: 2,
-            },
-          ]);
-        }
-      } else {
-        valSeries.setMarkers([]);
-      }
-
-      chart.timeScale().fitContent();
-    }
-
     const ro = new ResizeObserver(() => {
       if (containerRef.current && chartRef.current) {
         chartRef.current.applyOptions({
@@ -405,10 +357,74 @@ export default function IndividualHoldingChart({
 
     return () => {
       ro.disconnect();
-      chart.remove();
-      chartRef.current = null;
+      if (chartRef.current) {
+        chartRef.current.remove();
+        chartRef.current = null;
+      }
     };
-  }, [chartData, chartColors, selectedItem]);
+  }, [theme, chartColors]);
+
+  // Effect 2: Update series data and markers when chartData or selectedItem status changes
+  useEffect(() => {
+    if (!chartRef.current || !valSeriesRef.current || !baseSeriesRef.current) return;
+    if (!chartData || !Array.isArray(chartData.series) || chartData.series.length === 0) return;
+
+    const valPoints = chartData.series
+      .map((pt) => ({ time: pt.time, value: pt.value }))
+      .sort((a, b) => a.time - b.time)
+      .filter((v, idx, arr) => idx === 0 || v.time !== arr[idx - 1].time);
+
+    const costBasis = chartData.cost_basis || selectedItem?.costBasis || 100;
+    const basePoints = valPoints.map((pt) => ({ time: pt.time, value: costBasis }));
+
+    const isGain = (chartData?.return_usd ?? 0) >= 0;
+    const curveColor = isGain ? "#10b981" : "#ef4444";
+
+    valSeriesRef.current.applyOptions({
+      topColor: isGain ? "rgba(16, 185, 129, 0.28)" : "rgba(239, 68, 68, 0.28)",
+      bottomColor: isGain ? "rgba(16, 185, 129, 0.00)" : "rgba(239, 68, 68, 0.00)",
+      lineColor: curveColor,
+    });
+
+    baseSeriesRef.current.setData(basePoints);
+    valSeriesRef.current.setData(valPoints);
+
+    // If holding was closed/sold, place an explicit prominent marker on the exit day
+    const exitDateStr = selectedItem?.exitDate || chartData?.exit_date;
+    if (selectedItem?.status === "CLOSED" && exitDateStr) {
+      let markerPt = null;
+      for (let i = 0; i < valPoints.length; i++) {
+        const pt = valPoints[i];
+        const ptIso = chartData.series.find((s) => s.time === pt.time)?.date || "";
+        if (ptIso.slice(0, 10) <= exitDateStr) {
+          markerPt = pt;
+        } else {
+          break;
+        }
+      }
+      if (!markerPt && valPoints.length > 0) {
+        markerPt = valPoints[0];
+      }
+
+      if (markerPt) {
+        valSeriesRef.current.setMarkers([
+          {
+            time: markerPt.time,
+            position: "aboveBar",
+            color: "#ef4444",
+            shape: "arrowDown",
+            text: `🔻 VENDIDA (${exitDateStr})`,
+            size: 2,
+          },
+        ]);
+      }
+    } else {
+      valSeriesRef.current.setMarkers([]);
+    }
+
+    chartRef.current.timeScale().fitContent();
+  }, [chartData, selectedItem?.status, selectedItem?.exitDate, selectedItem?.costBasis]);
+
 
   const displayVal = hoverPoint ? hoverPoint.value : (chartData?.current_value ?? selectedItem?.currentValue ?? 0);
   const displayBase = hoverPoint ? hoverPoint.base : (chartData?.cost_basis ?? selectedItem?.costBasis ?? 0);
@@ -623,6 +639,7 @@ export default function IndividualHoldingChart({
               zIndex: 10,
               borderRadius: 8,
               backdropFilter: "blur(2px)",
+              pointerEvents: "none",
             }}
           >
             <div style={{ textAlign: "center", color: "var(--text-secondary)", fontSize: "0.85rem" }}>

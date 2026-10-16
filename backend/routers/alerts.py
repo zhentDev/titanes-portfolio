@@ -13,10 +13,11 @@ from services.db import (
     delete_stock_alert_db,
     trigger_stock_alert_db,
 )
-from services.email_notifier import send_sell_alert_email
+from services.email_notifier import send_sell_alert_email, send_test_email, get_smtp_config
 from services.market_data import get_live_quotes
 
 router = APIRouter(prefix="/alerts", tags=["Stock Alerts"])
+
 
 
 class StockAlertCreate(BaseModel):
@@ -156,3 +157,19 @@ def check_and_evaluate_alerts(body: CheckAlertsRequest, request: Request):
             triggered_list.append(triggered_item)
 
     return {"triggered": triggered_list}
+
+
+class TestEmailRequest(BaseModel):
+    email: Optional[str] = None
+
+
+@router.post("/test-email")
+def test_user_email(body: TestEmailRequest, request: Request):
+    """
+    Sends a test email to verify SMTP credentials and settings.
+    """
+    user = get_optional_current_user(request)
+    target_email = body.email or (user["email"] if user and "email" in user else None)
+    result = send_test_email(to_email=target_email)
+    return result
+
