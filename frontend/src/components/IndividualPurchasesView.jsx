@@ -1,7 +1,7 @@
 import { ColorType, LineStyle, createChart } from "lightweight-charts";
 import { useTheme } from "../context/ThemeContext";
 import { getChartColors, applyChartTheme } from "../utils/chartTheme";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import {
   fetchColInflationHistory,
