@@ -446,18 +446,34 @@ export default function FixedIncomeHub() {
         }
       });
 
+      const sortedAccRateHistory = Array.isArray(acc.rateHistory)
+        ? [...acc.rateHistory].sort((a, b) => (a.date || "").localeCompare(b.date || ""))
+        : [];
+
       const getRate = (dStr, balance = 0) => {
         if (acc.type === "crypto") {
           return Number(acc.interestRateEA || 8.0);
         }
 
+        if (sortedAccRateHistory.length > 0) {
+          let activeHistRate = null;
+          for (const rh of sortedAccRateHistory) {
+            if (rh.date && dStr >= rh.date) {
+              activeHistRate = Number(rh.rateEA);
+            }
+          }
+          if (activeHistRate && activeHistRate > 0) {
+            return activeHistRate;
+          }
+        }
+
         if (acc.tieredRates && acc.tieredRates.length > 0) {
           for (const tier of acc.tieredRates) {
             if (balance <= (tier.maxBalance || Infinity)) {
-              return Number(tier.rateEA || 3.0);
+              return Number(tier.rateEA || acc.interestRateEA || 4.0);
             }
           }
-          return Number(acc.tieredRates[acc.tieredRates.length - 1].rateEA || 3.0);
+          return Number(acc.tieredRates[acc.tieredRates.length - 1].rateEA || acc.interestRateEA || 4.0);
         }
 
         let entityRates = historicalRates?.entities?.[acc.entityId]?.savings_rates;
@@ -492,7 +508,7 @@ export default function FixedIncomeHub() {
           }
         }
 
-        return Number(acc.interestRateEA || (acc.currency === "USD" ? 3.0 : 9.30));
+        return Number(acc.interestRateEA || (acc.currency === "USD" ? 4.0 : 9.30));
       };
 
       return {

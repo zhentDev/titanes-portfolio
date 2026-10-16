@@ -61,33 +61,49 @@ export function calculateAccountYield(account, transactions = [], historicalRate
   }
 
   const tieredRates = account.tieredRates || [];
+  const rateHistory = Array.isArray(account.rateHistory)
+    ? [...account.rateHistory].sort((a, b) => (a.date || "").localeCompare(b.date || ""))
+    : [];
 
   const getRateForDateAndBalance = (dateStr, balance = 0) => {
-    // 1. If account is crypto / commodity or has an explicit rateEA, prioritize it!
-    if (account.type === "crypto" || (account.interestRateEA && Number(account.interestRateEA) > 0 && !tieredRates.length)) {
-      return Number(account.interestRateEA);
+    // 1. If account is crypto / commodity, prioritize explicit rateEA
+    if (account.type === "crypto") {
+      return Number(account.interestRateEA || 8.0);
     }
 
-    // 2. Dynamic balance tiers (e.g. Plenti Bolsillo Visible USD tiers)
+    // 2. Account-level chronological rateHistory (e.g., Plenti rate increase to 4.0% E.A.)
+    if (rateHistory.length > 0) {
+      let activeHistRate = null;
+      for (const rh of rateHistory) {
+        if (rh.date && dateStr >= rh.date) {
+          activeHistRate = Number(rh.rateEA);
+        }
+      }
+      if (activeHistRate && activeHistRate > 0) {
+        return activeHistRate;
+      }
+    }
+
+    // 3. Dynamic balance tiers if configured
     if (tieredRates.length > 0 && account.type !== "crypto") {
       for (const tier of tieredRates) {
         if (balance <= (tier.maxBalance || Infinity)) {
-          return Number(tier.rateEA || 3.0);
+          return Number(tier.rateEA || account.interestRateEA || 4.0);
         }
       }
-      return Number(tieredRates[tieredRates.length - 1].rateEA || 3.0);
+      return Number(tieredRates[tieredRates.length - 1].rateEA || account.interestRateEA || 4.0);
     }
 
-    // 3. Historical date brackets for entity (e.g. Nu Colombia)
+    // 4. Historical date brackets for entity (e.g. Nu Colombia)
     if (entityRates && entityRates.length > 0 && account.type !== "crypto") {
       for (const r of entityRates) {
         if (dateStr >= r.from && dateStr <= r.to) {
-          return Number(r.rateEA || account.interestRateEA || (account.currency === "USD" ? 3.0 : 9.30));
+          return Number(r.rateEA || account.interestRateEA || (account.currency === "USD" ? 4.0 : 9.30));
         }
       }
     }
 
-    return Number(account.interestRateEA || (account.currency === "USD" ? 3.0 : 9.30));
+    return Number(account.interestRateEA || (account.currency === "USD" ? 4.0 : 9.30));
   };
 
   // 2. Resolve CDTs linked to this account

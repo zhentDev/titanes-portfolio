@@ -81,6 +81,32 @@ export const useFixedIncomeStore = create(
               : (localState.transactions || []);
           }
 
+          // Normalize Plenti Bolsillo a la vista rate & tiers to 4.0% E.A. if still at legacy 3.0% / 2.0%
+          finalAccounts = finalAccounts.map((acc) => {
+            const isPlenti =
+              acc.id === "acc_1786777955489" ||
+              acc.entityId === "ent_1786777900826" ||
+              acc.entityId === "ent_plenti" ||
+              (acc.currency === "USD" && (acc.name || "").toLowerCase().includes("bolsillo"));
+            if (isPlenti && Number(acc.interestRateEA || 0) < 4.0) {
+              return {
+                ...acc,
+                interestRateEA: 4.0,
+                rateHistory: [
+                  { date: "2026-05-01", rateEA: 3.0 },
+                  { date: "2026-08-01", rateEA: 4.0 },
+                ],
+                tieredRates: [
+                  { maxBalance: 500, rateEA: 4.0, label: "Hasta $500 USD (4.0% EA)" },
+                  { maxBalance: 1000, rateEA: 4.0, label: "$500 a $1,000 USD (4.0% EA)" },
+                  { maxBalance: 5000, rateEA: 4.5, label: "$1,000 a $5,000 USD (4.5% EA)" },
+                  { maxBalance: 9999999, rateEA: 6.0, label: "Más de $5,000 USD (6.0% EA)" },
+                ],
+              };
+            }
+            return acc;
+          });
+
           set({
             entities: finalEntities,
             accounts: finalAccounts,

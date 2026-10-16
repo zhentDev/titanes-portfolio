@@ -341,11 +341,15 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
   const purchaseDates = useMemo(() => {
     const dates = new Set();
     (currentPurchases || []).forEach((p) => {
-      const d = p.purchaseDate || p.date;
+      const d = p.purchaseDate || p.purchase_date || p.date;
+      if (d) dates.add(String(d).split("T")[0]);
+    });
+    (currentSales || []).forEach((s) => {
+      const d = s.purchaseDate || s.purchase_date;
       if (d) dates.add(String(d).split("T")[0]);
     });
     return Array.from(dates).sort();
-  }, [currentPurchases]);
+  }, [currentPurchases, currentSales]);
 
   useEffect(() => {
     if (earliestDate) {
@@ -1259,16 +1263,18 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
       const sortedTimes = valueData.map((d) => d.time);
       const minTime = sortedTimes[0];
       const maxTime = sortedTimes[sortedTimes.length - 1];
+      const minMs = new Date(`${minTime}T00:00:00Z`).getTime() - 4 * 86400000;
+      const maxMs = new Date(`${maxTime}T00:00:00Z`).getTime() + 4 * 86400000;
       const markers = [];
       const usedTimes = new Set();
 
       purchaseDates.forEach((dStr) => {
-        if (dStr < minTime || dStr > maxTime) return;
+        const targetMs = new Date(`${dStr}T00:00:00Z`).getTime();
+        if (Number.isNaN(targetMs) || targetMs < minMs || targetMs > maxMs) return;
         let matchedTime = null;
         if (availableTimes.has(dStr)) {
           matchedTime = dStr;
         } else {
-          const targetMs = new Date(`${dStr}T00:00:00Z`).getTime();
           let closest = null;
           let minDiff = 4 * 86400000;
           for (const t of sortedTimes) {

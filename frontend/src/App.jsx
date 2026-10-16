@@ -486,7 +486,11 @@ export default function App() {
       if (d) dates.add(String(d).split("T")[0]);
     });
     (holdings || []).forEach((h) => {
-      const d = h.purchase_date || h.date;
+      const d = h.purchase_date || h.entry_date || h.date;
+      if (d) dates.add(String(d).split("T")[0]);
+    });
+    (navData?.closed_holdings || []).forEach((h) => {
+      const d = h.purchase_date || h.entry_date || h.date;
       if (d) dates.add(String(d).split("T")[0]);
     });
     return Array.from(dates).sort();

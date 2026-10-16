@@ -216,6 +216,8 @@ export default function FxRateExplorer({
     const sortedTimes = historyList.map((pt) => pt.time);
     const minTime = sortedTimes[0];
     const maxTime = sortedTimes[sortedTimes.length - 1];
+    const minMs = new Date(`${minTime}T00:00:00Z`).getTime() - 4 * 86400000;
+    const maxMs = new Date(`${maxTime}T00:00:00Z`).getTime() + 4 * 86400000;
 
     const markers = [];
     const usedTimes = new Set();
@@ -223,18 +225,18 @@ export default function FxRateExplorer({
     purchaseDates.forEach((rawDate) => {
       if (!rawDate) return;
       const dStr = String(rawDate).split("T")[0];
-      if (dStr < minTime || dStr > maxTime) return;
+      const targetMs = new Date(`${dStr}T00:00:00Z`).getTime();
+      if (isNaN(targetMs) || targetMs < minMs || targetMs > maxMs) return;
 
       let matchedTime = null;
       if (availableTimes.has(dStr)) {
         matchedTime = dStr;
       } else {
-        const targetMs = new Date(`${dStr}T00:00:00Z`).getTime();
         let closest = null;
         let minDiff = 4 * 86400000;
         for (const t of sortedTimes) {
           const diff = Math.abs(new Date(`${t}T00:00:00Z`).getTime() - targetMs);
-          if (diff < minDiff) {
+          if (diff <= minDiff) {
             minDiff = diff;
             closest = t;
           }
@@ -249,7 +251,7 @@ export default function FxRateExplorer({
           position: "inBar",
           color: isLight ? "#d97706" : "#fbbf24",
           shape: "circle",
-          size: 1,
+          size: 1.5,
         });
       }
     });

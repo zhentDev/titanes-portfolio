@@ -642,31 +642,37 @@
       "savings_rates": [
         {
           "from": "2024-01-01",
+          "to": "2026-07-31",
+          "rateEA": 3.0,
+          "notes": "Bolsillo a la vista USD (3.0% E.A.)"
+        },
+        {
+          "from": "2026-08-01",
           "to": "2099-12-31",
           "rateEA": 4.0,
-          "notes": "Bolsillo Visible USD (hasta 4.0% E.A.)"
+          "notes": "Bolsillo a la vista USD (4.0% E.A. vigente)"
         }
       ],
       "tiered_savings_rates": [
         {
           "maxBalance": 500,
-          "rateEA": 2.0,
-          "label": "Hasta $500 USD (2.0% EA)"
+          "rateEA": 4.0,
+          "label": "Hasta $500 USD (4.0% EA)"
         },
         {
           "maxBalance": 1000,
-          "rateEA": 3.0,
-          "label": "$500 a $1,000 USD (3.0% EA)"
+          "rateEA": 4.0,
+          "label": "$500 a $1,000 USD (4.0% EA)"
         },
         {
           "maxBalance": 5000,
-          "rateEA": 3.5,
-          "label": "$1,000 a $5,000 USD (3.5% EA)"
+          "rateEA": 4.5,
+          "label": "$1,000 a $5,000 USD (4.5% EA)"
         },
         {
           "maxBalance": 9999999,
-          "rateEA": 4.0,
-          "label": "Más de $5,000 USD (4.0% EA Máx Bolsillo Visible)"
+          "rateEA": 6.0,
+          "label": "Más de $5,000 USD (6.0% EA)"
         }
       ],
       "cdt_term_rates": [
@@ -691,31 +697,37 @@
       "savings_rates": [
         {
           "from": "2024-01-01",
+          "to": "2026-07-31",
+          "rateEA": 3.0,
+          "notes": "Bolsillo a la vista USD (3.0% E.A.)"
+        },
+        {
+          "from": "2026-08-01",
           "to": "2099-12-31",
           "rateEA": 4.0,
-          "notes": "Bolsillo Visible USD (hasta 4.0% E.A.)"
+          "notes": "Bolsillo a la vista USD (4.0% E.A. vigente)"
         }
       ],
       "tiered_savings_rates": [
         {
           "maxBalance": 500,
-          "rateEA": 2.0,
-          "label": "Hasta $500 USD (2.0% EA)"
+          "rateEA": 4.0,
+          "label": "Hasta $500 USD (4.0% EA)"
         },
         {
           "maxBalance": 1000,
-          "rateEA": 3.0,
-          "label": "$500 a $1,000 USD (3.0% EA)"
+          "rateEA": 4.0,
+          "label": "$500 a $1,000 USD (4.0% EA)"
         },
         {
           "maxBalance": 5000,
-          "rateEA": 3.5,
-          "label": "$1,000 a $5,000 USD (3.5% EA)"
+          "rateEA": 4.5,
+          "label": "$1,000 a $5,000 USD (4.5% EA)"
         },
         {
           "maxBalance": 9999999,
-          "rateEA": 4.0,
-          "label": "Más de $5,000 USD (4.0% EA Máx Bolsillo Visible)"
+          "rateEA": 6.0,
+          "label": "Más de $5,000 USD (6.0% EA)"
         }
       ],
       "cdt_term_rates": [
