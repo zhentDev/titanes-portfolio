@@ -72,8 +72,6 @@ export default function StockAlertModal({
     }
   }, [initialAlert, isOpen, userEmail, defaultProfitTarget, defaultStopLoss]);
 
-  if (!isOpen) return null;
-
   const numTarget = Number(targetValue) || 0;
   const calculatedTriggerPrice = entP > 0 ? entP * (1 + numTarget / 100) : 0;
   const spotDeltaPct = curP > 0 && calculatedTriggerPrice > 0 ? ((calculatedTriggerPrice - curP) / curP) * 100 : 0;
@@ -94,6 +92,8 @@ export default function StockAlertModal({
       return [-5, -8, -10, -15, -20, -25];
     }
   }, [alertType, curRet]);
+
+  if (!isOpen) return null;
 
   const handleSelectProfitTarget = () => {
     setAlertType("PROFIT_TARGET");
