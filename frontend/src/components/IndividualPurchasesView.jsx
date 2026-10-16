@@ -21,7 +21,7 @@ import { useAuthStore } from "../store/authStore";
 import { analyzeInvestmentPlan } from "../utils/investmentPlanAnalyzer";
 import { toastConfirm, toastPrompt } from "../utils/toastAlerts";
 import { getBrokerEquivalenceInfo, getMarketOpenTime, MARKET_REGIONS, translateBrokerTicker } from "../utils/marketHours";
-import { MarketScheduleBadge } from "./Common";
+import { InfoTooltip, MarketScheduleBadge } from "./Common";
 import AffiliateBanner from "./Common/AffiliateBanner";
 import ChangeTickerModal from "./ChangeTickerModal";
 import InflationExplorerModal from "./InflationExplorerModal";
