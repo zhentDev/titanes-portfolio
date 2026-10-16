@@ -101,25 +101,81 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
 
   const handleSaveAlert = async (alertPayload) => {
     try {
-      const saved = await saveStockAlert(alertPayload);
-      setAlerts((prev) => {
-        const filtered = prev.filter((a) => a.id !== saved.id && a.ticker !== saved.ticker);
-        return [...filtered, saved];
-      });
-      toast.success(
-        `Alerta ${saved.alert_type === "STOP_LOSS" ? "Stop Loss" : "Take Profit"} guardada para ${saved.ticker}`,
-        { icon: "🔔" }
-      );
+      const { isParentGroup, ...cleanPayload } = alertPayload;
+      const baseTicker = (cleanPayload.ticker || "").split("::")[0];
+
+      if (isParentGroup) {
+        // Parent group save: save master alert AND replicate to all individual lots of this ticker
+        const matchingLots = currentPurchases.filter((p) => p.ticker === baseTicker);
+        const savedList = [];
+
+        // 1. Save parent alert (keyed by baseTicker)
+        const existingParent = alerts.find((a) => a.ticker === baseTicker);
+        const parentSaved = await saveStockAlert({
+          ...cleanPayload,
+          id: existingParent?.id || undefined,
+          ticker: baseTicker,
+        });
+        savedList.push(parentSaved);
+
+        // 2. Replicate to each individual lot (keyed by `${baseTicker}::${lot.id}`)
+        for (const lot of matchingLots) {
+          const lotKey = `${baseTicker}::${lot.id}`;
+          const existingLotAlert = alerts.find((a) => a.ticker === lotKey);
+          const lotSaved = await saveStockAlert({
+            ...cleanPayload,
+            id: existingLotAlert?.id || undefined,
+            ticker: lotKey,
+          });
+          savedList.push(lotSaved);
+        }
+
+        const savedKeys = new Set(savedList.map((s) => s.ticker));
+        const savedIds = new Set(savedList.map((s) => s.id));
+        setAlerts((prev) => {
+          const filtered = prev.filter((a) => !savedKeys.has(a.ticker) && !savedIds.has(a.id));
+          return [...filtered, ...savedList];
+        });
+
+        toast.success(
+          `Alerta global ${parentSaved.alert_type === "STOP_LOSS" ? "Stop Loss" : "Recuperación / Take Profit"} aplicada a ${baseTicker} y sus ${matchingLots.length} lotes`,
+          { icon: "🌐" }
+        );
+      } else {
+        // Individual lot save: only affects this specific lotKey (`${ticker}::${lot.id}`)
+        const saved = await saveStockAlert(cleanPayload);
+        setAlerts((prev) => {
+          const filtered = prev.filter((a) => a.id !== saved.id && a.ticker !== saved.ticker);
+          return [...filtered, saved];
+        });
+        toast.success(
+          `Alerta individual (${saved.target_value >= 0 ? "+" : ""}${saved.target_value}%) guardada solo para este lote de ${baseTicker}`,
+          { icon: "🎯" }
+        );
+      }
     } catch {
       toast.error("Error al guardar la alerta");
     }
   };
 
-  const handleDeleteAlert = async (alertId) => {
+  const handleDeleteAlert = async (alertId, parentTickerToCascade = null) => {
     try {
-      await deleteStockAlert(alertId);
-      setAlerts((prev) => prev.filter((a) => a.id !== alertId));
-      toast.success("Alerta eliminada correctamente", { icon: "🗑️" });
+      if (parentTickerToCascade) {
+        const baseUpper = parentTickerToCascade.toUpperCase();
+        const toDelete = alerts.filter(
+          (a) => a.id === alertId || a.ticker === baseUpper || a.ticker.startsWith(`${baseUpper}::`)
+        );
+        for (const a of toDelete) {
+          await deleteStockAlert(a.id);
+        }
+        const deletedIds = new Set(toDelete.map((a) => a.id));
+        setAlerts((prev) => prev.filter((a) => !deletedIds.has(a.id)));
+        toast.success(`Alertas eliminadas en todos los lotes de ${baseUpper}`, { icon: "🗑️" });
+      } else {
+        await deleteStockAlert(alertId);
+        setAlerts((prev) => prev.filter((a) => a.id !== alertId));
+        toast.success("Alerta del lote eliminada correctamente", { icon: "🗑️" });
+      }
     } catch {
       toast.error("Error al eliminar la alerta");
     }
@@ -1001,14 +1057,27 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
   const evaluatedAlertsRef = useRef(new Set());
   useEffect(() => {
     if (!groupedLots.length || !alerts.some((a) => a.is_active && !a.triggered_at)) return;
-    const positions = groupedLots.map((g) => ({
-      ticker: g.ticker,
-      entry_price: g.avgOpenPrice,
-      current_price: g.currentPrice,
-      return_pct: g.profitPct,
-      name: g.name || g.ticker,
-      scope_title: `Compras (${portfolio.name || portfolioId})`,
-    }));
+    const positions = [];
+    groupedLots.forEach((g) => {
+      positions.push({
+        ticker: g.ticker,
+        entry_price: g.avgOpenPrice,
+        current_price: g.currentPrice,
+        return_pct: g.profitPct,
+        name: g.name || g.ticker,
+        scope_title: `Posición Consolidada (${portfolio.name || portfolioId})`,
+      });
+      (g.lots || []).forEach((lot) => {
+        positions.push({
+          ticker: `${g.ticker}::${lot.id}`,
+          entry_price: lot.purchasePrice,
+          current_price: lot.currentPrice,
+          return_pct: lot.profitPct,
+          name: `${g.name || g.ticker} (Lote ${lot.date})`,
+          scope_title: `Lote ${lot.date} (${portfolio.name || portfolioId})`,
+        });
+      });
+    });
 
     evaluateStockAlerts({
       scope: "purchase",
@@ -3609,6 +3678,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                                 handleOpenAlertModal(
                                   {
                                     ticker: group.ticker,
+                                    alertKey: group.ticker,
+                                    isParentGroup: true,
+                                    lotLabel: `Posición Consolidada (${group.lots.length} Lotes • Costo Promedio WAP $${group.avgOpenPrice.toFixed(2)})`,
                                     name: group.name,
                                     currentPrice: group.currentPrice,
                                     entryPrice: group.avgOpenPrice,
@@ -3619,10 +3691,10 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                               }
                               title={
                                 alerts.some((a) => a.ticker === group.ticker && a.is_active && !a.triggered_at)
-                                  ? `Alerta activa en posición ${group.ticker}: ${
-                                      alerts.find((a) => a.ticker === group.ticker)?.alert_type === "STOP_LOSS" ? "Stop Loss" : "Take Profit"
+                                  ? `Alerta global activa en ${group.ticker}: ${
+                                      alerts.find((a) => a.ticker === group.ticker)?.alert_type === "STOP_LOSS" ? "Stop Loss" : "Recuperación / Take Profit"
                                     } (${alerts.find((a) => a.ticker === group.ticker)?.target_value >= 0 ? "+" : ""}${alerts.find((a) => a.ticker === group.ticker)?.target_value}%)`
-                                  : `Configurar alerta de venta o stop loss para toda la posición de ${group.ticker}`
+                                  : `Configurar alerta maestra para toda la posición de ${group.ticker} (replica a todos sus lotes)`
                               }
                               style={{
                                 background: alerts.some((a) => a.ticker === group.ticker && a.is_active && !a.triggered_at)
@@ -4196,55 +4268,69 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                               </div>
 
                                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 16 }}>
-                                  <button
-                                    type="button"
-                                    onClick={(e) =>
-                                      handleOpenAlertModal(
-                                        {
-                                          ticker: p.ticker,
-                                          name: p.name || p.ticker,
-                                          currentPrice: p.currentPrice,
-                                          entryPrice: p.purchasePrice,
-                                          returnPct: p.profitPct,
-                                        },
-                                        e
-                                      )
-                                    }
-                                    title={
-                                      alerts.some((a) => a.ticker === p.ticker && a.is_active && !a.triggered_at)
-                                        ? `Alerta activa: ${
-                                            alerts.find((a) => a.ticker === p.ticker)?.alert_type === "STOP_LOSS" ? "Stop Loss" : "Take Profit"
-                                          } (${alerts.find((a) => a.ticker === p.ticker)?.target_value >= 0 ? "+" : ""}${alerts.find((a) => a.ticker === p.ticker)?.target_value}%)`
-                                        : `Configurar alerta de venta o stop loss para este lote de ${p.ticker}`
-                                    }
-                                    style={{
-                                      background: alerts.some((a) => a.ticker === p.ticker && a.is_active && !a.triggered_at)
-                                        ? (theme === "light" ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.2)")
-                                        : "transparent",
-                                      border: alerts.some((a) => a.ticker === p.ticker && a.is_active && !a.triggered_at)
-                                        ? "1px solid rgba(16, 185, 129, 0.4)"
-                                        : `1px solid ${theme === "light" ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.1)"}`,
-                                      borderRadius: "6px",
-                                      padding: "3px 8px",
-                                      fontSize: "0.75rem",
-                                      cursor: "pointer",
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      gap: 4,
-                                      color: alerts.some((a) => a.ticker === p.ticker && a.is_active && !a.triggered_at)
-                                        ? "#10b981"
-                                        : "var(--text-muted)",
-                                      transition: "all 0.15s ease",
-                                    }}
-                                  >
-                                    <span>🔔</span>
-                                    {alerts.some((a) => a.ticker === p.ticker && a.is_active && !a.triggered_at) && (
-                                      <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#10b981" }}>
-                                        {alerts.find((a) => a.ticker === p.ticker)?.target_value >= 0 ? "+" : ""}
-                                        {alerts.find((a) => a.ticker === p.ticker)?.target_value}%
-                                      </span>
-                                    )}
-                                  </button>
+                                  {(() => {
+                                    const lotKey = `${p.ticker}::${p.id}`;
+                                    const lotAlert = alerts.find(
+                                      (a) => a.ticker === lotKey && a.is_active && !a.triggered_at
+                                    );
+                                    const hasLotAlert = Boolean(lotAlert);
+                                    const isStop = lotAlert?.alert_type === "STOP_LOSS";
+                                    const badgeColor = isStop ? "#ef4444" : "#10b981";
+                                    return (
+                                      <button
+                                        type="button"
+                                        onClick={(e) =>
+                                          handleOpenAlertModal(
+                                            {
+                                              ticker: p.ticker,
+                                              alertKey: lotKey,
+                                              isParentGroup: false,
+                                              lotLabel: `Lote Individual (${p.date}${p.purchaseTime ? ` ${p.purchaseTime}` : ""} • Vol: ${Number(p.shares || 0).toFixed(4)} uds • P₀: $${Number(p.purchasePrice || 0).toFixed(2)})`,
+                                              name: p.name || p.ticker,
+                                              currentPrice: p.currentPrice,
+                                              entryPrice: p.purchasePrice,
+                                              returnPct: p.profitPct,
+                                            },
+                                            e
+                                          )
+                                        }
+                                        title={
+                                          hasLotAlert
+                                            ? `Alerta activa en este lote (${p.date}): ${
+                                                isStop ? "Stop Loss" : "Recuperación / Take Profit"
+                                              } (${lotAlert.target_value >= 0 ? "+" : ""}${lotAlert.target_value}%)`
+                                            : `Configurar alerta individual únicamente para este lote de ${p.ticker} (${p.date})`
+                                        }
+                                        style={{
+                                          background: hasLotAlert
+                                            ? isStop
+                                              ? theme === "light" ? "rgba(239, 68, 68, 0.14)" : "rgba(239, 68, 68, 0.2)"
+                                              : theme === "light" ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.2)"
+                                            : "transparent",
+                                          border: hasLotAlert
+                                            ? `1px solid ${isStop ? "rgba(239, 68, 68, 0.45)" : "rgba(16, 185, 129, 0.45)"}`
+                                            : `1px solid ${theme === "light" ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.1)"}`,
+                                          borderRadius: "6px",
+                                          padding: "3px 8px",
+                                          fontSize: "0.75rem",
+                                          cursor: "pointer",
+                                          display: "inline-flex",
+                                          alignItems: "center",
+                                          gap: 4,
+                                          color: hasLotAlert ? badgeColor : "var(--text-muted)",
+                                          transition: "all 0.15s ease",
+                                        }}
+                                      >
+                                        <span>🔔</span>
+                                        {hasLotAlert && (
+                                          <span style={{ fontSize: "0.68rem", fontWeight: 700, color: badgeColor }}>
+                                            {lotAlert.target_value >= 0 ? "+" : ""}
+                                            {lotAlert.target_value}%
+                                          </span>
+                                        )}
+                                      </button>
+                                    );
+                                  })()}
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -5145,10 +5231,15 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
           }}
           initialAlert={
             selectedAlertItem
-              ? alerts.find((a) => a.ticker === selectedAlertItem.ticker)
+              ? alerts.find(
+                  (a) => a.ticker === (selectedAlertItem.alertKey || selectedAlertItem.ticker)
+                )
               : null
           }
           ticker={selectedAlertItem?.ticker || ""}
+          alertKey={selectedAlertItem?.alertKey || selectedAlertItem?.ticker || ""}
+          lotLabel={selectedAlertItem?.lotLabel || null}
+          isParentGroup={Boolean(selectedAlertItem?.isParentGroup)}
           companyName={selectedAlertItem?.name || selectedAlertItem?.ticker || ""}
           currentPrice={selectedAlertItem?.currentPrice || 0}
           entryPrice={selectedAlertItem?.entryPrice || 0}

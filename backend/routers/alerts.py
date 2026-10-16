@@ -122,12 +122,14 @@ def check_and_evaluate_alerts(body: CheckAlertsRequest, request: Request):
             # 1. Update DB
             trigger_stock_alert_db(alert["id"], current_p)
 
+            clean_ticker = ticker.split("::")[0]
+
             # 2. Send email notification if configured
             email_sent = False
             if alert.get("notify_email") and recipient:
                 email_sent = send_sell_alert_email(
                     to_email=recipient,
-                    ticker=ticker,
+                    ticker=clean_ticker,
                     company_name=name,
                     alert_type=alert_type,
                     target_value=target_val,
@@ -139,7 +141,8 @@ def check_and_evaluate_alerts(body: CheckAlertsRequest, request: Request):
 
             triggered_item = {
                 "alert_id": alert["id"],
-                "ticker": ticker,
+                "ticker": clean_ticker,
+                "alert_key": ticker,
                 "company_name": name,
                 "alert_type": alert_type,
                 "target_value": target_val,
