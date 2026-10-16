@@ -2526,8 +2526,8 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Period selector (shown when viewing portfolio or fx) */}
-              {(mainChartViewTab === "portfolio" || mainChartViewTab === "fx") && (
+              {/* Period selector (shown when viewing portfolio) */}
+              {mainChartViewTab === "portfolio" && (
                 <div className="period-selector fade-up" style={{ margin: 0 }}>
                   {PERIODS.map((p) => {
                     const isFx = mainChartViewTab === "fx";

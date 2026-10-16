@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useTheme } from "../context/ThemeContext";
+import InfoTooltip from "./Common/InfoTooltip";
 
 export default function StockAlertModal({
   isOpen,
@@ -7,7 +8,7 @@ export default function StockAlertModal({
   initialAlert = null,
   ticker = "",
   alertKey = "", // e.g. "IPLT.L" (parent) or "IPLT.L::lot_123" (individual lot)
-  lotLabel = null, // e.g. "Lote Individual (2026-01-29 • 2.6464 uds)" or "Posición Consolidada (4 Lotes)"
+  lotLabel = null,
   isParentGroup = false,
   companyName = "",
   currentPrice = 0,
@@ -28,14 +29,13 @@ export default function StockAlertModal({
 
   // Smart default values for each mode based on current return
   const defaultProfitTarget = useMemo(() => {
-    if (curRet < -15) return -20.0; // Recovery target when deep in drawdown
+    if (curRet < -15) return -20.0;
     if (curRet < 0) return 5.0;
     return Math.ceil((curRet + 10) / 5) * 5;
   }, [curRet]);
 
   const defaultStopLoss = useMemo(() => {
     if (curRet < 0) {
-      // Position is already negative (e.g. -40.03%): default Stop Loss is 5% further down (e.g. -45%)
       return Math.floor(curRet - 5);
     }
     return -10.0;
@@ -84,7 +84,6 @@ export default function StockAlertModal({
       if (curRet < -5) return [-10, -5, 0, 5, 10, 15, 20];
       return [5, 10, 15, 20, 25, 35, 50];
     } else {
-      // STOP_LOSS mode: presets must be below currentReturnPct so they represent a downward stop!
       if (curRet < -5) {
         const base = Math.floor(curRet);
         return [base - 3, base - 5, base - 8, base - 10, base - 15, base - 20];
@@ -97,7 +96,6 @@ export default function StockAlertModal({
 
   const handleSelectProfitTarget = () => {
     setAlertType("PROFIT_TARGET");
-    // If current targetValue is below or equal to currentReturnPct, switch to a sensible recovery/profit target above curRet
     if (Number(targetValue) <= curRet) {
       setTargetValue(defaultProfitTarget);
     }
@@ -105,7 +103,6 @@ export default function StockAlertModal({
 
   const handleSelectStopLoss = () => {
     setAlertType("STOP_LOSS");
-    // If current targetValue is above or equal to currentReturnPct, switch to a sensible stop-loss below curRet
     if (Number(targetValue) >= curRet) {
       setTargetValue(defaultStopLoss);
     }
@@ -162,7 +159,7 @@ export default function StockAlertModal({
         className="card"
         style={{
           width: "100%",
-          maxWidth: 520,
+          maxWidth: 480,
           maxHeight: "92vh",
           overflowY: "auto",
           background: isLight ? "#ffffff" : "var(--bg-surface)",
@@ -179,23 +176,23 @@ export default function StockAlertModal({
             borderBottom: `1px solid ${isLight ? "rgba(0,0,0,0.08)" : "var(--border)"}`,
             display: "flex",
             justifyContent: "space-between",
-            alignItems: "flex-start",
+            alignItems: "center",
             background: isLight ? "rgba(2, 132, 199, 0.04)" : "rgba(0, 229, 255, 0.03)",
           }}
         >
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-            <span style={{ fontSize: "1.35rem", lineHeight: 1.1 }}>🔔</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: "1.35rem" }}>🔔</span>
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <h3 style={{ margin: 0, fontSize: "1.02rem", fontWeight: 800, letterSpacing: "0.02em" }}>
-                  ORDEN CONDICIONAL DE ALERTA • {ticker}
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800 }}>
+                  ALERTA DE VENTA • {ticker}
                 </h3>
                 <span
                   style={{
-                    fontSize: "0.65rem",
+                    fontSize: "0.62rem",
                     fontWeight: 800,
-                    padding: "2px 7px",
-                    borderRadius: 5,
+                    padding: "2px 6px",
+                    borderRadius: 4,
                     background: isParentGroup
                       ? isLight ? "rgba(245, 158, 11, 0.14)" : "rgba(245, 158, 11, 0.2)"
                       : isLight ? "rgba(2, 132, 199, 0.12)" : "rgba(0, 229, 255, 0.15)",
@@ -205,10 +202,24 @@ export default function StockAlertModal({
                     border: `1px solid ${isParentGroup ? "rgba(245, 158, 11, 0.35)" : "rgba(2, 132, 199, 0.3)"}`,
                   }}
                 >
-                  {isParentGroup ? "🌐 POSICIÓN GLOBAL (REPLICA A TODOS LOS LOTES)" : "🎯 LOTE INDIVIDUAL AISLADO"}
+                  {isParentGroup ? "🌐 GLOBAL" : "🎯 LOTE AISLADO"}
                 </span>
+                <InfoTooltip
+                  position="bottom"
+                  customContent={{
+                    title: isParentGroup ? "Alerta Maestra Global" : "Alerta de Lote Individual",
+                    tag: isParentGroup ? "CASCADA MULTI-LOTE" : "EJECUCIÓN AISLADA",
+                    tagColor: isParentGroup ? "#f59e0b" : "#00e5ff",
+                    explanation: isParentGroup
+                      ? `Esta alerta se configura a nivel de la posición consolidada de ${ticker} (Costo Promedio Ponderado WAP = $${entP.toFixed(2)}) y replica automáticamente el umbral a todos sus lotes abiertos.`
+                      : `Esta alerta monitorea exclusivamente este lote específico de compra (${lotLabel || ticker}) con su precio de entrada individual P₀ = $${entP.toFixed(2)}, sin afectar ni replicarse a los demás lotes.`,
+                    rule: isParentGroup
+                      ? "Usa la campana superior de la tarjeta agrupada cuando quieras fijar una regla única para toda la posición."
+                      : "Usa la campana dentro de cada fila de lote para definir objetivos de salida independientes por fecha de compra.",
+                  }}
+                />
               </div>
-              <div style={{ fontSize: "0.73rem", color: "var(--text-muted)", marginTop: 3 }}>
+              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 2 }}>
                 {lotLabel || companyName || ticker}
               </div>
             </div>
@@ -228,10 +239,10 @@ export default function StockAlertModal({
           </button>
         </div>
 
-        {/* Technical Position Telemetry Strip */}
+        {/* Position Telemetry Strip with Hover InfoTooltips */}
         <div
           style={{
-            padding: "14px 20px",
+            padding: "12px 20px",
             background: isLight ? "rgba(15, 23, 42, 0.025)" : "rgba(255, 255, 255, 0.02)",
             borderBottom: `1px solid ${isLight ? "rgba(0,0,0,0.06)" : "var(--border)"}`,
             display: "grid",
@@ -239,39 +250,44 @@ export default function StockAlertModal({
             gap: 10,
           }}
         >
-          <div
-            style={{
-              padding: "8px 10px",
-              borderRadius: 8,
-              background: isLight ? "#ffffff" : "rgba(0,0,0,0.2)",
-              border: `1px solid ${isLight ? "rgba(0,0,0,0.07)" : "rgba(255,255,255,0.06)"}`,
-            }}
-          >
-            <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
-              {isParentGroup ? "Costo Promedio (WAP)" : "Precio Apertura (P₀)"}
+          <div>
+            <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 4 }}>
+              <span>{isParentGroup ? "Costo WAP:" : "Precio Entrada:"}</span>
+              <InfoTooltip
+                position="bottom"
+                customContent={{
+                  title: isParentGroup ? "Costo Promedio Ponderado (WAP)" : "Precio Base de Entrada (P₀)",
+                  tag: "COST BASIS",
+                  tagColor: "#38bdf8",
+                  explanation: isParentGroup
+                    ? "Representa el precio de compra promedio ponderado por volumen de todos tus lotes abiertos en este activo."
+                    : "Es la cotización exacta de apertura/ejecución a la que adquiriste este lote específico.",
+                  rule: `P₀ = $${entP.toFixed(2)} sirve como denominador invariante para calcular el retorno porcentual y el Precio Gatillo.`,
+                }}
+              />
             </div>
-            <div style={{ fontSize: "0.95rem", fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", marginTop: 2 }}>
+            <div style={{ fontSize: "0.92rem", fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", marginTop: 2 }}>
               ${entP.toFixed(2)}
-            </div>
-            <div style={{ fontSize: "0.6rem", color: "var(--text-muted)" }}>
-              Base de cálculo Cost Basis
             </div>
           </div>
 
-          <div
-            style={{
-              padding: "8px 10px",
-              borderRadius: 8,
-              background: isLight ? "#ffffff" : "rgba(0,0,0,0.2)",
-              border: `1px solid ${isLight ? "rgba(0,0,0,0.07)" : "rgba(255,255,255,0.06)"}`,
-            }}
-          >
-            <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
-              Cotización Spot (P_actual)
+          <div>
+            <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 4 }}>
+              <span>Precio Spot:</span>
+              <InfoTooltip
+                position="bottom"
+                customContent={{
+                  title: "Cotización Spot (Mark-to-Market)",
+                  tag: "TIEMPO REAL",
+                  tagColor: "#00e5ff",
+                  explanation: "Último precio negociado en bolsa para el activo subyacente, actualizado continuamente durante la sesión de mercado.",
+                  rule: `Se compara cada 60s contra tu Precio Gatillo ($${calculatedTriggerPrice.toFixed(2)}) para disparar la orden de notificación.`,
+                }}
+              />
             </div>
             <div
               style={{
-                fontSize: "0.95rem",
+                fontSize: "0.92rem",
                 fontWeight: 800,
                 fontFamily: "'JetBrains Mono', monospace",
                 color: "var(--accent-primary)",
@@ -280,25 +296,25 @@ export default function StockAlertModal({
             >
               ${curP.toFixed(2)}
             </div>
-            <div style={{ fontSize: "0.6rem", color: "var(--text-muted)" }}>
-              Precio Mark-to-Market
-            </div>
           </div>
 
-          <div
-            style={{
-              padding: "8px 10px",
-              borderRadius: 8,
-              background: isLight ? "#ffffff" : "rgba(0,0,0,0.2)",
-              border: `1px solid ${isLight ? "rgba(0,0,0,0.07)" : "rgba(255,255,255,0.06)"}`,
-            }}
-          >
-            <div style={{ fontSize: "0.62rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
-              Retorno Latente (ROI)
+          <div>
+            <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 4 }}>
+              <span>ROI Latente:</span>
+              <InfoTooltip
+                position="bottom"
+                customContent={{
+                  title: "Rentabilidad Latente Acumulada (ROI)",
+                  tag: curRet >= 0 ? "PLUSVALÍA" : "DRAWDOWN",
+                  tagColor: curRet >= 0 ? "#10b981" : "#f43f5e",
+                  explanation: `Variación porcentual no realizada entre tu Precio de Entrada ($${entP.toFixed(2)}) y la Cotización Spot actual ($${curP.toFixed(2)}).`,
+                  rule: `Fórmula: ROI = [(P_actual − P₀) / P₀] × 100 = ${curRet >= 0 ? "+" : ""}${curRet.toFixed(2)}%.`,
+                }}
+              />
             </div>
             <div
               style={{
-                fontSize: "0.95rem",
+                fontSize: "0.92rem",
                 fontWeight: 800,
                 fontFamily: "'JetBrains Mono', monospace",
                 color: curRet >= 0 ? "#10b981" : "#f43f5e",
@@ -307,14 +323,11 @@ export default function StockAlertModal({
             >
               {curRet >= 0 ? "+" : ""}{curRet.toFixed(2)}%
             </div>
-            <div style={{ fontSize: "0.6rem", color: "var(--text-muted)" }}>
-              {curRet >= 0 ? "Plusvalía Abierta" : "Drawdown Actual"}
-            </div>
           </div>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSave} style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 15 }}>
+        <form onSubmit={handleSave} style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
           {/* Active Switch */}
           <div
             style={{
@@ -334,13 +347,20 @@ export default function StockAlertModal({
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: "1rem" }}>{isActive ? "⚡" : "⏸️"}</span>
               <div>
-                <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>
-                  {isActive ? "Centinela Activo (Polling Intradía 60s)" : "Centinela en Pausa"}
+                <div style={{ fontSize: "0.84rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+                  <span>{isActive ? "Alerta Activada" : "Alerta Pausada"}</span>
+                  <InfoTooltip
+                    customContent={{
+                      title: "Motor Centinela de Cotizaciones",
+                      tag: "POLLING 60S",
+                      tagColor: "#10b981",
+                      explanation: "Evalúa automáticamente en segundo plano cada actualización de precios en vivo contra el umbral configurado.",
+                      rule: "Al cumplirse la condición lógica, marca la alerta como ejecutada, despliega el banner en pantalla y envía el correo electrónico.",
+                    }}
+                  />
                 </div>
-                <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
-                  {isParentGroup
-                    ? "Al guardar aquí, este disparador se asignará a todos los lotes de este activo"
-                    : "Este disparador evalúa únicamente este lote de compra sin alterar los demás"}
+                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                  {isActive ? "Monitoreando cotizaciones continuamente" : "No emitirá avisos mientras esté pausada"}
                 </div>
               </div>
             </div>
@@ -380,13 +400,25 @@ export default function StockAlertModal({
 
           {/* Alert Type: Profit Target / Recovery vs Stop Loss */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <label style={{ fontSize: "0.72rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase" }}>
-                1. Tipo de Disparador (Condición Lógica de Cruce)
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <label style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                Tipo de Disparador
               </label>
-              <span style={{ fontSize: "0.66rem", fontFamily: "'JetBrains Mono', monospace", color: "var(--text-muted)" }}>
-                {alertType === "PROFIT_TARGET" ? "Condición: ROI_actual ≥ ROI_obj" : "Condición: ROI_actual ≤ ROI_obj"}
-              </span>
+              <InfoTooltip
+                customContent={{
+                  title: "Condición Lógica de Cruce (Trigger Type)",
+                  tag: alertType === "PROFIT_TARGET" ? "CRUCE ALCISTA ↑" : "CRUCE BAJISTA ↓",
+                  tagColor: alertType === "PROFIT_TARGET" ? "#10b981" : "#ef4444",
+                  explanation:
+                    alertType === "PROFIT_TARGET"
+                      ? `Evalúa la desigualdad alcista (ROI_actual ≥ ${numTarget}%). Ideal tanto para toma de ganancias como para recuperación parcial cuando el lote está en pérdida (${curRet.toFixed(2)}%) y deseas vender cuando suba hasta ${numTarget}% (~$${calculatedTriggerPrice.toFixed(2)}).`
+                      : `Evalúa la desigualdad bajista (ROI_actual ≤ ${numTarget}%). Actúa como red de protección si la posición cae desde su nivel actual (${curRet.toFixed(2)}%) hasta perforar ${numTarget}% (~$${calculatedTriggerPrice.toFixed(2)}).`,
+                  rule:
+                    alertType === "PROFIT_TARGET"
+                      ? `Requiere un umbral superior al retorno actual (> ${curRet.toFixed(2)}%).`
+                      : `Requiere un umbral inferior al retorno actual (< ${curRet.toFixed(2)}%).`,
+                }}
+              />
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -394,8 +426,8 @@ export default function StockAlertModal({
                 type="button"
                 onClick={handleSelectProfitTarget}
                 style={{
-                  padding: "10px 12px",
-                  borderRadius: 9,
+                  padding: "10px",
+                  borderRadius: 8,
                   border: alertType === "PROFIT_TARGET"
                     ? "1.5px solid #10b981"
                     : `1px solid ${isLight ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.1)"}`,
@@ -403,29 +435,25 @@ export default function StockAlertModal({
                     ? isLight ? "rgba(16, 185, 129, 0.12)" : "rgba(16, 185, 129, 0.18)"
                     : isLight ? "#ffffff" : "rgba(255,255,255,0.03)",
                   color: alertType === "PROFIT_TARGET" ? (isLight ? "#047857" : "#34d399") : "var(--text-secondary)",
+                  fontWeight: 700,
+                  fontSize: "0.82rem",
                   cursor: "pointer",
                   display: "flex",
-                  flexDirection: "column",
-                  alignItems: "flex-start",
-                  gap: 2,
-                  textAlign: "left",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 800, fontSize: "0.8rem" }}>
-                  <span>🎯</span>
-                  <span>{curRet < 0 ? "Recuperación / Take Profit" : "Take Profit (Ganancia)"}</span>
-                </div>
-                <span style={{ fontSize: "0.64rem", opacity: 0.85, fontWeight: 500 }}>
-                  Dispara cuando el precio SUBA desde ${curP.toFixed(2)} (Cruce Alcista ↑)
-                </span>
+                <span>🎯</span>
+                <span>{curRet < 0 ? "Objetivo Recuperación" : "Objetivo Ganancia"}</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleSelectStopLoss}
                 style={{
-                  padding: "10px 12px",
-                  borderRadius: 9,
+                  padding: "10px",
+                  borderRadius: 8,
                   border: alertType === "STOP_LOSS"
                     ? "1.5px solid #ef4444"
                     : `1px solid ${isLight ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.1)"}`,
@@ -433,31 +461,38 @@ export default function StockAlertModal({
                     ? isLight ? "rgba(239, 68, 68, 0.12)" : "rgba(239, 68, 68, 0.18)"
                     : isLight ? "#ffffff" : "rgba(255,255,255,0.03)",
                   color: alertType === "STOP_LOSS" ? (isLight ? "#b91c1c" : "#f87171") : "var(--text-secondary)",
+                  fontWeight: 700,
+                  fontSize: "0.82rem",
                   cursor: "pointer",
                   display: "flex",
-                  flexDirection: "column",
-                  alignItems: "flex-start",
-                  gap: 2,
-                  textAlign: "left",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 800, fontSize: "0.8rem" }}>
-                  <span>🛑</span>
-                  <span>Stop Loss (Protección Caída)</span>
-                </div>
-                <span style={{ fontSize: "0.64rem", opacity: 0.85, fontWeight: 500 }}>
-                  Dispara si el precio CAE aún más desde ${curP.toFixed(2)} (Cruce Bajista ↓)
-                </span>
+                <span>🛑</span>
+                <span>Stop Loss (Caída)</span>
               </button>
             </div>
           </div>
 
-          {/* Target Value Input + Technical Trigger Metrics */}
+          {/* Target Value Input */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 4 }}>
-              <label style={{ fontSize: "0.72rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase" }}>
-                2. Umbral de Rentabilidad Objetivo (ROI_obj sobre P₀)
-              </label>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <label style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                  Rentabilidad Disparadora (%)
+                </label>
+                <InfoTooltip
+                  customContent={{
+                    title: "Cálculo del Precio Gatillo (P_trigger)",
+                    tag: "FÓRMULA EXACTA",
+                    tagColor: "#38bdf8",
+                    explanation: `Determina la cotización exacta a la cual debe llegar ${ticker} para activar tu alerta, tomando como base tu precio de entrada P₀ ($${entP.toFixed(2)}).`,
+                    rule: `P_trigger = $${entP.toFixed(2)} × (1 + ${numTarget}% / 100) = $${calculatedTriggerPrice.toFixed(2)} USD. Requiere una variación Spot adicional de ${spotDeltaPct >= 0 ? "+" : ""}${spotDeltaPct.toFixed(2)}% (${spotDeltaUsd >= 0 ? "+" : ""}$${spotDeltaUsd.toFixed(2)}) desde los $${curP.toFixed(2)} actuales.`,
+                  }}
+                />
+              </div>
               {calculatedTriggerPrice > 0 && (
                 <span
                   style={{
@@ -467,7 +502,7 @@ export default function StockAlertModal({
                     fontFamily: "'JetBrains Mono', monospace",
                   }}
                 >
-                  Precio Gatillo (P_trigger): ${calculatedTriggerPrice.toFixed(2)}
+                  Dispara a ~${calculatedTriggerPrice.toFixed(2)}
                 </span>
               )}
             </div>
@@ -515,15 +550,12 @@ export default function StockAlertModal({
                   marginLeft: 8,
                 }}
               >
-                Δ Spot: {spotDeltaPct >= 0 ? "+" : ""}{spotDeltaPct.toFixed(2)}% ({spotDeltaUsd >= 0 ? "+" : ""}${spotDeltaUsd.toFixed(2)})
+                Δ Spot: {spotDeltaPct >= 0 ? "+" : ""}{spotDeltaPct.toFixed(1)}%
               </span>
             </div>
 
             {/* Quick Preset Buttons */}
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
-              <span style={{ fontSize: "0.66rem", color: "var(--text-muted)", fontWeight: 600 }}>
-                {alertType === "PROFIT_TARGET" ? "Niveles de Subida:" : "Niveles de Corte (Stop):"}
-              </span>
               {activePresets.map((preset) => (
                 <button
                   key={preset}
@@ -563,82 +595,41 @@ export default function StockAlertModal({
               ))}
             </div>
 
-            {/* Technical Diagnostic & Execution Logic Box */}
-            <div
-              style={{
-                marginTop: 4,
-                padding: "10px 12px",
-                borderRadius: 8,
-                fontSize: "0.73rem",
-                lineHeight: 1.45,
-                background: isInvalidDirection
-                  ? isLight ? "rgba(245, 158, 11, 0.1)" : "rgba(245, 158, 11, 0.12)"
-                  : alertType === "PROFIT_TARGET"
-                    ? isLight ? "rgba(16, 185, 129, 0.08)" : "rgba(16, 185, 129, 0.1)"
-                    : isLight ? "rgba(239, 68, 68, 0.08)" : "rgba(239, 68, 68, 0.1)",
-                border: `1px solid ${
-                  isInvalidDirection
-                    ? "rgba(245, 158, 11, 0.4)"
-                    : alertType === "PROFIT_TARGET"
-                      ? "rgba(16, 185, 129, 0.3)"
-                      : "rgba(239, 68, 68, 0.3)"
-                }`,
-                color: "var(--text-secondary)",
-              }}
-            >
-              {alertType === "PROFIT_TARGET" ? (
-                numTarget <= curRet ? (
-                  <>
-                    ⚠️ <strong>Atención Técnica (Umbral ya superado):</strong> El objetivo{" "}
-                    <strong>{numTarget}%</strong> es menor o igual a tu retorno actual (<strong>{curRet.toFixed(2)}%</strong>).
-                    Para que actúe como alerta de subida/recuperación, elige un porcentaje <strong>mayor a {curRet.toFixed(2)}%</strong> (ej. <strong>{defaultProfitTarget}%</strong>).
-                  </>
-                ) : (
-                  <>
-                    <div>
-                      📈 <strong>Modo Recuperación / Take Profit (Cruce Alcista):</strong> Se activará cuando la cotización Spot suba un{" "}
-                      <strong>+{spotDeltaPct.toFixed(2)}%</strong> adicional desde <strong>${curP.toFixed(2)}</strong> hasta tocar{" "}
-                      <strong>${calculatedTriggerPrice.toFixed(2)}</strong>.
-                    </div>
-                    <div style={{ fontSize: "0.66rem", color: "var(--text-muted)", marginTop: 4, fontFamily: "'JetBrains Mono', monospace" }}>
-                      Fórmula: P_trigger = P₀ (${entP.toFixed(2)}) × [1 + ({numTarget}% / 100)] = ${calculatedTriggerPrice.toFixed(2)} • Dispara si ROI ≥ {numTarget}%
-                    </div>
-                  </>
-                )
-              ) : numTarget >= curRet ? (
-                <>
-                  ⚠️ <strong>Atención Técnica (Stop Loss por encima del precio actual):</strong> Tu retorno actual ya es{" "}
-                  <strong>{curRet.toFixed(2)}%</strong> (${curP.toFixed(2)}), por lo que un Stop Loss en{" "}
-                  <strong>{numTarget}%</strong> (${calculatedTriggerPrice.toFixed(2)}) se dispararía de inmediato.
-                  Si quieres protegerte de una caída mayor, usa un nivel <strong>menor a {curRet.toFixed(2)}%</strong> (ej.{" "}
-                  <strong
-                    style={{ textDecoration: "underline", cursor: "pointer" }}
-                    onClick={() => setTargetValue(defaultStopLoss)}
-                  >
-                    {defaultStopLoss}%
-                  </strong>
-                  ). Si buscas que te avise cuando suba a {numTarget}%, selecciona <strong>🎯 Recuperación / Take Profit</strong>.
-                </>
-              ) : (
-                <>
-                  <div>
-                    🛑 <strong>Modo Stop Loss / Control de Drawdown (Cruce Bajista):</strong> Se activará si la cotización Spot cae un{" "}
-                    <strong>{spotDeltaPct.toFixed(2)}%</strong> adicional desde <strong>${curP.toFixed(2)}</strong> hasta tocar{" "}
-                    <strong>${calculatedTriggerPrice.toFixed(2)}</strong> o menos.
-                  </div>
-                  <div style={{ fontSize: "0.66rem", color: "var(--text-muted)", marginTop: 4, fontFamily: "'JetBrains Mono', monospace" }}>
-                    Fórmula: P_trigger = P₀ (${entP.toFixed(2)}) × [1 + ({numTarget}% / 100)] = ${calculatedTriggerPrice.toFixed(2)} • Dispara si ROI ≤ {numTarget}%
-                  </div>
-                </>
-              )}
-            </div>
+            {isInvalidDirection && (
+              <div
+                style={{
+                  marginTop: 2,
+                  padding: "6px 10px",
+                  borderRadius: 6,
+                  fontSize: "0.72rem",
+                  background: isLight ? "rgba(245, 158, 11, 0.1)" : "rgba(245, 158, 11, 0.12)",
+                  border: "1px solid rgba(245, 158, 11, 0.4)",
+                  color: isLight ? "#b45309" : "#fbbf24",
+                }}
+              >
+                ⚠️ {alertType === "PROFIT_TARGET"
+                  ? `Elige un objetivo mayor a tu retorno actual (${curRet.toFixed(2)}%).`
+                  : `Elige un Stop Loss menor a tu retorno actual (${curRet.toFixed(2)}%).`}
+              </div>
+            )}
           </div>
 
           {/* Notification Channels */}
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 2 }}>
-            <label style={{ fontSize: "0.72rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase" }}>
-              3. Canales de Despacho (Webhook In-App & SMTP)
-            </label>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <label style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                Canales de Notificación
+              </label>
+              <InfoTooltip
+                customContent={{
+                  title: "Despacho Multicanal (In-App & SMTP)",
+                  tag: "ALERTA AUTOMÁTICA",
+                  tagColor: "#8b5cf6",
+                  explanation: "Define por qué medios recibirás el aviso apenas la cotización cruce el Precio Gatillo.",
+                  rule: "El reporte por correo incluye el desglose técnico de Precio de Entrada, Precio Spot, ROI alcanzado y lote correspondiente.",
+                }}
+              />
+            </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: "0.8rem" }}>
@@ -648,7 +639,7 @@ export default function StockAlertModal({
                   onChange={(e) => setNotifyApp(e.target.checked)}
                   style={{ accentColor: "var(--accent-primary)", width: 16, height: 16 }}
                 />
-                <span>Notificación emergente en terminal (In-App Toast Banner)</span>
+                <span>Notificación estética en la aplicación (In-App Banner)</span>
               </label>
 
               <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: "0.8rem" }}>
@@ -658,7 +649,7 @@ export default function StockAlertModal({
                   onChange={(e) => setNotifyEmail(e.target.checked)}
                   style={{ accentColor: "var(--accent-primary)", width: 16, height: 16 }}
                 />
-                <span>Despacho de reporte técnico al correo electrónico (SMTP)</span>
+                <span>Enviar aviso al correo electrónico registrado</span>
               </label>
 
               {notifyEmail && (
@@ -752,4 +743,5 @@ export default function StockAlertModal({
     </div>
   );
 }
+
 

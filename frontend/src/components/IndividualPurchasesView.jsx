@@ -769,8 +769,29 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
     });
   };
 
+  // Helper to resolve closest trading day price for S&P 500 or NASDAQ
+  const getClosestIndexPrice = useCallback(
+    (dateStr, indexName) => {
+      if (!dateStr || !indicesHistory || Object.keys(indicesHistory).length === 0) return null;
+      const d = new Date(dateStr);
+      for (let i = 0; i < 10; i++) {
+        const str = d.toISOString().split("T")[0];
+        if (indicesHistory[str] && indicesHistory[str][indexName]) {
+          return indicesHistory[str][indexName];
+        }
+        d.setDate(d.getDate() - 1);
+      }
+      return null;
+    },
+    [indicesHistory],
+  );
+
   // Calculations for ETF/ETC and Stock lots
   const lotDataList = useMemo(() => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    const currentSp500 = getClosestIndexPrice(todayStr, "SP500");
+    const currentNasdaq = getClosestIndexPrice(todayStr, "NASDAQ");
+
     return currentPurchases.map((p) => {
       const invested = (p.shares && p.purchasePrice) ? p.shares * p.purchasePrice : (p.investedAmount ?? 0);
       const commission = Number(p.commissionAmount || 0);
@@ -784,6 +805,25 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
       const totalCostBasis = invested + commission;
       const profit = currentValue - totalCostBasis;
       const profitPct = totalCostBasis > 0 ? (profit / totalCostBasis) * 100 : 0;
+
+      // S&P 500 and NASDAQ benchmark comparison for the exact purchase date of this lot
+      const lotSp500Start = getClosestIndexPrice(p.date, "SP500");
+      const sp500ReturnPct =
+        lotSp500Start && currentSp500 && lotSp500Start > 0
+          ? ((currentSp500 - lotSp500Start) / lotSp500Start) * 100
+          : null;
+      const sp500EquivValue =
+        sp500ReturnPct !== null ? invested * (1 + sp500ReturnPct / 100) : invested;
+      const sp500Profit = sp500EquivValue - totalCostBasis;
+
+      const lotNasdaqStart = getClosestIndexPrice(p.date, "NASDAQ");
+      const nasdaqReturnPct =
+        lotNasdaqStart && currentNasdaq && lotNasdaqStart > 0
+          ? ((currentNasdaq - lotNasdaqStart) / lotNasdaqStart) * 100
+          : null;
+      const nasdaqEquivValue =
+        nasdaqReturnPct !== null ? invested * (1 + nasdaqReturnPct / 100) : invested;
+      const nasdaqProfit = nasdaqEquivValue - totalCostBasis;
 
       // FX and Real Yield Calculations
       const historicalFx = fxData.history[p.date] || fxData.current || 1.0;
@@ -858,6 +898,12 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
         currentValue,
         profit,
         profitPct,
+        sp500ReturnPct,
+        sp500EquivValue,
+        sp500Profit,
+        nasdaqReturnPct,
+        nasdaqEquivValue,
+        nasdaqProfit,
         investedFx,
         currentValueFx,
         profitFx,
@@ -881,6 +927,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
     portfolio.inflationRate,
     portfolio.useAutoColInflation,
     colInflationData,
+    getClosestIndexPrice,
   ]);
 
   const summary = useMemo(() => {
@@ -888,6 +935,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
     let totalCommission = 0;
     let totalCommissionFx = 0;
     let totalCurrentValue = 0;
+    let totalSp500Value = 0;
+    let totalNasdaqValue = 0;
+    let hasBenchmarks = false;
     let totalInvestedFx = 0;
     let totalCurrentValueFx = 0;
     let totalCurrentValueReal = 0;
@@ -898,6 +948,11 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
       totalCommission += (lot.commission || 0);
       totalCommissionFx += (lot.commissionFx || 0);
       totalCurrentValue += lot.currentValue;
+      totalSp500Value += lot.sp500EquivValue ?? lot.invested;
+      totalNasdaqValue += lot.nasdaqEquivValue ?? lot.invested;
+      if (lot.sp500ReturnPct !== null || lot.nasdaqReturnPct !== null) {
+        hasBenchmarks = true;
+      }
       totalInvestedFx += lot.investedFx;
       totalCurrentValueFx += lot.currentValueFx;
       totalCurrentValueReal += lot.currentValueReal;
@@ -908,6 +963,11 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
     const openCostBasisFx = totalInvestedFx + totalCommissionFx;
     const openNetReturn = totalCurrentValue - openCostBasis;
     const openNetReturnFx = totalCurrentValueFx - openCostBasisFx;
+
+    const sp500Return = totalSp500Value - totalInvested;
+    const sp500ReturnPct = totalInvested > 0 ? (sp500Return / totalInvested) * 100 : 0;
+    const nasdaqReturn = totalNasdaqValue - totalInvested;
+    const nasdaqReturnPct = totalInvested > 0 ? (nasdaqReturn / totalInvested) * 100 : 0;
 
     // Realized metrics from closed sales
     const currentFx = fxData.current || 1.0;
@@ -968,6 +1028,13 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
       openCostBasis,
       openCostBasisFx,
       totalCurrentValue,
+      totalSp500Value,
+      totalNasdaqValue,
+      sp500Return,
+      sp500ReturnPct,
+      nasdaqReturn,
+      nasdaqReturnPct,
+      hasBenchmarks,
       openNetReturn,
       openNetReturnFx,
       realizedPnlTotal,
@@ -1009,6 +1076,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
           totalCostBasis: 0,
           totalCostBasisFx: 0,
           totalCurrentValue: 0,
+          totalSp500Value: 0,
+          totalNasdaqValue: 0,
+          hasBenchmarks: false,
           totalShares: 0,
           totalInvestedFx: 0,
           totalCurrentValueFx: 0,
@@ -1023,6 +1093,11 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
       groups[p.ticker].totalCostBasis += (p.totalCostBasis || p.invested);
       groups[p.ticker].totalCostBasisFx += (p.totalCostBasisFx || p.investedFx);
       groups[p.ticker].totalCurrentValue += p.currentValue;
+      groups[p.ticker].totalSp500Value += p.sp500EquivValue ?? p.invested;
+      groups[p.ticker].totalNasdaqValue += p.nasdaqEquivValue ?? p.invested;
+      if (p.sp500ReturnPct !== null || p.nasdaqReturnPct !== null) {
+        groups[p.ticker].hasBenchmarks = true;
+      }
       groups[p.ticker].totalShares += p.shares;
       groups[p.ticker].totalInvestedFx += p.investedFx;
       groups[p.ticker].totalCurrentValueFx += p.currentValueFx;
@@ -1034,6 +1109,11 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
       g.profit = g.totalCurrentValue - g.totalCostBasis;
       g.profitPct = g.totalCostBasis > 0 ? (g.profit / g.totalCostBasis) * 100 : 0;
       g.isPositive = g.profit >= 0;
+
+      g.sp500Profit = g.totalSp500Value - g.totalInvested;
+      g.sp500ProfitPct = g.totalInvested > 0 ? (g.sp500Profit / g.totalInvested) * 100 : 0;
+      g.nasdaqProfit = g.totalNasdaqValue - g.totalInvested;
+      g.nasdaqProfitPct = g.totalInvested > 0 ? (g.nasdaqProfit / g.totalInvested) * 100 : 0;
 
       g.profitFx = g.totalCurrentValueFx - g.totalCostBasisFx;
       g.profitPctFx = g.totalCostBasisFx > 0 ? (g.profitFx / g.totalCostBasisFx) * 100 : 0;
@@ -1860,6 +1940,64 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                 </div>
               );
             })()}
+            {/* S&P 500 & NASDAQ Benchmark Comparison Card */}
+            <div
+              style={{
+                padding: 16,
+                background: theme === "light" ? "var(--bg-card)" : "rgba(255,255,255,0.02)",
+                borderRadius: "var(--radius)",
+                border: "1px solid var(--border)",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: 6 }}>
+                <span>Benchmarks (Mismas Fechas)</span>
+                <InfoTooltip
+                  customContent={{
+                    title: "Comparativa Cash-Flow Exacta vs S&P 500 y NASDAQ",
+                    tag: "BENCHMARKING",
+                    tagColor: "#ec4899",
+                    explanation:
+                      "Calcula cuánto habrías ganado en USD si cada dólar invertido en tus lotes individuales se hubiera depositado exactamente en la misma fecha de compra en el S&P 500 (^GSPC) o en el NASDAQ (^IXIC).",
+                    rule: "Permite evaluar tu Alpha real frente al mercado estadounidense descontando el efecto calendario de tus aportes.",
+                  }}
+                />
+              </div>
+              {summary.hasBenchmarks ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                    <span style={{ fontSize: "0.74rem", fontWeight: 700, color: theme === "light" ? "#be185d" : "#ec4899", display: "inline-flex", alignItems: "center", gap: 5 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: theme === "light" ? "#be185d" : "#ec4899" }} />
+                      S&P 500
+                    </span>
+                    <span className="mono" style={{ fontSize: "0.86rem", fontWeight: 800, color: summary.sp500Return >= 0 ? (theme === "light" ? "#16a34a" : "#4ade80") : (theme === "light" ? "#dc2626" : "#f87171") }}>
+                      {summary.sp500Return >= 0 ? "+" : ""}${summary.sp500Return.toFixed(2)}{" "}
+                      <span style={{ fontSize: "0.75rem" }}>
+                        ({summary.sp500ReturnPct >= 0 ? "+" : ""}{summary.sp500ReturnPct.toFixed(2)}%)
+                      </span>
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                    <span style={{ fontSize: "0.74rem", fontWeight: 700, color: theme === "light" ? "#6d28d9" : "#8b5cf6", display: "inline-flex", alignItems: "center", gap: 5 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: theme === "light" ? "#6d28d9" : "#8b5cf6" }} />
+                      NASDAQ
+                    </span>
+                    <span className="mono" style={{ fontSize: "0.86rem", fontWeight: 800, color: summary.nasdaqReturn >= 0 ? (theme === "light" ? "#16a34a" : "#4ade80") : (theme === "light" ? "#dc2626" : "#f87171") }}>
+                      {summary.nasdaqReturn >= 0 ? "+" : ""}${summary.nasdaqReturn.toFixed(2)}{" "}
+                      <span style={{ fontSize: "0.75rem" }}>
+                        ({summary.nasdaqReturnPct >= 0 ? "+" : ""}{summary.nasdaqReturnPct.toFixed(2)}%)
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                  ⏳ Calculando comparativa de índices...
+                </div>
+              )}
+            </div>
           </div>
 
           {/* ── 3-Level Comparative Breakdown Card (Nominal vs Divisa vs Real) ── */}
@@ -2708,7 +2846,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                   <span
                     style={{ width: 10, height: 10, borderRadius: "50%", background: theme === "light" ? "#0284c7" : "#00e5ff" }}
                   />{" "}
-                  Valor
+                  Valor ({summary.netReturnPct >= 0 ? "+" : ""}{summary.netReturnPct.toFixed(1)}%)
                 </button>
                 <button
                   onClick={() => toggleSeries("sp500")}
@@ -2727,6 +2865,11 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                   }}
                 >
                   <span style={{ width: 10, height: 2, background: theme === "light" ? "#be185d" : "#ec4899" }} /> S&P 500
+                  {summary.hasBenchmarks && (
+                    <span className="mono" style={{ fontSize: "0.7rem" }}>
+                      ({summary.sp500ReturnPct >= 0 ? "+" : ""}{summary.sp500ReturnPct.toFixed(1)}%)
+                    </span>
+                  )}
                 </button>
                 <button
                   onClick={() => toggleSeries("nasdaq")}
@@ -2745,6 +2888,11 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                   }}
                 >
                   <span style={{ width: 10, height: 2, background: theme === "light" ? "#6d28d9" : "#8b5cf6" }} /> NASDAQ
+                  {summary.hasBenchmarks && (
+                    <span className="mono" style={{ fontSize: "0.7rem" }}>
+                      ({summary.nasdaqReturnPct >= 0 ? "+" : ""}{summary.nasdaqReturnPct.toFixed(1)}%)
+                    </span>
+                  )}
                 </button>
                 <button
                   onClick={() => toggleSeries("invested")}
@@ -3981,7 +4129,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                                   : group.profitPctReal;
                             const isPositive = profit >= 0;
                             return (
-                              <div className="lot-metric-col" style={{ width: 125, textAlign: "right", flexShrink: 0 }}>
+                              <div className="lot-metric-col" style={{ width: 155, textAlign: "right", flexShrink: 0 }}>
                                 <div style={{ color: "var(--text-secondary)", fontSize: "0.7rem", whiteSpace: "nowrap" }}>
                                   {yieldViewMode === "REAL"
                                     ? "Beneficio Real"
@@ -4006,6 +4154,50 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                                     )
                                   </div>
                                 </div>
+                                {group.hasBenchmarks && (
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      justifyContent: "flex-end",
+                                      gap: 4,
+                                      marginTop: 3,
+                                      flexWrap: "wrap",
+                                    }}
+                                  >
+                                    <span
+                                      className="mono"
+                                      title={`Si hubieras invertido los lotes de ${group.ticker} en el S&P 500 en sus mismas fechas de compra: ${group.sp500Profit >= 0 ? "+" : ""}$${group.sp500Profit.toFixed(2)} USD`}
+                                      style={{
+                                        fontSize: "0.58rem",
+                                        padding: "1px 5px",
+                                        borderRadius: 4,
+                                        background: theme === "light" ? "rgba(190, 24, 93, 0.08)" : "rgba(236, 72, 153, 0.12)",
+                                        color: theme === "light" ? "#be185d" : "#f472b6",
+                                        border: `1px solid ${theme === "light" ? "rgba(190, 24, 93, 0.25)" : "rgba(236, 72, 153, 0.28)"}`,
+                                        fontWeight: 700,
+                                        whiteSpace: "nowrap",
+                                      }}
+                                    >
+                                      S&P {group.sp500ProfitPct >= 0 ? "+" : ""}{group.sp500ProfitPct.toFixed(1)}%
+                                    </span>
+                                    <span
+                                      className="mono"
+                                      title={`Si hubieras invertido los lotes de ${group.ticker} en el NASDAQ en sus mismas fechas de compra: ${group.nasdaqProfit >= 0 ? "+" : ""}$${group.nasdaqProfit.toFixed(2)} USD`}
+                                      style={{
+                                        fontSize: "0.58rem",
+                                        padding: "1px 5px",
+                                        borderRadius: 4,
+                                        background: theme === "light" ? "rgba(109, 40, 217, 0.08)" : "rgba(139, 92, 246, 0.12)",
+                                        color: theme === "light" ? "#6d28d9" : "#a78bfa",
+                                        border: `1px solid ${theme === "light" ? "rgba(109, 40, 217, 0.25)" : "rgba(139, 92, 246, 0.28)"}`,
+                                        fontWeight: 700,
+                                        whiteSpace: "nowrap",
+                                      }}
+                                    >
+                                      NDX {group.nasdaqProfitPct >= 0 ? "+" : ""}{group.nasdaqProfitPct.toFixed(1)}%
+                                    </span>
+                                  </div>
+                                )}
                                 {yieldViewMode === "REAL" && (
                                   <div
                                     style={{ fontSize: "0.65rem", color: "#f87171", marginTop: 2, whiteSpace: "nowrap" }}
@@ -4249,6 +4441,53 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                                         {profitPct.toFixed(2)}%
                                         {yieldViewMode === "REAL" ? " Real" : ""})
                                       </div>
+                                      {(p.sp500ReturnPct !== null || p.nasdaqReturnPct !== null) && (
+                                        <div
+                                          style={{
+                                            display: "flex",
+                                            justifyContent: "flex-end",
+                                            alignItems: "center",
+                                            gap: 6,
+                                            marginTop: 3,
+                                            flexWrap: "wrap",
+                                          }}
+                                        >
+                                          {p.sp500ReturnPct !== null && (
+                                            <span
+                                              className="mono"
+                                              title={`Rentabilidad del S&P 500 desde el ${p.date}: ${p.sp500Profit >= 0 ? "+" : ""}$${p.sp500Profit.toFixed(2)} USD`}
+                                              style={{
+                                                fontSize: "0.62rem",
+                                                padding: "1px 6px",
+                                                borderRadius: 4,
+                                                background: theme === "light" ? "rgba(190, 24, 93, 0.08)" : "rgba(236, 72, 153, 0.12)",
+                                                color: theme === "light" ? "#be185d" : "#f472b6",
+                                                border: `1px solid ${theme === "light" ? "rgba(190, 24, 93, 0.25)" : "rgba(236, 72, 153, 0.28)"}`,
+                                                fontWeight: 700,
+                                              }}
+                                            >
+                                              vs S&P 500: {p.sp500ReturnPct >= 0 ? "+" : ""}{p.sp500ReturnPct.toFixed(2)}% ({p.sp500Profit >= 0 ? "+" : ""}${p.sp500Profit.toFixed(2)})
+                                            </span>
+                                          )}
+                                          {p.nasdaqReturnPct !== null && (
+                                            <span
+                                              className="mono"
+                                              title={`Rentabilidad del NASDAQ desde el ${p.date}: ${p.nasdaqProfit >= 0 ? "+" : ""}$${p.nasdaqProfit.toFixed(2)} USD`}
+                                              style={{
+                                                fontSize: "0.62rem",
+                                                padding: "1px 6px",
+                                                borderRadius: 4,
+                                                background: theme === "light" ? "rgba(109, 40, 217, 0.08)" : "rgba(139, 92, 246, 0.12)",
+                                                color: theme === "light" ? "#6d28d9" : "#a78bfa",
+                                                border: `1px solid ${theme === "light" ? "rgba(109, 40, 217, 0.25)" : "rgba(139, 92, 246, 0.28)"}`,
+                                                fontWeight: 700,
+                                              }}
+                                            >
+                                              vs NASDAQ: {p.nasdaqReturnPct >= 0 ? "+" : ""}{p.nasdaqReturnPct.toFixed(2)}% ({p.nasdaqProfit >= 0 ? "+" : ""}${p.nasdaqProfit.toFixed(2)})
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
                                       {yieldViewMode === "REAL" && (
                                         <div
                                           style={{

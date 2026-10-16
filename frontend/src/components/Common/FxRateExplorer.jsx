@@ -64,8 +64,8 @@ export default function FxRateExplorer({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Time range filter - synchronized with parent period if provided
-  const [selectedRange, setSelectedRange] = useState(() => normalizePeriodToRange(period));
+  // Time range filter - synchronized with parent period if provided (default "TODO" to see the complete history)
+  const [selectedRange, setSelectedRange] = useState(() => (period ? normalizePeriodToRange(period) : "TODO"));
 
   useEffect(() => {
     if (period) {
@@ -80,8 +80,8 @@ export default function FxRateExplorer({
     }
   };
 
-  // Converter state
-  const [convertAmount, setConvertAmount] = useState(100);
+  // Converter state: default 1 USD / 1 unit
+  const [convertAmount, setConvertAmount] = useState(1);
 
   // Chart DOM refs
   const chartContainerRef = useRef(null);
@@ -151,10 +151,8 @@ export default function FxRateExplorer({
     const rangeObj = RANGES.find((r) => r.label === selectedRange);
 
     if (selectedRange === "TODO") {
-      if (minDate) {
-        filteredList = fullList.filter((item) => item.time >= minDate);
-        if (filteredList.length === 0) filteredList = fullList;
-      }
+      // "TODO" muestra la serie histórica completa disponible de la divisa
+      filteredList = fullList;
     } else if (rangeObj && fullList.length > 0) {
       const lastItemDate = new Date(`${fullList[fullList.length - 1].time}T00:00:00Z`);
       let cutoffStr = "";

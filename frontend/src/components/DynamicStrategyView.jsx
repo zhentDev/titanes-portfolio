@@ -1963,7 +1963,7 @@ export default function DynamicStrategyView({
           </button>
         </div>
 
-        {(stratChartTab === "portfolio" || stratChartTab === "fx") && (
+        {stratChartTab === "portfolio" && (
           <div
             className="period-selector"
             style={{ margin: 0, padding: 0, background: "transparent" }}
