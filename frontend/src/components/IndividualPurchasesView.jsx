@@ -1286,9 +1286,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
           markers.push({
             time: matchedTime,
             position: "inBar",
-            color: theme === "light" ? "#d97706" : "#fbbf24",
+            color: theme === "light" ? "rgba(2, 132, 199, 0.45)" : "rgba(0, 229, 255, 0.45)",
             shape: "circle",
-            size: 2,
+            size: 0.5,
           });
         }
       });
@@ -1321,7 +1321,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
         chartInstanceRef.current = null;
       }
     };
-  }, [lotDataList, currentSales, indicesHistory]);
+  }, [lotDataList, currentSales, indicesHistory, purchasesChartTab]);
 
   useEffect(() => {
     if (chartInstanceRef.current) {
@@ -2489,7 +2489,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
         </div>
 
         {/* GRAPH CONTAINER */}
-        <div className="card fade-up" style={{ padding: "20px", marginBottom: "24px" }}>
+        <div className="card chart-card fade-up" style={{ padding: "20px", marginBottom: "24px" }}>
           {purchasesChartTab === "fx" ? (
             <FxRateExplorer
               defaultAsset="USD"
@@ -3455,11 +3455,12 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                   return (
                     <div
                       key={group.ticker}
+                      className="lot-group-wrapper"
                       style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 640 }}
                     >
                       {/* TICKER SUMMARY CARD */}
                       <div
-                        className="card"
+                        className="card lot-group-card"
                         style={{
                           padding: "16px",
                           background: theme === "light" ? "var(--bg-card)" : "rgba(255,255,255,0.03)",
@@ -3483,13 +3484,14 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                             theme === "light" ? "var(--bg-card)" : "rgba(255,255,255,0.03)")
                         }
                       >
-                        <div>
+                        <div className="lot-group-header-left">
                           <div
                             style={{
                               display: "flex",
                               alignItems: "center",
                               gap: 8,
                               marginBottom: 4,
+                              flexWrap: "wrap",
                             }}
                           >
                             <strong style={{ fontSize: "1.1rem", color: "var(--text-primary)" }}>
@@ -3686,6 +3688,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                         </div>
 
                         <div
+                          className="lot-group-metrics"
                           style={{
                             textAlign: "right",
                             display: "flex",
@@ -3696,7 +3699,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                             flexShrink: 0,
                           }}
                         >
-                          <div style={{ width: 110, textAlign: "right", flexShrink: 0 }}>
+                          <div className="lot-metric-col" style={{ width: 110, textAlign: "right", flexShrink: 0 }}>
                             <div style={{ color: "var(--text-secondary)", fontSize: "0.7rem", whiteSpace: "nowrap" }}>
                               Total Invertido
                             </div>
@@ -3715,7 +3718,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                               </div>
                             )}
                           </div>
-                          <div style={{ width: 115, textAlign: "right", flexShrink: 0 }}>
+                          <div className="lot-metric-col" style={{ width: 115, textAlign: "right", flexShrink: 0 }}>
                             <div style={{ color: "var(--text-secondary)", fontSize: "0.7rem", whiteSpace: "nowrap" }}>
                               Valor Mercado
                             </div>
@@ -3751,7 +3754,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                             const isUp1d = chg1d >= 0;
 
                             return (
-                              <div style={{ width: 110, textAlign: "right", flexShrink: 0 }}>
+                              <div className="lot-metric-col" style={{ width: 110, textAlign: "right", flexShrink: 0 }}>
                                 <div style={{ color: "var(--text-secondary)", fontSize: "0.7rem", whiteSpace: "nowrap" }}>
                                   Hoy (24h)
                                 </div>
@@ -3829,7 +3832,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                                   : group.profitPctReal;
                             const isPositive = profit >= 0;
                             return (
-                              <div style={{ width: 125, textAlign: "right", flexShrink: 0 }}>
+                              <div className="lot-metric-col" style={{ width: 125, textAlign: "right", flexShrink: 0 }}>
                                 <div style={{ color: "var(--text-secondary)", fontSize: "0.7rem", whiteSpace: "nowrap" }}>
                                   {yieldViewMode === "REAL"
                                     ? "Beneficio Real"
@@ -3865,7 +3868,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                             );
                           })()}
 
-                          <div style={{ width: 32, textAlign: "center", fontSize: "1.1rem", color: "var(--text-muted)", flexShrink: 0 }}>
+                          <div className="lot-expand-chevron" style={{ width: 32, textAlign: "center", fontSize: "1.1rem", color: "var(--text-muted)", flexShrink: 0 }}>
                             {isExpanded ? "🔽" : "▶️"}
                           </div>
                         </div>
@@ -3874,6 +3877,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                       {/* EXPANDED INDIVIDUAL LOTS */}
                       {isExpanded && (
                         <div
+                          className="lot-expanded-list"
                           style={{
                             display: "flex",
                             flexDirection: "column",
@@ -3884,6 +3888,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                           {group.lots.map((p) => (
                             <div
                               key={p.id}
+                              className="lot-expanded-item"
                               style={{
                                 padding: "12px 16px",
                                 background: theme === "light" ? "var(--bg-surface)" : "rgba(0,0,0,0.2)",

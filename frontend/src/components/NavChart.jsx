@@ -405,9 +405,9 @@ export default function NavChart({
         markers.push({
           time: matchedTime,
           position: "inBar",
-          color: isLight ? "#d97706" : "#fbbf24",
+          color: isLight ? "rgba(2, 132, 199, 0.45)" : "rgba(0, 229, 255, 0.45)",
           shape: "circle",
-          size: 2,
+          size: 0.5,
         });
       }
     });
@@ -535,7 +535,7 @@ export default function NavChart({
 
   return (
     <div
-      className="card fade-up"
+      className="card nav-chart-inner-card fade-up"
       style={{
         padding: "16px 20px",
         marginBottom: "18px",
@@ -858,6 +858,7 @@ export default function NavChart({
         {/* ── Integrated Interactive Ticker Activator Bar (Position Switchers with Smooth Animations) ── */}
         {holdings && holdings.length > 0 && onToggleTicker && (
           <div
+            className="posiciones-bar-box"
             style={{
               display: "flex",
               alignItems: "center",

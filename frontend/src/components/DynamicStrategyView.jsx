@@ -1993,7 +1993,7 @@ export default function DynamicStrategyView({
         )}
       </div>
 
-      <div className="card fade-up" style={{ padding: "20px" }}>
+      <div className="card chart-card fade-up" style={{ padding: "20px" }}>
         {stratChartTab === "fx" ? (
           <FxRateExplorer
             defaultAsset="USD"
@@ -2062,6 +2062,7 @@ export default function DynamicStrategyView({
             {/* ── Integrated Interactive Ticker Activator Bar (Position Switchers with Smooth Animations) ── */}
             {filteredHoldings && filteredHoldings.length > 0 && (
               <div
+                className="posiciones-bar-box"
                 style={{
                   display: "flex",
                   alignItems: "center",

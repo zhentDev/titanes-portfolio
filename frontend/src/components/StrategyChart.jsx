@@ -545,9 +545,9 @@ export default function StrategyChart({
         markers.push({
           time: matchedTime,
           position: "inBar",
-          color: theme === "light" ? "#d97706" : "#fbbf24",
+          color: theme === "light" ? "rgba(2, 132, 199, 0.45)" : "rgba(0, 229, 255, 0.45)",
           shape: "circle",
-          size: 2,
+          size: 0.5,
         });
       }
     });

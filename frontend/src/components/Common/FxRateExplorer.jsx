@@ -249,7 +249,7 @@ export default function FxRateExplorer({
           position: "inBar",
           color: isLight ? "#d97706" : "#fbbf24",
           shape: "circle",
-          size: 2,
+          size: 1,
         });
       }
     });
@@ -502,9 +502,10 @@ export default function FxRateExplorer({
 
       {/* ── Conversor de Divisa Rápido e Interactivo ── */}
       <div
+        className="fx-explorer-converter-box"
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
           gap: 16,
           padding: "16px 20px",
           background: isLight ? "rgba(2, 132, 199, 0.04)" : "rgba(0, 229, 255, 0.03)",
@@ -621,6 +622,7 @@ export default function FxRateExplorer({
 
       {/* ── Chart Section & Range Filters ── */}
       <div
+        className="fx-explorer-chart-box"
         style={{
           background: isLight ? "#ffffff" : "var(--bg-surface)",
           border: `1px solid ${isLight ? "rgba(0,0,0,0.08)" : "var(--border)"}`,
