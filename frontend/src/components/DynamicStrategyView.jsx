@@ -195,6 +195,12 @@ export default function DynamicStrategyView({
     return firstInvestDate;
   }, [rebalances, firstInvestDate]);
 
+  // Real NAV data fetched from backend for this strategy
+  const [navData, setNavData] = useState(null);
+  const [isNavLoading, setIsNavLoading] = useState(false);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState(null);
+  const [navRefreshKey, setNavRefreshKey] = useState(0);
+
   const purchaseDates = useMemo(() => {
     const dates = new Set();
     (rebalances || []).forEach((r) => {
@@ -335,12 +341,6 @@ export default function DynamicStrategyView({
       updateStrategyCapital(strategy.id, simulatedCapital, activeInvested);
     }
   }, [simulatedCapital, activeInvested, strategy?.id, updateStrategyCapital]);
-
-  // Real NAV data fetched from backend for this strategy
-  const [navData, setNavData] = useState(null);
-  const [isNavLoading, setIsNavLoading] = useState(false);
-  const [lastRefreshedAt, setLastRefreshedAt] = useState(null);
-  const [navRefreshKey, setNavRefreshKey] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
