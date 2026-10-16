@@ -7,11 +7,14 @@ import { getChartColors } from "../utils/chartTheme";
 export default function IndividualHoldingChart({
   holdings = [],
   closedHoldings = [],
+  purchases = [],
   rebalances = [],
   investment = 2000,
   numSlots = 15,
   customStrategies = [],
   activeStrategyId = "historical",
+  activeKey = null,
+  onSelectKey = null,
 }) {
   const { theme } = useTheme();
   const isLight = theme === "light";
@@ -22,14 +25,94 @@ export default function IndividualHoldingChart({
   const valSeriesRef = useRef(null);
   const baseSeriesRef = useRef(null);
 
-  // Group options by Active and Closed
+  // Group options by Active, Closed, and Individual Purchases / Open Lots
   const availableOptions = useMemo(() => {
     const list = [];
     const slotVal = investment / (numSlots || 15);
 
-    // 1. Active holdings from props
+    // 0. If individual purchases/lots provided (e.g. from IndividualPurchasesView)
+    if (purchases && purchases.length > 0) {
+      // a. Grouped consolidated positions
+      const groupedMap = {};
+      purchases.forEach((p) => {
+        if (!groupedMap[p.ticker]) {
+          groupedMap[p.ticker] = {
+            ticker: p.ticker,
+            name: p.name || p.ticker,
+            shares: 0,
+            invested: 0,
+            earliestDate: p.date,
+            lots: [],
+            currentPrice: p.currentPrice || p.purchasePrice,
+          };
+        }
+        const g = groupedMap[p.ticker];
+        g.shares += Number(p.shares || 0);
+        g.invested += Number(p.invested || p.investedAmount || 0);
+        if (p.date < g.earliestDate) g.earliestDate = p.date;
+        g.lots.push(p);
+      });
+
+      // Add grouped consolidated positions
+      Object.values(groupedMap).forEach((g) => {
+        const curPrice = g.currentPrice || (g.shares > 0 ? g.invested / g.shares : 0);
+        const curVal = g.shares * curPrice;
+        const retUsd = curVal - g.invested;
+        const retPct = g.invested > 0 ? (retUsd / g.invested) * 100 : 0;
+        const avgPrice = g.shares > 0 ? g.invested / g.shares : curPrice;
+
+        list.push({
+          key: `GROUP_${g.ticker}`,
+          ticker: g.ticker,
+          name: `${g.name} (Consolidado ${g.lots.length} Lote${g.lots.length !== 1 ? "s" : ""})`,
+          status: "PURCHASE_GROUP",
+          groupTicker: g.ticker,
+          shares: g.shares,
+          startPrice: avgPrice,
+          entryDate: g.earliestDate,
+          exitDate: null,
+          costBasis: g.invested,
+          currentPrice: curPrice,
+          currentValue: curVal,
+          returnPct: retPct,
+          returnUsd: retUsd,
+        });
+      });
+
+      // b. Individual open lots
+      purchases.forEach((p) => {
+        const invested = Number(p.invested || p.investedAmount || (p.shares * p.purchasePrice));
+        const curPrice = p.currentPrice || p.purchasePrice;
+        const curVal = p.shares * curPrice;
+        const retUsd = curVal - invested;
+        const retPct = invested > 0 ? (retUsd / invested) * 100 : 0;
+
+        list.push({
+          key: `LOT_${p.id || `${p.ticker}_${p.date}`}`,
+          ticker: p.ticker,
+          name: `${p.name || p.ticker} — Lote ${p.date} (${Number(p.shares || 0).toFixed(4)} uds @ $${Number(p.purchasePrice || 0).toFixed(2)})`,
+          status: "PURCHASE_LOT",
+          groupTicker: p.ticker,
+          lotId: p.id,
+          shares: p.shares,
+          startPrice: p.purchasePrice,
+          entryDate: p.date,
+          exitDate: null,
+          costBasis: invested,
+          currentPrice: curPrice,
+          currentValue: curVal,
+          returnPct: retPct,
+          returnUsd: retUsd,
+        });
+      });
+
+      return list;
+    }
+
+    // 1. Active holdings from props (Titanes / Dynamic Strategy)
     (holdings || []).forEach((h) => {
       list.push({
+        key: `${h.ticker}_ACTIVE`,
         ticker: h.ticker,
         name: h.name || h.ticker,
         status: "ACTIVE",
@@ -45,8 +128,7 @@ export default function IndividualHoldingChart({
       });
     });
 
-    // 1b. Fallback for simulated strategies where holdings might be empty or partial:
-    // derive active tickers from the latest rebalance if not already in list
+    // 1b. Fallback for simulated strategies where holdings might be empty or partial
     if (Array.isArray(rebalances) && rebalances.length > 0) {
       const latestReb = rebalances[rebalances.length - 1];
       const rebTickers = Array.isArray(latestReb?.tickers) ? latestReb.tickers : [];
@@ -55,6 +137,7 @@ export default function IndividualHoldingChart({
       rebTickers.forEach((t) => {
         if (!list.some((item) => item.ticker === t && item.status === "ACTIVE")) {
           list.push({
+            key: `${t}_ACTIVE`,
             ticker: t,
             name: t,
             status: "ACTIVE",
@@ -75,6 +158,7 @@ export default function IndividualHoldingChart({
     // 2. Closed holdings
     (closedHoldings || []).forEach((c) => {
       list.push({
+        key: `${c.ticker}_CLOSED_${c.exit_date}`,
         ticker: c.ticker,
         name: c.name || c.ticker,
         status: "CLOSED",
@@ -91,23 +175,30 @@ export default function IndividualHoldingChart({
     });
 
     return list;
-  }, [holdings, closedHoldings, rebalances, investment, numSlots]);
+  }, [holdings, closedHoldings, purchases, rebalances, investment, numSlots]);
 
-  // Selected item state
-  const [selectedKey, setSelectedKey] = useState(() => {
-    return availableOptions[0] ? `${availableOptions[0].ticker}_${availableOptions[0].status}` : "";
+  // Selected item state (controlled or uncontrolled)
+  const [internalKey, setInternalKey] = useState(() => {
+    return availableOptions[0]?.key || "";
   });
+
+  const currentKey = activeKey !== undefined && activeKey !== null ? activeKey : internalKey;
+
+  const handleKeyChange = (newKey) => {
+    setInternalKey(newKey);
+    if (onSelectKey) onSelectKey(newKey);
+  };
 
   // Keep selection valid if options change
   useEffect(() => {
-    if (!selectedKey && availableOptions.length > 0) {
-      setSelectedKey(`${availableOptions[0].ticker}_${availableOptions[0].status}`);
+    if (!currentKey && availableOptions.length > 0) {
+      handleKeyChange(availableOptions[0].key);
     }
-  }, [availableOptions, selectedKey]);
+  }, [availableOptions, currentKey]);
 
   const selectedItem = useMemo(() => {
-    return availableOptions.find((opt) => `${opt.ticker}_${opt.status}` === selectedKey) || availableOptions[0] || null;
-  }, [availableOptions, selectedKey]);
+    return availableOptions.find((opt) => opt.key === currentKey) || availableOptions[0] || null;
+  }, [availableOptions, currentKey]);
 
   const [loading, setLoading] = useState(false);
   const [chartData, setChartData] = useState(null);
@@ -347,8 +438,8 @@ export default function IndividualHoldingChart({
             📈 Acción a inspeccionar:
           </span>
           <select
-            value={selectedKey}
-            onChange={(e) => setSelectedKey(e.target.value)}
+            value={currentKey}
+            onChange={(e) => handleKeyChange(e.target.value)}
             style={{
               padding: "5px 12px",
               borderRadius: 6,
@@ -359,23 +450,51 @@ export default function IndividualHoldingChart({
               fontWeight: 700,
               cursor: "pointer",
               outline: "none",
+              maxWidth: 340,
             }}
           >
-            <optgroup label="🟢 Acciones Activas (En Cartera)">
-              {availableOptions
-                .filter((o) => o.status === "ACTIVE")
-                .map((o) => (
-                  <option key={`${o.ticker}_${o.status}`} value={`${o.ticker}_${o.status}`}>
-                    {o.ticker} — {o.name} ({o.returnPct >= 0 ? "+" : ""}{Number(o.returnPct || 0).toFixed(2)}%)
-                  </option>
-                ))}
-            </optgroup>
+            {availableOptions.some((o) => o.status === "PURCHASE_GROUP") && (
+              <optgroup label="🏢 Posiciones Consolidadas (Todos los Lotes)">
+                {availableOptions
+                  .filter((o) => o.status === "PURCHASE_GROUP")
+                  .map((o) => (
+                    <option key={o.key} value={o.key}>
+                      {o.ticker} — {o.name} ({o.returnPct >= 0 ? "+" : ""}{Number(o.returnPct || 0).toFixed(2)}%)
+                    </option>
+                  ))}
+              </optgroup>
+            )}
+
+            {availableOptions.some((o) => o.status === "PURCHASE_LOT") && (
+              <optgroup label="🎯 Lotes Individuales / Compras Abiertas">
+                {availableOptions
+                  .filter((o) => o.status === "PURCHASE_LOT")
+                  .map((o) => (
+                    <option key={o.key} value={o.key}>
+                      {o.name} ({o.returnPct >= 0 ? "+" : ""}{Number(o.returnPct || 0).toFixed(2)}%)
+                    </option>
+                  ))}
+              </optgroup>
+            )}
+
+            {availableOptions.some((o) => o.status === "ACTIVE") && (
+              <optgroup label="🟢 Acciones Activas (En Cartera)">
+                {availableOptions
+                  .filter((o) => o.status === "ACTIVE")
+                  .map((o) => (
+                    <option key={o.key} value={o.key}>
+                      {o.ticker} — {o.name} ({o.returnPct >= 0 ? "+" : ""}{Number(o.returnPct || 0).toFixed(2)}%)
+                    </option>
+                  ))}
+              </optgroup>
+            )}
+
             {availableOptions.some((o) => o.status === "CLOSED") && (
               <optgroup label="🔴 Acciones Vendidas / Posiciones Cerradas">
                 {availableOptions
                   .filter((o) => o.status === "CLOSED")
                   .map((o) => (
-                    <option key={`${o.ticker}_${o.status}`} value={`${o.ticker}_${o.status}`}>
+                    <option key={o.key} value={o.key}>
                       {o.ticker} (CERRADA {o.exitDate}) — {o.returnPct >= 0 ? "+" : ""}{Number(o.returnPct || 0).toFixed(2)}%
                     </option>
                   ))}
@@ -383,7 +502,35 @@ export default function IndividualHoldingChart({
             )}
           </select>
 
-          {selectedItem?.status === "CLOSED" ? (
+          {selectedItem?.status === "PURCHASE_LOT" ? (
+            <span
+              style={{
+                fontSize: "0.68rem",
+                padding: "2px 8px",
+                borderRadius: 4,
+                background: isLight ? "rgba(2, 132, 199, 0.12)" : "rgba(0, 229, 255, 0.12)",
+                color: isLight ? "#0284c7" : "#00e5ff",
+                border: `1px solid ${isLight ? "rgba(2, 132, 199, 0.3)" : "rgba(0, 229, 255, 0.3)"}`,
+                fontWeight: 700,
+              }}
+            >
+              🎯 Lote Abierto ({selectedItem.entryDate}) • Vol: {Number(selectedItem.shares || 0).toFixed(4)} uds
+            </span>
+          ) : selectedItem?.status === "PURCHASE_GROUP" ? (
+            <span
+              style={{
+                fontSize: "0.68rem",
+                padding: "2px 8px",
+                borderRadius: 4,
+                background: isLight ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.2)",
+                color: isLight ? "#047857" : "#34d399",
+                border: "1px solid rgba(16, 185, 129, 0.3)",
+                fontWeight: 700,
+              }}
+            >
+              🏢 Posición Consolidada (Desde {selectedItem.entryDate})
+            </span>
+          ) : selectedItem?.status === "CLOSED" ? (
             <span
               style={{
                 fontSize: "0.68rem",

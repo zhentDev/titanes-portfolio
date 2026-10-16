@@ -30,6 +30,7 @@ import PlanExecutionModal from "./PlanExecutionModal";
 import XtbImportModal from "./XtbImportModal";
 import FxRateExplorer from "./Common/FxRateExplorer";
 import StockAlertModal from "./StockAlertModal";
+import IndividualHoldingChart from "./IndividualHoldingChart";
 
 export default function IndividualPurchasesView({ portfolioId = "hist_default", onSelectPortfolio }) {
   const {
@@ -373,8 +374,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
     return translateBrokerTicker(ticker);
   }, [ticker]);
 
-  // Chart Subtab State: "portfolio" | "fx"
+  // Chart Subtab State: "portfolio" | "individual" | "fx"
   const [purchasesChartTab, setPurchasesChartTab] = useState("portfolio");
+  const [selectedHoldingKey, setSelectedHoldingKey] = useState(null);
 
   // Visibility state
   const [visibleSeries, setVisibleSeries] = useState({
@@ -2744,6 +2746,48 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
 
             <button
               type="button"
+              onClick={() => setPurchasesChartTab("individual")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 7,
+                padding: "7px 14px",
+                borderRadius: 7,
+                border: purchasesChartTab === "individual"
+                  ? `1px solid ${theme === "light" ? "rgba(16, 185, 129, 0.4)" : "rgba(16, 185, 129, 0.4)"}`
+                  : "1px solid transparent",
+                background: purchasesChartTab === "individual"
+                  ? theme === "light" ? "rgba(16, 185, 129, 0.12)" : "rgba(16, 185, 129, 0.12)"
+                  : "transparent",
+                color: purchasesChartTab === "individual"
+                  ? theme === "light" ? "#059669" : "#34d399"
+                  : "var(--text-secondary)",
+                fontSize: "0.85rem",
+                fontWeight: purchasesChartTab === "individual" ? 700 : 500,
+                cursor: "pointer",
+                transition: "all 0.18s ease",
+              }}
+            >
+              <span>🔍</span>
+              <span>Acción o Lote Individual</span>
+              {currentPurchases.length > 0 && (
+                <span
+                  style={{
+                    fontSize: "0.68rem",
+                    padding: "1px 6px",
+                    borderRadius: 4,
+                    background: theme === "light" ? "rgba(16, 185, 129, 0.2)" : "rgba(16, 185, 129, 0.25)",
+                    color: theme === "light" ? "#047857" : "#34d399",
+                    fontWeight: 700,
+                  }}
+                >
+                  {groupedLots.length} activos • {currentPurchases.length} lotes
+                </span>
+              )}
+            </button>
+
+            <button
+              type="button"
               onClick={() => setPurchasesChartTab("fx")}
               style={{
                 display: "flex",
@@ -2782,6 +2826,12 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
               onPeriodChange={handleTimeRange}
               purchaseDates={purchaseDates}
               minDate={earliestDate}
+            />
+          ) : purchasesChartTab === "individual" ? (
+            <IndividualHoldingChart
+              purchases={lotDataList}
+              activeKey={selectedHoldingKey}
+              onSelectKey={setSelectedHoldingKey}
             />
           ) : (
             <>
@@ -3822,6 +3872,33 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                             </button>
                             <button
                               type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedHoldingKey(`GROUP_${group.ticker}`);
+                                setPurchasesChartTab("individual");
+                                window.scrollTo({ top: 380, behavior: "smooth" });
+                              }}
+                              style={{
+                                background: theme === "light" ? "rgba(16, 185, 129, 0.08)" : "rgba(16, 185, 129, 0.12)",
+                                border: `1px solid ${theme === "light" ? "rgba(16, 185, 129, 0.28)" : "rgba(16, 185, 129, 0.3)"}`,
+                                color: theme === "light" ? "#047857" : "#34d399",
+                                borderRadius: "6px",
+                                padding: "2px 8px",
+                                fontSize: "0.72rem",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 4,
+                                flexShrink: 0,
+                                transition: "all 0.15s ease",
+                              }}
+                              title={`Inspeccionar gráfica individual hora a hora de ${group.ticker}`}
+                            >
+                              <span>📈</span> Gráfica
+                            </button>
+                            <button
+                              type="button"
                               onClick={(e) =>
                                 handleOpenAlertModal(
                                   {
@@ -4507,6 +4584,31 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                               </div>
 
                                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 16 }}>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedHoldingKey(`LOT_${p.id || `${p.ticker}_${p.date}`}`);
+                                      setPurchasesChartTab("individual");
+                                      window.scrollTo({ top: 380, behavior: "smooth" });
+                                    }}
+                                    style={{
+                                      background: theme === "light" ? "rgba(2, 132, 199, 0.08)" : "rgba(0, 229, 255, 0.08)",
+                                      border: `1px solid ${theme === "light" ? "rgba(2, 132, 199, 0.3)" : "rgba(0, 229, 255, 0.25)"}`,
+                                      color: theme === "light" ? "#0284c7" : "#00e5ff",
+                                      borderRadius: "6px",
+                                      padding: "3px 8px",
+                                      fontSize: "0.75rem",
+                                      cursor: "pointer",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: 4,
+                                      transition: "all 0.15s ease",
+                                    }}
+                                    title={`Inspeccionar gráfica individual hora a hora para este lote específico del ${p.date}`}
+                                  >
+                                    <span>📊</span>
+                                  </button>
                                   {(() => {
                                     const lotKey = `${p.ticker}::${p.id}`;
                                     const lotAlert = alerts.find(

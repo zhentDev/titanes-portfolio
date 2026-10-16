@@ -151,8 +151,13 @@ export default function FxRateExplorer({
     const rangeObj = RANGES.find((r) => r.label === selectedRange);
 
     if (selectedRange === "TODO") {
-      // "TODO" muestra la serie histórica completa disponible de la divisa
-      filteredList = fullList;
+      // Si minDate está presente (p. ej. en Compras), mostrar solo desde la primera compra
+      if (minDate) {
+        filteredList = fullList.filter((item) => item.time >= minDate);
+        if (filteredList.length === 0) filteredList = fullList;
+      } else {
+        filteredList = fullList;
+      }
     } else if (rangeObj && fullList.length > 0) {
       const lastItemDate = new Date(`${fullList[fullList.length - 1].time}T00:00:00Z`);
       let cutoffStr = "";
@@ -167,7 +172,7 @@ export default function FxRateExplorer({
       }
 
       // Respetar minDate si el periodo seleccionado va más atrás que la primera compra
-      if (minDate && cutoffStr && cutoffStr < minDate) {
+      if (minDate && (!cutoffStr || cutoffStr < minDate)) {
         cutoffStr = minDate;
       }
 
