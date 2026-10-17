@@ -3,6 +3,7 @@ import { ColorType, LineStyle, createChart } from "lightweight-charts";
 import { fetchHoldingChart } from "../api/client";
 import { useTheme } from "../context/ThemeContext";
 import { getChartColors } from "../utils/chartTheme";
+import { getAssetName } from "../utils/assetNames";
 
 export default function IndividualHoldingChart({
   holdings = [],
@@ -36,9 +37,10 @@ export default function IndividualHoldingChart({
       const groupedMap = {};
       purchases.forEach((p) => {
         if (!groupedMap[p.ticker]) {
+          const resolvedName = getAssetName(p.ticker, p.name);
           groupedMap[p.ticker] = {
             ticker: p.ticker,
-            name: p.name || p.ticker,
+            name: resolvedName,
             shares: 0,
             invested: 0,
             earliestDate: p.date,
@@ -60,11 +62,13 @@ export default function IndividualHoldingChart({
         const retUsd = curVal - g.invested;
         const retPct = g.invested > 0 ? (retUsd / g.invested) * 100 : 0;
         const avgPrice = g.shares > 0 ? g.invested / g.shares : curPrice;
+        const fullName = getAssetName(g.ticker, g.name);
 
         list.push({
           key: `GROUP_${g.ticker}`,
           ticker: g.ticker,
-          name: `${g.name} (Consolidado ${g.lots.length} Lote${g.lots.length !== 1 ? "s" : ""})`,
+          name: `${g.ticker} — ${fullName} (Consolidado ${g.lots.length} Lote${g.lots.length !== 1 ? "s" : ""})`,
+          fullName,
           status: "PURCHASE_GROUP",
           groupTicker: g.ticker,
           shares: g.shares,
@@ -76,6 +80,7 @@ export default function IndividualHoldingChart({
           currentValue: curVal,
           returnPct: retPct,
           returnUsd: retUsd,
+          lotCount: g.lots.length,
         });
       });
 
@@ -86,11 +91,13 @@ export default function IndividualHoldingChart({
         const curVal = p.shares * curPrice;
         const retUsd = curVal - invested;
         const retPct = invested > 0 ? (retUsd / invested) * 100 : 0;
+        const fullName = getAssetName(p.ticker, p.name);
 
         list.push({
           key: `LOT_${p.id || `${p.ticker}_${p.date}`}`,
           ticker: p.ticker,
-          name: `${p.name || p.ticker} — Lote ${p.date} (${Number(p.shares || 0).toFixed(4)} uds @ $${Number(p.purchasePrice || 0).toFixed(2)})`,
+          name: `Lote ${p.date} (${Number(p.shares || 0).toFixed(4)} uds @ $${Number(p.purchasePrice || 0).toFixed(2)})`,
+          fullName,
           status: "PURCHASE_LOT",
           groupTicker: p.ticker,
           lotId: p.id,
@@ -111,10 +118,12 @@ export default function IndividualHoldingChart({
 
     // 1. Active holdings from props (Titanes / Dynamic Strategy)
     (holdings || []).forEach((h) => {
+      const fullName = getAssetName(h.ticker, h.name);
       list.push({
         key: `${h.ticker}_ACTIVE`,
         ticker: h.ticker,
-        name: h.name || h.ticker,
+        name: `${h.ticker} — ${fullName}`,
+        fullName,
         status: "ACTIVE",
         shares: h.shares,
         startPrice: h.start_price,
@@ -136,10 +145,12 @@ export default function IndividualHoldingChart({
 
       rebTickers.forEach((t) => {
         if (!list.some((item) => item.ticker === t && item.status === "ACTIVE")) {
+          const fullName = getAssetName(t);
           list.push({
             key: `${t}_ACTIVE`,
             ticker: t,
-            name: t,
+            name: `${t} — ${fullName}`,
+            fullName,
             status: "ACTIVE",
             shares: 1.0,
             startPrice: slotVal,
@@ -157,10 +168,12 @@ export default function IndividualHoldingChart({
 
     // 2. Closed holdings
     (closedHoldings || []).forEach((c) => {
+      const fullName = getAssetName(c.ticker, c.name);
       list.push({
         key: `${c.ticker}_CLOSED_${c.exit_date}`,
         ticker: c.ticker,
-        name: c.name || c.ticker,
+        name: `${c.ticker} — ${fullName} (Cerrada ${c.exit_date})`,
+        fullName,
         status: "CLOSED",
         shares: c.shares,
         startPrice: c.entry_price,
@@ -176,6 +189,7 @@ export default function IndividualHoldingChart({
 
     return list;
   }, [holdings, closedHoldings, purchases, rebalances, investment, numSlots]);
+
 
   // Selected item state (controlled or uncontrolled)
   const [internalKey, setInternalKey] = useState(() => {
@@ -457,8 +471,8 @@ export default function IndividualHoldingChart({
             value={currentKey}
             onChange={(e) => handleKeyChange(e.target.value)}
             style={{
-              padding: "5px 12px",
-              borderRadius: 6,
+              padding: "6px 12px",
+              borderRadius: 8,
               background: isLight ? "#ffffff" : "#1e293b",
               color: isLight ? "#0f172a" : "#f1f5f9",
               border: `1px solid ${isLight ? "#cbd5e1" : "#334155"}`,
@@ -466,25 +480,15 @@ export default function IndividualHoldingChart({
               fontWeight: 700,
               cursor: "pointer",
               outline: "none",
-              maxWidth: 340,
+              maxWidth: 420,
+              boxShadow: isLight ? "0 2px 6px rgba(0,0,0,0.05)" : "0 2px 6px rgba(0,0,0,0.3)",
             }}
           >
+            {/* 1. Posiciones Consolidadas */}
             {availableOptions.some((o) => o.status === "PURCHASE_GROUP") && (
               <optgroup label="🏢 Posiciones Consolidadas (Todos los Lotes)">
                 {availableOptions
                   .filter((o) => o.status === "PURCHASE_GROUP")
-                  .map((o) => (
-                    <option key={o.key} value={o.key}>
-                      {o.ticker} — {o.name} ({o.returnPct >= 0 ? "+" : ""}{Number(o.returnPct || 0).toFixed(2)}%)
-                    </option>
-                  ))}
-              </optgroup>
-            )}
-
-            {availableOptions.some((o) => o.status === "PURCHASE_LOT") && (
-              <optgroup label="🎯 Lotes Individuales / Compras Abiertas">
-                {availableOptions
-                  .filter((o) => o.status === "PURCHASE_LOT")
                   .map((o) => (
                     <option key={o.key} value={o.key}>
                       {o.name} ({o.returnPct >= 0 ? "+" : ""}{Number(o.returnPct || 0).toFixed(2)}%)
@@ -493,25 +497,57 @@ export default function IndividualHoldingChart({
               </optgroup>
             )}
 
+            {/* 2. Lotes Individuales Agrupados Limpiamente por Acción / ETF */}
+            {(() => {
+              const purchaseLots = availableOptions.filter((o) => o.status === "PURCHASE_LOT");
+              if (purchaseLots.length === 0) return null;
+
+              // Group lots by ticker
+              const lotsByTicker = {};
+              purchaseLots.forEach((lot) => {
+                const t = lot.groupTicker || lot.ticker;
+                if (!lotsByTicker[t]) lotsByTicker[t] = [];
+                lotsByTicker[t].push(lot);
+              });
+
+              return Object.entries(lotsByTicker).map(([ticker, lots]) => {
+                const assetName = lots[0]?.fullName || getAssetName(ticker);
+                return (
+                  <optgroup
+                    key={ticker}
+                    label={`🎯 ${ticker} • ${assetName} (${lots.length} Lote${lots.length !== 1 ? "s" : ""})`}
+                  >
+                    {lots.map((o) => (
+                      <option key={o.key} value={o.key}>
+                        {ticker} — {o.name} ({o.returnPct >= 0 ? "+" : ""}{Number(o.returnPct || 0).toFixed(2)}%)
+                      </option>
+                    ))}
+                  </optgroup>
+                );
+              });
+            })()}
+
+            {/* 3. Acciones Activas (Titanes) */}
             {availableOptions.some((o) => o.status === "ACTIVE") && (
               <optgroup label="🟢 Acciones Activas (En Cartera)">
                 {availableOptions
                   .filter((o) => o.status === "ACTIVE")
                   .map((o) => (
                     <option key={o.key} value={o.key}>
-                      {o.ticker} — {o.name} ({o.returnPct >= 0 ? "+" : ""}{Number(o.returnPct || 0).toFixed(2)}%)
+                      {o.name} ({o.returnPct >= 0 ? "+" : ""}{Number(o.returnPct || 0).toFixed(2)}%)
                     </option>
                   ))}
               </optgroup>
             )}
 
+            {/* 4. Posiciones Cerradas */}
             {availableOptions.some((o) => o.status === "CLOSED") && (
               <optgroup label="🔴 Acciones Vendidas / Posiciones Cerradas">
                 {availableOptions
                   .filter((o) => o.status === "CLOSED")
                   .map((o) => (
                     <option key={o.key} value={o.key}>
-                      {o.ticker} (CERRADA {o.exitDate}) — {o.returnPct >= 0 ? "+" : ""}{Number(o.returnPct || 0).toFixed(2)}%
+                      {o.name} ({o.returnPct >= 0 ? "+" : ""}{Number(o.returnPct || 0).toFixed(2)}%)
                     </option>
                   ))}
               </optgroup>
@@ -521,58 +557,82 @@ export default function IndividualHoldingChart({
           {selectedItem?.status === "PURCHASE_LOT" ? (
             <span
               style={{
-                fontSize: "0.68rem",
-                padding: "2px 8px",
-                borderRadius: 4,
-                background: isLight ? "rgba(2, 132, 199, 0.12)" : "rgba(0, 229, 255, 0.12)",
+                fontSize: "0.72rem",
+                padding: "3px 10px",
+                borderRadius: 6,
+                background: isLight ? "rgba(2, 132, 199, 0.12)" : "rgba(0, 229, 255, 0.14)",
                 color: isLight ? "#0284c7" : "#00e5ff",
-                border: `1px solid ${isLight ? "rgba(2, 132, 199, 0.3)" : "rgba(0, 229, 255, 0.3)"}`,
+                border: `1px solid ${isLight ? "rgba(2, 132, 199, 0.35)" : "rgba(0, 229, 255, 0.35)"}`,
                 fontWeight: 700,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
               }}
             >
-              🎯 Lote Abierto ({selectedItem.entryDate}) • Vol: {Number(selectedItem.shares || 0).toFixed(4)} uds
+              <span>🎯</span>
+              <span>
+                Lote {selectedItem.ticker}: <strong>{selectedItem.fullName || getAssetName(selectedItem.ticker)}</strong> • {selectedItem.entryDate} ({Number(selectedItem.shares || 0).toFixed(4)} uds)
+              </span>
             </span>
           ) : selectedItem?.status === "PURCHASE_GROUP" ? (
             <span
               style={{
-                fontSize: "0.68rem",
-                padding: "2px 8px",
-                borderRadius: 4,
+                fontSize: "0.72rem",
+                padding: "3px 10px",
+                borderRadius: 6,
                 background: isLight ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.2)",
                 color: isLight ? "#047857" : "#34d399",
-                border: "1px solid rgba(16, 185, 129, 0.3)",
+                border: "1px solid rgba(16, 185, 129, 0.35)",
                 fontWeight: 700,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
               }}
             >
-              🏢 Posición Consolidada (Desde {selectedItem.entryDate})
+              <span>🏢</span>
+              <span>
+                Consolidado {selectedItem.ticker}: <strong>{selectedItem.fullName || getAssetName(selectedItem.ticker)}</strong> ({selectedItem.lotCount || "Varios"} Lotes)
+              </span>
             </span>
           ) : selectedItem?.status === "CLOSED" ? (
             <span
               style={{
-                fontSize: "0.68rem",
-                padding: "2px 8px",
-                borderRadius: 4,
+                fontSize: "0.72rem",
+                padding: "3px 10px",
+                borderRadius: 6,
                 background: "rgba(239, 68, 68, 0.15)",
                 color: isLight ? "#dc2626" : "#f87171",
-                border: "1px solid rgba(239, 68, 68, 0.3)",
+                border: "1px solid rgba(239, 68, 68, 0.35)",
                 fontWeight: 700,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
               }}
             >
-              🔒 Posición Cerrada ({selectedItem.entryDate} ➔ {selectedItem.exitDate})
+              <span>🔒</span>
+              <span>
+                {selectedItem.ticker} — {selectedItem.fullName || getAssetName(selectedItem.ticker)} (Cerrada {selectedItem.exitDate})
+              </span>
             </span>
           ) : (
             <span
               style={{
-                fontSize: "0.68rem",
-                padding: "2px 8px",
-                borderRadius: 4,
+                fontSize: "0.72rem",
+                padding: "3px 10px",
+                borderRadius: 6,
                 background: "rgba(16, 185, 129, 0.15)",
                 color: isLight ? "#059669" : "#34d399",
-                border: "1px solid rgba(16, 185, 129, 0.3)",
+                border: "1px solid rgba(16, 185, 129, 0.35)",
                 fontWeight: 700,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
               }}
             >
-              🟢 Activa en Cartera (Desde {selectedItem?.entryDate || "Inicio"})
+              <span>🟢</span>
+              <span>
+                {selectedItem?.ticker} — {selectedItem?.fullName || getAssetName(selectedItem?.ticker)} (Activa en Cartera)
+              </span>
             </span>
           )}
         </div>
@@ -671,7 +731,7 @@ export default function IndividualHoldingChart({
               : "0 4px 12px rgba(0, 0, 0, 0.35)",
             pointerEvents: "none",
             zIndex: 10,
-            maxWidth: 220,
+            maxWidth: 280,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.74rem", fontWeight: 700 }}>
@@ -685,7 +745,7 @@ export default function IndividualHoldingChart({
               }}
             />
             <span style={{ color: isLight ? "#0f172a" : "#f8fafc", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {selectedItem?.ticker} Valor
+              {selectedItem?.ticker} — {selectedItem?.fullName || getAssetName(selectedItem?.ticker)}
             </span>
           </div>
 

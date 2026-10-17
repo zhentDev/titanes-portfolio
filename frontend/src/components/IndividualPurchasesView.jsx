@@ -31,8 +31,10 @@ import XtbImportModal from "./XtbImportModal";
 import FxRateExplorer from "./Common/FxRateExplorer";
 import StockAlertModal from "./StockAlertModal";
 import IndividualHoldingChart from "./IndividualHoldingChart";
+import { getAssetName } from "../utils/assetNames";
 
 export default function IndividualPurchasesView({ portfolioId = "hist_default", onSelectPortfolio }) {
+
   const {
     individualPurchases,
     purchaseSales,
@@ -890,7 +892,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
       return {
         ...p,
         purchaseTime: p.purchaseTime || getMarketOpenTime(p.ticker, p.exchange),
-        name: liveQuote?.name || p.name,
+        name: getAssetName(p.ticker, liveQuote?.name || p.name),
         invested,
         commission,
         commissionFx,
@@ -1070,7 +1072,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
       if (!groups[p.ticker]) {
         groups[p.ticker] = {
           ticker: p.ticker,
-          name: p.name,
+          name: getAssetName(p.ticker, p.name),
           lots: [],
           totalInvested: 0,
           totalCommission: 0,
@@ -3796,37 +3798,70 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
               >
                 {groupedLots.map((group) => {
                   const isExpanded = expandedTickers[group.ticker];
+                  const lq = liveQuotes[group.ticker];
+                  const fullName = getAssetName(group.ticker, lq?.name || group.name);
+
+                  // Detect if this group or any of its lots is currently active/selected in the chart
+                  const isSelectedGroup =
+                    selectedHoldingKey === `GROUP_${group.ticker}` ||
+                    selectedHoldingKey === group.ticker ||
+                    (typeof selectedHoldingKey === "string" && (
+                      selectedHoldingKey.startsWith(`LOT_${group.ticker}_`) ||
+                      group.lots.some((lot) => selectedHoldingKey === `LOT_${lot.id}`)
+                    ));
+
                   return (
                     <div
                       key={group.ticker}
                       className="lot-group-wrapper"
-                      style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 640 }}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 8,
+                        minWidth: 640,
+                        marginBottom: 10,
+                      }}
                     >
                       {/* TICKER SUMMARY CARD */}
                       <div
                         className="card lot-group-card"
                         style={{
-                          padding: "16px",
-                          background: theme === "light" ? "var(--bg-card)" : "rgba(255,255,255,0.03)",
-                          borderRadius: "var(--radius)",
-                          border: "1px solid var(--border)",
-                          borderLeft: `4px solid ${group.isPositive ? "#22c55e" : "#ef4444"}`,
+                          padding: "16px 20px",
+                          background: isSelectedGroup
+                            ? (theme === "light" ? "rgba(2, 132, 199, 0.05)" : "rgba(0, 229, 255, 0.06)")
+                            : (theme === "light" ? "#ffffff" : "rgba(255,255,255,0.03)"),
+                          borderRadius: 12,
+                          border: isSelectedGroup
+                            ? (theme === "light" ? "2px solid #0284c7" : "2px solid #00e5ff")
+                            : (theme === "light" ? "1px solid #cbd5e1" : "1px solid rgba(255,255,255,0.1)"),
+                          borderLeft: `5px solid ${group.isPositive ? "#10b981" : "#ef4444"}`,
+                          boxShadow: isSelectedGroup
+                            ? (theme === "light" ? "0 6px 22px rgba(2, 132, 199, 0.22)" : "0 6px 26px rgba(0, 229, 255, 0.28)")
+                            : (theme === "light" ? "0 2px 8px rgba(0, 0, 0, 0.05)" : "0 4px 12px rgba(0, 0, 0, 0.25)"),
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "center",
                           cursor: "pointer",
-                          transition: "background 0.2s",
+                          transition: "all 0.2s ease",
                           gap: 16,
                         }}
                         onClick={() => toggleExpand(group.ticker)}
-                        onMouseEnter={(e) =>
-                          (e.currentTarget.style.background =
-                            theme === "light" ? "var(--bg-surface)" : "rgba(255,255,255,0.06)")
-                        }
-                        onMouseLeave={(e) =>
-                          (e.currentTarget.style.background =
-                            theme === "light" ? "var(--bg-card)" : "rgba(255,255,255,0.03)")
-                        }
+                        onMouseEnter={(e) => {
+                          if (!isSelectedGroup) {
+                            e.currentTarget.style.background =
+                              theme === "light" ? "var(--bg-surface)" : "rgba(255,255,255,0.06)";
+                            e.currentTarget.style.borderColor =
+                              theme === "light" ? "#94a3b8" : "rgba(255,255,255,0.2)";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSelectedGroup) {
+                            e.currentTarget.style.background =
+                              theme === "light" ? "#ffffff" : "rgba(255,255,255,0.03)";
+                            e.currentTarget.style.borderColor =
+                              theme === "light" ? "#cbd5e1" : "rgba(255,255,255,0.1)";
+                          }
+                        }}
                       >
                         <div className="lot-group-header-left">
                           <div
@@ -3838,9 +3873,28 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                               flexWrap: "wrap",
                             }}
                           >
-                            <strong style={{ fontSize: "1.1rem", color: "var(--text-primary)" }}>
+                            <strong style={{ fontSize: "1.15rem", color: "var(--text-primary)", letterSpacing: "0.3px" }}>
                               {group.ticker}
                             </strong>
+                            {isSelectedGroup && (
+                              <span
+                                style={{
+                                  fontSize: "0.68rem",
+                                  fontWeight: 800,
+                                  padding: "2px 8px",
+                                  borderRadius: 6,
+                                  background: theme === "light" ? "#0284c7" : "#00e5ff",
+                                  color: theme === "light" ? "#ffffff" : "#080c18",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 4,
+                                  letterSpacing: "0.4px",
+                                  boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+                                }}
+                              >
+                                👁️ Activo en Gráfica
+                              </span>
+                            )}
                             <button
                               onClick={(e) => handleEditParentTicker(group, e)}
                               style={{
@@ -3858,6 +3912,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                                 flexShrink: 0,
                                 transition: "all 0.15s ease",
                               }}
+
                               title="Cambiar Acción o ETF a todos los lotes de esta posición"
                               onMouseEnter={(e) => {
                                 e.currentTarget.style.background = theme === "light" ? "rgba(2, 132, 199, 0.18)" : "rgba(0, 229, 255, 0.2)";
@@ -3971,16 +4026,18 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                               <>
                                 <div
                                   style={{
-                                    fontSize: "0.75rem",
-                                    color: "var(--text-secondary)",
+                                    fontSize: "0.85rem",
+                                    fontWeight: 600,
+                                    color: theme === "light" ? "#1e293b" : "#f1f5f9",
                                     whiteSpace: "nowrap",
                                     overflow: "hidden",
                                     textOverflow: "ellipsis",
-                                    maxWidth: 320,
+                                    maxWidth: 380,
+                                    marginTop: 2,
                                   }}
-                                  title={lq?.name || group.name}
+                                  title={`${group.ticker} — ${fullName}`}
                                 >
-                                  {lq?.name || group.name}
+                                  {fullName}
                                 </div>
                                 {lq && (lq.exchange || lq.quoteType || lq.currency) && (
                                   <div
@@ -4303,52 +4360,82 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                             paddingLeft: 24,
                           }}
                         >
-                          {group.lots.map((p) => (
-                            <div
-                              key={p.id}
-                              className="lot-expanded-item"
-                              style={{
-                                padding: "12px 16px",
-                                background: theme === "light" ? "var(--bg-surface)" : "rgba(0,0,0,0.2)",
-                                borderRadius: "var(--radius)",
-                                border: "1px solid var(--border)",
-                                borderLeft: `3px solid ${p.isPositive ? "#22c55e" : "#ef4444"}`,
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                              }}
-                            >
-                              <div>
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 8,
-                                    marginBottom: 2,
-                                  }}
-                                >
-                                  <span
+                          {group.lots.map((p) => {
+                            const isLotSelected =
+                              selectedHoldingKey === `LOT_${p.id}` ||
+                              selectedHoldingKey === `LOT_${p.ticker}_${p.date}`;
+
+                            return (
+                              <div
+                                key={p.id}
+                                className="lot-expanded-item"
+                                style={{
+                                  padding: "12px 18px",
+                                  background: isLotSelected
+                                    ? (theme === "light" ? "rgba(2, 132, 199, 0.08)" : "rgba(0, 229, 255, 0.1)")
+                                    : (theme === "light" ? "#ffffff" : "rgba(0,0,0,0.2)"),
+                                  borderRadius: "var(--radius)",
+                                  border: isLotSelected
+                                    ? (theme === "light" ? "2px solid #0284c7" : "2px solid #00e5ff")
+                                    : (theme === "light" ? "1px solid #cbd5e1" : "1px solid var(--border)"),
+                                  borderLeft: `4px solid ${p.isPositive ? "#10b981" : "#ef4444"}`,
+                                  boxShadow: isLotSelected
+                                    ? (theme === "light" ? "0 4px 14px rgba(2, 132, 199, 0.18)" : "0 4px 16px rgba(0, 229, 255, 0.22)")
+                                    : "none",
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  transition: "all 0.15s ease",
+                                }}
+                              >
+                                <div>
+                                  <div
                                     style={{
-                                      fontSize: "0.8rem",
-                                      background: theme === "light" ? "var(--bg-card)" : "rgba(255,255,255,0.05)",
-                                      border: "1px solid var(--border)",
-                                      padding: "2px 6px",
-                                      borderRadius: 4,
-                                      color: "var(--text-primary)",
-                                      display: "inline-flex",
+                                      display: "flex",
                                       alignItems: "center",
-                                      gap: 4,
+                                      gap: 8,
+                                      marginBottom: 2,
                                     }}
                                   >
-                                    <span>📅 {p.date}</span>
-                                    {p.purchaseTime && (
-                                      <span style={{ color: theme === "light" ? "#0284c7" : "#00e5ff", fontWeight: 600 }}>
-                                        🕒 {p.purchaseTime}
+                                    <span
+                                      style={{
+                                        fontSize: "0.8rem",
+                                        background: theme === "light" ? "var(--bg-card)" : "rgba(255,255,255,0.05)",
+                                        border: "1px solid var(--border)",
+                                        padding: "2px 6px",
+                                        borderRadius: 4,
+                                        color: "var(--text-primary)",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: 4,
+                                      }}
+                                    >
+                                      <span>📅 {p.date}</span>
+                                      {p.purchaseTime && (
+                                        <span style={{ color: theme === "light" ? "#0284c7" : "#00e5ff", fontWeight: 600 }}>
+                                          🕒 {p.purchaseTime}
+                                        </span>
+                                      )}
+                                    </span>
+                                    {isLotSelected && (
+                                      <span
+                                        style={{
+                                          fontSize: "0.68rem",
+                                          fontWeight: 800,
+                                          padding: "1px 7px",
+                                          borderRadius: 4,
+                                          background: theme === "light" ? "#0284c7" : "#00e5ff",
+                                          color: theme === "light" ? "#ffffff" : "#080c18",
+                                          display: "inline-flex",
+                                          alignItems: "center",
+                                          gap: 3,
+                                        }}
+                                      >
+                                        🎯 Lote en Gráfica
                                       </span>
                                     )}
-                                  </span>
+                                  </div>
                                 </div>
-                              </div>
 
                               <div style={{ textAlign: "right" }}>
                                 <div style={{ display: "flex", gap: 16, fontSize: "0.75rem" }}>
@@ -4748,7 +4835,8 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                                   </button>
                                 </div>
                             </div>
-                          ))}
+                          );
+                        })}
                         </div>
                       )}
                     </div>

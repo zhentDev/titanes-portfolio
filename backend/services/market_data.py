@@ -155,7 +155,74 @@ TICKER_METADATA: dict[str, dict[str, str]] = {
         "sector": "Criptomoneda / Smart Contracts",
         "exchange": "CRYPTO",
     },
+    # ETFs y Metales Físicos (LSE / Xetra / US)
+    "IPLT.L": {
+        "name": "WisdomTree Physical Platinum",
+        "sector": "Metales Preciosos / Platino Físico",
+        "exchange": "LSE",
+    },
+    "SMH.L": {
+        "name": "VanEck Semiconductor UCITS ETF",
+        "sector": "Semiconductores Globales",
+        "exchange": "LSE",
+    },
+    "SMH": {
+        "name": "VanEck Semiconductor ETF",
+        "sector": "Semiconductores",
+        "exchange": "NASDAQ",
+    },
+    "GDX.L": {
+        "name": "VanEck Gold Miners UCITS ETF",
+        "sector": "Minería de Oro",
+        "exchange": "LSE",
+    },
+    "GDX": {
+        "name": "VanEck Gold Miners ETF",
+        "sector": "Minería de Oro",
+        "exchange": "NYSE",
+    },
+    "CSPX.L": {
+        "name": "iShares Core S&P 500 UCITS ETF",
+        "sector": "Índice S&P 500",
+        "exchange": "LSE",
+    },
+    "CNDX.L": {
+        "name": "iShares NASDAQ 100 UCITS ETF",
+        "sector": "Índice NASDAQ 100",
+        "exchange": "LSE",
+    },
+    "EMIM.L": {
+        "name": "iShares Core MSCI Emerging Markets IMI ETF",
+        "sector": "Mercados Emergentes",
+        "exchange": "LSE",
+    },
+    "CNYA.L": {
+        "name": "iShares MSCI China A UCITS ETF",
+        "sector": "Renta Variable China A",
+        "exchange": "LSE",
+    },
+    "KWEB.L": {
+        "name": "KraneShares CSI China Internet ETF",
+        "sector": "Internet & Tecnología China",
+        "exchange": "LSE",
+    },
+    "3CP.F": {
+        "name": "WisdomTree Physical Platinum (Xetra)",
+        "sector": "Metales Preciosos / Platino",
+        "exchange": "XETRA",
+    },
+    "NNND.F": {
+        "name": "iShares NASDAQ 100 UCITS ETF (Xetra)",
+        "sector": "Índice NASDAQ 100 EUR",
+        "exchange": "XETRA",
+    },
+    "NVDA": {
+        "name": "NVIDIA Corporation",
+        "sector": "Chips & Aceleradores IA",
+        "exchange": "NASDAQ",
+    },
 }
+
 
 
 def get_ticker_meta(ticker: str) -> dict[str, str]:
