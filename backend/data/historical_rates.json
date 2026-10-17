@@ -744,6 +744,390 @@
           "label": "90 Días Plenti Lock (8.00% E.A.)"
         }
       ]
+    },
+    "ent_cajasocial": {
+      "name": "Banco Caja Social",
+      "country": "🇨🇴",
+      "savings_rates": [
+        {
+          "from": "2024-01-01",
+          "to": "2099-12-31",
+          "rateEA": 9.25,
+          "notes": "Rendicuenta y Cuentamiga Rentable"
+        }
+      ],
+      "cdt_term_rates": [
+        {
+          "termDaysMin": 1,
+          "termDaysMax": 120,
+          "rateEA": 10.0,
+          "label": "90 Días Tasa Fija"
+        },
+        {
+          "termDaysMin": 121,
+          "termDaysMax": 220,
+          "rateEA": 10.6,
+          "label": "180 Días Tasa Fija"
+        },
+        {
+          "termDaysMin": 221,
+          "termDaysMax": 999,
+          "rateEA": 10.9,
+          "label": "360 Días Tasa Fija"
+        }
+      ]
+    },
+    "ent_bogota": {
+      "name": "Banco de Bogotá",
+      "country": "🇨🇴",
+      "savings_rates": [
+        {
+          "from": "2024-01-01",
+          "to": "2099-12-31",
+          "rateEA": 9.0,
+          "notes": "Cuenta Rentahorro y Libre Ahorro"
+        }
+      ],
+      "cdt_term_rates": [
+        {
+          "termDaysMin": 1,
+          "termDaysMax": 120,
+          "rateEA": 9.8,
+          "label": "90 Días Digital"
+        },
+        {
+          "termDaysMin": 121,
+          "termDaysMax": 220,
+          "rateEA": 10.5,
+          "label": "180 Días Digital"
+        },
+        {
+          "termDaysMin": 221,
+          "termDaysMax": 999,
+          "rateEA": 10.8,
+          "label": "360 Días Digital"
+        }
+      ]
+    },
+    "ent_bbva": {
+      "name": "BBVA Colombia",
+      "country": "🇨🇴",
+      "savings_rates": [
+        {
+          "from": "2024-01-01",
+          "to": "2099-12-31",
+          "rateEA": 9.2,
+          "notes": "Cuenta Online y Nómina Blue BBVA"
+        }
+      ],
+      "cdt_term_rates": [
+        {
+          "termDaysMin": 1,
+          "termDaysMax": 120,
+          "rateEA": 10.1,
+          "label": "90 Días Online"
+        },
+        {
+          "termDaysMin": 121,
+          "termDaysMax": 220,
+          "rateEA": 10.7,
+          "label": "180 Días Online"
+        },
+        {
+          "termDaysMin": 221,
+          "termDaysMax": 999,
+          "rateEA": 11.0,
+          "label": "360 Días Online"
+        }
+      ]
+    },
+    "ent_scotiabank": {
+      "name": "Scotiabank Colpatria",
+      "country": "🇨🇴",
+      "savings_rates": [
+        {
+          "from": "2024-01-01",
+          "to": "2099-12-31",
+          "rateEA": 8.5,
+          "notes": "Cuenta Cero y Ahorro Más"
+        }
+      ],
+      "cdt_term_rates": [
+        {
+          "termDaysMin": 1,
+          "termDaysMax": 120,
+          "rateEA": 9.7,
+          "label": "90 Días Digital"
+        },
+        {
+          "termDaysMin": 121,
+          "termDaysMax": 220,
+          "rateEA": 10.4,
+          "label": "180 Días Digital"
+        },
+        {
+          "termDaysMin": 221,
+          "termDaysMax": 999,
+          "rateEA": 10.7,
+          "label": "360 Días Digital"
+        }
+      ]
+    },
+    "ent_occidente": {
+      "name": "Banco de Occidente",
+      "country": "🇨🇴",
+      "savings_rates": [
+        {
+          "from": "2024-01-01",
+          "to": "2099-12-31",
+          "rateEA": 8.8,
+          "notes": "Cuenta Ahorro Activo"
+        }
+      ],
+      "cdt_term_rates": [
+        {
+          "termDaysMin": 1,
+          "termDaysMax": 120,
+          "rateEA": 9.8,
+          "label": "90 Días Tradicional"
+        },
+        {
+          "termDaysMin": 121,
+          "termDaysMax": 220,
+          "rateEA": 10.5,
+          "label": "180 Días Tradicional"
+        },
+        {
+          "termDaysMin": 221,
+          "termDaysMax": 999,
+          "rateEA": 10.8,
+          "label": "360 Días Tradicional"
+        }
+      ]
+    },
+    "ent_villas": {
+      "name": "Banco AV Villas",
+      "country": "🇨🇴",
+      "savings_rates": [
+        {
+          "from": "2024-01-01",
+          "to": "2099-12-31",
+          "rateEA": 8.75,
+          "notes": "Cuenta Ahorro Fácil y Bolsillos"
+        }
+      ],
+      "cdt_term_rates": [
+        {
+          "termDaysMin": 1,
+          "termDaysMax": 120,
+          "rateEA": 9.8,
+          "label": "90 Días Digital"
+        },
+        {
+          "termDaysMin": 121,
+          "termDaysMax": 220,
+          "rateEA": 10.5,
+          "label": "180 Días Digital"
+        },
+        {
+          "termDaysMin": 221,
+          "termDaysMax": 999,
+          "rateEA": 10.7,
+          "label": "360 Días Digital"
+        }
+      ]
+    },
+    "ent_popular": {
+      "name": "Banco Popular",
+      "country": "🇨🇴",
+      "savings_rates": [
+        {
+          "from": "2024-01-01",
+          "to": "2099-12-31",
+          "rateEA": 9.0,
+          "notes": "Cuenta Diamante y Expreso"
+        }
+      ],
+      "cdt_term_rates": [
+        {
+          "termDaysMin": 1,
+          "termDaysMax": 120,
+          "rateEA": 9.9,
+          "label": "90 Días Popular"
+        },
+        {
+          "termDaysMin": 121,
+          "termDaysMax": 220,
+          "rateEA": 10.6,
+          "label": "180 Días Popular"
+        },
+        {
+          "termDaysMin": 221,
+          "termDaysMax": 999,
+          "rateEA": 10.8,
+          "label": "360 Días Popular"
+        }
+      ]
+    },
+    "ent_itau": {
+      "name": "Banco Itaú",
+      "country": "🇨🇴",
+      "savings_rates": [
+        {
+          "from": "2024-01-01",
+          "to": "2099-12-31",
+          "rateEA": 8.5,
+          "notes": "Cuenta Ahorros Itaú y Personal Bank"
+        }
+      ],
+      "cdt_term_rates": [
+        {
+          "termDaysMin": 1,
+          "termDaysMax": 120,
+          "rateEA": 9.6,
+          "label": "90 Días Itaú"
+        },
+        {
+          "termDaysMin": 121,
+          "termDaysMax": 220,
+          "rateEA": 10.3,
+          "label": "180 Días Itaú"
+        },
+        {
+          "termDaysMin": 221,
+          "termDaysMax": 999,
+          "rateEA": 10.6,
+          "label": "360 Días Itaú"
+        }
+      ]
+    },
+    "ent_falabella": {
+      "name": "Banco Falabella",
+      "country": "🇨🇴",
+      "savings_rates": [
+        {
+          "from": "2024-01-01",
+          "to": "2099-12-31",
+          "rateEA": 10.0,
+          "notes": "Cuenta PAC Costo Cero y CMR Puntos"
+        }
+      ],
+      "cdt_term_rates": [
+        {
+          "termDaysMin": 1,
+          "termDaysMax": 120,
+          "rateEA": 10.2,
+          "label": "90 Días Falabella"
+        },
+        {
+          "termDaysMin": 121,
+          "termDaysMax": 220,
+          "rateEA": 10.9,
+          "label": "180 Días Falabella"
+        },
+        {
+          "termDaysMin": 221,
+          "termDaysMax": 999,
+          "rateEA": 11.2,
+          "label": "360 Días Falabella"
+        }
+      ]
+    },
+    "ent_bancoagrario": {
+      "name": "Banco Agrario de Colombia",
+      "country": "🇨🇴",
+      "savings_rates": [
+        {
+          "from": "2024-01-01",
+          "to": "2099-12-31",
+          "rateEA": 8.0,
+          "notes": "Cuenta Tradicional Ahorro y RentaFácil"
+        }
+      ],
+      "cdt_term_rates": [
+        {
+          "termDaysMin": 1,
+          "termDaysMax": 120,
+          "rateEA": 9.5,
+          "label": "90 Días Agropecuario"
+        },
+        {
+          "termDaysMin": 121,
+          "termDaysMax": 220,
+          "rateEA": 10.2,
+          "label": "180 Días Agropecuario"
+        },
+        {
+          "termDaysMin": 221,
+          "termDaysMax": 999,
+          "rateEA": 10.5,
+          "label": "360 Días Agropecuario"
+        }
+      ]
+    },
+    "ent_bancamia": {
+      "name": "Bancamía",
+      "country": "🇨🇴",
+      "savings_rates": [
+        {
+          "from": "2024-01-01",
+          "to": "2099-12-31",
+          "rateEA": 9.5,
+          "notes": "Cuenta Ahorro Plazo"
+        }
+      ],
+      "cdt_term_rates": [
+        {
+          "termDaysMin": 1,
+          "termDaysMax": 120,
+          "rateEA": 10.1,
+          "label": "90 Días Bancamía"
+        },
+        {
+          "termDaysMin": 121,
+          "termDaysMax": 220,
+          "rateEA": 10.8,
+          "label": "180 Días Bancamía"
+        },
+        {
+          "termDaysMin": 221,
+          "termDaysMax": 999,
+          "rateEA": 11.1,
+          "label": "360 Días Bancamía"
+        }
+      ]
+    },
+    "ent_confiar": {
+      "name": "Confiar Cooperativa",
+      "country": "🇨🇴",
+      "savings_rates": [
+        {
+          "from": "2024-01-01",
+          "to": "2099-12-31",
+          "rateEA": 10.5,
+          "notes": "Ahorro a la Vista y Programado"
+        }
+      ],
+      "cdt_term_rates": [
+        {
+          "termDaysMin": 1,
+          "termDaysMax": 120,
+          "rateEA": 10.5,
+          "label": "90 Días CDAT"
+        },
+        {
+          "termDaysMin": 121,
+          "termDaysMax": 220,
+          "rateEA": 11.2,
+          "label": "180 Días CDAT"
+        },
+        {
+          "termDaysMin": 221,
+          "termDaysMax": 999,
+          "rateEA": 11.5,
+          "label": "360 Días CDAT"
+        }
+      ]
     }
   }
 }

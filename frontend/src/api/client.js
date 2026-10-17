@@ -2,6 +2,7 @@
  * API client — wraps fetch calls to the FastAPI backend.
  * Automatically falls back to static pre-calculated JSON data on GitHub Pages or when backend is offline!
  */
+import { getBankPreset } from "../utils/bankPresets";
 
 const RENDER_BACKEND_BASE = "https://titanes-portfolio-backend.onrender.com/api";
 const LOCAL_BACKEND_BASE = "http://127.0.0.1:8000/api";
@@ -685,9 +686,22 @@ export async function suggestFixedIncomeRate(
     const res = await safeFetch(`${BASE}/fixed-income/rates/suggest?${params}`);
     if (res.ok) return await res.json();
   } catch (e) {
-    // Fallback defaults
+    // Fallback defaults below
   }
-  return { rateEA: 12.0, label: "Tasa Estándar", tiers: [] };
+
+  const cleanId = String(entityId || "").replace("preset_", "").replace("ent_", "");
+  const bp = getBankPreset(cleanId);
+  const baseRate = bp?.defaultRateEA || (productType === "cdt" ? 10.5 : 9.0);
+
+  return {
+    rateEA: baseRate,
+    label: bp ? `Tasa Sugerida ${bp.name}` : "Tasa Estándar",
+    tiers: productType === "cdt" ? [
+      { termDaysMin: 1, termDaysMax: 120, rateEA: Number((baseRate + 0.5).toFixed(2)), label: "90 Días" },
+      { termDaysMin: 121, termDaysMax: 220, rateEA: Number((baseRate + 1.2).toFixed(2)), label: "180 Días" },
+      { termDaysMin: 221, termDaysMax: 999, rateEA: Number((baseRate + 1.5).toFixed(2)), label: "360 Días" },
+    ] : [],
+  };
 }
 
 export async function fetchHistoricalRates() {
@@ -695,7 +709,12 @@ export async function fetchHistoricalRates() {
     const res = await safeFetch(`${BASE}/fixed-income/rates`);
     if (res.ok) return await res.json();
   } catch (e) {
-    console.error("Error fetching historical rates database:", e);
+    try {
+      const staticRes = await fetch(getStaticDataPath("historical_rates.json"));
+      if (staticRes.ok) return await staticRes.json();
+    } catch (err) {
+      console.error("Error fetching historical rates database:", e);
+    }
   }
   return { entities: {} };
 }

@@ -28,17 +28,69 @@ export default function FixedIncomeModal({
     useFixedIncomeStore();
   const [activeTab, setActiveTab] = useState(initialTab); // 'entity' | 'account' | 'cdt' | 'calculator' | 'transaction'
 
-  // Memoized options for CustomSelectDropdown
+  // Memoized options for CustomSelectDropdown (includes existing entities + all traditional/modern bank presets)
   const entityOptions = useMemo(() => {
-    return entities.map((e) => ({
+    const existing = entities.map((e) => ({
       value: e.id,
       label: e.name,
       country: e.country,
       icon: e.icon,
       color: e.color,
+      badge: "En Portafolio",
       logoUrl: e.logoUrl || (e.name ? svgToDataUri(getBankPreset(e.name)?.logoSvg) : null),
     }));
+
+    const existingNames = new Set(
+      entities.map((e) => (e.name || "").toLowerCase().replace(/banco\s+/g, "").trim())
+    );
+
+    const availablePresets = BANK_PRESETS.filter((bp) => {
+      const cleanBp = bp.name.toLowerCase().replace(/banco\s+/g, "").trim();
+      return (
+        !existingNames.has(cleanBp) &&
+        !entities.some((e) => e.id === `ent_${bp.id}` || e.id === bp.id)
+      );
+    }).map((bp) => ({
+      value: `preset_${bp.id}`,
+      label: bp.name,
+      country: bp.country,
+      icon: bp.icon,
+      color: bp.color,
+      badge: `+ Nuevo (${bp.defaultRateEA}% E.A.)`,
+      isPreset: true,
+      logoUrl: svgToDataUri(bp.logoSvg),
+    }));
+
+    return [...existing, ...availablePresets];
   }, [entities]);
+
+  // Current entity or preset data for auto-suggestions
+  const currentSelectedPreset = useMemo(() => {
+    if (!selectedEntityId) return null;
+    if (selectedEntityId.startsWith("preset_")) {
+      const pId = selectedEntityId.replace("preset_", "");
+      return getBankPreset(pId);
+    }
+    const found = entities.find((e) => e.id === selectedEntityId);
+    if (found) {
+      return getBankPreset(found.name);
+    }
+    return null;
+  }, [selectedEntityId, entities]);
+
+  const suggestedProducts = currentSelectedPreset?.suggestedProducts || [];
+  const suggestedCdtProducts = useMemo(() => {
+    const filtered = suggestedProducts.filter((p) =>
+      p.toLowerCase().includes("cdt") ||
+      p.toLowerCase().includes("congelad") ||
+      p.toLowerCase().includes("plazo") ||
+      p.toLowerCase().includes("cdat")
+    );
+    if (filtered.length === 0 && currentSelectedPreset) {
+      return [`CDT ${currentSelectedPreset.name}`];
+    }
+    return filtered;
+  }, [suggestedProducts, currentSelectedPreset]);
 
   const accountOptions = useMemo(() => {
     return accounts.map((acc) => {
@@ -160,11 +212,16 @@ export default function FixedIncomeModal({
     if (initialEntityId) {
       setSelectedEntityId(initialEntityId);
       setCalcEntityId(initialEntityId);
-    } else if (entities.length > 0 && !selectedEntityId) {
-      setSelectedEntityId(entities[0].id);
-      setCalcEntityId(entities[0].id);
+    } else if (!selectedEntityId) {
+      if (entities.length > 0) {
+        setSelectedEntityId(entities[0].id);
+        setCalcEntityId(entities[0].id);
+      } else if (entityOptions.length > 0) {
+        setSelectedEntityId(entityOptions[0].value);
+        setCalcEntityId(entityOptions[0].value);
+      }
     }
-  }, [initialTab, initialEntityId, entities, isOpen]);
+  }, [initialTab, initialEntityId, entities, entityOptions, isOpen]);
 
   // Pre-fill form fields when editing an existing item, or reset if creating new
   useEffect(() => {
@@ -405,8 +462,30 @@ export default function FixedIncomeModal({
       toast.error("Ingresa el nombre de la cuenta o bolsillo");
       return;
     }
+
+    let finalEntityId = selectedEntityId;
+    if (selectedEntityId.startsWith("preset_")) {
+      const pId = selectedEntityId.replace("preset_", "");
+      const bp = getBankPreset(pId);
+      const existingEnt = entities.find(
+        (ent) => (ent.name || "").toLowerCase() === (bp.name || "").toLowerCase()
+      );
+      if (existingEnt) {
+        finalEntityId = existingEnt.id;
+      } else {
+        const newEnt = await addEntity({
+          name: bp.name,
+          country: bp.country,
+          color: bp.color,
+          icon: bp.icon,
+          logoUrl: svgToDataUri(bp.logoSvg),
+        });
+        finalEntityId = newEnt?.id || `ent_${Date.now()}`;
+      }
+    }
+
     const accountData = {
-      entityId: selectedEntityId,
+      entityId: finalEntityId,
       name: accountName,
       type: accountType,
       currency: accountCurrency,
@@ -441,8 +520,30 @@ export default function FixedIncomeModal({
       toast.error("Ingresa un capital válido");
       return;
     }
+
+    let finalEntityId = selectedEntityId;
+    if (selectedEntityId.startsWith("preset_")) {
+      const pId = selectedEntityId.replace("preset_", "");
+      const bp = getBankPreset(pId);
+      const existingEnt = entities.find(
+        (ent) => (ent.name || "").toLowerCase() === (bp.name || "").toLowerCase()
+      );
+      if (existingEnt) {
+        finalEntityId = existingEnt.id;
+      } else {
+        const newEnt = await addEntity({
+          name: bp.name,
+          country: bp.country,
+          color: bp.color,
+          icon: bp.icon,
+          logoUrl: svgToDataUri(bp.logoSvg),
+        });
+        finalEntityId = newEnt?.id || `ent_${Date.now()}`;
+      }
+    }
+
     const cdtData = {
-      entityId: selectedEntityId,
+      entityId: finalEntityId,
       name: cdtName,
       capital: Number(cdtCapital),
       currency: cdtCurrency,
@@ -606,11 +707,29 @@ export default function FixedIncomeModal({
               <div>
                 <FloatingInput
                   label="Nombre del Producto / Bolsillo"
-                  placeholder="ej. Cajita de Rendimiento, Bolsillo Viajes"
+                  placeholder="ej. Cuentamiga, Cajita de Rendimiento, Bolsillo Viajes"
                   value={accountName}
                   onChange={(e) => setAccountName(e.target.value)}
                   required
                 />
+                {suggestedProducts.length > 0 && (
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+                    <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", alignSelf: "center" }}>
+                      Sugerencias {currentSelectedPreset?.name || "Entidad"}:
+                    </span>
+                    {suggestedProducts.map((pName) => (
+                      <button
+                        key={pName}
+                        type="button"
+                        onClick={() => setAccountName(pName)}
+                        className={`fi-tier-chip ${accountName === pName ? "selected" : ""}`}
+                        style={{ fontSize: "0.72rem", padding: "2px 8px" }}
+                      >
+                        {pName}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -775,11 +894,29 @@ export default function FixedIncomeModal({
               <div>
                 <FloatingInput
                   label="Nombre / Identificador del CDT"
-                  placeholder="ej. CDT Nu Congelada 180 Días, CDT Pibank"
+                  placeholder="ej. CDT Caja Social Tasa Fija, CDT Nu Congelada 180 Días, CDT Pibank"
                   value={cdtName}
                   onChange={(e) => setCdtName(e.target.value)}
                   required
                 />
+                {suggestedCdtProducts.length > 0 && (
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+                    <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", alignSelf: "center" }}>
+                      Sugerencias CDT {currentSelectedPreset?.name || "Entidad"}:
+                    </span>
+                    {suggestedCdtProducts.map((pName) => (
+                      <button
+                        key={pName}
+                        type="button"
+                        onClick={() => setCdtName(pName)}
+                        className={`fi-tier-chip ${cdtName === pName ? "selected" : ""}`}
+                        style={{ fontSize: "0.72rem", padding: "2px 8px" }}
+                      >
+                        {pName}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>

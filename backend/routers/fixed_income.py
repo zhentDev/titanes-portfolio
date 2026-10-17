@@ -445,20 +445,20 @@ def suggest_rate(
 ):
     """Suggest exact historical or term-based E.A. interest rate for an entity."""
     rates_db = load_historical_rates_db()
-    entity_data = rates_db.get("entities", {}).get(entity_id)
+    lookup_id = entity_id.replace("preset_", "ent_") if entity_id.startswith("preset_") else entity_id
+    entity_data = rates_db.get("entities", {}).get(lookup_id)
 
     if not entity_data:
-        # Fallback: search by entity name in fixed_income database
+        # Fallback: search by entity name in fixed_income database or direct key match
         fi_db = load_fixed_income_db()
         target_ent = next((e for e in fi_db.get("entities", []) if e.get("id") == entity_id), None)
-        if target_ent:
-            ent_name_clean = target_ent.get("name", "").lower().replace(" ", "").replace("banco", "")
-            for k, ed in rates_db.get("entities", {}).items():
-                k_clean = k.lower().replace("ent_", "").replace("_", "")
-                ed_name_clean = ed.get("name", "").lower().replace(" ", "").replace("banco", "")
-                if k_clean in ent_name_clean or ent_name_clean in k_clean or ed_name_clean in ent_name_clean or ent_name_clean in ed_name_clean:
-                    entity_data = ed
-                    break
+        ent_name_clean = (target_ent.get("name", "") if target_ent else entity_id).lower().replace(" ", "").replace("banco", "").replace("preset_", "").replace("ent_", "")
+        for k, ed in rates_db.get("entities", {}).items():
+            k_clean = k.lower().replace("ent_", "").replace("_", "")
+            ed_name_clean = ed.get("name", "").lower().replace(" ", "").replace("banco", "")
+            if k_clean in ent_name_clean or ent_name_clean in k_clean or ed_name_clean in ent_name_clean or ent_name_clean in ed_name_clean:
+                entity_data = ed
+                break
 
     if not entity_data:
         if product_type == "cdt":
