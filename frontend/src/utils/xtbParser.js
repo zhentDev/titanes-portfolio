@@ -32,6 +32,79 @@ function cleanTicker(raw) {
     .replace(/_ES$/, '');
 }
 
+export function extractXtbDate(chunkOrRow, fallbackDate = "") {
+  const defaultDateStr = fallbackDate || new Date().toISOString().slice(0, 10);
+  if (!chunkOrRow) {
+    return { date: defaultDateStr, time: "", isAutoDetected: false };
+  }
+
+  const raw = typeof chunkOrRow === "string"
+    ? chunkOrRow
+    : chunkOrRow.innerHTML || chunkOrRow.textContent || "";
+
+  // 1. Prioritize specific xStation date-time containers or attributes
+  const specificPatterns = [
+    /(?:data-testid="(?:open-time|time|date|open-date)"[^>]*>|<xs6-date-renderer[^>]*>)([\s\S]*?)(?:<\/td>|<\/xs6-tablet-item-value-renderer>|<\/xs6-date-renderer>|<\/div>)/i,
+    /class="[^"]*(?:open-time|trade-time|order-time|time-column)[^"]*"[^>]*>([\s\S]*?)(?:<\/td>|<\/div>)/i,
+    /title="([^"]*(?:20\d\d|\d{2}[/.-]\d{2}[/.-]\d{4})[^"]*)"/i,
+  ];
+
+  let priorityText = "";
+  for (const pat of specificPatterns) {
+    const m = raw.match(pat);
+    if (m && m[1]) {
+      priorityText = m[1].replace(/<[^>]+>/g, " ").trim();
+      break;
+    }
+  }
+
+  const textToScan = priorityText || raw.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ");
+
+  // 2. Format DD/MM/YYYY or DD.MM.YYYY or DD-MM-YYYY (with optional HH:MM or HH:MM:SS)
+  const dmy = textToScan.match(/\b([0-3]?\d)[/.-]([01]?\d)[/.-](20\d{2})\b(?:\s+([0-2]?\d:[0-5]\d(?::[0-5]\d)?))?/);
+  if (dmy) {
+    const day = dmy[1].padStart(2, "0");
+    const month = dmy[2].padStart(2, "0");
+    const year = dmy[3];
+    const time = dmy[4] || "";
+
+    const mNum = parseInt(month, 10);
+    const dNum = parseInt(day, 10);
+    if (mNum >= 1 && mNum <= 12 && dNum >= 1 && dNum <= 31) {
+      return {
+        date: `${year}-${month}-${day}`,
+        time: time ? (time.length === 5 ? `${time}:00` : time) : "",
+        isAutoDetected: true,
+      };
+    }
+  }
+
+  // 3. Format YYYY-MM-DD or YYYY/MM/DD or YYYY.MM.DD (with optional HH:MM or HH:MM:SS)
+  const ymd = textToScan.match(/\b(20\d{2})[/.-]([01]?\d)[/.-]([0-3]?\d)\b(?:\s+([0-2]?\d:[0-5]\d(?::[0-5]\d)?))?/);
+  if (ymd) {
+    const year = ymd[1];
+    const month = ymd[2].padStart(2, "0");
+    const day = ymd[3].padStart(2, "0");
+    const time = ymd[4] || "";
+
+    const mNum = parseInt(month, 10);
+    const dNum = parseInt(day, 10);
+    if (mNum >= 1 && mNum <= 12 && dNum >= 1 && dNum <= 31) {
+      return {
+        date: `${year}-${month}-${day}`,
+        time: time ? (time.length === 5 ? `${time}:00` : time) : "",
+        isAutoDetected: true,
+      };
+    }
+  }
+
+  return {
+    date: defaultDateStr,
+    time: "",
+    isAutoDetected: false,
+  };
+}
+
 export function parseXtbTrades(rawInput, defaultDate = '') {
   if (!rawInput || typeof rawInput !== 'string') {
     return { success: false, trades: [], error: 'El contenido proporcionado está vacío.' };
@@ -68,117 +141,175 @@ export function parseXtbTrades(rawInput, defaultDate = '') {
 }
 
 function parseWithRegex(html, fallbackDate) {
-  // Extract custom trade rows
-  let rowChunks = html.match(/<xs6-my-trades-table-row[\s\S]*?<\/xs6-my-trades-table-row>/gi) || [];
+  // Extract custom trade rows and child position rows in document order
+  const chunkRegex = /(?:<xs6-my-trades-table-row\b[\s\S]*?<\/xs6-my-trades-table-row>|<xs6-open-table-position-row\b[\s\S]*?<\/xs6-open-table-position-row>|<tr\b[^>]*data-testid="(?:group-row|child-row)"[\s\S]*?<\/tr>)/gi;
+  let rowChunks = html.match(chunkRegex) || [];
 
-  // Fallback: match tr with group-row
+  // Fallback: match any tr
   if (rowChunks.length === 0) {
-    rowChunks = html.match(/<tr\b[^>]*data-testid="group-row"[\s\S]*?<\/tr>/gi) || [];
+    rowChunks = html.match(/<tr\b[\s\S]*?<\/tr>/gi) || [];
   }
 
-  // Fallback 2: split by <xs6-my-trades-table-row
-  if (rowChunks.length === 0 && html.includes('<xs6-my-trades-table-row')) {
-    rowChunks = html.split(/<xs6-my-trades-table-row/i).slice(1).map(c => '<xs6-my-trades-table-row' + c);
-  }
-
-  // Fallback 3: split by <tr
-  if (rowChunks.length === 0 && html.includes('<tr')) {
-    rowChunks = html.split(/<tr\b/i).slice(1).map(c => '<tr ' + c);
+  // Fallback 2: split by <xs6-my-trades-table-row or <xs6-open-table-position-row
+  if (rowChunks.length === 0 && (html.includes('<xs6-my-trades-table-row') || html.includes('<xs6-open-table-position-row'))) {
+    rowChunks = html.split(/(?=<xs6-my-trades-table-row|<xs6-open-table-position-row)/i).slice(1);
   }
 
   if (rowChunks.length === 0) {
     return { success: false, trades: [] };
   }
 
-  const trades = [];
-  const seenTickers = new Set();
+  const extractField = (chunk, testid) => {
+    // Primary: data-testid="X" followed by label-value, pds-value-text__value, or row-column
+    const reg = new RegExp(`data-testid="${testid}"[\\s\\S]*?(?:<p[^>]*class="[^"]*label-value[^"]*"[^>]*>|<span[^>]*class="[^"]*pds-value-text__value[^"]*"[^>]*>|\\bclass="[^"]*row-column[^"]*"[^>]*>)\\s*([\\d\\.,]+)`, 'i');
+    const m = chunk.match(reg);
+    if (m && m[1]) return cleanNumber(m[1]);
 
-  rowChunks.forEach((chunk, idx) => {
-    // 1. Ticker extraction from logo URL
-    let ticker = '';
-    const logoMatch = chunk.match(/logos\.xtb\.com\/([a-zA-Z0-9_]+?)(?:_us|_eu|_uk|_pl|_de|_es)?\.(?:png|svg|webp)/i);
-    if (logoMatch && logoMatch[1]) {
-      ticker = cleanTicker(logoMatch[1]);
-    }
+    // Secondary: data-testid="X" followed directly by number inside tags
+    const broadReg = new RegExp(`data-testid="${testid}"[^>]*>[\\s\\S]*?([\\d\\.,]+)`, 'i');
+    const m2 = chunk.match(broadReg);
+    if (m2 && m2[1]) return cleanNumber(m2[1]);
 
-    // Fallback ticker from instrument name element
-    if (!ticker) {
-      const symMatch = chunk.match(/data-testid="instrument-name"[^>]*>[\s\S]*?\b([A-Z0-9]{1,6})(?:\.US)?\b/i);
-      if (symMatch && symMatch[1]) {
-        ticker = cleanTicker(symMatch[1]);
+    return 0;
+  };
+
+  const groups = [];
+  let currentGroup = null;
+
+  for (const chunk of rowChunks) {
+    const isChild = chunk.includes('xs6-open-table-position-row') ||
+                    chunk.includes('data-testid="child-row"') ||
+                    chunk.includes('position-renderer') ||
+                    chunk.includes('class="child-row');
+
+    if (!isChild) {
+      // 1. Group row
+      let ticker = '';
+      const logoMatch = chunk.match(/logos\.xtb\.com\/([a-zA-Z0-9_]+?)(?:_us|_eu|_uk|_pl|_de|_es)?\.(?:png|svg|webp)/i);
+      if (logoMatch && logoMatch[1]) {
+        ticker = cleanTicker(logoMatch[1]);
       }
-    }
 
-    // Fallback ticker from general text
-    if (!ticker) {
-      const textSym = chunk.match(/\b([A-Z]{2,6})\.US\b/i);
-      if (textSym && textSym[1]) {
-        ticker = cleanTicker(textSym[1]);
+      if (!ticker) {
+        const symMatch = chunk.match(/data-testid="instrument-name"[^>]*>[\s\S]*?\b([A-Z0-9]{1,6})(?:\.US)?\b/i);
+        if (symMatch && symMatch[1]) {
+          ticker = cleanTicker(symMatch[1]);
+        }
       }
-    }
 
-    // 2. Company Name
-    let name = ticker;
-    const nameMatch = chunk.match(/class="[^"]*pds-element-name-value__element-name[^"]*"[^>]*>\s*([^<]+)/i) ||
-                      chunk.match(/class="[^"]*pds-interactive-underline[^"]*"[^>]*>\s*([^<]+)/i);
-    if (nameMatch && nameMatch[1]) {
-      name = nameMatch[1].trim();
-    }
+      if (!ticker) {
+        const textSym = chunk.match(/\b([A-Z]{2,6})\.US\b/i);
+        if (textSym && textSym[1]) {
+          ticker = cleanTicker(textSym[1]);
+        }
+      }
 
-    // 3. Field extractor helper
-    const extractField = (testid) => {
-      // Primary: data-testid="X" followed by label-value or row-column
-      const reg = new RegExp(`data-testid="${testid}"[\\s\\S]*?(?:<p[^>]*class="[^"]*label-value[^"]*"[^>]*>|<span[^>]*class="[^"]*pds-value-text__value[^"]*"[^>]*>|\\bclass="[^"]*row-column[^"]*"[^>]*>)\\s*([\\d\\.,]+)`, 'i');
-      const m = chunk.match(reg);
-      if (m && m[1]) return cleanNumber(m[1]);
+      let name = ticker;
+      const nameMatch = chunk.match(/class="[^"]*pds-element-name-value__element-name[^"]*"[^>]*>\s*([^<]+)/i) ||
+                        chunk.match(/class="[^"]*pds-interactive-underline[^"]*"[^>]*>\s*([^<]+)/i);
+      if (nameMatch && nameMatch[1]) {
+        name = nameMatch[1].trim();
+      }
 
-      // Secondary: data-testid="X" followed directly by number inside tags
-      const broadReg = new RegExp(`data-testid="${testid}"[^>]*>[\\s\\S]*?([\\d\\.,]+)`, 'i');
-      const m2 = chunk.match(broadReg);
-      if (m2 && m2[1]) return cleanNumber(m2[1]);
+      let shares = extractField(chunk, 'volume');
+      let purchasePrice = extractField(chunk, 'open-price');
+      let investedAmount = extractField(chunk, 'open-value');
+      let currentPrice = extractField(chunk, 'current-price');
 
-      return 0;
-    };
+      if (investedAmount === 0 && shares > 0 && purchasePrice > 0) {
+        investedAmount = Number((shares * purchasePrice).toFixed(2));
+      } else if (shares === 0 && investedAmount > 0 && purchasePrice > 0) {
+        shares = Number((investedAmount / purchasePrice).toFixed(4));
+      } else if (purchasePrice === 0 && investedAmount > 0 && shares > 0) {
+        purchasePrice = Number((investedAmount / shares).toFixed(2));
+      }
 
-    let shares = extractField('volume');
-    let purchasePrice = extractField('open-price');
-    let investedAmount = extractField('open-value');
-    let currentPrice = extractField('current-price');
+      const { date: tradeDate, time: tradeTime, isAutoDetected: isDateAutoDetected } = extractXtbDate(chunk, fallbackDate);
 
-    // Reconcile math
-    if (investedAmount === 0 && shares > 0 && purchasePrice > 0) {
-      investedAmount = Number((shares * purchasePrice).toFixed(2));
-    } else if (shares === 0 && investedAmount > 0 && purchasePrice > 0) {
-      shares = Number((investedAmount / purchasePrice).toFixed(4));
-    } else if (purchasePrice === 0 && investedAmount > 0 && shares > 0) {
-      purchasePrice = Number((investedAmount / shares).toFixed(2));
-    }
+      currentGroup = {
+        ticker,
+        name: name || ticker,
+        shares,
+        purchasePrice: purchasePrice || (shares > 0 ? Number((investedAmount / shares).toFixed(2)) : 0),
+        investedAmount,
+        currentPrice: currentPrice > 0 ? currentPrice : purchasePrice,
+        date: tradeDate,
+        purchaseTime: tradeTime,
+        isDateAutoDetected,
+        children: []
+      };
+      groups.push(currentGroup);
+    } else if (currentGroup) {
+      // 2. Child position row belonging to currentGroup
+      let shares = extractField(chunk, 'volume');
+      let purchasePrice = extractField(chunk, 'open-price');
+      let investedAmount = extractField(chunk, 'open-value');
+      let currentPrice = extractField(chunk, 'current-price') || currentGroup.currentPrice;
 
-    // Date from open-time if available
-    let tradeDate = fallbackDate;
-    const dateMatch = chunk.match(/data-testid="open-time"[\s\S]*?\b(\d{4}[-/.]\d{2}[-/.]\d{2})\b/i);
-    if (dateMatch && dateMatch[1]) {
-      tradeDate = dateMatch[1].replace(/[/.]/g, '-');
-    }
+      if (investedAmount === 0 && shares > 0 && purchasePrice > 0) {
+        investedAmount = Number((shares * purchasePrice).toFixed(2));
+      } else if (shares === 0 && investedAmount > 0 && purchasePrice > 0) {
+        shares = Number((investedAmount / purchasePrice).toFixed(4));
+      } else if (purchasePrice === 0 && investedAmount > 0 && shares > 0) {
+        purchasePrice = Number((investedAmount / shares).toFixed(2));
+      }
 
-    if (ticker && (shares > 0 || investedAmount > 0)) {
-      const dedupeKey = `${ticker}_${shares}_${purchasePrice}`;
-      if (!seenTickers.has(dedupeKey)) {
-        seenTickers.add(dedupeKey);
-        trades.push({
-          id: `xtb_${Date.now()}_${idx}_${ticker}`,
-          ticker,
-          name: name || ticker,
+      const { date: tradeDate, time: tradeTime, isAutoDetected: isDateAutoDetected } = extractXtbDate(chunk, fallbackDate);
+
+      if (shares > 0 || investedAmount > 0) {
+        currentGroup.children.push({
+          ticker: currentGroup.ticker,
+          name: currentGroup.name,
           shares,
           purchasePrice: purchasePrice || (shares > 0 ? Number((investedAmount / shares).toFixed(2)) : 0),
           investedAmount,
           currentPrice: currentPrice > 0 ? currentPrice : purchasePrice,
           date: tradeDate,
-          purchaseTime: '',
+          purchaseTime: tradeTime,
+          isDateAutoDetected,
         });
       }
     }
-  });
+  }
+
+  // Flatten: if an instrument row was expanded into children, use the individual child purchases!
+  // Otherwise use the summary group row.
+  const trades = [];
+  const seenTrades = new Set();
+  let idx = 0;
+
+  for (const g of groups) {
+    if (!g.ticker) continue;
+    if (g.children.length > 0) {
+      for (const c of g.children) {
+        const dedupeKey = `${c.ticker}_${c.shares}_${c.purchasePrice}_${c.date}_${c.purchaseTime}`;
+        if (!seenTrades.has(dedupeKey)) {
+          seenTrades.add(dedupeKey);
+          trades.push({
+            id: `xtb_${Date.now()}_${idx++}_${c.ticker}`,
+            ...c
+          });
+        }
+      }
+    } else if (g.shares > 0 || g.investedAmount > 0) {
+      const dedupeKey = `${g.ticker}_${g.shares}_${g.purchasePrice}`;
+      if (!seenTrades.has(dedupeKey)) {
+        seenTrades.add(dedupeKey);
+        trades.push({
+          id: `xtb_${Date.now()}_${idx++}_${g.ticker}`,
+          ticker: g.ticker,
+          name: g.name,
+          shares: g.shares,
+          purchasePrice: g.purchasePrice,
+          investedAmount: g.investedAmount,
+          currentPrice: g.currentPrice,
+          date: g.date,
+          purchaseTime: g.purchaseTime,
+          isDateAutoDetected: g.isDateAutoDetected,
+        });
+      }
+    }
+  }
 
   return { success: trades.length > 0, trades };
 }
@@ -197,39 +328,15 @@ function parseWithDom(html, fallbackDate) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(sanitizedHtml, 'text/html');
 
-  const rows = Array.from(
-    doc.querySelectorAll('xs6-my-trades-table-row, [data-testid="group-row"], .group-row, tr')
+  const elements = Array.from(
+    doc.querySelectorAll('xs6-my-trades-table-row, xs6-open-table-position-row, [data-testid="group-row"], [data-testid="child-row"], .group-row, tr')
   );
 
-  const trades = [];
-  const seenTickers = new Set();
+  const groups = [];
+  let currentGroup = null;
 
-  rows.forEach((row, idx) => {
-    let ticker = '';
-    const logoImg = row.querySelector('img[src*="logos.xtb.com"], img.logo-icon, img');
-    if (logoImg && logoImg.src) {
-      const match = logoImg.src.match(/logos\.xtb\.com\/([a-zA-Z0-9_]+?)(?:_us|_eu|_uk|_pl|_de|_es)?\.(?:png|svg|webp)/i);
-      if (match && match[1]) {
-        ticker = cleanTicker(match[1]);
-      }
-    }
-
-    if (!ticker) {
-      const instrumentEl = row.querySelector('[data-testid="instrument-name"], .pds-element-name');
-      if (instrumentEl) {
-        const text = instrumentEl.textContent.trim();
-        const symbolMatch = text.match(/\b([A-Z0-9]{1,6})(?:\.US)?\b/);
-        if (symbolMatch) {
-          ticker = cleanTicker(symbolMatch[1]);
-        }
-      }
-    }
-
-    let name = '';
-    const nameEl = row.querySelector('.pds-element-name-value__element-name, .pds-interactive-underline, [data-testid="instrument-name"]');
-    if (nameEl) {
-      name = nameEl.textContent.trim();
-    }
+  elements.forEach((row) => {
+    const isChild = row.matches('xs6-open-table-position-row, [data-testid="child-row"], .child-row');
 
     const getTestIdValue = (testid) => {
       const el = row.querySelector(`[data-testid="${testid}"] .label-value, [data-testid="${testid}"].row-column, [data-testid="${testid}"]`);
@@ -237,37 +344,131 @@ function parseWithDom(html, fallbackDate) {
       return cleanNumber(el.textContent);
     };
 
-    let shares = getTestIdValue('volume');
-    let purchasePrice = getTestIdValue('open-price');
-    let investedAmount = getTestIdValue('open-value');
-    let currentPrice = getTestIdValue('current-price');
+    if (!isChild) {
+      let ticker = '';
+      const logoImg = row.querySelector('img[src*="logos.xtb.com"], img.logo-icon, img');
+      if (logoImg && logoImg.src) {
+        const match = logoImg.src.match(/logos\.xtb\.com\/([a-zA-Z0-9_]+?)(?:_us|_eu|_uk|_pl|_de|_es)?\.(?:png|svg|webp)/i);
+        if (match && match[1]) {
+          ticker = cleanTicker(match[1]);
+        }
+      }
 
-    if (investedAmount === 0 && shares > 0 && purchasePrice > 0) {
-      investedAmount = Number((shares * purchasePrice).toFixed(2));
-    } else if (shares === 0 && investedAmount > 0 && purchasePrice > 0) {
-      shares = Number((investedAmount / purchasePrice).toFixed(4));
-    } else if (purchasePrice === 0 && investedAmount > 0 && shares > 0) {
-      purchasePrice = Number((investedAmount / shares).toFixed(2));
-    }
+      if (!ticker) {
+        const instrumentEl = row.querySelector('[data-testid="instrument-name"], .pds-element-name');
+        if (instrumentEl) {
+          const text = instrumentEl.textContent.trim();
+          const symbolMatch = text.match(/\b([A-Z0-9]{1,6})(?:\.US)?\b/);
+          if (symbolMatch) {
+            ticker = cleanTicker(symbolMatch[1]);
+          }
+        }
+      }
 
-    if (ticker && (shares > 0 || investedAmount > 0)) {
-      const dedupeKey = `${ticker}_${shares}_${purchasePrice}`;
-      if (!seenTickers.has(dedupeKey)) {
-        seenTickers.add(dedupeKey);
-        trades.push({
-          id: `xtb_${Date.now()}_${idx}_${ticker}`,
-          ticker,
-          name: name || ticker,
+      let name = '';
+      const nameEl = row.querySelector('.pds-element-name-value__element-name, .pds-interactive-underline, [data-testid="instrument-name"]');
+      if (nameEl) {
+        name = nameEl.textContent.trim();
+      }
+
+      let shares = getTestIdValue('volume');
+      let purchasePrice = getTestIdValue('open-price');
+      let investedAmount = getTestIdValue('open-value');
+      let currentPrice = getTestIdValue('current-price');
+
+      if (investedAmount === 0 && shares > 0 && purchasePrice > 0) {
+        investedAmount = Number((shares * purchasePrice).toFixed(2));
+      } else if (shares === 0 && investedAmount > 0 && purchasePrice > 0) {
+        shares = Number((investedAmount / purchasePrice).toFixed(4));
+      } else if (purchasePrice === 0 && investedAmount > 0 && shares > 0) {
+        purchasePrice = Number((investedAmount / shares).toFixed(2));
+      }
+
+      const { date: tradeDate, time: tradeTime, isAutoDetected: isDateAutoDetected } = extractXtbDate(row, fallbackDate);
+
+      currentGroup = {
+        ticker,
+        name: name || ticker,
+        shares,
+        purchasePrice,
+        investedAmount,
+        currentPrice: currentPrice > 0 ? currentPrice : purchasePrice,
+        date: tradeDate,
+        purchaseTime: tradeTime,
+        isDateAutoDetected,
+        children: []
+      };
+      if (ticker) {
+        groups.push(currentGroup);
+      }
+    } else if (currentGroup) {
+      let shares = getTestIdValue('volume');
+      let purchasePrice = getTestIdValue('open-price');
+      let investedAmount = getTestIdValue('open-value');
+      let currentPrice = getTestIdValue('current-price') || currentGroup.currentPrice;
+
+      if (investedAmount === 0 && shares > 0 && purchasePrice > 0) {
+        investedAmount = Number((shares * purchasePrice).toFixed(2));
+      } else if (shares === 0 && investedAmount > 0 && purchasePrice > 0) {
+        shares = Number((investedAmount / purchasePrice).toFixed(4));
+      } else if (purchasePrice === 0 && investedAmount > 0 && shares > 0) {
+        purchasePrice = Number((investedAmount / shares).toFixed(2));
+      }
+
+      const { date: tradeDate, time: tradeTime, isAutoDetected: isDateAutoDetected } = extractXtbDate(row, fallbackDate);
+
+      if (shares > 0 || investedAmount > 0) {
+        currentGroup.children.push({
+          ticker: currentGroup.ticker,
+          name: currentGroup.name,
           shares,
-          purchasePrice,
+          purchasePrice: purchasePrice || (shares > 0 ? Number((investedAmount / shares).toFixed(2)) : 0),
           investedAmount,
           currentPrice: currentPrice > 0 ? currentPrice : purchasePrice,
-          date: fallbackDate,
-          purchaseTime: '',
+          date: tradeDate,
+          purchaseTime: tradeTime,
+          isDateAutoDetected,
         });
       }
     }
   });
+
+  const trades = [];
+  const seenTrades = new Set();
+  let idx = 0;
+
+  for (const g of groups) {
+    if (!g.ticker) continue;
+    if (g.children.length > 0) {
+      for (const c of g.children) {
+        const dedupeKey = `${c.ticker}_${c.shares}_${c.purchasePrice}_${c.date}_${c.purchaseTime}`;
+        if (!seenTrades.has(dedupeKey)) {
+          seenTrades.add(dedupeKey);
+          trades.push({
+            id: `xtb_${Date.now()}_${idx++}_${c.ticker}`,
+            ...c
+          });
+        }
+      }
+    } else if (g.shares > 0 || g.investedAmount > 0) {
+      const dedupeKey = `${g.ticker}_${g.shares}_${g.purchasePrice}`;
+      if (!seenTrades.has(dedupeKey)) {
+        seenTrades.add(dedupeKey);
+        trades.push({
+          id: `xtb_${Date.now()}_${idx++}_${g.ticker}`,
+          ticker: g.ticker,
+          name: g.name,
+          shares: g.shares,
+          purchasePrice: g.purchasePrice,
+          investedAmount: g.investedAmount,
+          currentPrice: g.currentPrice,
+          date: g.date,
+          purchaseTime: g.purchaseTime,
+          isDateAutoDetected: g.isDateAutoDetected,
+        });
+      }
+    }
+  }
 
   return { success: trades.length > 0, trades };
 }
@@ -299,6 +500,8 @@ function parseFromText(text, fallbackDate) {
             investedAmount = Number((shares * purchasePrice).toFixed(2));
           }
 
+          const { date: tradeDate, time: tradeTime, isAutoDetected: isDateAutoDetected } = extractXtbDate(line, fallbackDate);
+
           trades.push({
             id: `xtb_${Date.now()}_${i}_${potentialTicker}`,
             ticker: potentialTicker,
@@ -307,8 +510,9 @@ function parseFromText(text, fallbackDate) {
             purchasePrice,
             investedAmount,
             currentPrice: currentPrice || purchasePrice,
-            date: fallbackDate,
-            purchaseTime: '',
+            date: tradeDate,
+            purchaseTime: tradeTime,
+            isDateAutoDetected,
           });
         }
       }
@@ -326,6 +530,7 @@ function parseFromText(text, fallbackDate) {
       const v2 = cleanNumber(match[3]);
       const v3 = cleanNumber(match[4]);
       if (sym && v1 > 0 && v2 > 0) {
+        const { date: tradeDate, time: tradeTime, isAutoDetected: isDateAutoDetected } = extractXtbDate(match[0], fallbackDate);
         trades.push({
           id: `xtb_${Date.now()}_${matchIdx++}_${sym}`,
           ticker: sym,
@@ -334,8 +539,9 @@ function parseFromText(text, fallbackDate) {
           purchasePrice: v2,
           investedAmount: v3 > 0 ? v3 : Number((v1 * v2).toFixed(2)),
           currentPrice: v2,
-          date: fallbackDate,
-          purchaseTime: '',
+          date: tradeDate,
+          purchaseTime: tradeTime,
+          isDateAutoDetected,
         });
       }
     }
