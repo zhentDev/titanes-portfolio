@@ -11,6 +11,7 @@ import StatementImporterModal from "./StatementImporterModal";
 import HourglassRangeSlider from "../Common/HourglassRangeSlider";
 import AffiliateBanner from "../Common/AffiliateBanner";
 import { getReferralForEntity } from "../../utils/referralLinks";
+import { useTheme } from "../../context/ThemeContext";
 
 const PERIOD_UNLOCK_DAYS = {
   "1M": 7,
@@ -22,6 +23,8 @@ const PERIOD_UNLOCK_DAYS = {
 };
 
 export default function FixedIncomeHub() {
+  const { theme } = useTheme();
+  const isLight = theme === "light";
   const {
     entities,
     accounts,
@@ -64,6 +67,8 @@ export default function FixedIncomeHub() {
   const [editType, setEditType] = useState(null); // 'account' | 'cdt' | 'entity' | 'transaction'
   const [migrateFrom, setMigrateFrom] = useState(null); // entityId being migrated
   const [expandedAccountIds, setExpandedAccountIds] = useState(new Set());
+  const [expandedAccountCdts, setExpandedAccountCdts] = useState(new Set());
+  const [expandedAccountRates, setExpandedAccountRates] = useState(new Set());
   const [expandedMaturedEntities, setExpandedMaturedEntities] = useState(new Set());
   const [expandedEntityIds, setExpandedEntityIds] = useState(new Set());
   const [movementFilterType, setMovementFilterType] = useState({});
@@ -142,6 +147,24 @@ export default function FixedIncomeHub() {
 
   const toggleAccountExpand = (accId) => {
     setExpandedAccountIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(accId)) next.delete(accId);
+      else next.add(accId);
+      return next;
+    });
+  };
+
+  const toggleAccountCdts = (accId) => {
+    setExpandedAccountCdts((prev) => {
+      const next = new Set(prev);
+      if (next.has(accId)) next.delete(accId);
+      else next.add(accId);
+      return next;
+    });
+  };
+
+  const toggleAccountRates = (accId) => {
+    setExpandedAccountRates((prev) => {
       const next = new Set(prev);
       if (next.has(accId)) next.delete(accId);
       else next.add(accId);
@@ -2096,129 +2119,250 @@ export default function FixedIncomeHub() {
                               padding: "10px 14px",
                             }}
                           >
-                            {/* CDTs Vinculados a esta Cajita (Activos y Cerrados) */}
-                            {(yieldData.activeCDTsList.length > 0 || yieldData.maturedCDTsList.length > 0) && (
-                              <div
-                                style={{
-                                  background: "rgba(245, 158, 11, 0.08)",
-                                  borderRadius: 8,
-                                  padding: "10px 14px",
-                                  marginBottom: 12,
-                                  border: "1px solid rgba(245, 158, 11, 0.25)",
-                                }}
-                              >
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 6 }}>
-                                  <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#d97706", display: "flex", alignItems: "center", gap: 6 }}>
-                                    <span>⏳ CDTs Vinculados a {acc.name}:</span>
-                                  </span>
-                                  <span style={{ fontSize: "0.78rem", color: "var(--gain)", fontWeight: 700 }}>
-                                    {yieldData.activeCDTsList.length > 0 && `Activos: $${yieldData.activeCDTsCapital.toLocaleString("en-US", { maximumFractionDigits: 0 })} COP (+$${yieldData.activeCDTsAccruedInterest.toLocaleString("en-US", { maximumFractionDigits: 0 })} rend.)`}
-                                    {yieldData.activeCDTsList.length > 0 && yieldData.maturedCDTsList.length > 0 && " • "}
-                                    {yieldData.maturedCDTsList.length > 0 && `📦 ${yieldData.maturedCDTsList.length} Cerrados (+$${yieldData.maturedCDTsTotalProfit.toLocaleString("en-US", { maximumFractionDigits: 0 })} cobrados)`}
-                                  </span>
-                                </div>
+                            {/* CDTs Vinculados a esta Cajita (Activos y Cerrados) (Acordeón Desplegable) */}
+                            {(yieldData.activeCDTsList.length > 0 || yieldData.maturedCDTsList.length > 0) && (() => {
+                              const isCdtsExpanded = expandedAccountCdts.has(acc.id);
+                              const totalCdts = yieldData.activeCDTsList.length + yieldData.maturedCDTsList.length;
 
-                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 8 }}>
-                                  {/* CDTs Activos */}
-                                  {yieldData.activeCDTsList.map((c, cIdx) => (
-                                    <div
-                                      key={`act_cdt_${cIdx}`}
-                                      style={{
-                                        background: "var(--bg-card)",
-                                        padding: "8px 10px",
-                                        borderRadius: 6,
-                                        border: "1px solid rgba(245, 158, 11, 0.25)",
-                                      }}
-                                    >
-                                      <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-primary)", fontSize: "0.78rem", fontWeight: 600 }}>
-                                        <span>⏳ {c.name || c.category}</span>
-                                        <span style={{ color: "#d97706", fontWeight: 700 }}>{c.interestRateEA}% E.A.</span>
-                                      </div>
-                                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                                        <span>Capital: ${Number(c.capital || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
-                                        <span>{c.daysElapsed} de {c.termDays}d</span>
-                                      </div>
-                                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: "0.75rem" }}>
-                                        <span style={{ color: "var(--text-muted)" }}>Rend. a hoy:</span>
-                                        <span style={{ color: "var(--gain)", fontWeight: 700, fontFamily: "JetBrains Mono" }}>
-                                          +${Number(c.accruedYield || 0).toLocaleString("en-US", { maximumFractionDigits: 2 })} COP
-                                        </span>
-                                      </div>
-                                    </div>
-                                  ))}
+                              return (
+                                <div
+                                  style={{
+                                    background: isLight ? "rgba(245, 158, 11, 0.08)" : "rgba(245, 158, 11, 0.08)",
+                                    borderRadius: 8,
+                                    padding: "10px 14px",
+                                    marginBottom: 12,
+                                    border: `1px solid ${isLight ? "rgba(245, 158, 11, 0.3)" : "rgba(245, 158, 11, 0.25)"}`,
+                                    transition: "all 0.2s ease",
+                                  }}
+                                >
+                                  <div
+                                    onClick={() => toggleAccountCdts(acc.id)}
+                                    style={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      alignItems: "center",
+                                      flexWrap: "wrap",
+                                      gap: 8,
+                                      cursor: "pointer",
+                                      userSelect: "none",
+                                    }}
+                                    title={isCdtsExpanded ? "Click para ocultar CDTs" : "Click para desplegar CDTs"}
+                                  >
+                                    <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#d97706", display: "flex", alignItems: "center", gap: 6 }}>
+                                      <span>⏳ CDTs Vinculados a {acc.name}:</span>
+                                      <span
+                                        style={{
+                                          fontSize: "0.68rem",
+                                          background: isLight ? "rgba(245, 158, 11, 0.2)" : "rgba(245, 158, 11, 0.25)",
+                                          color: "#d97706",
+                                          padding: "1px 6px",
+                                          borderRadius: 4,
+                                          fontWeight: 800,
+                                        }}
+                                      >
+                                        {totalCdts}
+                                      </span>
+                                    </span>
 
-                                  {/* CDTs Cerrados / Vencidos */}
-                                  {yieldData.maturedCDTsList.map((c, cIdx) => (
-                                    <div
-                                      key={`mat_cdt_${cIdx}`}
-                                      style={{
-                                        background: "var(--bg-card)",
-                                        padding: "8px 10px",
-                                        borderRadius: 6,
-                                        border: "1px solid var(--border)",
-                                      }}
-                                    >
-                                      <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-secondary)", fontSize: "0.78rem", fontWeight: 600 }}>
-                                        <span>📦 {c.name || c.category} (Cerrado)</span>
-                                        <span style={{ color: "var(--text-muted)" }}>{c.interestRateEA}% E.A.</span>
-                                      </div>
-                                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: "0.75rem" }}>
-                                        <span style={{ color: "var(--text-muted)" }}>Ganancia cobrada:</span>
-                                        <span style={{ color: "var(--gain)", fontWeight: 700, fontFamily: "JetBrains Mono" }}>
-                                          +${Number(c.finalProfit || 0).toLocaleString("en-US", { maximumFractionDigits: 2 })} {c.currency || acc.currency || "COP"}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
+                                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                                      <span style={{ fontSize: "0.78rem", color: isLight ? "#059669" : "var(--gain)", fontWeight: 700 }}>
+                                        {yieldData.activeCDTsList.length > 0 && `Activos: $${yieldData.activeCDTsCapital.toLocaleString("en-US", { maximumFractionDigits: 0 })} COP (+$${yieldData.activeCDTsAccruedInterest.toLocaleString("en-US", { maximumFractionDigits: 0 })} rend.)`}
+                                        {yieldData.activeCDTsList.length > 0 && yieldData.maturedCDTsList.length > 0 && " • "}
+                                        {yieldData.maturedCDTsList.length > 0 && `📦 ${yieldData.maturedCDTsList.length} Cerrados (+$${yieldData.maturedCDTsTotalProfit.toLocaleString("en-US", { maximumFractionDigits: 0 })} cobrados)`}
+                                      </span>
 
-                            {/* Desglose por Períodos de Tasa Histórica */}
-                            {yieldData.periodBreakdown.length > 0 && (
-                              <div
-                                style={{
-                                  background: "var(--bg-card)",
-                                  borderRadius: 8,
-                                  padding: "10px 14px",
-                                  marginBottom: 12,
-                                  border: "1px solid var(--border-accent)",
-                                }}
-                              >
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 6 }}>
-                                  <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--accent-primary)" }}>
-                                    📊 Rentabilidad Compuesta en Cajita por Períodos de Tasa:
-                                  </span>
-                                  <span style={{ fontSize: "0.78rem", color: "var(--gain)", fontWeight: 700 }}>
-                                    Total Ganado en Cajita: +${yieldData.liquidEarnedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })} {acc.currency || "COP"}
-                                  </span>
-                                </div>
-                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 8 }}>
-                                  {yieldData.periodBreakdown.map((p, pIdx) => (
-                                    <div
-                                      key={pIdx}
-                                      style={{
-                                        background: "var(--bg-card-hover)",
-                                        padding: "8px 10px",
-                                        borderRadius: 6,
-                                        border: "1px solid var(--border)",
-                                      }}
-                                    >
-                                      <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-secondary)", fontSize: "0.72rem" }}>
-                                        <span>{p.startDate} al {p.endDate}</span>
-                                        <span style={{ color: "var(--accent-primary)", fontWeight: 700 }}>{p.rateEA}% E.A.</span>
-                                      </div>
-                                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: "0.75rem" }}>
-                                        <span style={{ color: "var(--text-muted)" }}>{p.days} días activos</span>
-                                        <span style={{ color: "var(--gain)", fontWeight: 700, fontFamily: "JetBrains Mono" }}>
-                                          +${p.interestEarned.toLocaleString("en-US", { maximumFractionDigits: 2 })} {acc.currency || "COP"}
-                                        </span>
-                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleAccountCdts(acc.id);
+                                        }}
+                                        style={{
+                                          background: isCdtsExpanded ? "rgba(245, 158, 11, 0.22)" : (isLight ? "rgba(255, 255, 255, 0.8)" : "rgba(255, 255, 255, 0.05)"),
+                                          border: `1px solid ${isCdtsExpanded ? "#d97706" : (isLight ? "rgba(245, 158, 11, 0.4)" : "rgba(245, 158, 11, 0.3)")}`,
+                                          borderRadius: 6,
+                                          color: "#d97706",
+                                          padding: "3px 8px",
+                                          fontSize: "0.7rem",
+                                          fontWeight: 700,
+                                          cursor: "pointer",
+                                          display: "inline-flex",
+                                          alignItems: "center",
+                                          gap: 4,
+                                          whiteSpace: "nowrap",
+                                        }}
+                                      >
+                                        <span>{isCdtsExpanded ? "Ocultar ▲" : `Ver CDTs (${totalCdts}) ▼`}</span>
+                                      </button>
                                     </div>
-                                  ))}
+                                  </div>
+
+                                  {isCdtsExpanded && (
+                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 8, marginTop: 10 }}>
+                                      {/* CDTs Activos */}
+                                      {yieldData.activeCDTsList.map((c, cIdx) => (
+                                        <div
+                                          key={`act_cdt_${cIdx}`}
+                                          style={{
+                                            background: "var(--bg-card)",
+                                            padding: "8px 10px",
+                                            borderRadius: 6,
+                                            border: "1px solid rgba(245, 158, 11, 0.25)",
+                                          }}
+                                        >
+                                          <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-primary)", fontSize: "0.78rem", fontWeight: 600 }}>
+                                            <span>⏳ {c.name || c.category}</span>
+                                            <span style={{ color: "#d97706", fontWeight: 700 }}>{c.interestRateEA}% E.A.</span>
+                                          </div>
+                                          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                                            <span>Capital: ${Number(c.capital || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
+                                            <span>{c.daysElapsed} de {c.termDays}d</span>
+                                          </div>
+                                          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: "0.75rem" }}>
+                                            <span style={{ color: "var(--text-muted)" }}>Rend. a hoy:</span>
+                                            <span style={{ color: isLight ? "#059669" : "var(--gain)", fontWeight: 700, fontFamily: "JetBrains Mono" }}>
+                                              +${Number(c.accruedYield || 0).toLocaleString("en-US", { maximumFractionDigits: 2 })} COP
+                                            </span>
+                                          </div>
+                                        </div>
+                                      ))}
+
+                                      {/* CDTs Cerrados / Vencidos */}
+                                      {yieldData.maturedCDTsList.map((c, cIdx) => (
+                                        <div
+                                          key={`mat_cdt_${cIdx}`}
+                                          style={{
+                                            background: "var(--bg-card)",
+                                            padding: "8px 10px",
+                                            borderRadius: 6,
+                                            border: "1px solid var(--border)",
+                                          }}
+                                        >
+                                          <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-secondary)", fontSize: "0.78rem", fontWeight: 600 }}>
+                                            <span>📦 {c.name || c.category} (Cerrado)</span>
+                                            <span style={{ color: "var(--text-muted)" }}>{c.interestRateEA}% E.A.</span>
+                                          </div>
+                                          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: "0.75rem" }}>
+                                            <span style={{ color: "var(--text-muted)" }}>Ganancia cobrada:</span>
+                                            <span style={{ color: isLight ? "#059669" : "var(--gain)", fontWeight: 700, fontFamily: "JetBrains Mono" }}>
+                                              +${Number(c.finalProfit || 0).toLocaleString("en-US", { maximumFractionDigits: 2 })} {c.currency || acc.currency || "COP"}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
-                              </div>
-                            )}
+                              );
+                            })()}
+
+                            {/* Desglose por Períodos de Tasa Histórica (Acordeón Desplegable) */}
+                            {yieldData.periodBreakdown.length > 0 && (() => {
+                              const isRatesExpanded = expandedAccountRates.has(acc.id);
+
+                              return (
+                                <div
+                                  style={{
+                                    background: isLight ? "#ffffff" : "var(--bg-card)",
+                                    borderRadius: 8,
+                                    padding: "10px 14px",
+                                    marginBottom: 12,
+                                    border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.1)" : "var(--border-accent)"}`,
+                                    boxShadow: isLight ? "0 2px 6px rgba(0, 0, 0, 0.03)" : "none",
+                                    transition: "all 0.2s ease",
+                                  }}
+                                >
+                                  <div
+                                    onClick={() => toggleAccountRates(acc.id)}
+                                    style={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      alignItems: "center",
+                                      flexWrap: "wrap",
+                                      gap: 8,
+                                      cursor: "pointer",
+                                      userSelect: "none",
+                                    }}
+                                    title={isRatesExpanded ? "Click para ocultar períodos" : "Click para desplegar períodos"}
+                                  >
+                                    <span style={{ fontSize: "0.8rem", fontWeight: 700, color: isLight ? "#0284c7" : "var(--accent-primary)", display: "flex", alignItems: "center", gap: 6 }}>
+                                      <span>📊 Rentabilidad Compuesta en Cajita por Períodos de Tasa:</span>
+                                      <span
+                                        style={{
+                                          fontSize: "0.68rem",
+                                          background: isLight ? "rgba(2, 132, 199, 0.12)" : "rgba(0, 229, 255, 0.14)",
+                                          color: isLight ? "#0284c7" : "var(--accent-primary)",
+                                          padding: "1px 6px",
+                                          borderRadius: 4,
+                                          fontWeight: 800,
+                                        }}
+                                      >
+                                        {yieldData.periodBreakdown.length}
+                                      </span>
+                                    </span>
+
+                                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                                      <span style={{ fontSize: "0.78rem", color: isLight ? "#059669" : "var(--gain)", fontWeight: 700 }}>
+                                        Total Ganado en Cajita: +${yieldData.liquidEarnedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })} {acc.currency || "COP"}
+                                      </span>
+
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleAccountRates(acc.id);
+                                        }}
+                                        style={{
+                                          background: isRatesExpanded
+                                            ? (isLight ? "rgba(2, 132, 199, 0.15)" : "rgba(0, 229, 255, 0.18)")
+                                            : (isLight ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.05)"),
+                                          border: `1px solid ${isRatesExpanded ? (isLight ? "rgba(2, 132, 199, 0.4)" : "rgba(0, 229, 255, 0.4)") : (isLight ? "rgba(0, 0, 0, 0.1)" : "rgba(255, 255, 255, 0.1)")}`,
+                                          borderRadius: 6,
+                                          color: isRatesExpanded ? (isLight ? "#0284c7" : "var(--accent-primary)") : "var(--text-secondary)",
+                                          padding: "3px 8px",
+                                          fontSize: "0.7rem",
+                                          fontWeight: 700,
+                                          cursor: "pointer",
+                                          display: "inline-flex",
+                                          alignItems: "center",
+                                          gap: 4,
+                                          whiteSpace: "nowrap",
+                                        }}
+                                      >
+                                        <span>{isRatesExpanded ? "Ocultar ▲" : `Ver períodos (${yieldData.periodBreakdown.length}) ▼`}</span>
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {isRatesExpanded && (
+                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 8, marginTop: 10 }}>
+                                      {yieldData.periodBreakdown.map((p, pIdx) => (
+                                        <div
+                                          key={pIdx}
+                                          style={{
+                                            background: isLight ? "rgba(0, 0, 0, 0.03)" : "var(--bg-card-hover)",
+                                            padding: "8px 10px",
+                                            borderRadius: 6,
+                                            border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "var(--border)"}`,
+                                          }}
+                                        >
+                                          <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-secondary)", fontSize: "0.72rem" }}>
+                                            <span>{p.startDate} al {p.endDate}</span>
+                                            <span style={{ color: isLight ? "#0284c7" : "var(--accent-primary)", fontWeight: 700 }}>{p.rateEA}% E.A.</span>
+                                          </div>
+                                          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: "0.75rem" }}>
+                                            <span style={{ color: "var(--text-muted)" }}>{p.days} días activos</span>
+                                            <span style={{ color: isLight ? "#059669" : "var(--gain)", fontWeight: 700, fontFamily: "JetBrains Mono" }}>
+                                              +${p.interestEarned.toLocaleString("en-US", { maximumFractionDigits: 2 })} {acc.currency || "COP"}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
                             {/* Filter and Action Header */}
                             <div
                               style={{
