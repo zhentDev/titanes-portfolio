@@ -23,6 +23,8 @@ export default function AffiliateBanner({ style = {}, type = "stock" }) {
           padding: "14px 20px",
           margin: "16px 0 20px 0",
           borderRadius: "var(--radius)",
+          boxSizing: "border-box",
+          maxWidth: "100%",
           background: isLight
             ? "linear-gradient(135deg, rgba(130, 10, 209, 0.07) 0%, rgba(255, 68, 31, 0.07) 50%, rgba(16, 185, 129, 0.08) 100%)"
             : "linear-gradient(135deg, rgba(130, 10, 209, 0.15) 0%, rgba(255, 68, 31, 0.12) 50%, rgba(16, 185, 129, 0.12) 100%)",
@@ -33,7 +35,7 @@ export default function AffiliateBanner({ style = {}, type = "stock" }) {
           ...style,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 260 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, flex: "1 1 240px", minWidth: 0 }}>
           <div
             style={{
               fontSize: "1.6rem",
@@ -49,7 +51,7 @@ export default function AffiliateBanner({ style = {}, type = "stock" }) {
           >
             🎁
           </div>
-          <div>
+          <div style={{ minWidth: 0, flex: 1 }}>
             <div
               style={{
                 fontSize: "0.92rem",
@@ -71,6 +73,8 @@ export default function AffiliateBanner({ style = {}, type = "stock" }) {
                   color: isLight ? "#059669" : "#34d399",
                   fontWeight: 800,
                   textTransform: "uppercase",
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
                 }}
               >
                 Tasas hasta 14% E.A.
@@ -218,6 +222,8 @@ export default function AffiliateBanner({ style = {}, type = "stock" }) {
         padding: "14px 20px",
         margin: "18px 0",
         borderRadius: "var(--radius)",
+        boxSizing: "border-box",
+        maxWidth: "100%",
         background: isLight
           ? "linear-gradient(135deg, rgba(2, 132, 199, 0.08) 0%, rgba(16, 185, 129, 0.08) 100%)"
           : "linear-gradient(135deg, rgba(2, 132, 199, 0.15) 0%, rgba(16, 185, 129, 0.12) 100%)",
@@ -228,7 +234,7 @@ export default function AffiliateBanner({ style = {}, type = "stock" }) {
         ...style,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 260 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 14, flex: "1 1 240px", minWidth: 0 }}>
         <div
           style={{
             fontSize: "1.8rem",
@@ -244,7 +250,7 @@ export default function AffiliateBanner({ style = {}, type = "stock" }) {
         >
           🚀
         </div>
-        <div>
+        <div style={{ minWidth: 0, flex: 1 }}>
           <div
             style={{
               fontSize: "0.92rem",
@@ -253,6 +259,7 @@ export default function AffiliateBanner({ style = {}, type = "stock" }) {
               display: "flex",
               alignItems: "center",
               gap: 8,
+              flexWrap: "wrap",
             }}
           >
             <span>Invierte en Wall Street sin comisiones</span>
@@ -265,6 +272,8 @@ export default function AffiliateBanner({ style = {}, type = "stock" }) {
                 color: isLight ? "#059669" : "#34d399",
                 fontWeight: 800,
                 textTransform: "uppercase",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
               }}
             >
               0% Comisión
@@ -275,6 +284,7 @@ export default function AffiliateBanner({ style = {}, type = "stock" }) {
               fontSize: "0.78rem",
               color: isLight ? "#475569" : "var(--text-secondary)",
               marginTop: 2,
+              wordBreak: "break-word",
             }}
           >
             Abre tu cuenta de inversión internacional en Interactive Brokers o XTB y opera ETFs y acciones de Kpital Zhent.
@@ -282,7 +292,7 @@ export default function AffiliateBanner({ style = {}, type = "stock" }) {
         </div>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", flexShrink: 0 }}>
         <a
           href={REFERRAL_LINKS.ibkr.url}
           target="_blank"

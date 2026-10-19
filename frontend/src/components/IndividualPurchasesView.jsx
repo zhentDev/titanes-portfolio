@@ -1572,7 +1572,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
         {/* HEADER & SUMMARY */}
         <div className="card fade-up" style={{ padding: "24px", marginBottom: "24px" }}>
           <div
-            style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}
+            style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}
           >
             <div>
               <div
@@ -2716,6 +2716,10 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
               padding: "4px",
               borderRadius: 10,
               border: `1px solid ${theme === "light" ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.06)"}`,
+              maxWidth: "100%",
+              overflowX: "auto",
+              WebkitOverflowScrolling: "touch",
+              flexWrap: "wrap",
             }}
           >
             <button
@@ -2740,6 +2744,8 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                 fontWeight: purchasesChartTab === "portfolio" ? 700 : 500,
                 cursor: "pointer",
                 transition: "all 0.18s ease",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
               }}
             >
               <span>📈</span>
@@ -2768,6 +2774,8 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                 fontWeight: purchasesChartTab === "individual" ? 700 : 500,
                 cursor: "pointer",
                 transition: "all 0.18s ease",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
               }}
             >
               <span>🔍</span>
@@ -2781,6 +2789,10 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                     background: theme === "light" ? "rgba(16, 185, 129, 0.2)" : "rgba(16, 185, 129, 0.25)",
                     color: theme === "light" ? "#047857" : "#34d399",
                     fontWeight: 700,
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                    display: "inline-flex",
+                    marginLeft: 4,
                   }}
                 >
                   {groupedLots.length} activos • {currentPurchases.length} lotes
@@ -2810,6 +2822,8 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                 fontWeight: purchasesChartTab === "fx" ? 700 : 500,
                 cursor: "pointer",
                 transition: "all 0.18s ease",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
               }}
             >
               <span>💱</span>
@@ -2846,6 +2860,8 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                   flexWrap: "wrap",
                   gap: 12,
                   marginBottom: 16,
+                  width: "100%",
+                  boxSizing: "border-box",
                 }}
               >
             <h3
@@ -2856,6 +2872,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                 display: "flex",
                 alignItems: "center",
                 gap: 8,
+                flexWrap: "wrap",
               }}
             >
               <span>📈</span>
@@ -2868,8 +2885,8 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                 alignItems: "flex-end",
                 gap: 8,
                 flexWrap: "wrap",
-                width: "100%",
-                maxWidth: 420,
+                maxWidth: "100%",
+                boxSizing: "border-box",
               }}
             >
               <div
@@ -3818,7 +3835,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                         display: "flex",
                         flexDirection: "column",
                         gap: 8,
-                        minWidth: 640,
+                        width: "100%",
+                        maxWidth: "100%",
+                        boxSizing: "border-box",
                         marginBottom: 10,
                       }}
                     >
@@ -3841,6 +3860,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "center",
+                          flexWrap: "wrap",
                           cursor: "pointer",
                           transition: "all 0.2s ease",
                           gap: 16,
@@ -4125,9 +4145,8 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                             display: "flex",
                             justifyContent: "flex-end",
                             alignItems: "center",
-                            flexWrap: "nowrap",
+                            flexWrap: "wrap",
                             gap: 16,
-                            flexShrink: 0,
                           }}
                         >
                           <div className="lot-metric-col" style={{ width: 110, textAlign: "right", flexShrink: 0 }}>
@@ -4357,7 +4376,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                             display: "flex",
                             flexDirection: "column",
                             gap: 6,
-                            paddingLeft: 24,
+                            paddingLeft: "clamp(6px, 2vw, 24px)",
                           }}
                         >
                           {group.lots.map((p) => {
@@ -4385,6 +4404,8 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                                   display: "flex",
                                   justifyContent: "space-between",
                                   alignItems: "center",
+                                  flexWrap: "wrap",
+                                  gap: 12,
                                   transition: "all 0.15s ease",
                                 }}
                               >
@@ -4438,7 +4459,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                                 </div>
 
                               <div style={{ textAlign: "right" }}>
-                                <div style={{ display: "flex", gap: 16, fontSize: "0.75rem" }}>
+                                <div style={{ display: "flex", gap: 16, fontSize: "0.75rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
                                   <div>
                                     <div style={{ color: "var(--text-secondary)" }}>Invertido</div>
                                     <div className="mono" style={{ fontWeight: 700, color: "var(--text-primary)" }}>
