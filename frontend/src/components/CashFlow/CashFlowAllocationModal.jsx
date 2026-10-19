@@ -12,7 +12,7 @@ const CATEGORY_OPTIONS = {
     { value: "freelance", label: "💻 Freelance / Consultoría Tech", badge: "Variable" },
     { value: "overtime", label: "⏰ Horas Extras / Recargos", badge: "Extra" },
     { value: "business", label: "🏢 Negocio Propio / Ventas", badge: "Variable" },
-    { value: "passive_fixed", label: "⚡ Rendimientos Renta Fija (Cajitas/CDT)", badge: "Pasivo" },
+    { value: "passive_fixed", label: "⚡ Rendimientos Renta Fija (Cuentas/CDT)", badge: "Pasivo" },
     { value: "passive_equity", label: "📈 Dividendos Acciones / ETFs", badge: "Pasivo" },
     { value: "bonus", label: "🎁 Bonificaciones / Prima", badge: "Extra" },
     { value: "other", label: "💵 Otros Ingresos", badge: "General" },
@@ -238,7 +238,7 @@ export default function CashFlowAllocationModal({
       return {
         type: "fixed_pocket",
         targetId: pocket?.id,
-        targetName: pocket ? `${pocket.name}` : "Cajita de Ahorro",
+        targetName: pocket ? `${pocket.name}` : "Cuenta de Ahorro",
       };
     }
     if (sourceType === "investment_cash") {
@@ -396,7 +396,7 @@ export default function CashFlowAllocationModal({
                 <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: 2 }}>
                   Este monto se calcula automáticamente a partir de tus saldos y tasas activas en{" "}
                   <strong style={{ color: "#38bdf8" }}>
-                    {category === "passive_fixed" ? "Renta Fija (Cajitas & CDTs)" : "Portafolio Titanes Tech ETF"}
+                    {category === "passive_fixed" ? "Renta Fija (Cuentas de Ahorro & CDTs)" : "Portafolio Titanes Tech ETF"}
                   </strong>
                   .
                 </div>
@@ -656,7 +656,7 @@ export default function CashFlowAllocationModal({
                     textAlign: "center",
                   }}
                 >
-                  📦 Cajita / Renta Fija
+                  📦 Cuenta de Ahorro / Renta Fija
                 </button>
 
                 <button
@@ -716,7 +716,7 @@ export default function CashFlowAllocationModal({
               {/* Sub-selector for Pockets */}
               {sourceType === "fixed_pocket" && fixedIncomeAccounts.length > 0 && (
                 <div style={{ marginTop: 8 }}>
-                  <label style={{ fontSize: "0.72rem", color: "#94a3b8" }}>Cajita / Cuenta de Ahorro:</label>
+                  <label style={{ fontSize: "0.72rem", color: "#94a3b8" }}>Cuenta de Ahorro / Bolsillo:</label>
                   <select
                     value={selectedPocketId}
                     onChange={(e) => setSelectedPocketId(e.target.value)}

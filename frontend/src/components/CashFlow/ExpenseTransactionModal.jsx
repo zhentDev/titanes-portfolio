@@ -140,7 +140,7 @@ export default function ExpenseTransactionModal({
       return {
         type: "fixed_pocket",
         targetId: pocket?.id,
-        targetName: pocket ? `${pocket.name}` : "Cajita de Ahorro",
+        targetName: pocket ? `${pocket.name}` : "Cuenta de Ahorro",
       };
     }
     if (sourceType === "investment_cash") {
@@ -207,7 +207,7 @@ export default function ExpenseTransactionModal({
 
         <p style={{ fontSize: "0.8rem", color: "#94a3b8", marginTop: 4, marginBottom: 14 }}>
           {isWealthItem
-            ? "Indica de qué cuenta salió la plata para tu CDT, Cajita o inversión (ej. Nómina Nu) para descontarla de tu saldo líquido disponible."
+            ? "Indica de qué cuenta salió la plata para tu CDT, cuenta de ahorro o inversión (ej. Nómina Nu) para descontarla de tu saldo líquido disponible."
             : "Carga un gasto real consumido a tu sobre presupuestal y elige de qué cuenta o tarjeta salió el dinero."}
         </p>
 
@@ -236,7 +236,7 @@ export default function ExpenseTransactionModal({
               style={{ width: "100%", boxSizing: "border-box", background: "rgba(13, 18, 38, 0.7)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "8px", padding: "8px 12px", color: "#f8fafc", fontSize: "0.85rem" }}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder={isWealthItem ? "ej. CDT Bancolombia 180 días, Cajita Nu Vacaciones, Acciones..." : "ej. Almuerzo Crepes & Waffles, Compra Éxito, Cine..."}
+              placeholder={isWealthItem ? "ej. CDT Bancolombia 180 días, Ahorro Vacaciones, Acciones..." : "ej. Almuerzo Crepes & Waffles, Compra Éxito, Cine..."}
               required
               autoFocus
             />
@@ -406,7 +406,7 @@ export default function ExpenseTransactionModal({
                   textAlign: "center",
                 }}
               >
-                📦 Cajita / Renta Fija
+                📦 Cuenta de Ahorro / Renta Fija
               </button>
 
               <button
@@ -466,7 +466,7 @@ export default function ExpenseTransactionModal({
             {/* Sub-selector for Pockets */}
             {sourceType === "fixed_pocket" && fixedIncomeAccounts.length > 0 && (
               <div style={{ marginTop: 8 }}>
-                <label style={{ fontSize: "0.72rem", color: "#94a3b8" }}>Cajita / Cuenta de Ahorro:</label>
+                <label style={{ fontSize: "0.72rem", color: "#94a3b8" }}>Cuenta de Ahorro / Bolsillo:</label>
                 <select
                   value={selectedPocketId}
                   onChange={(e) => setSelectedPocketId(e.target.value)}

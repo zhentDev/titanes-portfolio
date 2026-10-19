@@ -111,6 +111,11 @@ export default function EmergencyFundCard({
               <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.95rem", fontWeight: 700, color: "#0284c7" }}>
                 {formatMoney(currentBalance, currency)}
               </div>
+              {emergencyItem?.sourceAccountName && (
+                <div style={{ fontSize: "0.65rem", color: "#10b981", fontWeight: 600, marginTop: 2 }} title="Cuenta específica de donde se toma el fondo de emergencia">
+                  📍 {emergencyItem.sourceAccountName}
+                </div>
+              )}
             </div>
             <div>
               <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Meta ({targetMonths} Meses Fijos)</div>

@@ -844,7 +844,7 @@ export default function FixedIncomeHub() {
             })}
           </div>
           <div style={{ fontSize: "0.68rem", color: "var(--accent-primary)", marginTop: 4, fontWeight: 600, display: "flex", gap: 6, flexWrap: "wrap" }}>
-            <span>💧 Cajitas: {currSymbol} {metrics.liquidBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <span>💧 Cuentas de Ahorro: {currSymbol} {metrics.liquidBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             {metrics.cdtsCapitalTotal > 0 && (
               <>
                 <span>•</span>
@@ -1611,7 +1611,7 @@ export default function FixedIncomeHub() {
                         {entity.name} <span style={{ fontSize: "0.8rem" }}>{entity.country}</span>
                       </div>
                       <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)" }}>
-                        {entityAccounts.length} cajita(s) / cuenta(s) • {entityCDTs.length} CDT(s)
+                        {entityAccounts.length} cuenta(s) de ahorro • {entityCDTs.length} CDT(s)
                       </div>
                     </div>
                   </div>
@@ -1777,10 +1777,10 @@ export default function FixedIncomeHub() {
                         borderRadius: 8,
                         border: `1px solid ${isLight ? "rgba(16, 185, 129, 0.3)" : "rgba(16, 185, 129, 0.35)"}`,
                       }}
-                      title="Saldo disponible líquido sumado de todas tus cajitas y cuentas en esta entidad"
+                      title="Saldo disponible líquido sumado de todas tus cuentas de ahorro en esta entidad"
                     >
                       <span style={{ fontSize: "0.68rem", color: isLight ? "#059669" : "#34d399", fontWeight: 700, display: "block", textTransform: "uppercase" }}>
-                        💰 Saldo Líquido Cajitas
+                        💰 Saldo Líquido Cuentas
                       </span>
                       <span className="mono" style={{ fontWeight: 800, color: isLight ? "#047857" : "#10b981", fontSize: "1.08rem" }}>
                         {entCurrSymbol} {accountsLiquidTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -1821,7 +1821,7 @@ export default function FixedIncomeHub() {
                           paddingLeft: 10,
                           borderLeft: `1px solid ${isLight ? "rgba(0, 0, 0, 0.1)" : "rgba(255, 255, 255, 0.1)"}`,
                         }}
-                        title="Patrimonio total en la entidad sumando efectivo líquido en cajitas y CDTs con sus ganancias a hoy"
+                        title="Patrimonio total en la entidad sumando efectivo líquido en cuentas de ahorro y CDTs con sus ganancias a hoy"
                       >
                         <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", display: "block", fontWeight: 600, textTransform: "uppercase" }}>
                           Total Entidad
@@ -2004,7 +2004,7 @@ export default function FixedIncomeHub() {
                         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", justifyContent: "flex-end" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--bg-surface)", padding: "6px 12px", borderRadius: 10, border: "1px solid var(--border)" }}>
                             {/* 1. Ingresado Neto Líquido */}
-                            <div style={{ textAlign: "right" }} title="Capital neto depositado líquido en la cajita">
+                            <div style={{ textAlign: "right" }} title="Capital neto depositado líquido en la cuenta">
                               <span style={{ color: "var(--text-muted)", fontSize: "0.68rem", display: "block" }}>📥 Aportado Neto</span>
                               <span className="mono" style={{ color: "var(--text-secondary)", fontWeight: 700, fontSize: "0.85rem" }}>
                                 ${yieldData.liquidNetCapital.toLocaleString("en-US", { maximumFractionDigits: 2 })}
@@ -2012,7 +2012,7 @@ export default function FixedIncomeHub() {
                             </div>
 
                             {/* 2. Rendimientos Líquidos */}
-                            <div style={{ textAlign: "right", paddingLeft: 8, borderLeft: "1px solid var(--border)" }} title="Rendimientos diarios ganados en la cajita">
+                            <div style={{ textAlign: "right", paddingLeft: 8, borderLeft: "1px solid var(--border)" }} title="Rendimientos diarios ganados en la cuenta">
                               <span style={{ color: "var(--text-muted)", fontSize: "0.68rem", display: "block" }}>📈 Rentabilidad</span>
                               <span className="mono" style={{ color: "#10b981", fontWeight: 700, fontSize: "0.85rem" }}>
                                 +${yieldData.liquidEarnedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })}
@@ -2020,7 +2020,7 @@ export default function FixedIncomeHub() {
                             </div>
 
                             {/* 3. Saldo Total Líquido */}
-                            <div style={{ textAlign: "right", paddingLeft: 10, borderLeft: "1px solid var(--border)" }} title="Saldo líquido disponible actualmente en la cajita">
+                            <div style={{ textAlign: "right", paddingLeft: 10, borderLeft: "1px solid var(--border)" }} title="Saldo líquido disponible actualmente en la cuenta">
                               <span style={{ color: "#0284c7", fontSize: "0.68rem", display: "block", fontWeight: 700 }}>💰 Saldo Líquido</span>
                               <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 800, fontSize: "1.05rem" }}>
                                 ${yieldData.liquidTotalBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })}{" "}
@@ -2028,7 +2028,7 @@ export default function FixedIncomeHub() {
                               </span>
                             </div>
 
-                            {/* 4. CDTs Activos vinculados a esta cajita */}
+                            {/* 4. CDTs Activos vinculados a esta cuenta */}
                             {yieldData.activeCDTsList.length > 0 && (
                               <div
                                 style={{
@@ -2036,7 +2036,7 @@ export default function FixedIncomeHub() {
                                   paddingLeft: 10,
                                   borderLeft: "1px solid var(--border)",
                                 }}
-                                title="Capital activo en CDT(s) vinculados a esta cajita más rendimientos devengados a hoy"
+                                title="Capital activo en CDT(s) vinculados a esta cuenta más rendimientos devengados a hoy"
                               >
                                 <span style={{ color: "#f59e0b", fontSize: "0.68rem", display: "block", fontWeight: 700 }}>
                                   ⏳ En {yieldData.activeCDTsList.length} CDT(s)
@@ -2050,7 +2050,7 @@ export default function FixedIncomeHub() {
                               </div>
                             )}
 
-                            {/* 5. Total Consolidado Cajita (Líquido + CDTs) */}
+                            {/* 5. Total Consolidado Cuenta (Líquido + CDTs) */}
                             {yieldData.activeCDTsList.length > 0 && (
                               <div
                                 style={{
@@ -2058,10 +2058,10 @@ export default function FixedIncomeHub() {
                                   paddingLeft: 10,
                                   borderLeft: "1px solid var(--border)",
                                 }}
-                                title="Total consolidado de esta cajita (Saldo Líquido disponible + CDTs activos)"
+                                title="Total consolidado de esta cuenta (Saldo Líquido disponible + CDTs activos)"
                               >
                                 <span style={{ color: "var(--text-secondary)", fontSize: "0.68rem", display: "block", fontWeight: 700 }}>
-                                  💼 Total Cajita
+                                  💼 Total Cuenta
                                 </span>
                                 <span className="mono" style={{ color: "#10b981", fontWeight: 800, fontSize: "1.05rem" }}>
                                   ${(yieldData.liquidTotalBalance + yieldData.activeCDTsCapital + yieldData.activeCDTsAccruedInterest).toLocaleString("en-US", { maximumFractionDigits: 2 })}
@@ -2092,7 +2092,7 @@ export default function FixedIncomeHub() {
                                   alignItems: "center",
                                   gap: 4,
                                 }}
-                                title="Sincronizar el saldo oficial de la cajita con el valor real calculado"
+                                title="Sincronizar el saldo oficial de la cuenta con el valor real calculado"
                               >
                                 <span>🔄 Sincronizar</span>
                               </button>
@@ -2373,7 +2373,7 @@ export default function FixedIncomeHub() {
                                     title={isRatesExpanded ? "Click para ocultar períodos" : "Click para desplegar períodos"}
                                   >
                                     <span style={{ fontSize: "0.8rem", fontWeight: 700, color: isLight ? "#0284c7" : "var(--accent-primary)", display: "flex", alignItems: "center", gap: 6 }}>
-                                      <span>📊 Rentabilidad Compuesta en Cajita por Períodos de Tasa:</span>
+                                      <span>📊 Rentabilidad Compuesta en Cuenta de Ahorros por Períodos de Tasa:</span>
                                       <span
                                         style={{
                                           fontSize: "0.68rem",
@@ -2390,7 +2390,7 @@ export default function FixedIncomeHub() {
 
                                     <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                                       <span style={{ fontSize: "0.78rem", color: isLight ? "#059669" : "var(--gain)", fontWeight: 700 }}>
-                                        Total Ganado en Cajita: +${yieldData.liquidEarnedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })} {acc.currency || "COP"}
+                                        Total Ganado en Cuenta: +${yieldData.liquidEarnedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })} {acc.currency || "COP"}
                                       </span>
 
                                       <button
@@ -2551,7 +2551,7 @@ export default function FixedIncomeHub() {
                                   fontWeight: 700,
                                   cursor: "pointer",
                                 }}
-                                title="Agregar un nuevo depósito o retiro manual a esta cajita"
+                                title="Agregar un nuevo depósito o retiro manual a esta cuenta"
                               >
                                 <span>+ Movimiento Manual</span>
                               </button>

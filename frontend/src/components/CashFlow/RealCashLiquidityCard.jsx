@@ -469,7 +469,7 @@ export default function RealCashLiquidityCard({
                 }}
               >
                 <span>📦</span>
-                <span>Saldo Cajitas / Renta Fija</span>
+                <span>Saldo Cuentas de Ahorro / Renta Fija</span>
               </span>
               <span
                 style={{
@@ -516,7 +516,7 @@ export default function RealCashLiquidityCard({
               </strong>
             </div>
             <div style={{ color: "var(--text-muted)" }}>
-              Total disponible en cuentas Nu (Cajitas) / CDTs
+              Total disponible en Cuentas de Ahorro / Bolsillos / CDTs
             </div>
           </div>
         </div>

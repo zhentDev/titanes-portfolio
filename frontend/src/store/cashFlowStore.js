@@ -1174,8 +1174,38 @@ export const useCashFlowStore = create(
           totalCashBalanceCOP += bal;
         });
 
+        // 1. Separate Emergency Fund accounts from general savings/fixed income
+        const emergencyAccounts = accounts.filter((acc) => {
+          const name = (acc.name || "").toLowerCase();
+          const category = (acc.category || "").toLowerCase();
+          return name.includes("emergencia") || category.includes("emergencia") || name.includes("emergency");
+        });
+
+        const emergencyBalanceCOP = emergencyAccounts.reduce((sum, acc) => {
+          const bal = Number(acc.balance) || 0;
+          const mult = acc.currency === "USD" ? fxRate : 1;
+          return sum + bal * mult;
+        }, 0);
+
+        // 2. Identify Non-emergency fixed income accounts
+        const nonEmergencyAccounts = accounts.filter(
+          (acc) => !emergencyAccounts.some((ea) => ea.id === acc.id)
+        );
+        const nonEmergencyCashCOP = nonEmergencyAccounts.reduce((sum, acc) => {
+          const bal = Number(acc.balance) || 0;
+          const mult = acc.currency === "USD" ? fxRate : 1;
+          return sum + bal * mult;
+        }, 0);
+
+        let totalCdtCapitalCOP = 0;
+        cdts.forEach((cdt) => {
+          const bal = Number(cdt.investmentAmount || cdt.initialAmount || cdt.amount || cdt.capital) || 0;
+          totalCdtCapitalCOP += bal;
+        });
+
         const roundedYield = Math.round(totalMonthlyYieldCOP);
-        const roundedBalance = Math.round(totalCashBalanceCOP);
+        const roundedEmergencyBalance = Math.round(emergencyBalanceCOP);
+        const roundedGeneralSavings = Math.round(nonEmergencyCashCOP + totalCdtCapitalCOP);
 
         set((state) => {
           const nextInflows = state.inflows.map((i) => {
@@ -1202,17 +1232,28 @@ export const useCashFlowStore = create(
               isAutoSynced: true,
               linkedModule: "fixed_income",
               frequency: "monthly",
-              paymentSource: { type: "fixed_pocket", targetName: "Renta Fija (Cuentas & CDTs)" },
+              paymentSource: { type: "fixed_pocket", targetName: "Renta Fija (Cuentas de Ahorro & CDTs)" },
               icon: "⚡",
               createdAt: new Date().toISOString(),
             });
           }
 
           const nextWealth = state.wealth.map((w) => {
-            if (w.linkedModule === "fixed_income" || w.category === "fixed_savings") {
+            if (w.category === "emergency_fund" || w.id === "wealth_emergency") {
+              // Solo cuenta el saldo de la(s) cuenta(s) específicamente destinadas a Fondo de Emergencia
               return {
                 ...w,
-                currentBalance: roundedBalance > 0 ? roundedBalance : w.currentBalance,
+                currentBalance: emergencyAccounts.length > 0 ? roundedEmergencyBalance : w.currentBalance,
+                linkedModule: "fixed_income",
+                sourceAccountName: emergencyAccounts.length > 0 ? emergencyAccounts.map((a) => a.name).join(", ") : w.sourceAccountName,
+              };
+            }
+            if (w.category === "fixed_savings" || w.id === "wealth_high_yield") {
+              // Ahorro de alto rendimiento en otras cuentas de ahorro y CDTs (excluye el fondo de emergencia)
+              return {
+                ...w,
+                currentBalance: roundedGeneralSavings > 0 ? roundedGeneralSavings : w.currentBalance,
+                linkedModule: "fixed_income",
               };
             }
             return w;

@@ -65,7 +65,7 @@ export default function LoanSettlementModal({
     } else if (targetType === "fixed_pocket") {
       const pocket = fixedIncomeAccounts.find((p) => p.id === selectedPocketId) || fixedIncomeAccounts[0];
       targetId = pocket?.id;
-      targetName = pocket ? pocket.name : "Cajita de Ahorro";
+      targetName = pocket ? pocket.name : "Cuenta de Ahorro";
     } else if (targetType === "investment_cash") {
       targetName = "Portafolio de Inversión / Broker";
     }
@@ -233,7 +233,7 @@ export default function LoanSettlementModal({
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: "0.82rem", color: targetType === "fixed_pocket" ? "#00e5ff" : "#e2e8f0" }}>
-                  <span>🏦</span> Ahorro / CDT / Cajita
+                  <span>🏦</span> Ahorro / CDT / Cuenta
                 </div>
                 <div style={{ fontSize: "0.72rem", color: "#94a3b8", marginTop: 4 }}>
                   Depositar en fondo de ahorro
@@ -286,7 +286,7 @@ export default function LoanSettlementModal({
           {targetType === "fixed_pocket" && fixedIncomeAccounts.length > 0 && (
             <div style={{ background: "rgba(0, 229, 255, 0.08)", border: "1px solid rgba(0, 229, 255, 0.25)", borderRadius: "8px", padding: "10px 14px" }}>
               <label style={{ display: "block", fontSize: "0.76rem", color: "#00e5ff", marginBottom: 5, fontWeight: 700 }}>
-                Selecciona la Cajita / Cuenta de Ahorro destino:
+                Selecciona la Cuenta de Ahorro destino:
               </label>
               <select
                 value={selectedPocketId}

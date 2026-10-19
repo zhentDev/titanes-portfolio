@@ -337,11 +337,26 @@ export default function CashFlowHub() {
   const passivePctOfInflow = totalInflow > 0 ? ((totalPassiveInflow / totalInflow) * 100).toFixed(1) : 0;
   const savingsRate = totalInflow > 0 ? ((totalWealth / totalInflow) * 100).toFixed(1) : 0;
 
-  // Emergency Fund Metrics
-  const emergencyItem = wealth.find((w) => w.category === "emergency_fund") || {
-    currentBalance: 0,
-    targetAmount: (totalNeeds || 1) * emergencyFundTargetMonths,
-  };
+  // Emergency Fund Metrics: Solo cuenta la cuenta designada como Fondo de Emergencia
+  const emergencyItem = useMemo(() => {
+    const item = wealth.find((w) => w.category === "emergency_fund") || {
+      currentBalance: 0,
+      targetAmount: (totalNeeds || 1) * emergencyFundTargetMonths,
+    };
+    const emergencyAccount = (fixedAccounts || []).find((a) => {
+      const name = (a.name || "").toLowerCase();
+      const cat = (a.category || "").toLowerCase();
+      return name.includes("emergencia") || cat.includes("emergencia") || name.includes("emergency");
+    });
+    if (emergencyAccount) {
+      return {
+        ...item,
+        currentBalance: Number(emergencyAccount.balance) || 0,
+        sourceAccountName: emergencyAccount.name,
+      };
+    }
+    return item;
+  }, [wealth, totalNeeds, emergencyFundTargetMonths, fixedAccounts]);
 
   // Days of Freedom Metric
   const dailyBurn = (totalNeeds + totalWants) / 30;
@@ -656,7 +671,7 @@ export default function CashFlowHub() {
               color: "#fb7185",
             }}
             onClick={() => setExpenseModalOpen(true)}
-            title="Registrar un gasto real consumido o un aporte a CDT/Cajita indicando la fuente de pago"
+            title="Registrar un gasto real consumido o un aporte a CDT/Cuenta de Ahorro indicando la fuente de pago"
           >
             <span>💸</span>
             <span>Registrar Movimiento / Gasto</span>
@@ -807,7 +822,7 @@ export default function CashFlowHub() {
             type="button"
             className="cashflow-action-btn sync"
             onClick={handleAutoSync}
-            title="Importar rendimientos pasivos de Cajitas Nu, Plenti USD, CDTs y Titanes Tech ETF"
+            title="Importar rendimientos pasivos de Cuentas Nu, Plenti USD, CDTs y Titanes Tech ETF"
           >
             <span>⚡</span>
             <span>Sincronizar Patrimonio</span>

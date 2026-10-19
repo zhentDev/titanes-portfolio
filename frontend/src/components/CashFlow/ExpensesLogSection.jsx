@@ -108,7 +108,7 @@ export default function ExpensesLogSection({
             <span>📋</span> Historial de Gastos Reales, Ahorro & Abonos ({activePeriod})
           </h3>
           <p style={{ margin: "4px 0 0 0", fontSize: "0.82rem", color: "var(--text-muted)" }}>
-            Transacciones de nómina: gastos de vida, transferencias a CDTs/cajitas y abonos de deuda de tarjetas.
+            Transacciones de nómina: gastos de vida, transferencias a CDTs o cuentas de ahorro y abonos de deuda de tarjetas.
           </p>
         </div>
 
@@ -191,7 +191,7 @@ export default function ExpensesLogSection({
           { id: "only_payments", label: "💵 Abonos a Tarjetas" },
           { id: "payroll", label: "🏦 Nómina" },
           { id: "credit_card", label: "💳 Tarjeta de Crédito" },
-          { id: "fixed_pocket", label: "📦 Cajitas / Renta Fija" },
+          { id: "fixed_pocket", label: "📦 Cuentas de Ahorro / Renta Fija" },
           { id: "investment_cash", label: "🚀 Broker" },
         ].map((f) => (
           <button

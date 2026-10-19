@@ -309,7 +309,7 @@ export default function FixedIncomeModal({
   const handleSaveTransaction = async (e) => {
     e.preventDefault();
     if (!txAccountId) {
-      toast.error("Selecciona una cajita o cuenta");
+      toast.error("Selecciona una cuenta de ahorro o bolsillo");
       return;
     }
     const numAmt = Number(txAmount);
@@ -708,7 +708,7 @@ export default function FixedIncomeModal({
               <div>
                 <FloatingInput
                   label="Nombre del Producto / Bolsillo"
-                  placeholder="ej. Cuentamiga, Cajita de Rendimiento, Bolsillo Viajes"
+                  placeholder="ej. Cuentamiga, Cuenta de Rendimiento, Bolsillo Viajes"
                   value={accountName}
                   onChange={(e) => setAccountName(e.target.value)}
                   required
@@ -1119,7 +1119,7 @@ export default function FixedIncomeModal({
               <div>
                 <FloatingInput
                   label="Nombre de la Cuenta (Opcional)"
-                  placeholder="ej. Cajita Principal Nu"
+                  placeholder="ej. Cuenta Principal Nu"
                   value={calcAccountName}
                   onChange={(e) => setCalcAccountName(e.target.value)}
                 />
@@ -1419,13 +1419,13 @@ export default function FixedIncomeModal({
             >
               <div>
                 <label className="fi-form-label">
-                  Cajita o Cuenta Destino
+                  Cuenta de Ahorro o Bolsillo Destino
                 </label>
                 <CustomSelectDropdown
                   options={accountOptions}
                   value={txAccountId}
                   onChange={(val) => setTxAccountId(val)}
-                  placeholder="Selecciona una cajita o cuenta..."
+                  placeholder="Selecciona una cuenta o bolsillo..."
                 />
               </div>
 
@@ -1493,7 +1493,7 @@ export default function FixedIncomeModal({
                   checked={txUpdateAccountBalance}
                   onChange={(e) => setTxUpdateAccountBalance(e.target.checked)}
                 />
-                <span>Actualizar el saldo actual de la cajita automáticamente</span>
+                <span>Actualizar el saldo actual de la cuenta automáticamente</span>
               </label>
 
               {/* Pinned Footer at Bottom */}

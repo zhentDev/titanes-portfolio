@@ -166,7 +166,7 @@ export default function CreditCardPaymentModal({
                     cursor: "pointer",
                   }}
                 >
-                  📦 Cajita de Ahorro / Renta Fija
+                  📦 Cuenta de Ahorro / Renta Fija
                 </button>
               )}
             </div>

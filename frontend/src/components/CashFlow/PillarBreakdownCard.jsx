@@ -53,7 +53,7 @@ export default function PillarBreakdownCard({
   const handleAutoSyncedClick = (item) => {
     const moduleName =
       item.linkedModule === "fixed_income" || item.category === "passive_fixed"
-        ? "Renta Fija (Cajitas & CDTs)"
+        ? "Renta Fija (Cuentas de Ahorro & CDTs)"
         : "Renta Variable / Portafolio ETF";
 
     toast(
@@ -257,7 +257,7 @@ export default function PillarBreakdownCard({
                             <span>🔗</span>
                             <span>
                               {item.category === "passive_fixed" || item.linkedModule === "fixed_income"
-                                ? "⚡ Renta Fija (Cajitas & CDTs)"
+                                ? "⚡ Renta Fija (Cuentas de Ahorro & CDTs)"
                                 : "⚡ Dividendos Titanes Tech ETF"}
                             </span>
                           </span>

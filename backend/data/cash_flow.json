@@ -170,7 +170,7 @@
       "category": "emergency_fund",
       "targetAmount": 15000000,
       "monthlyContribution": 500000,
-      "currentBalance": 4022832,
+      "currentBalance": 1070000,
       "currency": "COP",
       "linkedModule": "fixed_income",
       "paymentSource": {
@@ -178,7 +178,8 @@
         "targetName": "Cuenta Nu Débito"
       },
       "icon": "🛡️",
-      "createdAt": "2026-09-19T16:57:44.254Z"
+      "createdAt": "2026-09-19T16:57:44.254Z",
+      "sourceAccountName": "Fondo de emergencia (RappiPay)"
     },
     {
       "id": "wealth_tech_etf",
@@ -202,7 +203,7 @@
       "category": "fixed_savings",
       "targetAmount": 15000000,
       "monthlyContribution": 300000,
-      "currentBalance": 4022832,
+      "currentBalance": 2952832,
       "currency": "COP",
       "linkedModule": "fixed_income",
       "paymentSource": {
