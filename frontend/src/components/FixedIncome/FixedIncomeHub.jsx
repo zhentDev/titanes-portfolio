@@ -1550,7 +1550,8 @@ export default function FixedIncomeHub() {
           }, 0);
 
           const activeCDTsCapitalTotal = activeEntityCDTs.reduce((sum, c) => sum + (c.capital || 0), 0);
-          const entityTotal = accountsLiquidTotal + activeCDTsAccruedYield;
+          const activeCDTsTotal = activeCDTsCapitalTotal + activeCDTsAccruedYield;
+          const entityTotal = accountsLiquidTotal + activeCDTsTotal;
 
           return (
             <div
@@ -1766,23 +1767,68 @@ export default function FixedIncomeHub() {
                     </button>
                   </div>
 
-                  <div style={{ textAlign: "right", marginLeft: "auto" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", justifyContent: "flex-end", marginLeft: "auto" }}>
+                    {/* 1. Saldo Líquido en Cajitas (coincide con saldo en app) */}
                     <div
-                      className="mono"
-                      style={{ fontWeight: 800, color: "#10b981", fontSize: "1.15rem", letterSpacing: "0.2px" }}
-                      title={`Líquido Cajitas ($${accountsLiquidTotal.toLocaleString()}) + Rendimiento Devengado CDTs ($${activeCDTsAccruedYield.toLocaleString()})`}
+                      style={{
+                        textAlign: "right",
+                        background: isLight ? "rgba(16, 185, 129, 0.08)" : "rgba(16, 185, 129, 0.12)",
+                        padding: "6px 12px",
+                        borderRadius: 8,
+                        border: `1px solid ${isLight ? "rgba(16, 185, 129, 0.3)" : "rgba(16, 185, 129, 0.35)"}`,
+                      }}
+                      title="Saldo disponible líquido sumado de todas tus cajitas y cuentas en esta entidad"
                     >
-                      {entCurrSymbol}{" "}
-                      {entityTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <span style={{ fontSize: "0.68rem", color: isLight ? "#059669" : "#34d399", fontWeight: 700, display: "block", textTransform: "uppercase" }}>
+                        💰 Saldo Líquido Cajitas
+                      </span>
+                      <span className="mono" style={{ fontWeight: 800, color: isLight ? "#047857" : "#10b981", fontSize: "1.08rem" }}>
+                        {entCurrSymbol} {accountsLiquidTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
                     </div>
+
+                    {/* 2. Inversión en CDTs Activos (Capital + Rendimiento a hoy) */}
                     {activeEntityCDTs.length > 0 && (
-                      <div style={{ fontSize: "0.72rem", color: "#f59e0b", marginTop: 2 }}>
-                        + {entCurrSymbol}{activeCDTsCapitalTotal.toLocaleString("en-US", { maximumFractionDigits: 0 })} en {activeEntityCDTs.length} CDT(s)
+                      <div
+                        style={{
+                          textAlign: "right",
+                          background: isLight ? "rgba(245, 158, 11, 0.08)" : "rgba(245, 158, 11, 0.12)",
+                          padding: "6px 12px",
+                          borderRadius: 8,
+                          border: `1px solid ${isLight ? "rgba(245, 158, 11, 0.3)" : "rgba(245, 158, 11, 0.35)"}`,
+                        }}
+                        title={`Capital en CDTs: $${activeCDTsCapitalTotal.toLocaleString()} + Rendimientos devengados a hoy: +$${activeCDTsAccruedYield.toLocaleString()}`}
+                      >
+                        <span style={{ fontSize: "0.68rem", color: "#d97706", fontWeight: 700, display: "block", textTransform: "uppercase" }}>
+                          ⏳ En {activeEntityCDTs.length} CDT(s)
+                        </span>
+                        <span className="mono" style={{ fontWeight: 800, color: "#d97706", fontSize: "1.02rem" }}>
+                          {entCurrSymbol} {activeCDTsTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
                         {activeCDTsAccruedYield > 0 && (
-                          <span style={{ color: "#34d399", marginLeft: 4, fontWeight: 600 }}>
+                          <div style={{ fontSize: "0.65rem", color: isLight ? "#059669" : "#34d399", fontWeight: 600 }}>
                             (+$ {activeCDTsAccruedYield.toLocaleString("en-US", { maximumFractionDigits: 2 })} rend. a hoy)
-                          </span>
+                          </div>
                         )}
+                      </div>
+                    )}
+
+                    {/* 3. Total Consolidado en la Entidad (Líquido + CDTs) */}
+                    {activeEntityCDTs.length > 0 && (
+                      <div
+                        style={{
+                          textAlign: "right",
+                          paddingLeft: 10,
+                          borderLeft: `1px solid ${isLight ? "rgba(0, 0, 0, 0.1)" : "rgba(255, 255, 255, 0.1)"}`,
+                        }}
+                        title="Patrimonio total en la entidad sumando efectivo líquido en cajitas y CDTs con sus ganancias a hoy"
+                      >
+                        <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", display: "block", fontWeight: 600, textTransform: "uppercase" }}>
+                          Total Entidad
+                        </span>
+                        <span className="mono" style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "1.05rem" }}>
+                          {entCurrSymbol} {entityTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -1929,8 +1975,8 @@ export default function FixedIncomeHub() {
                                 {acc.type === "crypto" ? "Tasa Staking:" : "Tasa actual:"}{" "}
                                 <span style={{ color: "#10b981", fontWeight: 700, fontSize: "0.78rem" }}>
                                   {Number(
-                                    (acc.type === "crypto" || acc.interestRateEA)
-                                      ? (acc.interestRateEA || historicalRates?.entities?.[acc.entityId]?.savings_rates?.slice(-1)[0]?.rateEA || 8.00)
+                                    acc.type === "crypto"
+                                      ? (acc.interestRateEA || 8.00)
                                       : (historicalRates?.entities?.[acc.entityId]?.savings_rates?.slice(-1)[0]?.rateEA || acc.interestRateEA || 9.30)
                                   ).toFixed(2)}% E.A.
                                 </span>
@@ -1954,7 +2000,7 @@ export default function FixedIncomeHub() {
                           </div>
                         </div>
 
-                        {/* Right: 3 Metric Badges + Actions */}
+                        {/* Right: Metric Badges + Actions */}
                         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", justifyContent: "flex-end" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--bg-surface)", padding: "6px 12px", borderRadius: 10, border: "1px solid var(--border)" }}>
                             {/* 1. Ingresado Neto Líquido */}
@@ -1974,13 +2020,54 @@ export default function FixedIncomeHub() {
                             </div>
 
                             {/* 3. Saldo Total Líquido */}
-                            <div style={{ textAlign: "right", paddingLeft: 10, borderLeft: "1px solid var(--border)" }} title="Saldo líquido actual en la cajita">
+                            <div style={{ textAlign: "right", paddingLeft: 10, borderLeft: "1px solid var(--border)" }} title="Saldo líquido disponible actualmente en la cajita">
                               <span style={{ color: "#0284c7", fontSize: "0.68rem", display: "block", fontWeight: 700 }}>💰 Saldo Líquido</span>
                               <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 800, fontSize: "1.05rem" }}>
                                 ${yieldData.liquidTotalBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })}{" "}
                                 <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{acc.currency}</span>
                               </span>
                             </div>
+
+                            {/* 4. CDTs Activos vinculados a esta cajita */}
+                            {yieldData.activeCDTsList.length > 0 && (
+                              <div
+                                style={{
+                                  textAlign: "right",
+                                  paddingLeft: 10,
+                                  borderLeft: "1px solid var(--border)",
+                                }}
+                                title="Capital activo en CDT(s) vinculados a esta cajita más rendimientos devengados a hoy"
+                              >
+                                <span style={{ color: "#f59e0b", fontSize: "0.68rem", display: "block", fontWeight: 700 }}>
+                                  ⏳ En {yieldData.activeCDTsList.length} CDT(s)
+                                </span>
+                                <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: "0.92rem" }}>
+                                  ${(yieldData.activeCDTsCapital + yieldData.activeCDTsAccruedInterest).toLocaleString("en-US", { maximumFractionDigits: 2 })}
+                                </span>
+                                <span style={{ color: "#10b981", fontSize: "0.68rem", display: "block", fontWeight: 600 }}>
+                                  (+${yieldData.activeCDTsAccruedInterest.toLocaleString("en-US", { maximumFractionDigits: 0 })} rend.)
+                                </span>
+                              </div>
+                            )}
+
+                            {/* 5. Total Consolidado Cajita (Líquido + CDTs) */}
+                            {yieldData.activeCDTsList.length > 0 && (
+                              <div
+                                style={{
+                                  textAlign: "right",
+                                  paddingLeft: 10,
+                                  borderLeft: "1px solid var(--border)",
+                                }}
+                                title="Total consolidado de esta cajita (Saldo Líquido disponible + CDTs activos)"
+                              >
+                                <span style={{ color: "var(--text-secondary)", fontSize: "0.68rem", display: "block", fontWeight: 700 }}>
+                                  💼 Total Cajita
+                                </span>
+                                <span className="mono" style={{ color: "#10b981", fontWeight: 800, fontSize: "1.05rem" }}>
+                                  ${(yieldData.liquidTotalBalance + yieldData.activeCDTsCapital + yieldData.activeCDTsAccruedInterest).toLocaleString("en-US", { maximumFractionDigits: 2 })}
+                                </span>
+                              </div>
+                            )}
                           </div>
 
                           {/* Action Buttons */}
