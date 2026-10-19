@@ -28,6 +28,57 @@ export default function FixedIncomeModal({
     useFixedIncomeStore();
   const [activeTab, setActiveTab] = useState(initialTab); // 'entity' | 'account' | 'cdt' | 'calculator' | 'transaction'
 
+  // Entity Form State
+  const [entityName, setEntityName] = useState("");
+  const [entityCountry, setEntityCountry] = useState("🇨🇴");
+  const [entityColor, setEntityColor] = useState("#820ad1");
+  const [entityIcon, setEntityIcon] = useState("💜");
+  const [entityLogoUrl, setEntityLogoUrl] = useState("");
+
+  // Account Form State
+  const [selectedEntityId, setSelectedEntityId] = useState("");
+  const [accountName, setAccountName] = useState("");
+  const [accountType, setAccountType] = useState("pocket");
+  const [accountCurrency, setAccountCurrency] = useState("COP");
+  const [accountBalance, setAccountBalance] = useState("");
+  const [accountRateEA, setAccountRateEA] = useState("");
+  const [accountTaxExempt, setAccountTaxExempt] = useState(true);
+  const [accountStartDate, setAccountStartDate] = useState("2023-06-01");
+
+  // CDT Form State
+  const [cdtName, setCdtName] = useState("");
+  const [cdtCapital, setCdtCapital] = useState("");
+  const [cdtCurrency, setCdtCurrency] = useState("COP");
+  const [cdtRateEA, setCdtRateEA] = useState("");
+  const [cdtTermDays, setCdtTermDays] = useState(180);
+  const [cdtStartDate, setCdtStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const [cdtMaturityDate, setCdtMaturityDate] = useState("");
+  const [cdtReteFuente, setCdtReteFuente] = useState(4.0);
+  const [cdtAutoRenew, setCdtAutoRenew] = useState(false);
+  const [cdtStatus, setCdtStatus] = useState("active");
+  const [cdtPayoutAmount, setCdtPayoutAmount] = useState("");
+  const [cdtPayoutDate, setCdtPayoutDate] = useState("");
+  const [cdtCategory, setCdtCategory] = useState("");
+  const [cdtAvailableTiers, setCdtAvailableTiers] = useState([]);
+  const [suggestedRateLabel, setSuggestedRateLabel] = useState("");
+
+  // Transaction / Manual Movement State
+  const [txAccountId, setTxAccountId] = useState("");
+  const [txDate, setTxDate] = useState(new Date().toISOString().slice(0, 10));
+  const [txDescription, setTxDescription] = useState("");
+  const [txType, setTxType] = useState("credit"); // 'credit' | 'debit'
+  const [txAmount, setTxAmount] = useState("");
+  const [txUpdateAccountBalance, setTxUpdateAccountBalance] = useState(true);
+
+  // Historical Aportes Calculator State
+  const [calcEntityId, setCalcEntityId] = useState("");
+  const [calcAccountName, setCalcAccountName] = useState("");
+  const [calcDeposits, setCalcDeposits] = useState([
+    { id: 1, date: new Date().toISOString().slice(0, 10), amount: "" },
+  ]);
+  const [calcResult, setCalcResult] = useState(null);
+  const [isCalculating, setIsCalculating] = useState(false);
+
   // Memoized options for CustomSelectDropdown (includes existing entities + all traditional/modern bank presets)
   const entityOptions = useMemo(() => {
     const existing = entities.map((e) => ({
@@ -116,58 +167,6 @@ export default function FixedIncomeModal({
       logoUrl: svgToDataUri(bp.logoSvg),
     }));
   }, []);
-
-  // Entity Form State
-  const [entityName, setEntityName] = useState("");
-  const [entityCountry, setEntityCountry] = useState("🇨🇴");
-  const [entityColor, setEntityColor] = useState("#820ad1");
-  const [entityIcon, setEntityIcon] = useState("💜");
-  const [entityLogoUrl, setEntityLogoUrl] = useState("");
-
-  // Account Form State
-  const [selectedEntityId, setSelectedEntityId] = useState("");
-  const [accountName, setAccountName] = useState("");
-  const [accountType, setAccountType] = useState("pocket");
-  const [accountCurrency, setAccountCurrency] = useState("COP");
-  const [accountBalance, setAccountBalance] = useState("");
-  const [accountRateEA, setAccountRateEA] = useState("");
-  const [accountTaxExempt, setAccountTaxExempt] = useState(true);
-  const [accountStartDate, setAccountStartDate] = useState("2023-06-01");
-
-
-  // CDT Form State
-  const [cdtName, setCdtName] = useState("");
-  const [cdtCapital, setCdtCapital] = useState("");
-  const [cdtCurrency, setCdtCurrency] = useState("COP");
-  const [cdtRateEA, setCdtRateEA] = useState("");
-  const [cdtTermDays, setCdtTermDays] = useState(180);
-  const [cdtStartDate, setCdtStartDate] = useState(new Date().toISOString().slice(0, 10));
-  const [cdtMaturityDate, setCdtMaturityDate] = useState("");
-  const [cdtReteFuente, setCdtReteFuente] = useState(4.0);
-  const [cdtAutoRenew, setCdtAutoRenew] = useState(false);
-  const [cdtStatus, setCdtStatus] = useState("active");
-  const [cdtPayoutAmount, setCdtPayoutAmount] = useState("");
-  const [cdtPayoutDate, setCdtPayoutDate] = useState("");
-  const [cdtCategory, setCdtCategory] = useState("");
-  const [cdtAvailableTiers, setCdtAvailableTiers] = useState([]);
-  const [suggestedRateLabel, setSuggestedRateLabel] = useState("");
-
-  // Transaction / Manual Movement State
-  const [txAccountId, setTxAccountId] = useState("");
-  const [txDate, setTxDate] = useState(new Date().toISOString().slice(0, 10));
-  const [txDescription, setTxDescription] = useState("");
-  const [txType, setTxType] = useState("credit"); // 'credit' | 'debit'
-  const [txAmount, setTxAmount] = useState("");
-  const [txUpdateAccountBalance, setTxUpdateAccountBalance] = useState(true);
-
-  // Historical Aportes Calculator State
-  const [calcEntityId, setCalcEntityId] = useState("");
-  const [calcAccountName, setCalcAccountName] = useState("");
-  const [calcDeposits, setCalcDeposits] = useState([
-    { id: 1, date: new Date().toISOString().slice(0, 10), amount: "" },
-  ]);
-  const [calcResult, setCalcResult] = useState(null);
-  const [isCalculating, setIsCalculating] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -630,6 +629,8 @@ export default function FixedIncomeModal({
     setCalcResult(null);
     onClose();
   };
+
+  if (!isOpen) return null;
 
   return createPortal(
     <div
