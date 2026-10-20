@@ -451,194 +451,217 @@ export default function IndividualHoldingChart({
       <div
         style={{
           display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: 12,
-          padding: "10px 14px",
+          flexDirection: "column",
+          gap: 10,
+          padding: "10px 16px",
           marginBottom: "14px",
-          background: isLight ? "rgba(241, 245, 249, 0.85)" : "rgba(0, 0, 0, 0.25)",
-          borderRadius: 8,
+          background: isLight ? "#ffffff" : "rgba(0, 0, 0, 0.25)",
+          borderRadius: 10,
           border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.06)"}`,
+          boxShadow: isLight ? "0 2px 8px rgba(0,0,0,0.04)" : "none",
         }}
       >
-        {/* Dropdown Selector */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)" }}>
-            📈 Acción a inspeccionar:
-          </span>
-          <select
-            value={currentKey}
-            onChange={(e) => handleKeyChange(e.target.value)}
-            style={{
-              padding: "6px 12px",
-              borderRadius: 8,
-              background: isLight ? "#ffffff" : "#1e293b",
-              color: isLight ? "#0f172a" : "#f1f5f9",
-              border: `1px solid ${isLight ? "#cbd5e1" : "#334155"}`,
-              fontSize: "0.82rem",
-              fontWeight: 700,
-              cursor: "pointer",
-              outline: "none",
-              maxWidth: 420,
-              boxShadow: isLight ? "0 2px 6px rgba(0,0,0,0.05)" : "0 2px 6px rgba(0,0,0,0.3)",
-            }}
-          >
-            {/* 1. Posiciones Consolidadas */}
-            {availableOptions.some((o) => o.status === "PURCHASE_GROUP") && (
-              <optgroup label="🏢 Posiciones Consolidadas (Todos los Lotes)">
-                {availableOptions
-                  .filter((o) => o.status === "PURCHASE_GROUP")
-                  .map((o) => (
-                    <option key={o.key} value={o.key}>
-                      {o.name} ({o.returnPct >= 0 ? "+" : ""}{Number(o.returnPct || 0).toFixed(2)}%)
-                    </option>
-                  ))}
-              </optgroup>
-            )}
-
-            {/* 2. Lotes Individuales Agrupados Limpiamente por Acción / ETF */}
-            {(() => {
-              const purchaseLots = availableOptions.filter((o) => o.status === "PURCHASE_LOT");
-              if (purchaseLots.length === 0) return null;
-
-              // Group lots by ticker
-              const lotsByTicker = {};
-              purchaseLots.forEach((lot) => {
-                const t = lot.groupTicker || lot.ticker;
-                if (!lotsByTicker[t]) lotsByTicker[t] = [];
-                lotsByTicker[t].push(lot);
-              });
-
-              return Object.entries(lotsByTicker).map(([ticker, lots]) => {
-                const assetName = lots[0]?.fullName || getAssetName(ticker);
-                return (
-                  <optgroup
-                    key={ticker}
-                    label={`🎯 ${ticker} • ${assetName} (${lots.length} Lote${lots.length !== 1 ? "s" : ""})`}
-                  >
-                    {lots.map((o) => (
+        {/* Fila 1: Selector de Acción/Lote + Insignia de Contexto */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 10,
+            width: "100%",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", minWidth: 260 }}>
+            <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
+              📈 Acción a inspeccionar:
+            </span>
+            <select
+              value={currentKey}
+              onChange={(e) => handleKeyChange(e.target.value)}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 8,
+                background: isLight ? "#f8fafc" : "#1e293b",
+                color: isLight ? "#0f172a" : "#f1f5f9",
+                border: `1px solid ${isLight ? "#cbd5e1" : "#334155"}`,
+                fontSize: "0.82rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                outline: "none",
+                maxWidth: 420,
+                boxShadow: isLight ? "0 1px 4px rgba(0,0,0,0.05)" : "0 2px 6px rgba(0,0,0,0.3)",
+              }}
+            >
+              {/* 1. Posiciones Consolidadas */}
+              {availableOptions.some((o) => o.status === "PURCHASE_GROUP") && (
+                <optgroup label="🏢 Posiciones Consolidadas (Todos los Lotes)">
+                  {availableOptions
+                    .filter((o) => o.status === "PURCHASE_GROUP")
+                    .map((o) => (
                       <option key={o.key} value={o.key}>
-                        {ticker} — {o.name} ({o.returnPct >= 0 ? "+" : ""}{Number(o.returnPct || 0).toFixed(2)}%)
+                        {o.name} ({o.returnPct >= 0 ? "+" : ""}{Number(o.returnPct || 0).toFixed(2)}%)
                       </option>
                     ))}
-                  </optgroup>
-                );
-              });
-            })()}
+                </optgroup>
+              )}
 
-            {/* 3. Acciones Activas (Titanes) */}
-            {availableOptions.some((o) => o.status === "ACTIVE") && (
-              <optgroup label="🟢 Acciones Activas (En Cartera)">
-                {availableOptions
-                  .filter((o) => o.status === "ACTIVE")
-                  .map((o) => (
-                    <option key={o.key} value={o.key}>
-                      {o.name} ({o.returnPct >= 0 ? "+" : ""}{Number(o.returnPct || 0).toFixed(2)}%)
-                    </option>
-                  ))}
-              </optgroup>
+              {/* 2. Lotes Individuales Agrupados Limpiamente por Acción / ETF */}
+              {(() => {
+                const purchaseLots = availableOptions.filter((o) => o.status === "PURCHASE_LOT");
+                if (purchaseLots.length === 0) return null;
+
+                // Group lots by ticker
+                const lotsByTicker = {};
+                purchaseLots.forEach((lot) => {
+                  const t = lot.groupTicker || lot.ticker;
+                  if (!lotsByTicker[t]) lotsByTicker[t] = [];
+                  lotsByTicker[t].push(lot);
+                });
+
+                return Object.entries(lotsByTicker).map(([ticker, lots]) => {
+                  const assetName = lots[0]?.fullName || getAssetName(ticker);
+                  return (
+                    <optgroup
+                      key={ticker}
+                      label={`🎯 ${ticker} • ${assetName} (${lots.length} Lote${lots.length !== 1 ? "s" : ""})`}
+                    >
+                      {lots.map((o) => (
+                        <option key={o.key} value={o.key}>
+                          {ticker} — {o.name} ({o.returnPct >= 0 ? "+" : ""}{Number(o.returnPct || 0).toFixed(2)}%)
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                });
+              })()}
+
+              {/* 3. Acciones Activas (Titanes) */}
+              {availableOptions.some((o) => o.status === "ACTIVE") && (
+                <optgroup label="🟢 Acciones Activas (En Cartera)">
+                  {availableOptions
+                    .filter((o) => o.status === "ACTIVE")
+                    .map((o) => (
+                      <option key={o.key} value={o.key}>
+                        {o.name} ({o.returnPct >= 0 ? "+" : ""}{Number(o.returnPct || 0).toFixed(2)}%)
+                      </option>
+                    ))}
+                </optgroup>
+              )}
+
+              {/* 4. Posiciones Cerradas */}
+              {availableOptions.some((o) => o.status === "CLOSED") && (
+                <optgroup label="🔴 Acciones Vendidas / Posiciones Cerradas">
+                  {availableOptions
+                    .filter((o) => o.status === "CLOSED")
+                    .map((o) => (
+                      <option key={o.key} value={o.key}>
+                        {o.name} ({o.returnPct >= 0 ? "+" : ""}{Number(o.returnPct || 0).toFixed(2)}%)
+                      </option>
+                    ))}
+                </optgroup>
+              )}
+            </select>
+          </div>
+
+          <div>
+            {selectedItem?.status === "PURCHASE_LOT" ? (
+              <span
+                style={{
+                  fontSize: "0.72rem",
+                  padding: "4px 10px",
+                  borderRadius: 6,
+                  background: isLight ? "rgba(124, 58, 237, 0.12)" : "rgba(168, 85, 247, 0.2)",
+                  color: isLight ? "#6d28d9" : "#c084fc",
+                  border: `1px solid ${isLight ? "rgba(124, 58, 237, 0.35)" : "rgba(168, 85, 247, 0.4)"}`,
+                  fontWeight: 700,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <span>🎯</span>
+                <span>
+                  Lote {selectedItem.ticker}: <strong>{selectedItem.entryDate}</strong> ({Number(selectedItem.shares || 0).toFixed(4)} uds)
+                </span>
+              </span>
+            ) : selectedItem?.status === "PURCHASE_GROUP" ? (
+              <span
+                style={{
+                  fontSize: "0.72rem",
+                  padding: "4px 10px",
+                  borderRadius: 6,
+                  background: isLight ? "rgba(2, 132, 199, 0.12)" : "rgba(0, 229, 255, 0.18)",
+                  color: isLight ? "#0284c7" : "#00e5ff",
+                  border: `1px solid ${isLight ? "rgba(2, 132, 199, 0.35)" : "rgba(0, 229, 255, 0.4)"}`,
+                  fontWeight: 700,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <span>🏢</span>
+                <span>
+                  Consolidado {selectedItem.ticker} (<strong>{selectedItem.lotCount || "Varios"} Lotes</strong>)
+                </span>
+              </span>
+            ) : selectedItem?.status === "CLOSED" ? (
+              <span
+                style={{
+                  fontSize: "0.72rem",
+                  padding: "4px 10px",
+                  borderRadius: 6,
+                  background: "rgba(239, 68, 68, 0.15)",
+                  color: isLight ? "#dc2626" : "#f87171",
+                  border: "1px solid rgba(239, 68, 68, 0.35)",
+                  fontWeight: 700,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <span>🔒</span>
+                <span>
+                  {selectedItem.ticker} (Cerrada {selectedItem.exitDate})
+                </span>
+              </span>
+            ) : (
+              <span
+                style={{
+                  fontSize: "0.72rem",
+                  padding: "4px 10px",
+                  borderRadius: 6,
+                  background: "rgba(16, 185, 129, 0.15)",
+                  color: isLight ? "#059669" : "#34d399",
+                  border: "1px solid rgba(16, 185, 129, 0.35)",
+                  fontWeight: 700,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <span>🟢</span>
+                <span>
+                  {selectedItem?.ticker} (Activa en Cartera)
+                </span>
+              </span>
             )}
-
-            {/* 4. Posiciones Cerradas */}
-            {availableOptions.some((o) => o.status === "CLOSED") && (
-              <optgroup label="🔴 Acciones Vendidas / Posiciones Cerradas">
-                {availableOptions
-                  .filter((o) => o.status === "CLOSED")
-                  .map((o) => (
-                    <option key={o.key} value={o.key}>
-                      {o.name} ({o.returnPct >= 0 ? "+" : ""}{Number(o.returnPct || 0).toFixed(2)}%)
-                    </option>
-                  ))}
-              </optgroup>
-            )}
-          </select>
-
-          {selectedItem?.status === "PURCHASE_LOT" ? (
-            <span
-              style={{
-                fontSize: "0.72rem",
-                padding: "3px 10px",
-                borderRadius: 6,
-                background: isLight ? "rgba(2, 132, 199, 0.12)" : "rgba(0, 229, 255, 0.14)",
-                color: isLight ? "#0284c7" : "#00e5ff",
-                border: `1px solid ${isLight ? "rgba(2, 132, 199, 0.35)" : "rgba(0, 229, 255, 0.35)"}`,
-                fontWeight: 700,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              <span>🎯</span>
-              <span>
-                Lote {selectedItem.ticker}: <strong>{selectedItem.fullName || getAssetName(selectedItem.ticker)}</strong> • {selectedItem.entryDate} ({Number(selectedItem.shares || 0).toFixed(4)} uds)
-              </span>
-            </span>
-          ) : selectedItem?.status === "PURCHASE_GROUP" ? (
-            <span
-              style={{
-                fontSize: "0.72rem",
-                padding: "3px 10px",
-                borderRadius: 6,
-                background: isLight ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.2)",
-                color: isLight ? "#047857" : "#34d399",
-                border: "1px solid rgba(16, 185, 129, 0.35)",
-                fontWeight: 700,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              <span>🏢</span>
-              <span>
-                Consolidado {selectedItem.ticker}: <strong>{selectedItem.fullName || getAssetName(selectedItem.ticker)}</strong> ({selectedItem.lotCount || "Varios"} Lotes)
-              </span>
-            </span>
-          ) : selectedItem?.status === "CLOSED" ? (
-            <span
-              style={{
-                fontSize: "0.72rem",
-                padding: "3px 10px",
-                borderRadius: 6,
-                background: "rgba(239, 68, 68, 0.15)",
-                color: isLight ? "#dc2626" : "#f87171",
-                border: "1px solid rgba(239, 68, 68, 0.35)",
-                fontWeight: 700,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              <span>🔒</span>
-              <span>
-                {selectedItem.ticker} — {selectedItem.fullName || getAssetName(selectedItem.ticker)} (Cerrada {selectedItem.exitDate})
-              </span>
-            </span>
-          ) : (
-            <span
-              style={{
-                fontSize: "0.72rem",
-                padding: "3px 10px",
-                borderRadius: 6,
-                background: "rgba(16, 185, 129, 0.15)",
-                color: isLight ? "#059669" : "#34d399",
-                border: "1px solid rgba(16, 185, 129, 0.35)",
-                fontWeight: 700,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              <span>🟢</span>
-              <span>
-                {selectedItem?.ticker} — {selectedItem?.fullName || getAssetName(selectedItem?.ticker)} (Activa en Cartera)
-              </span>
-            </span>
-          )}
+          </div>
         </div>
 
-        {/* Resumen Métricas de la Acción */}
-        <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+        {/* Fila 2: Resumen Métricas de la Acción (Posición fija e inalterable) */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            gap: 20,
+            flexWrap: "wrap",
+            width: "100%",
+            paddingTop: 8,
+            borderTop: `1px solid ${isLight ? "rgba(0, 0, 0, 0.06)" : "rgba(255, 255, 255, 0.06)"}`,
+          }}
+        >
           <div>
             <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", textTransform: "uppercase", display: "block" }}>
               Inversión Base

@@ -3819,13 +3819,20 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                   const fullName = getAssetName(group.ticker, lq?.name || group.name);
 
                   // Detect if this group or any of its lots is currently active/selected in the chart
-                  const isSelectedGroup =
+                  const isGroupConsolidatedSelected =
                     selectedHoldingKey === `GROUP_${group.ticker}` ||
-                    selectedHoldingKey === group.ticker ||
-                    (typeof selectedHoldingKey === "string" && (
-                      selectedHoldingKey.startsWith(`LOT_${group.ticker}_`) ||
-                      group.lots.some((lot) => selectedHoldingKey === `LOT_${lot.id}`)
-                    ));
+                    selectedHoldingKey === group.ticker;
+
+                  const selectedLotInGroup = group.lots.find((lot) =>
+                    selectedHoldingKey === `LOT_${lot.id}` ||
+                    selectedHoldingKey === `LOT_${group.ticker}_${lot.id}` ||
+                    selectedHoldingKey === `LOT_${group.ticker}_${lot.date}` ||
+                    (typeof selectedHoldingKey === "string" &&
+                      selectedHoldingKey.startsWith(`LOT_${group.ticker}_`) &&
+                      selectedHoldingKey.includes(String(lot.id)))
+                  );
+
+                  const isSelectedGroup = isGroupConsolidatedSelected || Boolean(selectedLotInGroup);
 
                   return (
                     <div
@@ -3896,25 +3903,28 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                             <strong style={{ fontSize: "1.15rem", color: "var(--text-primary)", letterSpacing: "0.3px" }}>
                               {group.ticker}
                             </strong>
-                            {isSelectedGroup && (
+                            {isGroupConsolidatedSelected ? (
                               <span
-                                style={{
-                                  fontSize: "0.68rem",
-                                  fontWeight: 800,
-                                  padding: "2px 8px",
-                                  borderRadius: 6,
-                                  background: theme === "light" ? "#0284c7" : "#00e5ff",
-                                  color: theme === "light" ? "#ffffff" : "#080c18",
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: 4,
-                                  letterSpacing: "0.4px",
-                                  boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
-                                }}
+                                className="badge-active-in-chart group-consolidated"
+                                title="Posición completa (consolidada) activa en la gráfica horaria interactiva"
                               >
-                                👁️ Activo en Gráfica
+                                <span>🏢</span> Consolidado en Gráfica
                               </span>
-                            )}
+                            ) : selectedLotInGroup ? (
+                              <span
+                                className="badge-active-in-chart group-lot"
+                                title={`Lote específico del ${selectedLotInGroup.date} activo en la gráfica horaria interactiva`}
+                              >
+                                <span>🎯</span> Lote {selectedLotInGroup.date} en Gráfica
+                              </span>
+                            ) : isSelectedGroup ? (
+                              <span
+                                className="badge-active-in-chart group-consolidated"
+                                title="Activo en la gráfica interactiva"
+                              >
+                                <span>👁️</span> Activo en Gráfica
+                              </span>
+                            ) : null}
                             <button
                               onClick={(e) => handleEditParentTicker(group, e)}
                               style={{
@@ -4440,19 +4450,15 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                                     </span>
                                     {isLotSelected && (
                                       <span
+                                        className="badge-active-in-chart group-lot"
                                         style={{
                                           fontSize: "0.68rem",
-                                          fontWeight: 800,
                                           padding: "1px 7px",
                                           borderRadius: 4,
-                                          background: theme === "light" ? "#0284c7" : "#00e5ff",
-                                          color: theme === "light" ? "#ffffff" : "#080c18",
-                                          display: "inline-flex",
-                                          alignItems: "center",
-                                          gap: 3,
                                         }}
+                                        title={`Este lote específico del ${p.date} está activo en la gráfica horaria`}
                                       >
-                                        🎯 Lote en Gráfica
+                                        <span>🎯</span> Lote en Gráfica
                                       </span>
                                     )}
                                   </div>
