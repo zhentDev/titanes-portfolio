@@ -734,6 +734,147 @@ export default function DynamicStrategyView({
     }
   };
 
+  // ── Slot Matrix Management: Colocar y Quitar acciones directamente ──
+  const [slotModalOpen, setSlotModalOpen] = useState(false);
+  const [slotTargetIndex, setSlotTargetIndex] = useState(null);
+  const [slotSearchQuery, setSlotSearchQuery] = useState("");
+  const [isAssigning, setIsAssigning] = useState(false);
+
+  const handleOpenSlotModal = (targetIndex = null) => {
+    setSlotTargetIndex(targetIndex);
+    setSlotSearchQuery("");
+    setSlotModalOpen(true);
+  };
+
+  const handleCloseSlotModal = () => {
+    setSlotModalOpen(false);
+    setSlotTargetIndex(null);
+    setSlotSearchQuery("");
+    setIsAssigning(false);
+  };
+
+  const handleRemoveTickerFromSlot = async (tickerToRemove) => {
+    if (!tickerToRemove) return;
+    const isConfirmed = await toastConfirm(
+      `¿Quitar ${tickerToRemove} de la estrategia "${strategy.name}"?\nEl slot de $${slotValue.toFixed(2)} (${weightPerSlot}%) pasará a reserva de liquidez (Cash Q).`
+    );
+    if (!isConfirmed) return;
+
+    const latest = rebalances[rebalances.length - 1];
+    if (!latest) return;
+
+    const currentTickers = latest.tickers || [];
+    const nextTickers = currentTickers.filter((t) => t !== tickerToRemove);
+
+    const updated = rebalances.map((r, idx) =>
+      idx === rebalances.length - 1 ? { ...r, tickers: nextTickers } : r
+    );
+
+    setRebalances(updated);
+    setStrategyRebalances(strategy.id, updated);
+    localStorage.setItem(storageKey, JSON.stringify(updated));
+    setFormTickers(nextTickers);
+
+    try {
+      await createRebalance({
+        rebalance_date: latest.rebalance_date || date,
+        cash_added: latest.cash_added || 0,
+        tickers: nextTickers,
+        strategy_id: strategy.id,
+      });
+      toast.success(`Acción ${tickerToRemove} retirada del slot. Capital liberado a Cash Q.`);
+    } catch (e) {
+      console.warn("Backend update failed, updated locally", e);
+      toast.success(`Acción ${tickerToRemove} retirada localmente`);
+    } finally {
+      setNavRefreshKey((prev) => prev + 1);
+    }
+  };
+
+  const handleAssignTickerToSlot = async (tickerCandidate, targetIndex = null) => {
+    const cleanTicker = (tickerCandidate || "").trim().toUpperCase();
+    if (!cleanTicker) return;
+
+    const latest = rebalances[rebalances.length - 1] || {
+      rebalance_date: date,
+      cash_added: 0,
+      tickers: [],
+      strategy_id: strategy.id,
+    };
+
+    const currentTickers = [...(latest.tickers || [])];
+    let nextTickers;
+
+    if (targetIndex !== null && targetIndex < currentTickers.length) {
+      // Reemplazo en slot específico ocupado
+      if (currentTickers[targetIndex] === cleanTicker) {
+        toast("El ticker ya ocupa este slot", { icon: "ℹ️" });
+        handleCloseSlotModal();
+        return;
+      }
+      if (currentTickers.includes(cleanTicker)) {
+        toast.error(`El ticker ${cleanTicker} ya está presente en la estrategia`);
+        return;
+      }
+      nextTickers = [...currentTickers];
+      nextTickers[targetIndex] = cleanTicker;
+    } else {
+      // Asignación a slot vacío o añadir
+      if (currentTickers.includes(cleanTicker)) {
+        toast.error(`El ticker ${cleanTicker} ya está presente en la estrategia`);
+        return;
+      }
+      if (currentTickers.length >= numSlots) {
+        toast.error(`Límite máximo de ${numSlots} slots alcanzado`);
+        return;
+      }
+      nextTickers = [...currentTickers, cleanTicker];
+    }
+
+    setIsAssigning(true);
+    try {
+      try {
+        await searchTicker(cleanTicker);
+      } catch (err) {
+        console.warn("Search validation warning", err);
+      }
+
+      const updated =
+        rebalances.length > 0
+          ? rebalances.map((r, idx) =>
+              idx === rebalances.length - 1 ? { ...r, tickers: nextTickers } : r
+            )
+          : [{ ...latest, tickers: nextTickers }];
+
+      setRebalances(updated);
+      setStrategyRebalances(strategy.id, updated);
+      localStorage.setItem(storageKey, JSON.stringify(updated));
+      setFormTickers(nextTickers);
+
+      try {
+        await createRebalance({
+          rebalance_date: latest.rebalance_date || date,
+          cash_added: latest.cash_added || 0,
+          tickers: nextTickers,
+          strategy_id: strategy.id,
+        });
+        toast.success(
+          targetIndex !== null && targetIndex < currentTickers.length
+            ? `Reemplazado por ${cleanTicker} en el Slot ${targetIndex + 1}`
+            : `Acción ${cleanTicker} colocada en el Slot ${nextTickers.length}`
+        );
+      } catch (e) {
+        console.warn("Backend update failed, updated locally", e);
+        toast.success(`Acción ${cleanTicker} asignada localmente`);
+      }
+
+      handleCloseSlotModal();
+    } finally {
+      setIsAssigning(false);
+      setNavRefreshKey((prev) => prev + 1);
+    }
+  };
+
   return (
     <div className="fade-up" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
       {/* ── Strategy Header ──────────────────────────── */}
@@ -2243,6 +2384,7 @@ export default function DynamicStrategyView({
               unit={unit}
               onToggleUnit={() => setUnit((u) => (u === "pct" ? "usd" : "pct"))}
               onToggleTicker={handleToggleTicker}
+              onRemoveTicker={handleRemoveTickerFromSlot}
               isRealMoney={true}
               closedOnly={false}
               onExportExcel={() => exportPortfolioExcel(strategy.id, simulatedCapital, numSlots)}
@@ -2265,6 +2407,7 @@ export default function DynamicStrategyView({
               unit={unit}
               onToggleUnit={() => setUnit((u) => (u === "pct" ? "usd" : "pct"))}
               onToggleTicker={handleToggleTicker}
+              onRemoveTicker={handleRemoveTickerFromSlot}
               isRealMoney={false}
               closedOnly={true}
               onExportExcel={() => exportPortfolioExcel(strategy.id, simulatedCapital, numSlots)}
@@ -2316,8 +2459,34 @@ export default function DynamicStrategyView({
               Los slots vacíos se preservan en liquidez (Cash Q).
             </span>
           </div>
-          <div style={{ fontSize: "0.75rem", fontWeight: 700, color: strategy.color }}>
-            {activeTickers.length} Asignados · {numSlots - activeTickers.length} en Cash
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <div style={{ fontSize: "0.75rem", fontWeight: 700, color: strategy.color }}>
+              {activeTickers.length} Asignados · {numSlots - activeTickers.length} en Cash
+            </div>
+            {activeTickers.length < numSlots && (
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{
+                  fontSize: "0.75rem",
+                  padding: "5px 12px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  borderRadius: 6,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  background: strategy.color,
+                  borderColor: strategy.color,
+                  color: "#ffffff",
+                  boxShadow: `0 2px 8px ${strategy.color}40`,
+                }}
+                onClick={() => handleOpenSlotModal(null)}
+              >
+                <span>➕</span>
+                <span>Colocar Acción</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -2332,22 +2501,179 @@ export default function DynamicStrategyView({
           {Array.from({ length: numSlots }).map((_, i) => {
             const ticker = activeTickers[i];
             const isOccupied = !!ticker;
-            return (
+            return isOccupied ? (
               <div
                 key={i}
                 style={{
                   padding: "10px 12px",
                   borderRadius: "var(--radius)",
-                  border: isOccupied
-                    ? `1px solid ${strategy.color}66`
-                    : "1px dashed rgba(255, 255, 255, 0.1)",
-                  background: isOccupied
-                    ? `linear-gradient(135deg, ${strategy.color}20 0%, rgba(0,0,0,0.3) 100%)`
-                    : "rgba(255, 255, 255, 0.02)",
+                  border: isLight ? `1px solid ${strategy.color}55` : `1px solid ${strategy.color}66`,
+                  background: isLight
+                    ? "var(--bg-card, #ffffff)"
+                    : `linear-gradient(135deg, ${strategy.color}20 0%, rgba(0,0,0,0.3) 100%)`,
+                  boxShadow: isLight ? "0 2px 6px rgba(0,0,0,0.04)" : "none",
                   display: "flex",
                   flexDirection: "column",
                   gap: 4,
                   transition: "all 0.15s ease",
+                  position: "relative",
+                }}
+              >
+                <div
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+                >
+                  <span
+                    style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: 600 }}
+                  >
+                    Slot {i + 1}
+                  </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                    <span
+                      style={{
+                        fontSize: "0.62rem",
+                        padding: "1px 5px",
+                        borderRadius: 4,
+                        background: isLight ? `${strategy.color}18` : `${strategy.color}40`,
+                        color: strategy.color,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {weightPerSlot}%
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenSlotModal(i);
+                      }}
+                      title={`Cambiar ${ticker} por otra acción`}
+                      aria-label={`Cambiar ${ticker}`}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        cursor: "pointer",
+                        padding: "1px 3px",
+                        borderRadius: 3,
+                        fontSize: "0.72rem",
+                        lineHeight: 1,
+                        color: "var(--text-muted)",
+                        transition: "all 0.15s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = strategy.color;
+                        e.currentTarget.style.background = isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.08)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = "var(--text-muted)";
+                        e.currentTarget.style.background = "transparent";
+                      }}
+                    >
+                      🔄
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveTickerFromSlot(ticker);
+                      }}
+                      title={`Quitar ${ticker} de la estrategia`}
+                      aria-label={`Quitar ${ticker}`}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        cursor: "pointer",
+                        padding: "1px 4px",
+                        borderRadius: 3,
+                        fontSize: "0.76rem",
+                        fontWeight: 700,
+                        lineHeight: 1,
+                        color: isLight ? "#94a3b8" : "rgba(255, 255, 255, 0.45)",
+                        transition: "all 0.15s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = "#ef4444";
+                        e.currentTarget.style.background = isLight ? "rgba(239, 68, 68, 0.1)" : "rgba(239, 68, 68, 0.2)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = isLight ? "#94a3b8" : "rgba(255, 255, 255, 0.45)";
+                        e.currentTarget.style.background = "transparent";
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4 }}>
+                  <strong
+                    className="mono"
+                    style={{ fontSize: "1.05rem", color: strategy.color, lineHeight: 1.1 }}
+                  >
+                    {ticker}
+                  </strong>
+                  {tickerMetadata[ticker]?.market_open !== undefined && (
+                    <span
+                      title={
+                        tickerMetadata[ticker].market_open
+                          ? `Mercado Abierto (${tickerMetadata[ticker]?.exchange || "US"})`
+                          : `Mercado Cerrado (${tickerMetadata[ticker]?.exchange || "US"})`
+                      }
+                      style={{
+                        width: 7,
+                        height: 7,
+                        borderRadius: "50%",
+                        background: tickerMetadata[ticker].market_open ? "#22c55e" : "#ef4444",
+                        boxShadow: tickerMetadata[ticker].market_open ? "0 0 6px #22c55e" : "none",
+                        display: "inline-block",
+                        flexShrink: 0,
+                      }}
+                    />
+                  )}
+                </div>
+                {tickerMetadata[ticker] && (
+                  <div
+                    style={{
+                      fontSize: "0.62rem",
+                      color: isLight ? "var(--text-secondary, #475569)" : "#cbd5e1",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                    title={tickerMetadata[ticker].name}
+                  >
+                    {tickerMetadata[ticker].name}
+                  </div>
+                )}
+                <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", marginTop: 2 }}>
+                  ${slotValue.toFixed(2)} asignados
+                </div>
+              </div>
+            ) : (
+              <div
+                key={i}
+                onClick={() => handleOpenSlotModal(i)}
+                title={`Hacer clic para colocar una acción en este slot`}
+                style={{
+                  padding: "10px 12px",
+                  borderRadius: "var(--radius)",
+                  border: isLight ? "1.5px dashed #cbd5e1" : "1px dashed rgba(255, 255, 255, 0.15)",
+                  background: isLight ? "rgba(241, 245, 249, 0.4)" : "rgba(255, 255, 255, 0.02)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 4,
+                  cursor: "pointer",
+                  transition: "all 0.18s ease",
+                  userSelect: "none",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = strategy.color;
+                  e.currentTarget.style.background = isLight ? `${strategy.color}0c` : `${strategy.color}15`;
+                  e.currentTarget.style.transform = "translateY(-1px)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = isLight ? "#cbd5e1" : "rgba(255, 255, 255, 0.15)";
+                  e.currentTarget.style.background = isLight ? "rgba(241, 245, 249, 0.4)" : "rgba(255, 255, 255, 0.02)";
+                  e.currentTarget.style.transform = "none";
                 }}
               >
                 <div
@@ -2363,78 +2689,267 @@ export default function DynamicStrategyView({
                       fontSize: "0.62rem",
                       padding: "1px 5px",
                       borderRadius: 4,
-                      background: isOccupied ? `${strategy.color}40` : "rgba(255, 255, 255, 0.05)",
-                      color: isOccupied ? strategy.color : "var(--text-muted)",
+                      background: isLight ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.05)",
+                      color: "var(--text-muted)",
                       fontWeight: 700,
                     }}
                   >
-                    {isOccupied ? `${weightPerSlot}%` : "Cash Q"}
+                    Cash Q
                   </span>
                 </div>
-
-                {isOccupied ? (
-                  <>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4 }}>
-                      <strong
-                        className="mono"
-                        style={{ fontSize: "1.05rem", color: strategy.color, lineHeight: 1.1 }}
-                      >
-                        {ticker}
-                      </strong>
-                      {tickerMetadata[ticker]?.market_open !== undefined && (
-                        <span
-                          title={
-                            tickerMetadata[ticker].market_open
-                              ? `Mercado Abierto (${tickerMetadata[ticker]?.exchange || "US"})`
-                              : `Mercado Cerrado (${tickerMetadata[ticker]?.exchange || "US"})`
-                          }
-                          style={{
-                            width: 7,
-                            height: 7,
-                            borderRadius: "50%",
-                            background: tickerMetadata[ticker].market_open ? "#22c55e" : "#ef4444",
-                            boxShadow: tickerMetadata[ticker].market_open ? "0 0 6px #22c55e" : "none",
-                            display: "inline-block",
-                            flexShrink: 0,
-                          }}
-                        />
-                      )}
-                    </div>
-                    {tickerMetadata[ticker] && (
-                      <div
-                        style={{
-                          fontSize: "0.62rem",
-                          color: "#cbd5e1",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                        title={tickerMetadata[ticker].name}
-                      >
-                        {tickerMetadata[ticker].name}
-                      </div>
-                    )}
-                    <div style={{ fontSize: "0.65rem", color: "#94a3b8", marginTop: 2 }}>
-                      ${slotValue.toFixed(2)} asignados
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <span
-                      style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontWeight: 600 }}
-                    >
-                      Disponible
-                    </span>
-                    <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
-                      ${slotValue.toFixed(2)} en reserva
-                    </div>
-                  </>
-                )}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 5,
+                    marginTop: 2,
+                    color: strategy.color,
+                    fontSize: "0.82rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  <span style={{ fontSize: "0.85rem" }}>➕</span>
+                  <span>Colocar</span>
+                </div>
+                <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                  ${slotValue.toFixed(2)} en reserva
+                </div>
               </div>
             );
           })}
         </div>
       </div>
+
+      {/* ── Modal para Colocar o Cambiar Acción en Slot ── */}
+      {slotModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.65)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "16px",
+          }}
+          onClick={handleCloseSlotModal}
+        >
+          <div
+            className="fade-up"
+            style={{
+              background: isLight ? "#ffffff" : "var(--bg-card, #111827)",
+              border: isLight ? "1px solid var(--border)" : "1px solid rgba(255, 255, 255, 0.12)",
+              borderRadius: 12,
+              width: "100%",
+              maxWidth: 440,
+              padding: "22px 24px",
+              boxShadow: isLight ? "0 10px 25px rgba(0, 0, 0, 0.15)" : "0 10px 30px rgba(0, 0, 0, 0.7)",
+              color: "var(--text-primary)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                marginBottom: 16,
+              }}
+            >
+              <div>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: "1.05rem",
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <span>
+                    {slotTargetIndex !== null && activeTickers[slotTargetIndex]
+                      ? "🔄 Cambiar Acción"
+                      : "➕ Colocar Acción"}
+                  </span>
+                </h3>
+                <p style={{ margin: "4px 0 0 0", fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                  {slotTargetIndex !== null && activeTickers[slotTargetIndex]
+                    ? `Reemplazar ${activeTickers[slotTargetIndex]} en el Slot ${slotTargetIndex + 1}`
+                    : slotTargetIndex !== null
+                    ? `Asignar al Slot ${slotTargetIndex + 1} · $${slotValue.toFixed(2)} (${weightPerSlot}%)`
+                    : `Asignar a la estrategia ${strategy.name} · $${slotValue.toFixed(2)} (${weightPerSlot}%)`}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseSlotModal}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "1.2rem",
+                  color: "var(--text-muted)",
+                  padding: "2px 6px",
+                  borderRadius: 4,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Form */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (slotSearchQuery.trim()) {
+                  handleAssignTickerToSlot(slotSearchQuery, slotTargetIndex);
+                }
+              }}
+            >
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                  marginBottom: 6,
+                  color: "var(--text-muted)",
+                }}
+              >
+                Símbolo o Ticker de la Acción:
+              </label>
+              <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="Ej. NVDA, AAPL, MSFT, GOOGL..."
+                  value={slotSearchQuery}
+                  onChange={(e) => setSlotSearchQuery(e.target.value.toUpperCase())}
+                  style={{
+                    flex: 1,
+                    padding: "10px 14px",
+                    borderRadius: "var(--radius)",
+                    border: isLight ? "1px solid #cbd5e1" : "1px solid var(--border)",
+                    background: isLight ? "#f8fafc" : "var(--bg-surface)",
+                    color: isLight ? "#0f172a" : "#ffffff",
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: "0.95rem",
+                    fontWeight: 600,
+                    letterSpacing: "0.04em",
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={!slotSearchQuery.trim() || isAssigning}
+                  className="btn btn-primary"
+                  style={{
+                    padding: "0 18px",
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    background: strategy.color,
+                    borderColor: strategy.color,
+                    color: "#ffffff",
+                    opacity: !slotSearchQuery.trim() || isAssigning ? 0.6 : 1,
+                    cursor: !slotSearchQuery.trim() || isAssigning ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {isAssigning ? "Guardando..." : "Colocar"}
+                </button>
+              </div>
+
+              {/* Quick suggestions */}
+              <div style={{ marginBottom: 18 }}>
+                <span
+                  style={{
+                    fontSize: "0.72rem",
+                    color: "var(--text-muted)",
+                    display: "block",
+                    marginBottom: 6,
+                  }}
+                >
+                  Sugerencias rápidas:
+                </span>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {["NVDA", "AAPL", "MSFT", "AMZN", "GOOGL", "META", "TSLA", "AVGO", "AMD", "PLTR", "CRM", "NFLX"]
+                    .filter((t) => !activeTickers.includes(t))
+                    .slice(0, 8)
+                    .map((sugTicker) => (
+                      <button
+                        key={sugTicker}
+                        type="button"
+                        onClick={() => setSlotSearchQuery(sugTicker)}
+                        style={{
+                          fontSize: "0.72rem",
+                          padding: "3px 8px",
+                          borderRadius: 4,
+                          border: isLight ? "1px solid #e2e8f0" : "1px solid rgba(255, 255, 255, 0.1)",
+                          background: isLight ? "#f1f5f9" : "rgba(255, 255, 255, 0.05)",
+                          color: "var(--text-primary)",
+                          cursor: "pointer",
+                          fontFamily: "'JetBrains Mono', monospace",
+                          fontWeight: 600,
+                          transition: "all 0.15s ease",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = strategy.color;
+                          e.currentTarget.style.color = strategy.color;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = isLight ? "#e2e8f0" : "rgba(255, 255, 255, 0.1)";
+                          e.currentTarget.style.color = "var(--text-primary)";
+                        }}
+                      >
+                        {sugTicker}
+                      </button>
+                    ))}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={handleCloseSlotModal}
+                  style={{
+                    padding: "8px 14px",
+                    fontSize: "0.82rem",
+                    borderRadius: 6,
+                    background: isLight ? "#f1f5f9" : "rgba(255, 255, 255, 0.08)",
+                    color: "var(--text-secondary)",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={!slotSearchQuery.trim() || isAssigning}
+                  className="btn btn-primary"
+                  style={{
+                    padding: "8px 16px",
+                    fontSize: "0.82rem",
+                    borderRadius: 6,
+                    background: strategy.color,
+                    borderColor: strategy.color,
+                    color: "#ffffff",
+                    cursor: !slotSearchQuery.trim() || isAssigning ? "not-allowed" : "pointer",
+                    boxShadow: `0 2px 8px ${strategy.color}40`,
+                  }}
+                >
+                  {isAssigning ? "Guardando..." : "Confirmar y Asignar"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ── Rebalance Manager Grid ────────────────────── */}
       <div className="bottom-grid">

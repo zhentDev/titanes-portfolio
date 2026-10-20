@@ -22,6 +22,7 @@ export default function HoldingsTable({
   onExportExcel,
   onExportPyScript,
   strategyId = "historical",
+  onRemoveTicker,
 }) {
   const [activeTab, setActiveTab] = useState(closedOnly ? "closed" : "active"); // 'active' | 'closed'
   const [mobileViewMode, setMobileViewMode] = useState("auto"); // 'auto' | 'card' | 'table'
@@ -470,6 +471,36 @@ export default function HoldingsTable({
                         )}
                       </button>
                     )}
+                    {isSelected && onRemoveTicker && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRemoveTicker(h.ticker);
+                        }}
+                        title={`Quitar ${h.ticker} de la estrategia`}
+                        aria-label={`Quitar ${h.ticker}`}
+                        style={{
+                          background: "transparent",
+                          border: `1px solid ${isLight ? "rgba(239, 68, 68, 0.25)" : "rgba(239, 68, 68, 0.35)"}`,
+                          borderRadius: "8px",
+                          padding: "3px 7px",
+                          fontSize: "0.75rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          color: "#ef4444",
+                          transition: "all 0.15s ease",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = isLight ? "rgba(239, 68, 68, 0.1)" : "rgba(239, 68, 68, 0.2)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "transparent";
+                        }}
+                      >
+                        ✕
+                      </button>
+                    )}
                     <span
                       className={`badge ${isGain ? "gain" : "loss"}`}
                       style={{ fontSize: "0.85rem", padding: "4px 8px" }}
@@ -904,6 +935,37 @@ export default function HoldingsTable({
                       </button>
                     ) : (
                       <span style={{ color: "var(--text-muted)", fontSize: "0.7rem" }}>—</span>
+                    )}
+                    {isSelected && onRemoveTicker && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRemoveTicker(h.ticker);
+                        }}
+                        title={`Quitar ${h.ticker} de la estrategia`}
+                        aria-label={`Quitar ${h.ticker}`}
+                        style={{
+                          background: "transparent",
+                          border: `1px solid ${isLight ? "rgba(239, 68, 68, 0.25)" : "rgba(239, 68, 68, 0.35)"}`,
+                          borderRadius: "6px",
+                          padding: "3px 8px",
+                          fontSize: "0.75rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          color: "#ef4444",
+                          marginLeft: "6px",
+                          transition: "all 0.15s ease",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = isLight ? "rgba(239, 68, 68, 0.1)" : "rgba(239, 68, 68, 0.2)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "transparent";
+                        }}
+                      >
+                        ✕
+                      </button>
                     )}
                   </td>
 
