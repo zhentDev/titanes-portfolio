@@ -294,12 +294,15 @@ export async function fetchHoldingChart({ ticker, startDate, exitDate, shares, c
 /** GET /api/prices/indices_history?start_date=YYYY-MM-DD */
 export async function fetchIndicesHistory(startDate) {
   try {
-    const res = await safeFetch(`${BASE}/prices/indices_history?start_date=${startDate}`, {}, 2, 1000);
-    if (res && res.ok) {
-      return await res.json();
-    }
-  } catch {}
-  return {};
+    const data = await fetchWithFallback(
+      `/prices/indices_history?start_date=${encodeURIComponent(startDate || "2020-01-01")}`,
+      "indices_history.json",
+      { timeoutMs: 15000 },
+    );
+    return data && typeof data === "object" ? data : {};
+  } catch {
+    return {};
+  }
 }
 
 /** GET /api/prices/historical/:ticker?date=YYYY-MM-DD&time=HH:MM */
@@ -308,8 +311,8 @@ export async function fetchHistoricalPrice(ticker, date, time = null) {
   try {
     const timeParam = time ? `&time=${encodeURIComponent(time)}` : "";
     const res = await safeFetch(
-      `${BASE}/prices/historical/${encodeURIComponent(ticker)}?date=${date}${timeParam}`,
-      {},
+      `${getBase()}/prices/historical/${encodeURIComponent(ticker)}?date=${date}${timeParam}`,
+      { timeoutMs: 12000 },
       2,
       1000,
     );

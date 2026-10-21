@@ -79,45 +79,64 @@ def _save_indices_to_disk(result: dict) -> None:
 def indices_history(start_date: str = Query("2020-01-01", description="Start date in YYYY-MM-DD")):
     """
     Returns daily historical prices for S&P 500 and NASDAQ from start_date to today.
-    Cached in memory to return responses in < 2ms without re-downloading from yfinance.
+    Merges persisted disk history with recent market data when disk data is behind current trading days.
     """
     global _indices_cache, _indices_cache_ts
     now = time.time()
 
-    if _indices_cache and (now - _indices_cache_ts < INDICES_TTL):
-        return {k: v for k, v in _indices_cache.items() if k >= start_date}
-
-    # Cold start: reload from disk (no Yahoo download) if the persisted file is still fresh
     if not _indices_cache and INDICES_FILE.exists():
+        disk = _load_indices_from_disk()
+        if disk:
+            _indices_cache = disk
+            _indices_cache_ts = now
+
+    today_date = datetime.date.today()
+    expected_date = today_date
+    if expected_date.weekday() == 5:  # Saturday -> Friday
+        expected_date -= datetime.timedelta(days=1)
+    elif expected_date.weekday() == 6:  # Sunday -> Friday
+        expected_date -= datetime.timedelta(days=2)
+    expected_str = expected_date.isoformat()
+
+    max_cached_date = max(_indices_cache.keys()) if _indices_cache else ""
+    needs_topup = (not _indices_cache) or (
+        max_cached_date < expected_str
+        and (
+            now - _indices_cache_ts > 1800
+            or max_cached_date < (expected_date - datetime.timedelta(days=1)).isoformat()
+        )
+    )
+
+    if needs_topup:
         try:
-            if now - INDICES_FILE.stat().st_mtime < INDICES_TTL:
-                disk = _load_indices_from_disk()
-                if disk:
-                    _indices_cache = disk
-                    _indices_cache_ts = now
-                    return {k: v for k, v in _indices_cache.items() if k >= start_date}
-        except Exception:
-            pass
+            from services.market_data import get_historical_prices
 
-    from services.market_data import get_historical_prices
+            fetch_period = "3M" if _indices_cache else "MAX"
+            df = get_historical_prices(["^GSPC", "^IXIC"], period=fetch_period, include_benchmarks=False)
+            df_pd = df.to_pandas()
+            df_pd["date_str"] = df_pd["date"].astype(str).str[:10]
 
-    df = get_historical_prices(["^GSPC", "^IXIC"], period="MAX", include_benchmarks=False)
-    df_pd = df.to_pandas()
-    df_pd["date_str"] = df_pd["date"].astype(str).str[:10]
+            merged = dict(_indices_cache) if _indices_cache else {}
+            for _, row in df_pd.iterrows():
+                sp_val = row.get("SP500") if "SP500" in row else row.get("^GSPC")
+                nasdaq_val = row.get("NASDAQ") if "NASDAQ" in row else row.get("^IXIC")
+                sp_clean = float(sp_val) if sp_val is not None and not pd.isna(sp_val) else None
+                nd_clean = float(nasdaq_val) if nasdaq_val is not None and not pd.isna(nasdaq_val) else None
+                if sp_clean or nd_clean:
+                    merged[row["date_str"]] = {
+                        "SP500": sp_clean,
+                        "NASDAQ": nd_clean,
+                    }
 
-    result = {}
-    for _, row in df_pd.iterrows():
-        sp_val = row.get("SP500") if "SP500" in row else row.get("^GSPC")
-        nasdaq_val = row.get("NASDAQ") if "NASDAQ" in row else row.get("^IXIC")
-        result[row["date_str"]] = {
-            "SP500": float(sp_val) if sp_val is not None and not pd.isna(sp_val) else None,
-            "NASDAQ": float(nasdaq_val) if nasdaq_val is not None and not pd.isna(nasdaq_val) else None,
-        }
+            if merged:
+                _indices_cache = merged
+                _indices_cache_ts = now
+                _save_indices_to_disk(merged)
+        except Exception as exc:
+            print(f"[INDICES] Warning topping up indices_history: {exc}")
+            _indices_cache_ts = now
 
-    _indices_cache = result
-    _indices_cache_ts = now
-    _save_indices_to_disk(result)
-    return {k: v for k, v in result.items() if k >= start_date}
+    return {k: v for k, v in _indices_cache.items() if k >= start_date}
 
 
 @router.get("/prices/historical/{ticker}")

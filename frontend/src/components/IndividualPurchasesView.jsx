@@ -417,11 +417,17 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
 
   useEffect(() => {
     if (earliestDate) {
-      // Subtract 7 days to ensure we catch the previous valid trading day if earliestDate is a weekend/holiday
+      // Subtract 14 days to ensure we catch the previous valid trading day if earliestDate is a weekend/holiday
       const d = new Date(earliestDate);
-      d.setDate(d.getDate() - 7);
+      d.setDate(d.getDate() - 14);
       const safeStartDate = d.toISOString().split("T")[0];
-      fetchIndicesHistory(safeStartDate).then(setIndicesHistory).catch(console.error);
+      fetchIndicesHistory(safeStartDate)
+        .then((res) => {
+          if (res && typeof res === "object") {
+            setIndicesHistory((prev) => ({ ...prev, ...res }));
+          }
+        })
+        .catch(console.error);
     }
   }, [earliestDate]);
 
@@ -531,9 +537,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
           if (Array.isArray(res)) {
             const map = {};
             res.forEach((q) => {
-              map[q.ticker] = q;
+              if (q && q.ticker) map[q.ticker] = q;
             });
-            setLiveQuotes(map);
+            setLiveQuotes((prev) => ({ ...prev, ...map }));
           }
         })
         .catch(console.error);
@@ -776,21 +782,36 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
     });
   };
 
-  // Helper to resolve closest trading day price for S&P 500 or NASDAQ
+  const sortedIndexDates = useMemo(
+    () => (indicesHistory ? Object.keys(indicesHistory).sort() : []),
+    [indicesHistory],
+  );
+
+  // Helper to resolve closest trading day price for S&P 500 or NASDAQ without any 10-day cutoff
   const getClosestIndexPrice = useCallback(
     (dateStr, indexName) => {
-      if (!dateStr || !indicesHistory || Object.keys(indicesHistory).length === 0) return null;
-      const d = new Date(dateStr);
-      for (let i = 0; i < 10; i++) {
-        const str = d.toISOString().split("T")[0];
-        if (indicesHistory[str] && indicesHistory[str][indexName]) {
-          return indicesHistory[str][indexName];
+      if (!dateStr || !indicesHistory || sortedIndexDates.length === 0) return null;
+      const cleanDate = String(dateStr).slice(0, 10);
+      if (indicesHistory[cleanDate] && Number(indicesHistory[cleanDate][indexName]) > 0) {
+        return Number(indicesHistory[cleanDate][indexName]);
+      }
+      // Binary search / reverse scan for closest trading date <= cleanDate
+      for (let i = sortedIndexDates.length - 1; i >= 0; i--) {
+        const dKey = sortedIndexDates[i];
+        if (dKey <= cleanDate && indicesHistory[dKey] && Number(indicesHistory[dKey][indexName]) > 0) {
+          return Number(indicesHistory[dKey][indexName]);
         }
-        d.setDate(d.getDate() - 1);
+      }
+      // Fallback to earliest available trading date if cleanDate precedes all available history
+      for (let i = 0; i < sortedIndexDates.length; i++) {
+        const dKey = sortedIndexDates[i];
+        if (indicesHistory[dKey] && Number(indicesHistory[dKey][indexName]) > 0) {
+          return Number(indicesHistory[dKey][indexName]);
+        }
       }
       return null;
     },
-    [indicesHistory],
+    [indicesHistory, sortedIndexDates],
   );
 
   // Calculations for ETF/ETC and Stock lots
@@ -1352,18 +1373,6 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
       visible: visibleSeries.nasdaq,
     });
 
-    const getClosestIndexPrice = (dateStr, indexName) => {
-      const d = new Date(dateStr);
-      for (let i = 0; i < 10; i++) {
-        const str = d.toISOString().split("T")[0];
-        if (indicesHistory[str] && indicesHistory[str][indexName]) {
-          return indicesHistory[str][indexName];
-        }
-        d.setDate(d.getDate() - 1);
-      }
-      return null;
-    };
-
     const sortedPurchases = [...lotDataList].sort((a, b) => new Date(a.date) - new Date(b.date));
 
     // Also collect closed / sold positions from currentSales so they have historical presence in the chart
@@ -1480,6 +1489,20 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
         if (buyTime <= dateTime && dateTime <= saleTime) {
           // While the lot was held between purchaseDate and saleDate: part of active portfolio exposure
           totalInvested += closed.invested;
+          if (hasIndexData) {
+            const closedStartSp500 = getClosestIndexPrice(closed.purchaseDate, "SP500");
+            if (currentSp500 && closedStartSp500) {
+              totalSp500 += closed.invested * (currentSp500 / closedStartSp500);
+            } else {
+              totalSp500 += closed.invested;
+            }
+            const closedStartNasdaq = getClosestIndexPrice(closed.purchaseDate, "NASDAQ");
+            if (currentNasdaq && closedStartNasdaq) {
+              totalNasdaq += closed.invested * (currentNasdaq / closedStartNasdaq);
+            } else {
+              totalNasdaq += closed.invested;
+            }
+          }
           if (dateStr === closed.purchaseDate) {
             totalValue += closed.invested;
           } else if (dateStr === closed.saleDate) {
