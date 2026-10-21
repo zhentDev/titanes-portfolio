@@ -109,6 +109,28 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
   const [driftThreshold, setDriftThreshold] = useState(2.0); // Threshold in percent (e.g. ±2%)
   const [selectedHistoricalDate, setSelectedHistoricalDate] = useState(null); // null = Live today, "YYYY-MM-DD" = historical day
   const [showCalendar, setShowCalendar] = useState(false);
+  const calendarContainerRef = useRef(null);
+
+  // Outside click listener & Escape key for calendar popover
+  useEffect(() => {
+    if (!showCalendar) return;
+    const handleOutsideClick = (e) => {
+      if (calendarContainerRef.current && !calendarContainerRef.current.contains(e.target)) {
+        setShowCalendar(false);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setShowCalendar(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showCalendar]);
 
   // Ref mirror of marketOpen so the polling interval reads the latest value without stale closures
   const marketOpenRef = useRef(false);
@@ -776,7 +798,7 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
 
       {/* ── Live Curve & Calendar Historical Day Inspector ── */}
       {intradayChart.length > 1 && (
-        <div className="card" style={{ paddingBottom: "20px", overflow: "hidden", position: "relative" }}>
+        <div className="card" style={{ paddingBottom: "20px", position: "relative" }}>
           <div
             style={{
               display: "flex",
@@ -785,6 +807,8 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
               flexWrap: "wrap",
               gap: 12,
               marginBottom: 16,
+              position: "relative",
+              zIndex: 100,
             }}
           >
             <h3
@@ -838,7 +862,10 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
             </h3>
 
             {/* Calendar toggle button */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, position: "relative" }}>
+            <div
+              ref={calendarContainerRef}
+              style={{ display: "flex", alignItems: "center", gap: 8, position: "relative", zIndex: 110 }}
+            >
               {selectedHistoricalDate && (
                 <button
                   type="button"
@@ -901,7 +928,7 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
                     position: "absolute",
                     top: "calc(100% + 8px)",
                     right: 0,
-                    zIndex: 999,
+                    zIndex: 2500,
                   }}
                 >
                   <LiveHistoryCalendar
