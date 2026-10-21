@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import toast from "react-hot-toast";
+import { useTheme } from "../../context/ThemeContext";
 import { formatCashFlowMoney } from "../../utils/cashFlowFormatters";
 import "./CashFlow.css";
 
@@ -21,8 +22,19 @@ export default function PillarBreakdownCard({
   onSettleTransaction,
   onOpenAddExpenseModal,
 }) {
+  const { theme } = useTheme();
+  const isLight = theme === "light";
   const formatMoney = (val, cur = currency) => formatCashFlowMoney(val, cur, fxRate);
   const [expandedItemId, setExpandedItemId] = useState(null);
+  const [isCardOpen, setIsCardOpen] = useState(true);
+  const [expandedSubItems, setExpandedSubItems] = useState({});
+
+  const toggleSubItems = (itemId) => {
+    setExpandedSubItems((prev) => ({
+      ...prev,
+      [itemId]: !prev[itemId],
+    }));
+  };
 
   const totalAmount = items.reduce((acc, curr) => {
     const val = type === "wealth" ? curr.monthlyContribution : curr.amount;
@@ -77,11 +89,40 @@ export default function PillarBreakdownCard({
 
   return (
     <div className={`cashflow-pillar-card ${type}`}>
-      {/* Pillar Header */}
-      <div className="cashflow-pillar-header">
-        <h4 className="cashflow-pillar-title">
-          <span>{icon}</span> {title}
-        </h4>
+      {/* Pillar Header with Collapse/Expand */}
+      <div
+        className="cashflow-pillar-header"
+        style={{ cursor: "pointer", userSelect: "none" }}
+        onClick={() => setIsCardOpen(!isCardOpen)}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <h4 className="cashflow-pillar-title" style={{ margin: 0 }}>
+            <span>{icon}</span> {title}
+          </h4>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsCardOpen(!isCardOpen);
+            }}
+            style={{
+              background: isLight ? "rgba(0, 0, 0, 0.05)" : "rgba(255, 255, 255, 0.08)",
+              border: isLight ? "1px solid rgba(0, 0, 0, 0.1)" : "1px solid rgba(255, 255, 255, 0.12)",
+              color: isLight ? "#475569" : "#94a3b8",
+              borderRadius: "6px",
+              padding: "2px 8px",
+              fontSize: "0.72rem",
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+            }}
+            title={isCardOpen ? "Ocultar contenido de este pilar" : "Desplegar contenido de este pilar"}
+          >
+            <span>{isCardOpen ? "▲ Ocultar" : "▼ Desplegar"}</span>
+          </button>
+        </div>
         <span className="cashflow-pillar-total" style={{ color }}>
           {formatMoney(totalAmount, currency)}
         </span>
@@ -137,8 +178,10 @@ export default function PillarBreakdownCard({
         )}
       </div>
 
-      {/* Items List */}
-      <div className="cashflow-items-list">
+      {/* Items List & Actions (Collapsible) */}
+      {isCardOpen && (
+        <>
+          <div className="cashflow-items-list">
         {items.length === 0 ? (
           <div style={{ padding: "24px 0", textAlign: "center", color: "#64748b", fontSize: "0.85rem" }}>
             No hay ítems registrados en este pilar para este mes.
@@ -345,6 +388,128 @@ export default function PillarBreakdownCard({
                     )}
                   </div>
                 </div>
+
+                {/* Specific Concepts Sub-items Breakdown */}
+                {Array.isArray(item.subItems) && item.subItems.length > 0 ? (
+                  <div style={{ marginTop: 2 }}>
+                    <button
+                      type="button"
+                      onClick={() => toggleSubItems(item.id)}
+                      style={{
+                        background: isLight ? "rgba(56, 189, 248, 0.08)" : "rgba(56, 189, 248, 0.12)",
+                        border: "1px solid rgba(56, 189, 248, 0.28)",
+                        color: isLight ? "#0284c7" : "#38bdf8",
+                        fontSize: "0.74rem",
+                        cursor: "pointer",
+                        padding: "3px 9px",
+                        borderRadius: "6px",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 5,
+                        fontWeight: 600,
+                      }}
+                      title={expandedSubItems[item.id] ? "Ocultar desglose detallado" : "Ver desglose detallado de conceptos"}
+                    >
+                      <span>{expandedSubItems[item.id] ? "▲ Ocultar desglose" : `▼ Ver desglose (${item.subItems.length} conceptos)`}</span>
+                    </button>
+
+                    {expandedSubItems[item.id] && (
+                      <div
+                        style={{
+                          marginTop: 8,
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 6,
+                          background: isLight ? "rgba(0, 0, 0, 0.03)" : "rgba(0, 0, 0, 0.3)",
+                          padding: "10px 12px",
+                          borderRadius: "10px",
+                          border: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.08)",
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
+                          <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                            📋 Conceptos especificados
+                          </span>
+                          {onEditItem && !isAutoSynced && (
+                            <button
+                              type="button"
+                              onClick={() => onEditItem(item, type)}
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                color: "#38bdf8",
+                                fontSize: "0.72rem",
+                                cursor: "pointer",
+                                fontWeight: 600,
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 3,
+                              }}
+                            >
+                              ✏️ Editar conceptos
+                            </button>
+                          )}
+                        </div>
+
+                        {item.subItems.map((sub, sIdx) => {
+                          const subAmt = Number(sub.amount) || 0;
+                          const subPct = Number(itemAmt) > 0 ? ((subAmt / Number(itemAmt)) * 100).toFixed(0) : 0;
+                          return (
+                            <div
+                              key={sub.id || sIdx}
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                fontSize: "0.78rem",
+                                padding: "4px 0",
+                                borderBottom: sIdx < item.subItems.length - 1 ? (isLight ? "1px solid rgba(0,0,0,0.05)" : "1px solid rgba(255,255,255,0.05)") : "none",
+                              }}
+                            >
+                              <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>
+                                • {sub.name}
+                              </span>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                                  ({subPct}%)
+                                </span>
+                                <span style={{ fontFamily: "JetBrains Mono, monospace", fontWeight: 600, color: isLight ? "#0f172a" : "#f8fafc" }}>
+                                  {formatMoney(subAmt, currency)}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  !isAutoSynced && onEditItem && (
+                    <div style={{ marginTop: 2 }}>
+                      <button
+                        type="button"
+                        onClick={() => onEditItem(item, type)}
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          color: "var(--text-muted)",
+                          fontSize: "0.72rem",
+                          cursor: "pointer",
+                          padding: "2px 0",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                          opacity: 0.8,
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.8")}
+                        title="Dividir este gasto/ahorro en conceptos individuales con sus propios valores"
+                      >
+                        <span>➕ Dividir en conceptos específicos</span>
+                      </button>
+                    </div>
+                  )
+                )}
 
                 {/* Real Spending vs. Budget Envelope Track (For Needs, Wants & Wealth) */}
                 {type !== "inflow" && (
@@ -585,14 +750,16 @@ export default function PillarBreakdownCard({
         )}
       </div>
 
-      {/* Add New Item Button */}
-      <button
-        type="button"
-        className="cashflow-add-btn"
-        onClick={() => onAddItem(type)}
-      >
-        <span>+</span> Agregar a {title}
-      </button>
+          {/* Add New Item Button */}
+          <button
+            type="button"
+            className="cashflow-add-btn"
+            onClick={() => onAddItem(type)}
+          >
+            <span>+</span> Agregar a {title}
+          </button>
+        </>
+      )}
     </div>
   );
 }

@@ -111,6 +111,45 @@ export default function CashFlowAllocationModal({
   const [targetPeriod, setTargetPeriod] = useState(currentPeriod);
   const [paymentStatus, setPaymentStatus] = useState("received"); // 'received' | 'pending'
   const [isPassive, setIsPassive] = useState(false);
+  const [subItems, setSubItems] = useState([]);
+
+  const handleAddSubItem = () => {
+    setSubItems((prev) => [
+      ...prev,
+      { id: `sub_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`, name: "", amount: 0 },
+    ]);
+  };
+
+  const handleUpdateSubItem = (index, field, value) => {
+    setSubItems((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+  };
+
+  const handleDeleteSubItem = (index) => {
+    setSubItems((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const handleAutoParseNameConcepts = () => {
+    const match = name.match(/\((.*?)\)/);
+    if (!match || !match[1]) return;
+    const parts = match[1].split(/[,;/]+/).map((s) => s.trim()).filter(Boolean);
+    if (parts.length === 0) return;
+    const approx = parts.length > 0 && Number(amount) > 0 ? Math.round(Number(amount) / parts.length) : 0;
+    setSubItems(
+      parts.map((p) => ({
+        id: `sub_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+        name: p,
+        amount: approx,
+      }))
+    );
+  };
+
+  const subItemsTotal = useMemo(() => {
+    return subItems.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+  }, [subItems]);
 
   // Payment Source State
   const [sourceType, setSourceType] = useState("payroll"); // 'payroll' | 'credit_card' | 'fixed_pocket' | 'investment_cash' | 'cash'
@@ -155,6 +194,7 @@ export default function CashFlowAllocationModal({
         setSelectedCardId(src.targetId || creditCards[0]?.id || "");
         setCardInstallments(src.installments || 1);
         setSelectedPocketId(src.targetId || fixedIncomeAccounts[0]?.id || "");
+        setSubItems(Array.isArray(editItem.subItems) ? editItem.subItems.map((s) => ({ ...s })) : []);
       } else {
         setActiveTab(initialType);
         setName("");
@@ -165,6 +205,7 @@ export default function CashFlowAllocationModal({
         setFrequency("monthly");
         setTargetPeriod(currentPeriod);
         setPaymentStatus("received");
+        setSubItems([]);
         const defaultCat = CATEGORY_OPTIONS[initialType]?.[0]?.value || "other";
         setCategory(defaultCat);
         setIsPassive(defaultCat.startsWith("passive_"));
@@ -259,6 +300,13 @@ export default function CashFlowAllocationModal({
 
     const icon = ICONS_BY_CATEGORY[category] || "🎯";
     const paymentSource = buildPaymentSource();
+    const cleanSubItems = subItems
+      .filter((s) => s.name?.trim() || Number(s.amount) > 0)
+      .map((s) => ({
+        id: s.id || `sub_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+        name: s.name.trim(),
+        amount: Number(s.amount) || 0,
+      }));
 
     if (activeTab === "inflow") {
       const payload = {
@@ -274,6 +322,7 @@ export default function CashFlowAllocationModal({
         frequency: isAutoSynced ? "monthly" : frequency,
         paymentSource,
         icon,
+        subItems: cleanSubItems,
       };
       if (isEditing && onUpdateInflow) {
         onUpdateInflow(editItem.id, payload);
@@ -291,6 +340,7 @@ export default function CashFlowAllocationModal({
         targetPeriod: isOneTime ? targetPeriod : null,
         paymentSource,
         icon,
+        subItems: cleanSubItems,
       };
       if (isEditing && onUpdateNeed) {
         onUpdateNeed(editItem.id, payload);
@@ -307,6 +357,7 @@ export default function CashFlowAllocationModal({
         targetPeriod: isOneTime ? targetPeriod : null,
         paymentSource,
         icon,
+        subItems: cleanSubItems,
       };
       if (isEditing && onUpdateWant) {
         onUpdateWant(editItem.id, payload);
@@ -324,6 +375,7 @@ export default function CashFlowAllocationModal({
         linkedModule: category === "equity_investment" ? "variable_income" : category === "fixed_savings" ? "fixed_income" : "custom",
         paymentSource,
         icon,
+        subItems: cleanSubItems,
       };
       if (isEditing && onUpdateWealth) {
         onUpdateWealth(editItem.id, payload);
@@ -873,6 +925,185 @@ export default function CashFlowAllocationModal({
                 />
               </div>
             )}
+            {/* Desglose Detallado de Conceptos / Sub-ítems */}
+            <div
+              style={{
+                background: "rgba(255, 255, 255, 0.03)",
+                border: "1px solid var(--border)",
+                borderRadius: "12px",
+                padding: "14px 16px",
+                marginTop: 6,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 8,
+                  flexWrap: "wrap",
+                  gap: 8,
+                }}
+              >
+                <div>
+                  <span
+                    style={{
+                      fontSize: "0.82rem",
+                      fontWeight: 700,
+                      color: "var(--text-primary)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <span>📋</span>
+                    <span>Desglose Específico de Conceptos ({subItems.length})</span>
+                  </span>
+                  <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block", marginTop: 2 }}>
+                    Especifica qué incluye este ítem y cuánto vale cada uno (ej. Netflix, Spotify, Gym o CDT Nu, Plenti).
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddSubItem}
+                  style={{
+                    background: "rgba(56, 189, 248, 0.15)",
+                    border: "1px solid rgba(56, 189, 248, 0.35)",
+                    color: "#38bdf8",
+                    borderRadius: "6px",
+                    padding: "4px 10px",
+                    fontSize: "0.74rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  + Agregar concepto
+                </button>
+              </div>
+
+              {/* Botón inteligente para autocompletar si el nombre tiene paréntesis con conceptos */}
+              {subItems.length === 0 && name.includes("(") && name.includes(")") && (
+                <button
+                  type="button"
+                  onClick={handleAutoParseNameConcepts}
+                  style={{
+                    background: "rgba(168, 85, 247, 0.12)",
+                    border: "1px solid rgba(168, 85, 247, 0.3)",
+                    color: "#c084fc",
+                    borderRadius: "6px",
+                    padding: "4px 10px",
+                    fontSize: "0.72rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    marginBottom: 10,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <span>✨</span>
+                  <span>Autocompletar conceptos desde el nombre "{name.match(/\((.*?)\)/)?.[1]}"</span>
+                </button>
+              )}
+
+              {subItems.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 6 }}>
+                  {subItems.map((sub, idx) => (
+                    <div
+                      key={sub.id || idx}
+                      style={{
+                        display: "flex",
+                        gap: 8,
+                        alignItems: "center",
+                        background: "var(--bg-surface)",
+                        padding: "6px 10px",
+                        borderRadius: "8px",
+                        border: "1px solid var(--border)",
+                      }}
+                    >
+                      <input
+                        type="text"
+                        placeholder="Nombre (ej. Netflix, SmartFit, Luz)"
+                        value={sub.name}
+                        onChange={(e) => handleUpdateSubItem(idx, "name", e.target.value)}
+                        style={{
+                          flex: 2,
+                          padding: "6px 8px",
+                          borderRadius: "6px",
+                          border: "1px solid var(--border)",
+                          background: "var(--bg-card)",
+                          color: "var(--text-primary)",
+                          fontSize: "0.82rem",
+                        }}
+                      />
+                      <div style={{ flex: 1.5 }}>
+                        <CurrencyInput
+                          value={sub.amount}
+                          onChange={(val) => handleUpdateSubItem(idx, "amount", val)}
+                          currency={currency}
+                          placeholder="0"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSubItem(idx)}
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          color: "#f43f5e",
+                          cursor: "pointer",
+                          padding: "4px 6px",
+                          fontSize: "0.85rem",
+                          fontWeight: 700,
+                        }}
+                        title="Eliminar este concepto"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginTop: 4,
+                      paddingTop: 8,
+                      borderTop: "1px dashed var(--border)",
+                      flexWrap: "wrap",
+                      gap: 8,
+                    }}
+                  >
+                    <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                      Suma del desglose:{" "}
+                      <strong style={{ color: "var(--text-primary)", fontFamily: "JetBrains Mono, monospace" }}>
+                        ${subItemsTotal.toLocaleString("es-CO")} {currency}
+                      </strong>
+                    </span>
+                    {subItemsTotal > 0 && subItemsTotal !== Number(amount) && (
+                      <button
+                        type="button"
+                        onClick={() => setAmount(subItemsTotal)}
+                        style={{
+                          background: "rgba(16, 185, 129, 0.15)",
+                          border: "1px solid rgba(16, 185, 129, 0.35)",
+                          color: "#10b981",
+                          borderRadius: "6px",
+                          padding: "3px 10px",
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                        }}
+                      >
+                        ⚡ Usar suma como monto total
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Modal Actions Footer */}

@@ -731,6 +731,7 @@ export const useCashFlowStore = create(
           frequency: item.frequency || (isOneTime ? "one_time" : "monthly"),
           paymentSource: item.paymentSource || { type: "payroll", targetName: state.payrollAccount?.name || "Cuenta Nu" },
           icon: item.icon || "💼",
+          subItems: Array.isArray(item.subItems) ? item.subItems : [],
           createdAt: new Date().toISOString(),
         };
 
@@ -843,6 +844,7 @@ export const useCashFlowStore = create(
           targetPeriod: item.targetPeriod || state.activePeriod,
           paymentSource: item.paymentSource || { type: "payroll", targetName: state.payrollAccount?.name || "Cuenta Nu" },
           icon: item.icon || "🏠",
+          subItems: Array.isArray(item.subItems) ? item.subItems : [],
           createdAt: new Date().toISOString(),
         };
 
@@ -954,6 +956,7 @@ export const useCashFlowStore = create(
           targetPeriod: item.targetPeriod || state.activePeriod,
           paymentSource: item.paymentSource || { type: "payroll", targetName: state.payrollAccount?.name || "Cuenta Nu" },
           icon: item.icon || "🍷",
+          subItems: Array.isArray(item.subItems) ? item.subItems : [],
           createdAt: new Date().toISOString(),
         };
 
@@ -1068,6 +1071,7 @@ export const useCashFlowStore = create(
           targetPeriod: item.targetPeriod || state.activePeriod,
           paymentSource: item.paymentSource || { type: "payroll", targetName: state.payrollAccount?.name || "Cuenta Nu" },
           icon: item.icon || "💎",
+          subItems: Array.isArray(item.subItems) ? item.subItems : [],
           createdAt: new Date().toISOString(),
         };
 
