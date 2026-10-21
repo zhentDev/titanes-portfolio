@@ -11,6 +11,7 @@ import {
   FloatingInput,
   CustomSelectDropdown,
 } from "../Common";
+import { useTheme } from "../../context/ThemeContext";
 import "./FixedIncomeModal.css";
 
 export default function FixedIncomeModal({
@@ -20,6 +21,8 @@ export default function FixedIncomeModal({
   initialEntityId = null,
   editItem = null,
 }) {
+  const { theme } = useTheme();
+  const isLight = theme === "light";
   const modalRef = useRef(null);
   const backdropRef = useRef(null);
   const bodyRef = useRef(null);
@@ -1027,7 +1030,7 @@ export default function FixedIncomeModal({
                         onChange={(e) => setCdtStatus(e.target.value)}
                         className="fi-select"
                         style={{
-                          color: cdtStatus === "matured" ? "#f59e0b" : "#10b981",
+                          color: cdtStatus === "matured" ? (isLight ? "#92400e" : "#f59e0b") : "#10b981",
                           fontWeight: 600,
                         }}
                       >

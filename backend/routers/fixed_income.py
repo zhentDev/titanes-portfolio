@@ -233,6 +233,7 @@ class SyncStateModel(BaseModel):
     accounts: list[dict[str, Any]] | None = None
     cdts: list[dict[str, Any]] | None = None
     transactions: list[dict[str, Any]] | None = None
+    deletedTxIds: list[str] | None = None
 
 
 # --- Endpoints ---
@@ -603,20 +604,58 @@ def calculate_compound_history(payload: CompoundHistoryRequest):
 
 @router.post("/sync")
 def sync_full_state(payload: SyncStateModel, request: Request):
-    """Batch sync entire fixed income state from frontend store."""
+    """Batch sync entire fixed income state from frontend store with lossless union merge."""
     user = get_optional_current_user(request)
     user_id = user["sub"] if user else None
     db = load_fixed_income_db(user_id)
+
     if payload.entities is not None:
-        db["entities"] = payload.entities
+        existing_ent = {e["id"]: e for e in db.get("entities", []) if isinstance(e, dict) and e.get("id")}
+        for e in payload.entities:
+            if isinstance(e, dict) and e.get("id"):
+                existing_ent[e["id"]] = e
+        db["entities"] = list(existing_ent.values())
+
     if payload.accounts is not None:
-        db["accounts"] = payload.accounts
+        existing_acc = {a["id"]: a for a in db.get("accounts", []) if isinstance(a, dict) and a.get("id")}
+        for a in payload.accounts:
+            if isinstance(a, dict) and a.get("id"):
+                if a["id"] in existing_acc:
+                    existing_acc[a["id"]].update(a)
+                else:
+                    existing_acc[a["id"]] = a
+        db["accounts"] = list(existing_acc.values())
+
     if payload.cdts is not None:
-        db["cdts"] = payload.cdts
+        existing_cdts = {c["id"]: c for c in db.get("cdts", []) if isinstance(c, dict) and c.get("id")}
+        for c in payload.cdts:
+            if isinstance(c, dict) and c.get("id"):
+                existing_cdts[c["id"]] = c
+        db["cdts"] = list(existing_cdts.values())
+
     if payload.transactions is not None:
-        db["transactions"] = payload.transactions
+        existing_tx = {t["id"]: t for t in db.get("transactions", []) if isinstance(t, dict) and t.get("id")}
+        # Prune deliberately deleted transactions if any
+        if payload.deletedTxIds:
+            del_set = set(payload.deletedTxIds)
+            existing_tx = {tid: t for tid, t in existing_tx.items() if tid not in del_set}
+        # Merge incoming transactions
+        for t in payload.transactions:
+            if isinstance(t, dict) and t.get("id"):
+                if not payload.deletedTxIds or t["id"] not in set(payload.deletedTxIds):
+                    existing_tx[t["id"]] = t
+        db["transactions"] = sorted(
+            list(existing_tx.values()),
+            key=lambda x: (x.get("date", ""), x.get("createdAt", "")),
+            reverse=True
+        )
+
     save_fixed_income_db(db, user_id)
-    return {"success": True, "timestamp": datetime.now().isoformat()}
+    return {
+        "success": True,
+        "timestamp": datetime.now().isoformat(),
+        "totalTransactions": len(db.get("transactions", [])),
+    }
 
 
 from fastapi import File, Form, UploadFile

@@ -50,8 +50,8 @@
       "name": "Cajita Viaje",
       "type": "pocket",
       "currency": "COP",
-      "balance": 520034.55844768183,
-      "interestRateEA": 9.25,
+      "balance": 119256.50442583702,
+      "interestRateEA": 9.35,
       "isTaxExemptGMF": true,
       "startDate": "2023-06-01",
       "createdAt": "2023-06-01T00:00:00.000Z",
@@ -63,8 +63,8 @@
       "name": "Cajita Estudios",
       "type": "pocket",
       "currency": "COP",
-      "balance": 326174.5938794982,
-      "interestRateEA": 9.25,
+      "balance": 340259.67623154656,
+      "interestRateEA": 9.35,
       "isTaxExemptGMF": true,
       "startDate": "2023-06-01",
       "createdAt": "2023-06-01T00:00:00.000Z",
@@ -76,8 +76,8 @@
       "name": "Cajita Deuda mom",
       "type": "pocket",
       "currency": "COP",
-      "balance": 260679.70791434398,
-      "interestRateEA": 9.25,
+      "balance": 265392.2832130934,
+      "interestRateEA": 9.35,
       "isTaxExemptGMF": true,
       "startDate": "2023-06-01",
       "createdAt": "2023-06-01T00:00:00.000Z",
@@ -107,28 +107,28 @@
       "type": "pocket",
       "currency": "USD",
       "balance": 386.95000000000005,
-      "interestRateEA": 4.0,
+      "interestRateEA": 4,
       "isTaxExemptGMF": true,
       "rateHistory": [
         {
           "date": "2026-05-01",
-          "rateEA": 3.0
+          "rateEA": 3
         },
         {
           "date": "2026-08-01",
-          "rateEA": 4.0
+          "rateEA": 4
         }
       ],
       "createdAt": "2026-08-15T07:12:35.490Z",
       "tieredRates": [
         {
           "maxBalance": 500,
-          "rateEA": 4.0,
+          "rateEA": 4,
           "label": "Hasta  USD (4.0% EA)"
         },
         {
           "maxBalance": 1000,
-          "rateEA": 4.0,
+          "rateEA": 4,
           "label": " a ,000 USD (4.0% EA)"
         },
         {
@@ -138,7 +138,7 @@
         },
         {
           "maxBalance": 9999999,
-          "rateEA": 6.0,
+          "rateEA": 6,
           "label": "Más de ,000 USD (6.0% EA)"
         }
       ]
@@ -445,14 +445,54 @@
   ],
   "transactions": [
     {
-      "id": "tx_1790923968011_zbjc2k",
-      "accountId": "acc_1786777955489",
-      "date": "2026-10-01",
-      "description": "Retiro de Bolsillo a la vista",
-      "amount": -225,
-      "currency": "USD",
+      "id": "tx_1792615245462_agv3rk",
+      "accountId": "acc_viaje",
+      "date": "2026-10-20",
+      "description": "Retiro de Cajita Viaje",
+      "amount": -30000,
+      "currency": "COP",
       "type": "debit",
-      "createdAt": "2026-10-02T06:52:48.011Z"
+      "createdAt": "2026-10-21T20:40:45.462Z"
+    },
+    {
+      "id": "tx_1792615203940_8my2vy",
+      "accountId": "acc_viaje",
+      "date": "2026-10-18",
+      "description": "Retiro de Cajita Viaje",
+      "amount": -70000,
+      "currency": "COP",
+      "type": "debit",
+      "createdAt": "2026-10-21T20:40:03.940Z"
+    },
+    {
+      "id": "tx_1792615233115_eykqdy",
+      "accountId": "acc_viaje",
+      "date": "2026-10-13",
+      "description": "Retiro de Cajita Viaje",
+      "amount": -130000,
+      "currency": "COP",
+      "type": "debit",
+      "createdAt": "2026-10-21T20:40:33.115Z"
+    },
+    {
+      "id": "tx_1792615187097_e776it",
+      "accountId": "acc_viaje",
+      "date": "2026-10-08",
+      "description": "Retiro de Cajita Viaje",
+      "amount": -30000,
+      "currency": "COP",
+      "type": "debit",
+      "createdAt": "2026-10-21T20:39:47.097Z"
+    },
+    {
+      "id": "tx_1792615165415_r6v0rc",
+      "accountId": "acc_viaje",
+      "date": "2026-10-05",
+      "description": "Retiro de Cajita Viaje",
+      "amount": -150000,
+      "currency": "COP",
+      "type": "debit",
+      "createdAt": "2026-10-21T20:39:25.415Z"
     },
     {
       "id": "tx_1790923930084_qs0xxk",
@@ -473,6 +513,16 @@
       "currency": "COP",
       "type": "credit",
       "createdAt": "2026-10-02T06:50:57.060Z"
+    },
+    {
+      "id": "tx_1790923968011_zbjc2k",
+      "accountId": "acc_1786777955489",
+      "date": "2026-10-01",
+      "description": "Retiro de Bolsillo a la vista",
+      "amount": -225,
+      "currency": "USD",
+      "type": "debit",
+      "createdAt": "2026-10-02T06:52:48.011Z"
     },
     {
       "id": "tx_1789760705657_b2g14e",
@@ -545,6 +595,16 @@
       "createdAt": "2026-08-18T00:32:36.149Z"
     },
     {
+      "id": "tx_1786765225474_lb09ws",
+      "accountId": "acc_estudios",
+      "date": "2026-08-14",
+      "description": "Retiro de Cajita Estudios",
+      "amount": -20000,
+      "currency": "COP",
+      "type": "debit",
+      "createdAt": "2026-08-15T03:40:25.474Z"
+    },
+    {
       "id": "tx_1786778544792_rezb73",
       "accountId": "acc_1786777955489",
       "date": "2026-07-31",
@@ -553,6 +613,17 @@
       "currency": "USD",
       "type": "credit",
       "createdAt": "2026-08-15T07:22:24.792Z"
+    },
+    {
+      "id": "tx_finandina_yield_2026-07",
+      "accountId": "acc_1786771927434",
+      "date": "2026-07-31",
+      "description": "Rendimiento Mensual Flexi Digital + (Jul 2026)",
+      "amount": 5244.33,
+      "currency": "COP",
+      "type": "credit",
+      "isInterestPayout": true,
+      "createdAt": "2026-08-15T00:56:54.041025"
     },
     {
       "id": "tx_1786778498710_hl31tg",
@@ -573,6 +644,16 @@
       "currency": "USD",
       "type": "debit",
       "createdAt": "2026-08-15T07:21:15.474Z"
+    },
+    {
+      "id": "tx_1786755170296_c3zsat",
+      "accountId": "acc_estudios",
+      "date": "2026-07-26",
+      "description": "Aporte a Cajita Estudios",
+      "amount": 450000,
+      "currency": "COP",
+      "type": "credit",
+      "createdAt": "2026-08-15T00:52:50.296Z"
     },
     {
       "id": "tx_1786778458390_gu72lg",
@@ -633,6 +714,17 @@
       "currency": "USD",
       "type": "debit",
       "createdAt": "2026-08-15T07:19:23.961Z"
+    },
+    {
+      "id": "tx_finandina_yield_2026-06",
+      "accountId": "acc_1786771927434",
+      "date": "2026-06-30",
+      "description": "Rendimiento Mensual Flexi Digital + (Jun 2026)",
+      "amount": 5035.16,
+      "currency": "COP",
+      "type": "credit",
+      "isInterestPayout": true,
+      "createdAt": "2026-08-15T00:56:54.041025"
     },
     {
       "id": "tx_1786778331853_r77320",
@@ -715,6 +807,17 @@
       "createdAt": "2026-08-15T07:15:21.089Z"
     },
     {
+      "id": "tx_finandina_yield_2026-05",
+      "accountId": "acc_1786771927434",
+      "date": "2026-05-31",
+      "description": "Rendimiento Mensual Flexi Digital + (May 2026)",
+      "amount": 5160.64,
+      "currency": "COP",
+      "type": "credit",
+      "isInterestPayout": true,
+      "createdAt": "2026-08-15T00:56:54.041025"
+    },
+    {
       "id": "tx_1786778092338_xxe93e",
       "accountId": "acc_1786777955489",
       "date": "2026-05-22",
@@ -745,288 +848,100 @@
       "createdAt": "2026-08-15T07:13:26.149Z"
     },
     {
-      "id": "tx_1786772402716_spdosw",
+      "id": "tx_finandina_yield_2026-04",
       "accountId": "acc_1786771927434",
-      "date": "2025-09-26",
-      "description": "Aporte a Flexi Digital +",
-      "amount": -640000,
-      "currency": "COP",
-      "type": "debit",
-      "createdAt": "2026-08-15T05:40:02.716Z"
-    },
-    {
-      "id": "tx_1786772369159_m538p5",
-      "accountId": "acc_1786771927434",
-      "date": "2025-07-24",
-      "description": "Retiro de Flexi Digital +",
-      "amount": -2000,
-      "currency": "COP",
-      "type": "debit",
-      "createdAt": "2026-08-15T05:39:29.159Z"
-    },
-    {
-      "id": "tx_1786772334043_gtd3sp",
-      "accountId": "acc_1786771927434",
-      "date": "2025-07-24",
-      "description": "Retiro de Flexi Digital +",
-      "amount": -80000,
-      "currency": "COP",
-      "type": "debit",
-      "createdAt": "2026-08-15T05:38:54.043Z"
-    },
-    {
-      "id": "tx_1786772309682_jcc4jj",
-      "accountId": "acc_1786771927434",
-      "date": "2025-06-03",
-      "description": "Aporte a Flexi Digital +",
-      "amount": 100000,
+      "date": "2026-04-30",
+      "description": "Rendimiento Mensual Flexi Digital + (Apr 2026)",
+      "amount": 4954.81,
       "currency": "COP",
       "type": "credit",
-      "createdAt": "2026-08-15T05:38:29.682Z"
+      "isInterestPayout": true,
+      "createdAt": "2026-08-15T00:56:54.041025"
     },
     {
-      "id": "tx_1786772277467_ywlkfp",
+      "id": "tx_finandina_yield_2026-03",
       "accountId": "acc_1786771927434",
-      "date": "2025-05-26",
-      "description": "Aporte a Flexi Digital +",
-      "amount": 200000,
+      "date": "2026-03-31",
+      "description": "Rendimiento Mensual Flexi Digital + (Mar 2026)",
+      "amount": 5078.28,
       "currency": "COP",
       "type": "credit",
-      "createdAt": "2026-08-15T05:37:57.467Z"
+      "isInterestPayout": true,
+      "createdAt": "2026-08-15T00:56:54.040024"
     },
     {
-      "id": "tx_1786772248621_gwosxy",
+      "id": "tx_finandina_yield_2026-02",
       "accountId": "acc_1786771927434",
-      "date": "2025-05-19",
-      "description": "Retiro de Flexi Digital +",
-      "amount": -15000,
-      "currency": "COP",
-      "type": "debit",
-      "createdAt": "2026-08-15T05:37:28.621Z"
-    },
-    {
-      "id": "tx_1786772209456_tru7b5",
-      "accountId": "acc_1786771927434",
-      "date": "2025-04-30",
-      "description": "Aporte a Flexi Digital +",
-      "amount": 20000,
+      "date": "2026-02-28",
+      "description": "Rendimiento Mensual Flexi Digital + (Feb 2026)",
+      "amount": 4553.08,
       "currency": "COP",
       "type": "credit",
-      "createdAt": "2026-08-15T05:36:49.456Z"
+      "isInterestPayout": true,
+      "createdAt": "2026-08-15T00:56:54.040024"
     },
     {
-      "id": "tx_1786772181847_qjrglg",
+      "id": "tx_finandina_yield_2026-01",
       "accountId": "acc_1786771927434",
-      "date": "2025-04-30",
-      "description": "Retiro de Flexi Digital +",
-      "amount": -10000,
-      "currency": "COP",
-      "type": "debit",
-      "createdAt": "2026-08-15T05:36:21.847Z"
-    },
-    {
-      "id": "tx_1786772136791_xd6lsu",
-      "accountId": "acc_1786771927434",
-      "date": "2025-04-29",
-      "description": "Aporte a Flexi Digital +",
-      "amount": 150000,
+      "date": "2026-01-31",
+      "description": "Rendimiento Mensual Flexi Digital + (Jan 2026)",
+      "amount": 4999.87,
       "currency": "COP",
       "type": "credit",
-      "createdAt": "2026-08-15T05:35:36.791Z"
+      "isInterestPayout": true,
+      "createdAt": "2026-08-15T00:56:54.040024"
     },
     {
-      "id": "tx_1786772108838_57jjrl",
-      "accountId": "acc_1786771927434",
-      "date": "2025-04-15",
-      "description": "Aporte a Flexi Digital +",
-      "amount": 50000,
-      "currency": "COP",
-      "type": "credit",
-      "createdAt": "2026-08-15T05:35:08.838Z"
-    },
-    {
-      "id": "tx_1786772079677_l24euc",
-      "accountId": "acc_1786771927434",
-      "date": "2025-03-03",
-      "description": "Aporte a Flexi Digital +",
-      "amount": 210000,
-      "currency": "COP",
-      "type": "credit",
-      "createdAt": "2026-08-15T05:34:39.677Z"
-    },
-    {
-      "id": "tx_1786772044494_aax3ln",
-      "accountId": "acc_1786771927434",
-      "date": "2025-02-19",
-      "description": "Aporte a Flexi Digital +",
-      "amount": 500000,
-      "currency": "COP",
-      "type": "credit",
-      "createdAt": "2026-08-15T05:34:04.494Z"
-    },
-    {
-      "id": "tx_1786772006278_33yf2i",
-      "accountId": "acc_1786771927434",
-      "date": "2025-03-03",
-      "description": "Aporte a Flexi Digital +",
-      "amount": 50000,
-      "currency": "COP",
-      "type": "credit",
-      "createdAt": "2026-08-15T05:33:26.278Z"
-    },
-    {
-      "id": "tx_1786765225474_lb09ws",
+      "id": "tx_1786755150316_qd9ji2",
       "accountId": "acc_estudios",
-      "date": "2026-08-14",
-      "description": "Retiro de Cajita Estudios",
-      "amount": -20000,
+      "date": "2026-01-30",
+      "description": "Aporte a Cajita Estudios",
+      "amount": 50162.12,
+      "currency": "COP",
+      "type": "credit",
+      "createdAt": "2026-08-15T00:52:30.316Z"
+    },
+    {
+      "id": "tx_finandina_yield_2025-12",
+      "accountId": "acc_1786771927434",
+      "date": "2025-12-31",
+      "description": "Rendimiento Mensual Flexi Digital + (Dec 2025)",
+      "amount": 4959.16,
+      "currency": "COP",
+      "type": "credit",
+      "isInterestPayout": true,
+      "createdAt": "2026-08-15T00:56:54.040024"
+    },
+    {
+      "id": "tx_1786755663228_dr44x9",
+      "accountId": "acc_viaje",
+      "date": "2025-12-19",
+      "description": "Retiro de Cajita Viaje",
+      "amount": -50000,
       "currency": "COP",
       "type": "debit",
-      "createdAt": "2026-08-15T03:40:25.474Z"
+      "createdAt": "2026-08-15T01:01:03.228Z"
     },
     {
-      "id": "tx_5_2b9131",
-      "accountId": "acc_viaje",
-      "date": "2024-06-13",
-      "description": "Agregaste a Cajita Viaje",
-      "amount": 50000,
+      "id": "tx_finandina_yield_2025-11",
+      "accountId": "acc_1786771927434",
+      "date": "2025-11-30",
+      "description": "Rendimiento Mensual Flexi Digital + (Nov 2025)",
+      "amount": 4761.37,
       "currency": "COP",
-      "type": "credit"
+      "type": "credit",
+      "isInterestPayout": true,
+      "createdAt": "2026-08-15T00:56:54.040024"
     },
     {
-      "id": "tx_6_e6aa07",
-      "accountId": "acc_viaje",
-      "date": "2024-07-26",
-      "description": "Agregaste a Cajita Viaje",
-      "amount": 100000.41,
-      "currency": "COP",
-      "type": "credit"
-    },
-    {
-      "id": "tx_7_9d2e49",
-      "accountId": "acc_viaje",
-      "date": "2024-08-04",
-      "description": "Agregaste a Cajita Viaje",
-      "amount": 150000.41,
-      "currency": "COP",
-      "type": "credit"
-    },
-    {
-      "id": "tx_8_88fa72",
-      "accountId": "acc_estudios",
-      "date": "2024-08-04",
-      "description": "Agregaste a Cajita Estudios",
-      "amount": 150000,
-      "currency": "COP",
-      "type": "credit"
-    },
-    {
-      "id": "tx_9_54a654",
+      "id": "tx_1786753989568_v89utk",
       "accountId": "acc_deuda_mom",
-      "date": "2024-09-02",
-      "description": "Agregaste a Cajita Deuda mom",
-      "amount": 200000,
+      "date": "2025-11-27",
+      "description": "Retiro de Cajita Deuda mom",
+      "amount": -16000,
       "currency": "COP",
-      "type": "credit"
-    },
-    {
-      "id": "tx_10_a3b365",
-      "accountId": "acc_estudios",
-      "date": "2024-09-02",
-      "description": "Agregaste a Cajita Estudios",
-      "amount": 100000,
-      "currency": "COP",
-      "type": "credit"
-    },
-    {
-      "id": "tx_11_f5aa1b",
-      "accountId": "acc_estudios",
-      "date": "2024-09-03",
-      "description": "Agregaste a Cajita Estudios",
-      "amount": 40000,
-      "currency": "COP",
-      "type": "credit"
-    },
-    {
-      "id": "tx_13_65a2bb",
-      "accountId": "acc_viaje",
-      "date": "2024-12-27",
-      "description": "Agregaste a Cajita Viaje",
-      "amount": 260461.45,
-      "currency": "COP",
-      "type": "credit"
-    },
-    {
-      "id": "tx_14_a4cb71",
-      "accountId": "acc_viaje",
-      "date": "2025-01-17",
-      "description": "Agregaste a Cajita Viaje",
-      "amount": 150000,
-      "currency": "COP",
-      "type": "credit"
-    },
-    {
-      "id": "tx_15_747aed",
-      "accountId": "acc_deuda_mom",
-      "date": "2025-02-04",
-      "description": "Agregaste a Cajita Deuda mom",
-      "amount": 150000,
-      "currency": "COP",
-      "type": "credit"
-    },
-    {
-      "id": "tx_16_463845",
-      "accountId": "acc_viaje",
-      "date": "2025-02-04",
-      "description": "Agregaste a Cajita Viaje",
-      "amount": 250000,
-      "currency": "COP",
-      "type": "credit"
-    },
-    {
-      "id": "tx_17_689cca",
-      "accountId": "acc_deuda_mom",
-      "date": "2025-02-26",
-      "description": "Agregaste a Cajita Deuda mom",
-      "amount": 50000,
-      "currency": "COP",
-      "type": "credit"
-    },
-    {
-      "id": "tx_18_81cbd7",
-      "accountId": "acc_viaje",
-      "date": "2025-02-26",
-      "description": "Agregaste a Cajita Viaje",
-      "amount": 170000,
-      "currency": "COP",
-      "type": "credit"
-    },
-    {
-      "id": "tx_21_497b36",
-      "accountId": "acc_viaje",
-      "date": "2025-10-22",
-      "description": "Retiraste de Cajita Viaje",
-      "amount": 150000,
-      "currency": "COP",
-      "type": "credit"
-    },
-    {
-      "id": "tx_22_d01916",
-      "accountId": "acc_viaje",
-      "date": "2025-10-26",
-      "description": "Retiraste de Cajita Viaje",
-      "amount": 150000,
-      "currency": "COP",
-      "type": "credit"
-    },
-    {
-      "id": "tx_23_b53a5c",
-      "accountId": "acc_viaje",
-      "date": "2025-11-17",
-      "description": "Retiraste de Cajita Viaje",
-      "amount": 30000,
-      "currency": "COP",
-      "type": "credit"
+      "type": "debit",
+      "createdAt": "2026-08-15T00:33:09.568Z"
     },
     {
       "id": "tx_24_57ac7b",
@@ -1047,74 +962,63 @@
       "type": "credit"
     },
     {
-      "id": "tx_1786755663228_dr44x9",
+      "id": "tx_23_b53a5c",
       "accountId": "acc_viaje",
-      "date": "2025-12-19",
-      "description": "Retiro de Cajita Viaje",
-      "amount": -50000,
+      "date": "2025-11-17",
+      "description": "Retiraste de Cajita Viaje",
+      "amount": 30000,
+      "currency": "COP",
+      "type": "credit"
+    },
+    {
+      "id": "tx_finandina_yield_2025-10",
+      "accountId": "acc_1786771927434",
+      "date": "2025-10-31",
+      "description": "Rendimiento Mensual Flexi Digital + (Oct 2025)",
+      "amount": 4880.02,
+      "currency": "COP",
+      "type": "credit",
+      "isInterestPayout": true,
+      "createdAt": "2026-08-15T00:56:54.040024"
+    },
+    {
+      "id": "tx_22_d01916",
+      "accountId": "acc_viaje",
+      "date": "2025-10-26",
+      "description": "Retiraste de Cajita Viaje",
+      "amount": 150000,
+      "currency": "COP",
+      "type": "credit"
+    },
+    {
+      "id": "tx_21_497b36",
+      "accountId": "acc_viaje",
+      "date": "2025-10-22",
+      "description": "Retiraste de Cajita Viaje",
+      "amount": 150000,
+      "currency": "COP",
+      "type": "credit"
+    },
+    {
+      "id": "tx_finandina_yield_2025-09",
+      "accountId": "acc_1786771927434",
+      "date": "2025-09-30",
+      "description": "Rendimiento Mensual Flexi Digital + (Sep 2025)",
+      "amount": 8888.56,
+      "currency": "COP",
+      "type": "credit",
+      "isInterestPayout": true,
+      "createdAt": "2026-08-15T00:56:54.040024"
+    },
+    {
+      "id": "tx_1786772402716_spdosw",
+      "accountId": "acc_1786771927434",
+      "date": "2025-09-26",
+      "description": "Aporte a Flexi Digital +",
+      "amount": -640000,
       "currency": "COP",
       "type": "debit",
-      "createdAt": "2026-08-15T01:01:03.228Z"
-    },
-    {
-      "id": "tx_1786755567683_h1svts",
-      "accountId": "acc_viaje",
-      "date": "2025-07-20",
-      "description": "Retiro de Cajita Viaje",
-      "amount": -300000,
-      "currency": "COP",
-      "type": "debit",
-      "createdAt": "2026-08-15T00:59:27.683Z"
-    },
-    {
-      "id": "tx_1786755512534_x7m532",
-      "accountId": "acc_viaje",
-      "date": "2024-09-29",
-      "description": "Aporte a Cajita Viaje",
-      "amount": 50000,
-      "currency": "COP",
-      "type": "credit",
-      "createdAt": "2026-08-15T00:58:32.534Z"
-    },
-    {
-      "id": "tx_1786755493538_xbmxf8",
-      "accountId": "acc_viaje",
-      "date": "2024-09-15",
-      "description": "Aporte a Cajita Viaje",
-      "amount": 50000,
-      "currency": "COP",
-      "type": "credit",
-      "createdAt": "2026-08-15T00:58:13.538Z"
-    },
-    {
-      "id": "tx_1786755473721_9xfrez",
-      "accountId": "acc_viaje",
-      "date": "2024-09-03",
-      "description": "Aporte a Cajita Viaje",
-      "amount": 40000,
-      "currency": "COP",
-      "type": "credit",
-      "createdAt": "2026-08-15T00:57:53.721Z"
-    },
-    {
-      "id": "tx_1786755170296_c3zsat",
-      "accountId": "acc_estudios",
-      "date": "2026-07-26",
-      "description": "Aporte a Cajita Estudios",
-      "amount": 450000,
-      "currency": "COP",
-      "type": "credit",
-      "createdAt": "2026-08-15T00:52:50.296Z"
-    },
-    {
-      "id": "tx_1786755150316_qd9ji2",
-      "accountId": "acc_estudios",
-      "date": "2026-01-30",
-      "description": "Aporte a Cajita Estudios",
-      "amount": 50162.12,
-      "currency": "COP",
-      "type": "credit",
-      "createdAt": "2026-08-15T00:52:30.316Z"
+      "createdAt": "2026-08-15T05:40:02.716Z"
     },
     {
       "id": "tx_1786755095146_1mg7lp",
@@ -1157,6 +1061,17 @@
       "createdAt": "2026-08-15T00:49:15.639Z"
     },
     {
+      "id": "tx_finandina_yield_2025-08",
+      "accountId": "acc_1786771927434",
+      "date": "2025-08-31",
+      "description": "Rendimiento Mensual Flexi Digital + (Aug 2025)",
+      "amount": 9978.5,
+      "currency": "COP",
+      "type": "credit",
+      "isInterestPayout": true,
+      "createdAt": "2026-08-15T00:56:54.040024"
+    },
+    {
       "id": "tx_1786754921027_tfahiu",
       "accountId": "acc_estudios",
       "date": "2025-08-16",
@@ -1197,6 +1112,17 @@
       "createdAt": "2026-08-15T00:46:38.806Z"
     },
     {
+      "id": "tx_finandina_yield_2025-07",
+      "accountId": "acc_1786771927434",
+      "date": "2025-07-31",
+      "description": "Rendimiento Mensual Flexi Digital + (Jul 2025)",
+      "amount": 10392.58,
+      "currency": "COP",
+      "type": "credit",
+      "isInterestPayout": true,
+      "createdAt": "2026-08-15T00:56:54.040024"
+    },
+    {
       "id": "tx_1786754750771_0g9e8s",
       "accountId": "acc_estudios",
       "date": "2025-07-29",
@@ -1207,6 +1133,78 @@
       "createdAt": "2026-08-15T00:45:50.771Z"
     },
     {
+      "id": "tx_1786772369159_m538p5",
+      "accountId": "acc_1786771927434",
+      "date": "2025-07-24",
+      "description": "Retiro de Flexi Digital +",
+      "amount": -2000,
+      "currency": "COP",
+      "type": "debit",
+      "createdAt": "2026-08-15T05:39:29.159Z"
+    },
+    {
+      "id": "tx_1786772334043_gtd3sp",
+      "accountId": "acc_1786771927434",
+      "date": "2025-07-24",
+      "description": "Retiro de Flexi Digital +",
+      "amount": -80000,
+      "currency": "COP",
+      "type": "debit",
+      "createdAt": "2026-08-15T05:38:54.043Z"
+    },
+    {
+      "id": "tx_1786755567683_h1svts",
+      "accountId": "acc_viaje",
+      "date": "2025-07-20",
+      "description": "Retiro de Cajita Viaje",
+      "amount": -300000,
+      "currency": "COP",
+      "type": "debit",
+      "createdAt": "2026-08-15T00:59:27.683Z"
+    },
+    {
+      "id": "tx_finandina_yield_2025-06",
+      "accountId": "acc_1786771927434",
+      "date": "2025-06-30",
+      "description": "Rendimiento Mensual Flexi Digital + (Jun 2025)",
+      "amount": 10092.31,
+      "currency": "COP",
+      "type": "credit",
+      "isInterestPayout": true,
+      "createdAt": "2026-08-15T00:56:54.040024"
+    },
+    {
+      "id": "tx_1786772309682_jcc4jj",
+      "accountId": "acc_1786771927434",
+      "date": "2025-06-03",
+      "description": "Aporte a Flexi Digital +",
+      "amount": 100000,
+      "currency": "COP",
+      "type": "credit",
+      "createdAt": "2026-08-15T05:38:29.682Z"
+    },
+    {
+      "id": "tx_finandina_yield_2025-05",
+      "accountId": "acc_1786771927434",
+      "date": "2025-05-31",
+      "description": "Rendimiento Mensual Flexi Digital + (May 2025)",
+      "amount": 8341.7,
+      "currency": "COP",
+      "type": "credit",
+      "isInterestPayout": true,
+      "createdAt": "2026-08-15T00:56:54.040024"
+    },
+    {
+      "id": "tx_1786772277467_ywlkfp",
+      "accountId": "acc_1786771927434",
+      "date": "2025-05-26",
+      "description": "Aporte a Flexi Digital +",
+      "amount": 200000,
+      "currency": "COP",
+      "type": "credit",
+      "createdAt": "2026-08-15T05:37:57.467Z"
+    },
+    {
       "id": "tx_1786754657012_78hlff",
       "accountId": "acc_estudios",
       "date": "2025-05-25",
@@ -1215,96 +1213,6 @@
       "currency": "COP",
       "type": "credit",
       "createdAt": "2026-08-15T00:44:17.012Z"
-    },
-    {
-      "id": "tx_1786754626775_886354",
-      "accountId": "acc_estudios",
-      "date": "2025-04-10",
-      "description": "Aporte a Cajita Estudios",
-      "amount": 150000,
-      "currency": "COP",
-      "type": "credit",
-      "createdAt": "2026-08-15T00:43:46.775Z"
-    },
-    {
-      "id": "tx_1786754598915_xf21de",
-      "accountId": "acc_estudios",
-      "date": "2024-12-27",
-      "description": "Aporte a Cajita Estudios",
-      "amount": 200000,
-      "currency": "COP",
-      "type": "credit",
-      "createdAt": "2026-08-15T00:43:18.915Z"
-    },
-    {
-      "id": "tx_1786754564269_pczscj",
-      "accountId": "acc_estudios",
-      "date": "2024-12-16",
-      "description": "Aporte a Cajita Estudios",
-      "amount": 50000,
-      "currency": "COP",
-      "type": "credit",
-      "createdAt": "2026-08-15T00:42:44.269Z"
-    },
-    {
-      "id": "tx_1786754533276_tg8rlk",
-      "accountId": "acc_estudios",
-      "date": "2024-12-06",
-      "description": "Aporte a Cajita Estudios",
-      "amount": 150000,
-      "currency": "COP",
-      "type": "credit",
-      "createdAt": "2026-08-15T00:42:13.276Z"
-    },
-    {
-      "id": "tx_1786754496423_0u6bcl",
-      "accountId": "acc_estudios",
-      "date": "2024-11-08",
-      "description": "Aporte a Cajita Estudios",
-      "amount": 100000,
-      "currency": "COP",
-      "type": "credit",
-      "createdAt": "2026-08-15T00:41:36.423Z"
-    },
-    {
-      "id": "tx_1786754458619_7plm6e",
-      "accountId": "acc_estudios",
-      "date": "2024-10-30",
-      "description": "Aporte a Cajita Estudios",
-      "amount": 50000,
-      "currency": "COP",
-      "type": "credit",
-      "createdAt": "2026-08-15T00:40:58.619Z"
-    },
-    {
-      "id": "tx_1786754415048_h5rl8l",
-      "accountId": "acc_estudios",
-      "date": "2024-09-29",
-      "description": "Aporte a Cajita Estudios",
-      "amount": 100000,
-      "currency": "COP",
-      "type": "credit",
-      "createdAt": "2026-08-15T00:40:15.048Z"
-    },
-    {
-      "id": "tx_1786754375702_5iuev6",
-      "accountId": "acc_estudios",
-      "date": "2024-09-15",
-      "description": "Aporte a Cajita Estudios",
-      "amount": 50000,
-      "currency": "COP",
-      "type": "credit",
-      "createdAt": "2026-08-15T00:39:35.702Z"
-    },
-    {
-      "id": "tx_1786753989568_v89utk",
-      "accountId": "acc_deuda_mom",
-      "date": "2025-11-27",
-      "description": "Retiro de Cajita Deuda mom",
-      "amount": -16000,
-      "currency": "COP",
-      "type": "debit",
-      "createdAt": "2026-08-15T00:33:09.568Z"
     },
     {
       "id": "tx_1786753935974_eff5qs",
@@ -1327,96 +1235,34 @@
       "createdAt": "2026-08-15T00:31:58.154Z"
     },
     {
-      "id": "tx_1786753883247_yskn75",
-      "accountId": "acc_deuda_mom",
-      "date": "2025-04-29",
-      "description": "Aporte a Cajita Deuda mom",
-      "amount": 80000,
-      "currency": "COP",
-      "type": "credit",
-      "createdAt": "2026-08-15T00:31:23.247Z"
-    },
-    {
-      "id": "tx_1786753854119_891e6t",
-      "accountId": "acc_deuda_mom",
-      "date": "2025-04-10",
-      "description": "Aporte a Cajita Deuda mom",
-      "amount": 150000,
-      "currency": "COP",
-      "type": "credit",
-      "createdAt": "2026-08-15T00:30:54.119Z"
-    },
-    {
-      "id": "tx_1786753469304_k5y071",
-      "accountId": "acc_deuda_mom",
-      "date": "2024-12-27",
-      "description": "Retiro de Cajita Deuda mom",
-      "amount": -460461.45,
+      "id": "tx_1786772248621_gwosxy",
+      "accountId": "acc_1786771927434",
+      "date": "2025-05-19",
+      "description": "Retiro de Flexi Digital +",
+      "amount": -15000,
       "currency": "COP",
       "type": "debit",
-      "createdAt": "2026-08-15T00:24:29.304Z"
+      "createdAt": "2026-08-15T05:37:28.621Z"
     },
     {
-      "id": "tx_1786753416722_69l843",
-      "accountId": "acc_deuda_mom",
-      "date": "2024-12-16",
-      "description": "Aporte a Cajita Deuda mom",
-      "amount": 50000.27,
-      "currency": "COP",
-      "type": "credit",
-      "createdAt": "2026-08-15T00:23:36.722Z"
-    },
-    {
-      "id": "tx_1786753372586_rmza89",
-      "accountId": "acc_deuda_mom",
-      "date": "2024-12-06",
-      "description": "Aporte a Cajita Deuda mom",
-      "amount": 100000,
-      "currency": "COP",
-      "type": "credit",
-      "createdAt": "2026-08-15T00:22:52.586Z"
-    },
-    {
-      "id": "tx_1786753331344_1xxjws",
-      "accountId": "acc_deuda_mom",
-      "date": "2024-10-30",
-      "description": "Aporte a Cajita Deuda mom",
-      "amount": 50000,
-      "currency": "COP",
-      "type": "credit",
-      "createdAt": "2026-08-15T00:22:11.344Z"
-    },
-    {
-      "id": "tx_1786753288942_djl8yf",
-      "accountId": "acc_deuda_mom",
-      "date": "2024-09-29",
-      "description": "Aporte a Cajita Deuda mom",
-      "amount": 50000,
-      "currency": "COP",
-      "type": "credit",
-      "createdAt": "2026-08-15T00:21:28.942Z"
-    },
-    {
-      "id": "tx_finandina_yield_2025-02",
+      "id": "tx_1786772209456_tru7b5",
       "accountId": "acc_1786771927434",
-      "date": "2025-02-28",
-      "description": "Rendimiento Mensual Flexi Digital + (Feb 2025)",
-      "amount": 1323.93,
+      "date": "2025-04-30",
+      "description": "Aporte a Flexi Digital +",
+      "amount": 20000,
       "currency": "COP",
       "type": "credit",
-      "isInterestPayout": true,
-      "createdAt": "2026-08-15T00:56:54.039024"
+      "createdAt": "2026-08-15T05:36:49.456Z"
     },
     {
-      "id": "tx_finandina_yield_2025-03",
+      "id": "tx_1786772181847_qjrglg",
       "accountId": "acc_1786771927434",
-      "date": "2025-03-31",
-      "description": "Rendimiento Mensual Flexi Digital + (Mar 2025)",
-      "amount": 6111.53,
+      "date": "2025-04-30",
+      "description": "Retiro de Flexi Digital +",
+      "amount": -10000,
       "currency": "COP",
-      "type": "credit",
-      "isInterestPayout": true,
-      "createdAt": "2026-08-15T00:56:54.039024"
+      "type": "debit",
+      "createdAt": "2026-08-15T05:36:21.847Z"
     },
     {
       "id": "tx_finandina_yield_2025-04",
@@ -1430,169 +1276,373 @@
       "createdAt": "2026-08-15T00:56:54.039024"
     },
     {
-      "id": "tx_finandina_yield_2025-05",
+      "id": "tx_1786772136791_xd6lsu",
       "accountId": "acc_1786771927434",
-      "date": "2025-05-31",
-      "description": "Rendimiento Mensual Flexi Digital + (May 2025)",
-      "amount": 8341.7,
+      "date": "2025-04-29",
+      "description": "Aporte a Flexi Digital +",
+      "amount": 150000,
       "currency": "COP",
       "type": "credit",
-      "isInterestPayout": true,
-      "createdAt": "2026-08-15T00:56:54.040024"
+      "createdAt": "2026-08-15T05:35:36.791Z"
     },
     {
-      "id": "tx_finandina_yield_2025-06",
-      "accountId": "acc_1786771927434",
-      "date": "2025-06-30",
-      "description": "Rendimiento Mensual Flexi Digital + (Jun 2025)",
-      "amount": 10092.31,
+      "id": "tx_1786753883247_yskn75",
+      "accountId": "acc_deuda_mom",
+      "date": "2025-04-29",
+      "description": "Aporte a Cajita Deuda mom",
+      "amount": 80000,
       "currency": "COP",
       "type": "credit",
-      "isInterestPayout": true,
-      "createdAt": "2026-08-15T00:56:54.040024"
+      "createdAt": "2026-08-15T00:31:23.247Z"
     },
     {
-      "id": "tx_finandina_yield_2025-07",
+      "id": "tx_1786772108838_57jjrl",
       "accountId": "acc_1786771927434",
-      "date": "2025-07-31",
-      "description": "Rendimiento Mensual Flexi Digital + (Jul 2025)",
-      "amount": 10392.58,
+      "date": "2025-04-15",
+      "description": "Aporte a Flexi Digital +",
+      "amount": 50000,
       "currency": "COP",
       "type": "credit",
-      "isInterestPayout": true,
-      "createdAt": "2026-08-15T00:56:54.040024"
+      "createdAt": "2026-08-15T05:35:08.838Z"
     },
     {
-      "id": "tx_finandina_yield_2025-08",
-      "accountId": "acc_1786771927434",
-      "date": "2025-08-31",
-      "description": "Rendimiento Mensual Flexi Digital + (Aug 2025)",
-      "amount": 9978.5,
+      "id": "tx_1786754626775_886354",
+      "accountId": "acc_estudios",
+      "date": "2025-04-10",
+      "description": "Aporte a Cajita Estudios",
+      "amount": 150000,
       "currency": "COP",
       "type": "credit",
-      "isInterestPayout": true,
-      "createdAt": "2026-08-15T00:56:54.040024"
+      "createdAt": "2026-08-15T00:43:46.775Z"
     },
     {
-      "id": "tx_finandina_yield_2025-09",
-      "accountId": "acc_1786771927434",
-      "date": "2025-09-30",
-      "description": "Rendimiento Mensual Flexi Digital + (Sep 2025)",
-      "amount": 8888.56,
+      "id": "tx_1786753854119_891e6t",
+      "accountId": "acc_deuda_mom",
+      "date": "2025-04-10",
+      "description": "Aporte a Cajita Deuda mom",
+      "amount": 150000,
       "currency": "COP",
       "type": "credit",
-      "isInterestPayout": true,
-      "createdAt": "2026-08-15T00:56:54.040024"
+      "createdAt": "2026-08-15T00:30:54.119Z"
     },
     {
-      "id": "tx_finandina_yield_2025-10",
+      "id": "tx_finandina_yield_2025-03",
       "accountId": "acc_1786771927434",
-      "date": "2025-10-31",
-      "description": "Rendimiento Mensual Flexi Digital + (Oct 2025)",
-      "amount": 4880.02,
+      "date": "2025-03-31",
+      "description": "Rendimiento Mensual Flexi Digital + (Mar 2025)",
+      "amount": 6111.53,
       "currency": "COP",
       "type": "credit",
       "isInterestPayout": true,
-      "createdAt": "2026-08-15T00:56:54.040024"
+      "createdAt": "2026-08-15T00:56:54.039024"
     },
     {
-      "id": "tx_finandina_yield_2025-11",
+      "id": "tx_1786772079677_l24euc",
       "accountId": "acc_1786771927434",
-      "date": "2025-11-30",
-      "description": "Rendimiento Mensual Flexi Digital + (Nov 2025)",
-      "amount": 4761.37,
+      "date": "2025-03-03",
+      "description": "Aporte a Flexi Digital +",
+      "amount": 210000,
       "currency": "COP",
       "type": "credit",
-      "isInterestPayout": true,
-      "createdAt": "2026-08-15T00:56:54.040024"
+      "createdAt": "2026-08-15T05:34:39.677Z"
     },
     {
-      "id": "tx_finandina_yield_2025-12",
+      "id": "tx_1786772006278_33yf2i",
       "accountId": "acc_1786771927434",
-      "date": "2025-12-31",
-      "description": "Rendimiento Mensual Flexi Digital + (Dec 2025)",
-      "amount": 4959.16,
+      "date": "2025-03-03",
+      "description": "Aporte a Flexi Digital +",
+      "amount": 50000,
       "currency": "COP",
       "type": "credit",
-      "isInterestPayout": true,
-      "createdAt": "2026-08-15T00:56:54.040024"
+      "createdAt": "2026-08-15T05:33:26.278Z"
     },
     {
-      "id": "tx_finandina_yield_2026-01",
+      "id": "tx_finandina_yield_2025-02",
       "accountId": "acc_1786771927434",
-      "date": "2026-01-31",
-      "description": "Rendimiento Mensual Flexi Digital + (Jan 2026)",
-      "amount": 4999.87,
+      "date": "2025-02-28",
+      "description": "Rendimiento Mensual Flexi Digital + (Feb 2025)",
+      "amount": 1323.93,
       "currency": "COP",
       "type": "credit",
       "isInterestPayout": true,
-      "createdAt": "2026-08-15T00:56:54.040024"
+      "createdAt": "2026-08-15T00:56:54.039024"
     },
     {
-      "id": "tx_finandina_yield_2026-02",
-      "accountId": "acc_1786771927434",
-      "date": "2026-02-28",
-      "description": "Rendimiento Mensual Flexi Digital + (Feb 2026)",
-      "amount": 4553.08,
+      "id": "tx_17_689cca",
+      "accountId": "acc_deuda_mom",
+      "date": "2025-02-26",
+      "description": "Agregaste a Cajita Deuda mom",
+      "amount": 50000,
       "currency": "COP",
-      "type": "credit",
-      "isInterestPayout": true,
-      "createdAt": "2026-08-15T00:56:54.040024"
+      "type": "credit"
     },
     {
-      "id": "tx_finandina_yield_2026-03",
-      "accountId": "acc_1786771927434",
-      "date": "2026-03-31",
-      "description": "Rendimiento Mensual Flexi Digital + (Mar 2026)",
-      "amount": 5078.28,
+      "id": "tx_18_81cbd7",
+      "accountId": "acc_viaje",
+      "date": "2025-02-26",
+      "description": "Agregaste a Cajita Viaje",
+      "amount": 170000,
       "currency": "COP",
-      "type": "credit",
-      "isInterestPayout": true,
-      "createdAt": "2026-08-15T00:56:54.040024"
+      "type": "credit"
     },
     {
-      "id": "tx_finandina_yield_2026-04",
+      "id": "tx_1786772044494_aax3ln",
       "accountId": "acc_1786771927434",
-      "date": "2026-04-30",
-      "description": "Rendimiento Mensual Flexi Digital + (Apr 2026)",
-      "amount": 4954.81,
+      "date": "2025-02-19",
+      "description": "Aporte a Flexi Digital +",
+      "amount": 500000,
       "currency": "COP",
       "type": "credit",
-      "isInterestPayout": true,
-      "createdAt": "2026-08-15T00:56:54.041025"
+      "createdAt": "2026-08-15T05:34:04.494Z"
     },
     {
-      "id": "tx_finandina_yield_2026-05",
-      "accountId": "acc_1786771927434",
-      "date": "2026-05-31",
-      "description": "Rendimiento Mensual Flexi Digital + (May 2026)",
-      "amount": 5160.64,
+      "id": "tx_15_747aed",
+      "accountId": "acc_deuda_mom",
+      "date": "2025-02-04",
+      "description": "Agregaste a Cajita Deuda mom",
+      "amount": 150000,
       "currency": "COP",
-      "type": "credit",
-      "isInterestPayout": true,
-      "createdAt": "2026-08-15T00:56:54.041025"
+      "type": "credit"
     },
     {
-      "id": "tx_finandina_yield_2026-06",
-      "accountId": "acc_1786771927434",
-      "date": "2026-06-30",
-      "description": "Rendimiento Mensual Flexi Digital + (Jun 2026)",
-      "amount": 5035.16,
+      "id": "tx_16_463845",
+      "accountId": "acc_viaje",
+      "date": "2025-02-04",
+      "description": "Agregaste a Cajita Viaje",
+      "amount": 250000,
       "currency": "COP",
-      "type": "credit",
-      "isInterestPayout": true,
-      "createdAt": "2026-08-15T00:56:54.041025"
+      "type": "credit"
     },
     {
-      "id": "tx_finandina_yield_2026-07",
-      "accountId": "acc_1786771927434",
-      "date": "2026-07-31",
-      "description": "Rendimiento Mensual Flexi Digital + (Jul 2026)",
-      "amount": 5244.33,
+      "id": "tx_14_a4cb71",
+      "accountId": "acc_viaje",
+      "date": "2025-01-17",
+      "description": "Agregaste a Cajita Viaje",
+      "amount": 150000,
+      "currency": "COP",
+      "type": "credit"
+    },
+    {
+      "id": "tx_1786754598915_xf21de",
+      "accountId": "acc_estudios",
+      "date": "2024-12-27",
+      "description": "Aporte a Cajita Estudios",
+      "amount": 200000,
       "currency": "COP",
       "type": "credit",
-      "isInterestPayout": true,
-      "createdAt": "2026-08-15T00:56:54.041025"
+      "createdAt": "2026-08-15T00:43:18.915Z"
+    },
+    {
+      "id": "tx_1786753469304_k5y071",
+      "accountId": "acc_deuda_mom",
+      "date": "2024-12-27",
+      "description": "Retiro de Cajita Deuda mom",
+      "amount": -460461.45,
+      "currency": "COP",
+      "type": "debit",
+      "createdAt": "2026-08-15T00:24:29.304Z"
+    },
+    {
+      "id": "tx_13_65a2bb",
+      "accountId": "acc_viaje",
+      "date": "2024-12-27",
+      "description": "Agregaste a Cajita Viaje",
+      "amount": 260461.45,
+      "currency": "COP",
+      "type": "credit"
+    },
+    {
+      "id": "tx_1786754564269_pczscj",
+      "accountId": "acc_estudios",
+      "date": "2024-12-16",
+      "description": "Aporte a Cajita Estudios",
+      "amount": 50000,
+      "currency": "COP",
+      "type": "credit",
+      "createdAt": "2026-08-15T00:42:44.269Z"
+    },
+    {
+      "id": "tx_1786753416722_69l843",
+      "accountId": "acc_deuda_mom",
+      "date": "2024-12-16",
+      "description": "Aporte a Cajita Deuda mom",
+      "amount": 50000.27,
+      "currency": "COP",
+      "type": "credit",
+      "createdAt": "2026-08-15T00:23:36.722Z"
+    },
+    {
+      "id": "tx_1786754533276_tg8rlk",
+      "accountId": "acc_estudios",
+      "date": "2024-12-06",
+      "description": "Aporte a Cajita Estudios",
+      "amount": 150000,
+      "currency": "COP",
+      "type": "credit",
+      "createdAt": "2026-08-15T00:42:13.276Z"
+    },
+    {
+      "id": "tx_1786753372586_rmza89",
+      "accountId": "acc_deuda_mom",
+      "date": "2024-12-06",
+      "description": "Aporte a Cajita Deuda mom",
+      "amount": 100000,
+      "currency": "COP",
+      "type": "credit",
+      "createdAt": "2026-08-15T00:22:52.586Z"
+    },
+    {
+      "id": "tx_1786754496423_0u6bcl",
+      "accountId": "acc_estudios",
+      "date": "2024-11-08",
+      "description": "Aporte a Cajita Estudios",
+      "amount": 100000,
+      "currency": "COP",
+      "type": "credit",
+      "createdAt": "2026-08-15T00:41:36.423Z"
+    },
+    {
+      "id": "tx_1786754458619_7plm6e",
+      "accountId": "acc_estudios",
+      "date": "2024-10-30",
+      "description": "Aporte a Cajita Estudios",
+      "amount": 50000,
+      "currency": "COP",
+      "type": "credit",
+      "createdAt": "2026-08-15T00:40:58.619Z"
+    },
+    {
+      "id": "tx_1786753331344_1xxjws",
+      "accountId": "acc_deuda_mom",
+      "date": "2024-10-30",
+      "description": "Aporte a Cajita Deuda mom",
+      "amount": 50000,
+      "currency": "COP",
+      "type": "credit",
+      "createdAt": "2026-08-15T00:22:11.344Z"
+    },
+    {
+      "id": "tx_1786755512534_x7m532",
+      "accountId": "acc_viaje",
+      "date": "2024-09-29",
+      "description": "Aporte a Cajita Viaje",
+      "amount": 50000,
+      "currency": "COP",
+      "type": "credit",
+      "createdAt": "2026-08-15T00:58:32.534Z"
+    },
+    {
+      "id": "tx_1786754415048_h5rl8l",
+      "accountId": "acc_estudios",
+      "date": "2024-09-29",
+      "description": "Aporte a Cajita Estudios",
+      "amount": 100000,
+      "currency": "COP",
+      "type": "credit",
+      "createdAt": "2026-08-15T00:40:15.048Z"
+    },
+    {
+      "id": "tx_1786753288942_djl8yf",
+      "accountId": "acc_deuda_mom",
+      "date": "2024-09-29",
+      "description": "Aporte a Cajita Deuda mom",
+      "amount": 50000,
+      "currency": "COP",
+      "type": "credit",
+      "createdAt": "2026-08-15T00:21:28.942Z"
+    },
+    {
+      "id": "tx_1786755493538_xbmxf8",
+      "accountId": "acc_viaje",
+      "date": "2024-09-15",
+      "description": "Aporte a Cajita Viaje",
+      "amount": 50000,
+      "currency": "COP",
+      "type": "credit",
+      "createdAt": "2026-08-15T00:58:13.538Z"
+    },
+    {
+      "id": "tx_1786754375702_5iuev6",
+      "accountId": "acc_estudios",
+      "date": "2024-09-15",
+      "description": "Aporte a Cajita Estudios",
+      "amount": 50000,
+      "currency": "COP",
+      "type": "credit",
+      "createdAt": "2026-08-15T00:39:35.702Z"
+    },
+    {
+      "id": "tx_1786755473721_9xfrez",
+      "accountId": "acc_viaje",
+      "date": "2024-09-03",
+      "description": "Aporte a Cajita Viaje",
+      "amount": 40000,
+      "currency": "COP",
+      "type": "credit",
+      "createdAt": "2026-08-15T00:57:53.721Z"
+    },
+    {
+      "id": "tx_11_f5aa1b",
+      "accountId": "acc_estudios",
+      "date": "2024-09-03",
+      "description": "Agregaste a Cajita Estudios",
+      "amount": 40000,
+      "currency": "COP",
+      "type": "credit"
+    },
+    {
+      "id": "tx_9_54a654",
+      "accountId": "acc_deuda_mom",
+      "date": "2024-09-02",
+      "description": "Agregaste a Cajita Deuda mom",
+      "amount": 200000,
+      "currency": "COP",
+      "type": "credit"
+    },
+    {
+      "id": "tx_10_a3b365",
+      "accountId": "acc_estudios",
+      "date": "2024-09-02",
+      "description": "Agregaste a Cajita Estudios",
+      "amount": 100000,
+      "currency": "COP",
+      "type": "credit"
+    },
+    {
+      "id": "tx_7_9d2e49",
+      "accountId": "acc_viaje",
+      "date": "2024-08-04",
+      "description": "Agregaste a Cajita Viaje",
+      "amount": 150000.41,
+      "currency": "COP",
+      "type": "credit"
+    },
+    {
+      "id": "tx_8_88fa72",
+      "accountId": "acc_estudios",
+      "date": "2024-08-04",
+      "description": "Agregaste a Cajita Estudios",
+      "amount": 150000,
+      "currency": "COP",
+      "type": "credit"
+    },
+    {
+      "id": "tx_6_e6aa07",
+      "accountId": "acc_viaje",
+      "date": "2024-07-26",
+      "description": "Agregaste a Cajita Viaje",
+      "amount": 100000.41,
+      "currency": "COP",
+      "type": "credit"
+    },
+    {
+      "id": "tx_5_2b9131",
+      "accountId": "acc_viaje",
+      "date": "2024-06-13",
+      "description": "Agregaste a Cajita Viaje",
+      "amount": 50000,
+      "currency": "COP",
+      "type": "credit"
     }
   ]
 }

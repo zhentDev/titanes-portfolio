@@ -436,11 +436,12 @@ input[type="time"]:focus {
 .floating-input-field::placeholder {
   color: #64748b;
   font-size: 0.84rem;
-  transition: color 0.2s ease;
+  transition: color 0.2s ease, opacity 0.2s ease;
 }
 
 .floating-input-container:not(:focus-within):not(.has-value) .floating-input-field::placeholder {
-  color: transparent;
+  color: transparent !important;
+  opacity: 0 !important;
 }
 
 .floating-label-text {
@@ -920,6 +921,11 @@ input[type="time"]:focus {
 
 [data-theme="light"] .floating-input-field::placeholder {
   color: #94a3b8;
+}
+
+[data-theme="light"] .floating-input-container:not(:focus-within):not(.has-value) .floating-input-field::placeholder {
+  color: transparent !important;
+  opacity: 0 !important;
 }
 
 [data-theme="light"] .floating-label-text {

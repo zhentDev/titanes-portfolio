@@ -59,26 +59,63 @@ export const useFixedIncomeStore = create(
           const localState = get();
           const isAuthenticated = Boolean(getAuthHeaders().Authorization);
 
-          // Si el usuario está autenticado, la respuesta del backend (DuckDB / Postgres) es la única fuente de verdad.
-          // Si es una sesión pública (no autenticada), se prioriza la vitrina fetched o el cache de demo.
-          let finalEntities = [];
-          let finalAccounts = [];
-          let finalCDTs = [];
-          let finalTransactions = [];
+          // ── Lossless Union Merge ───────────────────────────────────────
+          // Combine remote and local data by unique ID so changes made either on
+          // the public site (Render) or locally are NEVER dropped or overwritten.
 
-          if (isAuthenticated) {
-            finalEntities = Array.isArray(res?.entities) && res.entities.length > 0 ? res.entities : (localState.entities || []);
-            finalAccounts = Array.isArray(res?.accounts) ? res.accounts : [];
-            finalCDTs = Array.isArray(res?.cdts) ? res.cdts : [];
-            finalTransactions = Array.isArray(res?.transactions) ? res.transactions : [];
-          } else {
-            const hasFetchedData = (res?.accounts && res.accounts.length > 0) || (res?.cdts && res.cdts.length > 0);
-            finalEntities = (hasFetchedData && res.entities?.length > 0) ? res.entities : ((localState.entities && localState.entities.length > 0) ? localState.entities : (res?.entities || []));
-            finalAccounts = (hasFetchedData && res.accounts?.length > 0) ? res.accounts : (localState.accounts || []);
-            finalCDTs = (hasFetchedData && res.cdts?.length > 0) ? res.cdts : (localState.cdts || []);
-            finalTransactions = (hasFetchedData && res.transactions?.length > 0)
-              ? res.transactions
-              : (localState.transactions || []);
+          // 1. Entities
+          const entityMap = new Map();
+          (res?.entities || []).forEach((e) => { if (e && e.id) entityMap.set(e.id, e); });
+          (localState.entities || []).forEach((e) => {
+            if (e && e.id && !entityMap.has(e.id)) entityMap.set(e.id, e);
+          });
+          const finalEntities = Array.from(entityMap.values());
+
+          // 2. CDTs
+          const cdtMap = new Map();
+          (res?.cdts || []).forEach((c) => { if (c && c.id) cdtMap.set(c.id, c); });
+          (localState.cdts || []).forEach((c) => {
+            if (c && c.id && !cdtMap.has(c.id)) cdtMap.set(c.id, c);
+          });
+          const finalCDTs = Array.from(cdtMap.values());
+
+          // 3. Transactions (lossless union: keeps all unique IDs from remote and local)
+          const txMap = new Map();
+          (res?.transactions || []).forEach((t) => { if (t && t.id) txMap.set(t.id, t); });
+          let localHadExtraTx = false;
+          (localState.transactions || []).forEach((t) => {
+            if (t && t.id && !txMap.has(t.id)) {
+              txMap.set(t.id, t);
+              localHadExtraTx = true;
+            }
+          });
+          const finalTransactions = Array.from(txMap.values()).sort(
+            (a, b) => (b.date || "").localeCompare(a.date || "") || (b.createdAt || "").localeCompare(a.createdAt || "")
+          );
+
+          // 4. Accounts
+          const accMap = new Map();
+          (res?.accounts || []).forEach((a) => { if (a && a.id) accMap.set(a.id, a); });
+          (localState.accounts || []).forEach((a) => {
+            if (a && a.id) {
+              if (!accMap.has(a.id)) {
+                accMap.set(a.id, a);
+              } else {
+                const remoteAcc = accMap.get(a.id);
+                accMap.set(a.id, { ...a, ...remoteAcc });
+              }
+            }
+          });
+          let finalAccounts = Array.from(accMap.values());
+
+          // If local had new transactions that remote lacked, push them upstream
+          if (localHadExtraTx && finalTransactions.length > (res?.transactions?.length || 0)) {
+            syncFixedIncomeStateApi({
+              entities: finalEntities,
+              accounts: finalAccounts,
+              cdts: finalCDTs,
+              transactions: finalTransactions,
+            }).catch((e) => console.warn("[FixedIncome] Background sync of merged tx failed:", e));
           }
 
           // Normalize Plenti Bolsillo a la vista rate & tiers to 4.0% E.A. if still at legacy 3.0% / 2.0%
@@ -342,6 +379,7 @@ export const useFixedIncomeStore = create(
             accounts: get().accounts,
             cdts: get().cdts,
             transactions: updatedTx,
+            deletedTxIds: [txId],
           });
           toast.success("Movimiento eliminado");
         } catch (e) {
@@ -381,6 +419,7 @@ export const useFixedIncomeStore = create(
             accounts: get().accounts,
             cdts: get().cdts,
             transactions: updatedTx,
+            deletedTxIds: Array.from(idSet),
           });
           toast.success(`${idSet.size} movimiento(s) eliminado(s)`);
         } catch (e) {
