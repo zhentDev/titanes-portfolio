@@ -490,21 +490,65 @@ export const useCashFlowStore = create(
       // ── Credit Card Debt Payments / Abonos ───────────
       addCreditCardPayment: (payment) => {
         set((state) => {
+          const breakdownMap = {};
+          if (Array.isArray(payment.cardsBreakdown) && payment.cardsBreakdown.length > 0) {
+            payment.cardsBreakdown.forEach((b) => {
+              if (b.cardId) {
+                breakdownMap[b.cardId] = (breakdownMap[b.cardId] || 0) + (Number(b.amount) || 0);
+              }
+            });
+          } else if (payment.cardId) {
+            breakdownMap[payment.cardId] = Number(payment.amount) || 0;
+          }
+
           const updatedCards = state.creditCards.map((c) => {
-            if (c.id === payment.cardId) {
+            if (breakdownMap[c.id] !== undefined) {
               const currentUsed = Number(c.usedLimit) || 0;
-              return { ...c, usedLimit: Math.max(0, currentUsed - Number(payment.amount)) };
+              return { ...c, usedLimit: Math.max(0, currentUsed - breakdownMap[c.id]) };
             }
             return c;
           });
 
+          const deductions = Array.isArray(payment.budgetDeductions)
+            ? payment.budgetDeductions.filter((d) => Number(d.amount) > 0 && d.budgetItemId)
+            : [];
+
+          const generatedExpenseTxs = deductions.map((ded, idx) => ({
+            id: `tx_ccpay_${payment.id}_${idx}`,
+            creditCardPaymentId: payment.id,
+            isCreditCardPayoff: true,
+            description: `💳 Pago ${payment.cardName} (Descontado de ${ded.budgetItemName})`,
+            amount: Number(ded.amount),
+            currency: payment.currency || state.currency,
+            date: payment.date,
+            period: payment.period || state.activePeriod,
+            budgetItemId: ded.budgetItemId,
+            budgetItemName: ded.budgetItemName,
+            budgetItemType: ded.budgetItemType,
+            paymentSource: {
+              type: payment.sourceType || "payroll",
+              targetId: payment.sourceAccountId || null,
+              targetName: payment.sourceAccount || state.payrollAccount?.name || "Nómina",
+            },
+            createdAt: new Date().toISOString(),
+          }));
+
           return {
             creditCardPayments: [payment, ...(state.creditCardPayments || [])],
             creditCards: updatedCards,
+            expensesLog: [...generatedExpenseTxs, ...(state.expensesLog || [])],
           };
         });
         get().syncStateWithBackend();
-        toast.success(`Pago de ${payment.cardName} por $${Math.round(payment.amount).toLocaleString("es-CO")} registrado. ¡Cupo liberado!`, { icon: "💵" });
+        const dedCount = Array.isArray(payment.budgetDeductions)
+          ? payment.budgetDeductions.filter((d) => Number(d.amount) > 0).length
+          : 0;
+        toast.success(
+          dedCount > 0
+            ? `Pago de ${payment.cardName} por $${Math.round(payment.amount).toLocaleString("es-CO")} registrado y descontado de ${dedCount} rubro(s) del mes.`
+            : `Pago de ${payment.cardName} por $${Math.round(payment.amount).toLocaleString("es-CO")} registrado. ¡Cupo liberado!`,
+          { icon: "💵", duration: 4000 }
+        );
       },
 
       deleteCreditCardPayment: (id) => {
@@ -513,9 +557,20 @@ export const useCashFlowStore = create(
           let updatedCards = state.creditCards;
 
           if (paymentToDelete) {
+            const breakdownMap = {};
+            if (Array.isArray(paymentToDelete.cardsBreakdown) && paymentToDelete.cardsBreakdown.length > 0) {
+              paymentToDelete.cardsBreakdown.forEach((b) => {
+                if (b.cardId) {
+                  breakdownMap[b.cardId] = (breakdownMap[b.cardId] || 0) + (Number(b.amount) || 0);
+                }
+              });
+            } else if (paymentToDelete.cardId) {
+              breakdownMap[paymentToDelete.cardId] = Number(paymentToDelete.amount) || 0;
+            }
+
             updatedCards = state.creditCards.map((c) => {
-              if (c.id === paymentToDelete.cardId) {
-                return { ...c, usedLimit: (Number(c.usedLimit) || 0) + Number(paymentToDelete.amount) };
+              if (breakdownMap[c.id] !== undefined) {
+                return { ...c, usedLimit: (Number(c.usedLimit) || 0) + breakdownMap[c.id] };
               }
               return c;
             });
@@ -524,10 +579,11 @@ export const useCashFlowStore = create(
           return {
             creditCardPayments: (state.creditCardPayments || []).filter((p) => p.id !== id),
             creditCards: updatedCards,
+            expensesLog: (state.expensesLog || []).filter((tx) => tx.creditCardPaymentId !== id),
           };
         });
         get().syncStateWithBackend();
-        toast.success("Pago de tarjeta revertido", { icon: "🗑️" });
+        toast.success("Pago de tarjeta y descuentos presupuestales revertidos", { icon: "🗑️" });
       },
 
       // ── Progressive Multi-Period Monthly Navigation & Inheritance ──

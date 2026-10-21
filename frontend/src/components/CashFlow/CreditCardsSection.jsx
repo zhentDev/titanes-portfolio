@@ -100,11 +100,30 @@ export default function CreditCardsSection({
         </div>
 
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          {totalCreditUsed > 0 && onOpenPaymentModal && (
+            <button
+              type="button"
+              className="cashflow-action-btn secondary"
+              onClick={() => onOpenPaymentModal("ALL", totalCreditUsed)}
+              style={{
+                fontSize: "0.84rem",
+                padding: "9px 16px",
+                borderColor: "rgba(56, 189, 248, 0.4)",
+                color: "#38bdf8",
+                background: "rgba(56, 189, 248, 0.12)",
+                fontWeight: 700,
+              }}
+              title="Pagar la deuda total de todas tus tarjetas y descontarla de tus rubros de Ahorro y Salidas del mes"
+            >
+              <span>⚡</span> Dejar Todas en $0 ({formatMoney(totalCreditUsed, currency)})
+            </button>
+          )}
+
           {onOpenPaymentModal && (
             <button
               type="button"
               className="cashflow-action-btn secondary"
-              onClick={onOpenPaymentModal}
+              onClick={() => onOpenPaymentModal()}
               style={{
                 fontSize: "0.84rem",
                 padding: "9px 16px",
@@ -283,9 +302,11 @@ export default function CreditCardsSection({
                 </div>
 
                 <div style={{ textAlign: "right" }}>
-                  <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block" }}>Factura del Mes</span>
-                  <strong style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.15rem", color: "#f43f5e" }}>
-                    {formatMoney(card.monthlyBill, currency)}
+                  <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block" }}>
+                    {card.monthlyBill > 0 ? "Factura / Cuota Mes" : "Saldo por Pagar"}
+                  </span>
+                  <strong style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.15rem", color: (card.monthlyBill > 0 || card.usedLimit > 0) ? "#f43f5e" : "#10b981" }}>
+                    {formatMoney(card.monthlyBill > 0 ? card.monthlyBill : card.usedLimit, currency)}
                   </strong>
                 </div>
               </div>
@@ -317,9 +338,33 @@ export default function CreditCardsSection({
               </div>
 
               {/* Details Footer */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.75rem", color: "var(--text-muted)", borderTop: "1px solid var(--border)", paddingTop: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.75rem", color: "var(--text-muted)", borderTop: "1px solid var(--border)", paddingTop: 10, flexWrap: "wrap", gap: 8 }}>
                 <span>Cupo Total: <strong>{formatMoney(card.totalLimit, currency)}</strong></span>
-                <span style={{ color: "#38bdf8", fontWeight: 600 }}>Tasa: {card.rateEA || 24.5}% E.A. (SFC)</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  {card.usedLimit > 0 && onOpenPaymentModal && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenPaymentModal(card.id, card.usedLimit)}
+                      style={{
+                        background: "rgba(16, 185, 129, 0.14)",
+                        border: "1px solid rgba(16, 185, 129, 0.4)",
+                        color: "#10b981",
+                        borderRadius: "6px",
+                        padding: "3px 8px",
+                        fontSize: "0.72rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
+                      title="Pagar el saldo total de esta tarjeta y descontarlo de tus rubros de ahorro o salidas del mes"
+                    >
+                      💵 Pagar a $0 ({formatMoney(card.usedLimit, currency)})
+                    </button>
+                  )}
+                  <span style={{ color: "#38bdf8", fontWeight: 600 }}>Tasa: {card.rateEA || 24.5}% E.A. (SFC)</span>
+                </div>
               </div>
             </div>
           );

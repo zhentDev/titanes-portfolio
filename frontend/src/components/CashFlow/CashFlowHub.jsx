@@ -112,6 +112,8 @@ export default function CashFlowHub() {
   const [expenseToEdit, setExpenseToEdit] = useState(null);
   const [expenseToSettle, setExpenseToSettle] = useState(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [paymentInitialCardId, setPaymentInitialCardId] = useState(null);
+  const [paymentInitialAmount, setPaymentInitialAmount] = useState(null);
   const [showSankey, setShowSankey] = useState(true);
   const [showLiquidity, setShowLiquidity] = useState(false);
   const [showRules, setShowRules] = useState(false);
@@ -2262,7 +2264,11 @@ export default function CashFlowHub() {
               onOpenCreditPurchaseModal={() => setCreditPurchaseModalOpen(true)}
               onOpenNewCardModal={handleOpenNewCardModal}
               onOpenEditCardModal={handleOpenEditCardModal}
-              onOpenPaymentModal={() => setPaymentModalOpen(true)}
+              onOpenPaymentModal={(cardId = null, amt = null) => {
+                setPaymentInitialCardId(cardId);
+                setPaymentInitialAmount(amt);
+                setPaymentModalOpen(true);
+              }}
               onDeletePurchase={deleteCreditPurchase}
               onDeleteCard={deleteCreditCard}
               onDeletePayment={deleteCreditCardPayment}
@@ -2361,12 +2367,20 @@ export default function CashFlowHub() {
       {/* ── 17. Credit Card Debt Payment & Quota Liberation Modal ───── */}
       <CreditCardPaymentModal
         isOpen={paymentModalOpen}
-        onClose={() => setPaymentModalOpen(false)}
+        onClose={() => {
+          setPaymentInitialCardId(null);
+          setPaymentInitialAmount(null);
+          setPaymentModalOpen(false);
+        }}
         activePeriod={activePeriod}
         currency={currency}
         creditCards={creditCards}
         payrollAccount={payrollAccount}
         fixedIncomeAccounts={fixedAccounts}
+        budgetItems={budgetEnvelopes}
+        expensesLog={periodExpenses}
+        initialCardId={paymentInitialCardId}
+        initialAmount={paymentInitialAmount}
         onSavePayment={addCreditCardPayment}
       />
 
