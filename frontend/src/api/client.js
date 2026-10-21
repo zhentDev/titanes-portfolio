@@ -517,7 +517,11 @@ export async function saveStockAlert(alertData) {
     body: JSON.stringify(alertData),
   });
   if (!res.ok) throw new Error("Error guardando alerta");
-  return res.json();
+  const data = await res.json();
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("stockAlertsUpdated", { detail: data }));
+  }
+  return data;
 }
 
 export async function deleteStockAlert(alertId) {
@@ -525,7 +529,11 @@ export async function deleteStockAlert(alertId) {
     method: "DELETE",
   });
   if (!res.ok) throw new Error("Error eliminando alerta");
-  return res.json();
+  const data = await res.json();
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("stockAlertsUpdated", { detail: { alertId } }));
+  }
+  return data;
 }
 
 export async function evaluateStockAlerts({ scope, targetId, positions }) {

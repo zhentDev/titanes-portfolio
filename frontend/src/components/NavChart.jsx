@@ -1,5 +1,7 @@
 import { ColorType, LineStyle, PriceScaleMode, createChart } from "lightweight-charts";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import toast from "react-hot-toast";
+import { fetchStockAlerts } from "../api/client";
 import { usePortfolioStore } from "../store/portfolioStore";
 import { InfoTooltip } from "./Common";
 import { useTheme } from "../context/ThemeContext";
@@ -40,6 +42,32 @@ export default function NavChart({
   const [isMobile, setIsMobile] = useState(() => (typeof window !== "undefined" ? window.innerWidth <= 640 : false));
   const [manualScaleMode, setManualScaleMode] = useState(null); // null = auto, 'log' = force log, 'normal' = force normal
   const [chartReady, setChartReady] = useState(0);
+  const [alerts, setAlerts] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadAlerts = () => {
+      fetchStockAlerts()
+        .then((data) => {
+          if (isMounted && Array.isArray(data)) {
+            setAlerts(data);
+          }
+        })
+        .catch(() => {});
+    };
+    loadAlerts();
+    if (typeof window !== "undefined") {
+      window.addEventListener("stockAlertsUpdated", loadAlerts);
+      window.addEventListener("focus", loadAlerts);
+    }
+    return () => {
+      isMounted = false;
+      if (typeof window !== "undefined") {
+        window.removeEventListener("stockAlertsUpdated", loadAlerts);
+        window.removeEventListener("focus", loadAlerts);
+      }
+    };
+  }, []);
 
   const { visibleSeries, toggleSeries } = usePortfolioStore();
   const { theme } = useTheme();
@@ -933,6 +961,36 @@ export default function NavChart({
               >
                 🔴 Perdedoras
               </button>
+              {holdings.some((h) => alerts.some((a) => a.ticker === h.ticker && a.is_active && !a.triggered_at)) && (
+                <button
+                  className="btn-chip"
+                  onClick={() => {
+                    const alertTickers = holdings
+                      .filter((h) => alerts.some((a) => a.ticker === h.ticker && a.is_active && !a.triggered_at))
+                      .map((h) => h.ticker);
+                    if (alertTickers.length === 0) {
+                      toast("No hay posiciones con alerta activa", { icon: "ℹ️" });
+                      return;
+                    }
+                    holdings.forEach((h) => {
+                      const isSelected = h.selected !== false;
+                      const shouldBeSelected = alertTickers.includes(h.ticker);
+                      if (isSelected !== shouldBeSelected && onToggleTicker) {
+                        onToggleTicker(h.ticker);
+                      }
+                    });
+                  }}
+                  title="Filtrar solo posiciones con alerta de venta activa"
+                  style={{
+                    color: isLight ? "#b45309" : "#fbbf24",
+                    borderColor: isLight ? "rgba(217, 119, 6, 0.45)" : "rgba(245, 158, 11, 0.5)",
+                    background: isLight ? "rgba(245, 158, 11, 0.12)" : "rgba(245, 158, 11, 0.18)",
+                    fontWeight: 700,
+                  }}
+                >
+                  🔔 Con Alerta
+                </button>
+              )}
               <button
                 className="btn-chip"
                 onClick={invertSelection}
@@ -956,12 +1014,46 @@ export default function NavChart({
               {holdings.map((h) => {
                 const isSelected = h.selected !== false;
                 const isGain = (h.unrealized_pnl ?? 0) >= 0;
+                const activeAlert = alerts.find(
+                  (a) => a.ticker === h.ticker && a.is_active && !a.triggered_at
+                );
+                const hasAlert = Boolean(activeAlert);
+
+                // Distinct warm amber/orange styling for active sell alert
+                const alertBg = isSelected
+                  ? isLight ? "rgba(245, 158, 11, 0.16)" : "rgba(245, 158, 11, 0.22)"
+                  : isLight ? "rgba(245, 158, 11, 0.05)" : "rgba(245, 158, 11, 0.06)";
+                const alertBorder = isSelected
+                  ? isLight ? "1px solid rgba(217, 119, 6, 0.55)" : "1px solid rgba(245, 158, 11, 0.65)"
+                  : isLight ? "1px dashed rgba(217, 119, 6, 0.3)" : "1px dashed rgba(245, 158, 11, 0.35)";
+                const alertColor = isSelected
+                  ? isLight ? "#b45309" : "#fbbf24"
+                  : isLight ? "#d97706" : "#f59e0b";
+                const alertShadow = isSelected
+                  ? isLight ? "0 0 10px rgba(245, 158, 11, 0.25)" : "0 0 12px rgba(245, 158, 11, 0.35)"
+                  : "none";
+
+                const regularBg = isSelected
+                  ? isGain
+                    ? isLight ? "rgba(2, 132, 199, 0.1)" : "rgba(0, 229, 255, 0.08)"
+                    : "rgba(239, 68, 68, 0.08)"
+                  : isLight ? "rgba(0, 0, 0, 0.03)" : "rgba(255, 255, 255, 0.02)";
+                const regularBorder = isSelected
+                  ? isGain
+                    ? isLight ? "1px solid rgba(2, 132, 199, 0.35)" : "1px solid rgba(0, 229, 255, 0.35)"
+                    : "1px solid rgba(239, 68, 68, 0.35)"
+                  : isLight ? "1px solid rgba(0, 0, 0, 0.1)" : "1px solid rgba(255, 255, 255, 0.08)";
+                const regularColor = isSelected
+                  ? isGain
+                    ? isLight ? "#0284c7" : "#00e5ff"
+                    : "#f87171"
+                  : isLight ? "#94a3b8" : "#64748b";
 
                 return (
                   <button
                     key={h.ticker}
                     onClick={() => onToggleTicker(h.ticker)}
-                    className={`ticker-chip ${isSelected ? "active" : "inactive"} ${isGain ? "gain" : "loss"}`}
+                    className={`ticker-chip ${isSelected ? "active" : "inactive"} ${hasAlert ? "alert" : isGain ? "gain" : "loss"}`}
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
@@ -975,32 +1067,37 @@ export default function NavChart({
                       boxSizing: "border-box",
                       minWidth: "68px",
                       height: "26px",
-                      transition: "background 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease",
-                      background: isSelected
-                        ? isGain
-                          ? isLight ? "rgba(2, 132, 199, 0.1)" : "rgba(0, 229, 255, 0.08)"
-                          : "rgba(239, 68, 68, 0.08)"
-                        : isLight ? "rgba(0, 0, 0, 0.03)" : "rgba(255, 255, 255, 0.02)",
-                      border: `1px solid ${
-                        isSelected
-                          ? isGain
-                            ? isLight ? "rgba(2, 132, 199, 0.35)" : "rgba(0, 229, 255, 0.35)"
-                            : "rgba(239, 68, 68, 0.35)"
-                          : isLight ? "rgba(0, 0, 0, 0.1)" : "rgba(255, 255, 255, 0.08)"
-                      }`,
-                      color: isSelected
-                        ? isGain
-                          ? isLight ? "#0284c7" : "#00e5ff"
-                          : "#f87171"
-                        : isLight ? "#94a3b8" : "#64748b",
+                      transition: "all 0.15s ease",
+                      background: hasAlert ? alertBg : regularBg,
+                      border: hasAlert ? alertBorder : regularBorder,
+                      color: hasAlert ? alertColor : regularColor,
+                      boxShadow: hasAlert ? alertShadow : "none",
                       opacity: isSelected ? 1 : 0.55,
                     }}
-                    title={`Clic para ${isSelected ? "excluir" : "incluir"} ${h.ticker}`}
+                    title={
+                      hasAlert
+                        ? `Alerta de venta activa en ${h.ticker}: ${
+                            activeAlert.alert_type === "STOP_LOSS" ? "Stop Loss" : "Take Profit"
+                          } (${activeAlert.target_value >= 0 ? "+" : ""}${activeAlert.target_value}%). Clic para ${isSelected ? "excluir" : "incluir"}.`
+                        : `Clic para ${isSelected ? "excluir" : "incluir"} ${h.ticker}`
+                    }
                   >
-                    <span style={{ fontSize: "0.65rem", width: "10px", textAlign: "center", flexShrink: 0 }}>
-                      {isSelected ? "✓" : "✗"}
+                    <span style={{ fontSize: hasAlert && isSelected ? "0.75rem" : "0.65rem", width: "12px", textAlign: "center", flexShrink: 0 }}>
+                      {isSelected ? (hasAlert ? "🔔" : "✓") : "✗"}
                     </span>
                     <span style={{ flexShrink: 0 }}>{h.ticker}</span>
+                    {hasAlert && isSelected && typeof activeAlert.target_value === "number" && (
+                      <span
+                        style={{
+                          fontSize: "0.62rem",
+                          fontWeight: 800,
+                          opacity: 0.9,
+                          marginLeft: 1,
+                        }}
+                      >
+                        {activeAlert.target_value >= 0 ? "+" : ""}{activeAlert.target_value}%
+                      </span>
+                    )}
                   </button>
                 );
               })}
