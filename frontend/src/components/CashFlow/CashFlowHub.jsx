@@ -129,6 +129,18 @@ export default function CashFlowHub() {
   const [showCreditCards, setShowCreditCards] = useState(false);
   const [expandedCard, setExpandedCard] = useState(null); // 'invested' | 'yield' | 'closed' | null
 
+  const areAllAccordionsExpanded =
+    showLiquidity && showRules && showEmergency && showPillars && showExpenses && showCreditCards;
+  const toggleAllAccordions = () => {
+    const nextState = !areAllAccordionsExpanded;
+    setShowLiquidity(nextState);
+    setShowRules(nextState);
+    setShowEmergency(nextState);
+    setShowPillars(nextState);
+    setShowExpenses(nextState);
+    setShowCreditCards(nextState);
+  };
+
   // Ensure fixed income accounts are fetched from backend SSOT on mount
   useEffect(() => {
     initFetchFixedIncome();
@@ -1940,258 +1952,426 @@ export default function CashFlowHub() {
         )}
       </div>
 
-      {/* ── 5. Real Liquid Cash & Funds Availability Card (COLLAPSIBLE) ──────────── */}
+      {/* ── Control Header for Collapsible Cash Flow Modules ────────────────────── */}
       <div
         style={{
-          background: "var(--bg-card)",
-          border: "1px solid var(--border)",
-          borderRadius: 14,
-          padding: showLiquidity ? "16px" : "12px 18px",
-          transition: "all 0.2s ease",
-          marginTop: 14,
-          boxShadow: "var(--shadow-card)",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginTop: 20,
+          marginBottom: 8,
+          padding: "0 4px",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            cursor: "pointer",
-            flexWrap: "wrap",
-            gap: 10,
-            marginBottom: showLiquidity ? 14 : 0,
-          }}
-          onClick={() => setShowLiquidity(!showLiquidity)}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <span>💧</span>
-            <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--text-primary)" }}>
-              Disponibilidad Real de Plata Líquida & Fondos
-            </span>
-            <span
-              style={{
-                fontSize: "0.7rem",
-                color: "#a855f7",
-                background: "rgba(130, 10, 209, 0.15)",
-                padding: "2px 8px",
-                borderRadius: 12,
-                border: "1px solid rgba(130, 10, 209, 0.3)",
-              }}
-            >
-              {payrollAccount?.name || "Cuenta Principal"}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowLiquidity(!showLiquidity);
-            }}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span
             style={{
-              background: "var(--bg-surface)",
-              border: "1px solid var(--border)",
-              borderRadius: 6,
-              padding: "4px 10px",
-              color: "var(--text-muted)",
-              fontSize: "0.74rem",
-              cursor: "pointer",
+              fontSize: "0.8rem",
+              fontWeight: 700,
+              color: "var(--text-secondary)",
+              textTransform: "uppercase",
+              letterSpacing: "0.06em",
             }}
           >
-            {showLiquidity ? "▲ Ocultar Disponibilidad" : "▼ Desplegar Disponibilidad"}
-          </button>
-        </div>
-
-        {showLiquidity && (
-          <RealCashLiquidityCard
-            payrollAccount={payrollAccount}
-            totalInflow={totalInflow}
-            inflows={periodInflows}
-            needs={periodNeeds}
-            wants={periodWants}
-            wealth={periodWealth}
-            creditCards={creditCards}
-            creditPurchases={creditPurchases}
-            creditCardPayments={creditCardPayments}
-            expensesLog={periodExpenses}
-            fixedIncomeAccounts={fixedAccounts}
-            activePeriod={activePeriod}
-            currency={currency}
-            fxRate={fxRate}
-            onOpenPayrollModal={() => setPayrollEntityModalOpen(true)}
-            onOpenExpenseModal={() => {
-              setExpenseToEdit(null);
-              setExpenseModalOpen(true);
-            }}
-            onOpenPaymentModal={() => setPaymentModalOpen(true)}
-          />
-        )}
-      </div>
-
-      {/* ── 6. Dynamic Rule & Strategy Selector (COLLAPSIBLE) ────────────────────── */}
-      <div
-        style={{
-          background: "var(--bg-card)",
-          border: "1px solid var(--border)",
-          borderRadius: 14,
-          padding: showRules ? "16px" : "12px 18px",
-          transition: "all 0.2s ease",
-          marginTop: 14,
-          boxShadow: "var(--shadow-card)",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            cursor: "pointer",
-            flexWrap: "wrap",
-            gap: 10,
-            marginBottom: showRules ? 14 : 0,
-          }}
-          onClick={() => setShowRules(!showRules)}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <span>⚙️</span>
-            <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--text-primary)" }}>
-              Distribución Estratégica del Flujo & Reglas
-            </span>
-            <span
-              style={{
-                fontSize: "0.7rem",
-                color: "#0284c7",
-                background: "rgba(2, 132, 199, 0.12)",
-                padding: "2px 8px",
-                borderRadius: 12,
-                border: "1px solid rgba(2, 132, 199, 0.25)",
-              }}
-            >
-              Ratio: {customRatios.needs}% Fijos • {customRatios.wants}% Gustos • {customRatios.savings}% Ahorro
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowRules(!showRules);
-            }}
+            Módulos del Flujo de Caja
+          </span>
+          <span
             style={{
-              background: "var(--bg-surface)",
-              border: "1px solid var(--border)",
-              borderRadius: 6,
-              padding: "4px 10px",
+              fontSize: "0.72rem",
               color: "var(--text-muted)",
-              fontSize: "0.74rem",
-              cursor: "pointer",
+              background: isLight ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.06)",
+              padding: "1px 7px",
+              borderRadius: 10,
             }}
           >
-            {showRules ? "▲ Ocultar Estrategia" : "▼ Desplegar Estrategia"}
-          </button>
+            6 módulos
+          </span>
         </div>
-
-        {showRules && (
-          <CashFlowRuleSelector
-            allocationModel={allocationModel}
-            onSelectModel={setAllocationModel}
-            customRatios={customRatios}
-            onUpdateRatios={setCustomRatios}
-            totalInflow={totalInflow}
-            totalNeeds={totalNeeds}
-            totalWants={totalWants}
-            totalWealth={totalWealth}
-            expensesLog={periodExpenses}
-            currency={currency}
-            fxRate={fxRate}
-          />
-        )}
+        <button
+          type="button"
+          onClick={toggleAllAccordions}
+          style={{
+            background: isLight ? "rgba(2, 132, 199, 0.08)" : "rgba(56, 189, 248, 0.12)",
+            border: `1px solid ${isLight ? "rgba(2, 132, 199, 0.25)" : "rgba(56, 189, 248, 0.3)"}`,
+            color: isLight ? "#0284c7" : "#38bdf8",
+            fontSize: "0.74rem",
+            fontWeight: 600,
+            cursor: "pointer",
+            padding: "4px 10px",
+            borderRadius: 6,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 5,
+            transition: "all 0.2s ease",
+          }}
+        >
+          <span>{areAllAccordionsExpanded ? "▲" : "▼"}</span>
+          <span>{areAllAccordionsExpanded ? "Contraer todos" : "Expandir todos"}</span>
+        </button>
       </div>
 
-      {/* ── 7. Emergency Fund Runway Tracker (COLLAPSIBLE) ───────────────────────── */}
-      <div
-        style={{
-          background: "var(--bg-card)",
-          border: "1px solid var(--border)",
-          borderRadius: 14,
-          padding: showEmergency ? "16px" : "12px 18px",
-          transition: "all 0.2s ease",
-          marginTop: 14,
-          boxShadow: "var(--shadow-card)",
-        }}
-      >
+      {/* ── Accordion Stack with Compact 8px Gap ─────────────────────────── */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {/* ── 5. Real Liquid Cash & Funds Availability Card ──────────── */}
         <div
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            cursor: "pointer",
-            flexWrap: "wrap",
-            gap: 10,
-            marginBottom: showEmergency ? 14 : 0,
+            background: showLiquidity
+              ? (isLight ? "rgba(2, 132, 199, 0.025)" : "rgba(56, 189, 248, 0.035)")
+              : "var(--bg-card)",
+            border: showLiquidity
+              ? (isLight ? "1px solid rgba(2, 132, 199, 0.28)" : "1px solid rgba(56, 189, 248, 0.32)")
+              : "1px solid var(--border)",
+            borderLeft: `4px solid ${isLight ? "#0284c7" : "#38bdf8"}`,
+            borderRadius: 14,
+            padding: showLiquidity ? "16px" : "12px 18px",
+            transition: "all 0.2s ease",
+            boxShadow: showLiquidity
+              ? (isLight ? "0 4px 18px rgba(2, 132, 199, 0.08)" : "0 4px 20px rgba(0, 0, 0, 0.28)")
+              : "var(--shadow-card)",
           }}
-          onClick={() => setShowEmergency(!showEmergency)}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <span>🛡️</span>
-            <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--text-primary)" }}>
-              Fondo de Emergencia & Pista de Aterrizaje (Runway)
-            </span>
-            <span
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              cursor: "pointer",
+              flexWrap: "wrap",
+              gap: 10,
+              paddingBottom: showLiquidity ? 12 : 0,
+              marginBottom: showLiquidity ? 14 : 0,
+              borderBottom: showLiquidity
+                ? (isLight ? "1px solid rgba(2, 132, 199, 0.15)" : "1px solid rgba(56, 189, 248, 0.15)")
+                : "none",
+            }}
+            onClick={() => setShowLiquidity(!showLiquidity)}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 8,
+                  background: isLight ? "rgba(2, 132, 199, 0.12)" : "rgba(56, 189, 248, 0.18)",
+                  border: `1px solid ${isLight ? "rgba(2, 132, 199, 0.25)" : "rgba(56, 189, 248, 0.3)"}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "0.95rem",
+                  flexShrink: 0,
+                }}
+              >
+                💧
+              </div>
+              <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                Disponibilidad Real de Plata Líquida & Fondos
+              </span>
+              <span
+                style={{
+                  fontSize: "0.7rem",
+                  fontWeight: 600,
+                  color: isLight ? "#0284c7" : "#38bdf8",
+                  background: isLight ? "rgba(2, 132, 199, 0.1)" : "rgba(56, 189, 248, 0.14)",
+                  padding: "2px 8px",
+                  borderRadius: 12,
+                  border: `1px solid ${isLight ? "rgba(2, 132, 199, 0.25)" : "rgba(56, 189, 248, 0.3)"}`,
+                }}
+              >
+                {payrollAccount?.name || "Cuenta Principal"}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowLiquidity(!showLiquidity);
+              }}
               style={{
-                fontSize: "0.7rem",
-                color: "#10b981",
-                background: "rgba(16, 185, 129, 0.12)",
-                padding: "2px 8px",
-                borderRadius: 12,
-                border: "1px solid rgba(16, 185, 129, 0.25)",
+                background: showLiquidity
+                  ? (isLight ? "rgba(2, 132, 199, 0.12)" : "rgba(56, 189, 248, 0.18)")
+                  : "var(--bg-surface)",
+                border: showLiquidity
+                  ? `1px solid ${isLight ? "#0284c7" : "#38bdf8"}`
+                  : "1px solid var(--border)",
+                borderRadius: 6,
+                padding: "4px 10px",
+                color: showLiquidity
+                  ? (isLight ? "#0284c7" : "#38bdf8")
+                  : "var(--text-muted)",
+                fontWeight: showLiquidity ? 600 : 500,
+                fontSize: "0.74rem",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
               }}
             >
-              Meta: {emergencyFundTargetMonths} meses
-            </span>
+              {showLiquidity ? "▲ Ocultar Disponibilidad" : "▼ Desplegar Disponibilidad"}
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowEmergency(!showEmergency);
-            }}
-            style={{
-              background: "var(--bg-surface)",
-              border: "1px solid var(--border)",
-              borderRadius: 6,
-              padding: "4px 10px",
-              color: "var(--text-muted)",
-              fontSize: "0.74rem",
-              cursor: "pointer",
-            }}
-          >
-            {showEmergency ? "▲ Ocultar Fondo Emergencia" : "▼ Desplegar Fondo Emergencia"}
-          </button>
+
+          {showLiquidity && (
+            <RealCashLiquidityCard
+              payrollAccount={payrollAccount}
+              totalInflow={totalInflow}
+              inflows={periodInflows}
+              needs={periodNeeds}
+              wants={periodWants}
+              wealth={periodWealth}
+              creditCards={creditCards}
+              creditPurchases={creditPurchases}
+              creditCardPayments={creditCardPayments}
+              expensesLog={periodExpenses}
+              fixedIncomeAccounts={fixedAccounts}
+              activePeriod={activePeriod}
+              currency={currency}
+              fxRate={fxRate}
+              onOpenPayrollModal={() => setPayrollEntityModalOpen(true)}
+              onOpenExpenseModal={() => {
+                setExpenseToEdit(null);
+                setExpenseModalOpen(true);
+              }}
+              onOpenPaymentModal={() => setPaymentModalOpen(true)}
+            />
+          )}
         </div>
 
-        {showEmergency && (
-          <EmergencyFundCard
-            emergencyItem={emergencyItem}
-            totalNeeds={totalNeeds}
-            targetMonths={emergencyFundTargetMonths}
-            onSelectTargetMonths={setEmergencyFundTargetMonths}
-            currency={currency}
-            fxRate={fxRate}
-            onEditEmergency={() => handleOpenAddModal("wealth")}
-          />
-        )}
-      </div>
+        {/* ── 6. Dynamic Rule & Strategy Selector ────────────────────── */}
+        <div
+          style={{
+            background: showRules
+              ? (isLight ? "rgba(79, 70, 229, 0.025)" : "rgba(129, 140, 248, 0.035)")
+              : "var(--bg-card)",
+            border: showRules
+              ? (isLight ? "1px solid rgba(79, 70, 229, 0.28)" : "1px solid rgba(129, 140, 248, 0.32)")
+              : "1px solid var(--border)",
+            borderLeft: `4px solid ${isLight ? "#4f46e5" : "#818cf8"}`,
+            borderRadius: 14,
+            padding: showRules ? "16px" : "12px 18px",
+            transition: "all 0.2s ease",
+            boxShadow: showRules
+              ? (isLight ? "0 4px 18px rgba(79, 70, 229, 0.08)" : "0 4px 20px rgba(0, 0, 0, 0.28)")
+              : "var(--shadow-card)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              cursor: "pointer",
+              flexWrap: "wrap",
+              gap: 10,
+              paddingBottom: showRules ? 12 : 0,
+              marginBottom: showRules ? 14 : 0,
+              borderBottom: showRules
+                ? (isLight ? "1px solid rgba(79, 70, 229, 0.15)" : "1px solid rgba(129, 140, 248, 0.15)")
+                : "none",
+            }}
+            onClick={() => setShowRules(!showRules)}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 8,
+                  background: isLight ? "rgba(79, 70, 229, 0.12)" : "rgba(129, 140, 248, 0.18)",
+                  border: `1px solid ${isLight ? "rgba(79, 70, 229, 0.25)" : "rgba(129, 140, 248, 0.3)"}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "0.95rem",
+                  flexShrink: 0,
+                }}
+              >
+                ⚙️
+              </div>
+              <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                Distribución Estratégica del Flujo & Reglas
+              </span>
+              <span
+                style={{
+                  fontSize: "0.7rem",
+                  fontWeight: 600,
+                  color: isLight ? "#4f46e5" : "#818cf8",
+                  background: isLight ? "rgba(79, 70, 229, 0.1)" : "rgba(129, 140, 248, 0.14)",
+                  padding: "2px 8px",
+                  borderRadius: 12,
+                  border: `1px solid ${isLight ? "rgba(79, 70, 229, 0.25)" : "rgba(129, 140, 248, 0.3)"}`,
+                }}
+              >
+                Ratio: {customRatios.needs}% Fijos • {customRatios.wants}% Gustos • {customRatios.savings}% Ahorro
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowRules(!showRules);
+              }}
+              style={{
+                background: showRules
+                  ? (isLight ? "rgba(79, 70, 229, 0.12)" : "rgba(129, 140, 248, 0.18)")
+                  : "var(--bg-surface)",
+                border: showRules
+                  ? `1px solid ${isLight ? "#4f46e5" : "#818cf8"}`
+                  : "1px solid var(--border)",
+                borderRadius: 6,
+                padding: "4px 10px",
+                color: showRules
+                  ? (isLight ? "#4f46e5" : "#818cf8")
+                  : "var(--text-muted)",
+                fontWeight: showRules ? 600 : 500,
+                fontSize: "0.74rem",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+              }}
+            >
+              {showRules ? "▲ Ocultar Estrategia" : "▼ Desplegar Estrategia"}
+            </button>
+          </div>
+
+          {showRules && (
+            <CashFlowRuleSelector
+              allocationModel={allocationModel}
+              onSelectModel={setAllocationModel}
+              customRatios={customRatios}
+              onUpdateRatios={setCustomRatios}
+              totalInflow={totalInflow}
+              totalNeeds={totalNeeds}
+              totalWants={totalWants}
+              totalWealth={totalWealth}
+              expensesLog={periodExpenses}
+              currency={currency}
+              fxRate={fxRate}
+            />
+          )}
+        </div>
+
+        {/* ── 7. Emergency Fund Runway Tracker ───────────────────────── */}
+        <div
+          style={{
+            background: showEmergency
+              ? (isLight ? "rgba(5, 150, 105, 0.025)" : "rgba(16, 185, 129, 0.035)")
+              : "var(--bg-card)",
+            border: showEmergency
+              ? (isLight ? "1px solid rgba(5, 150, 105, 0.28)" : "1px solid rgba(16, 185, 129, 0.32)")
+              : "1px solid var(--border)",
+            borderLeft: `4px solid ${isLight ? "#059669" : "#10b981"}`,
+            borderRadius: 14,
+            padding: showEmergency ? "16px" : "12px 18px",
+            transition: "all 0.2s ease",
+            boxShadow: showEmergency
+              ? (isLight ? "0 4px 18px rgba(5, 150, 105, 0.08)" : "0 4px 20px rgba(0, 0, 0, 0.28)")
+              : "var(--shadow-card)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              cursor: "pointer",
+              flexWrap: "wrap",
+              gap: 10,
+              paddingBottom: showEmergency ? 12 : 0,
+              marginBottom: showEmergency ? 14 : 0,
+              borderBottom: showEmergency
+                ? (isLight ? "1px solid rgba(5, 150, 105, 0.15)" : "1px solid rgba(16, 185, 129, 0.15)")
+                : "none",
+            }}
+            onClick={() => setShowEmergency(!showEmergency)}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 8,
+                  background: isLight ? "rgba(5, 150, 105, 0.12)" : "rgba(16, 185, 129, 0.18)",
+                  border: `1px solid ${isLight ? "rgba(5, 150, 105, 0.25)" : "rgba(16, 185, 129, 0.3)"}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "0.95rem",
+                  flexShrink: 0,
+                }}
+              >
+                🛡️
+              </div>
+              <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                Fondo de Emergencia & Pista de Aterrizaje (Runway)
+              </span>
+              <span
+                style={{
+                  fontSize: "0.7rem",
+                  fontWeight: 600,
+                  color: isLight ? "#059669" : "#10b981",
+                  background: isLight ? "rgba(5, 150, 105, 0.1)" : "rgba(16, 185, 129, 0.14)",
+                  padding: "2px 8px",
+                  borderRadius: 12,
+                  border: `1px solid ${isLight ? "rgba(5, 150, 105, 0.25)" : "rgba(16, 185, 129, 0.3)"}`,
+                }}
+              >
+                Meta: {emergencyFundTargetMonths} meses
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowEmergency(!showEmergency);
+              }}
+              style={{
+                background: showEmergency
+                  ? (isLight ? "rgba(5, 150, 105, 0.12)" : "rgba(16, 185, 129, 0.18)")
+                  : "var(--bg-surface)",
+                border: showEmergency
+                  ? `1px solid ${isLight ? "#059669" : "#10b981"}`
+                  : "1px solid var(--border)",
+                borderRadius: 6,
+                padding: "4px 10px",
+                color: showEmergency
+                  ? (isLight ? "#059669" : "#10b981")
+                  : "var(--text-muted)",
+                fontWeight: showEmergency ? 600 : 500,
+                fontSize: "0.74rem",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+              }}
+            >
+              {showEmergency ? "▲ Ocultar Fondo Emergencia" : "▼ Desplegar Fondo Emergencia"}
+            </button>
+          </div>
+
+          {showEmergency && (
+            <EmergencyFundCard
+              emergencyItem={emergencyItem}
+              totalNeeds={totalNeeds}
+              targetMonths={emergencyFundTargetMonths}
+              onSelectTargetMonths={setEmergencyFundTargetMonths}
+              currency={currency}
+              fxRate={fxRate}
+              onEditEmergency={() => handleOpenAddModal("wealth")}
+            />
+          )}
+        </div>
 
       {/* ── 8. 4 Pillars Structured Breakdown Grid (Topes Presupuestados vs Gastado) (COLLAPSIBLE) ── */}
       <div
         style={{
-          background: "var(--bg-card)",
-          border: "1px solid var(--border)",
+          background: showPillars
+            ? (isLight ? "rgba(217, 119, 6, 0.025)" : "rgba(245, 158, 11, 0.035)")
+            : "var(--bg-card)",
+          border: showPillars
+            ? (isLight ? "1px solid rgba(217, 119, 6, 0.28)" : "1px solid rgba(245, 158, 11, 0.32)")
+            : "1px solid var(--border)",
+          borderLeft: `4px solid ${isLight ? "#d97706" : "#f59e0b"}`,
           borderRadius: 14,
           padding: showPillars ? "16px" : "12px 18px",
           transition: "all 0.2s ease",
-          marginTop: 14,
-          boxShadow: "var(--shadow-card)",
+          boxShadow: showPillars
+            ? (isLight ? "0 4px 18px rgba(217, 119, 6, 0.08)" : "0 4px 20px rgba(0, 0, 0, 0.28)")
+            : "var(--shadow-card)",
         }}
       >
         <div
@@ -2202,23 +2382,43 @@ export default function CashFlowHub() {
             cursor: "pointer",
             flexWrap: "wrap",
             gap: 10,
+            paddingBottom: showPillars ? 12 : 0,
             marginBottom: showPillars ? 14 : 0,
+            borderBottom: showPillars
+              ? (isLight ? "1px solid rgba(217, 119, 6, 0.15)" : "1px solid rgba(245, 158, 11, 0.15)")
+              : "none",
           }}
           onClick={() => setShowPillars(!showPillars)}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <span>🏛️</span>
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 8,
+                background: isLight ? "rgba(217, 119, 6, 0.12)" : "rgba(245, 158, 11, 0.18)",
+                border: `1px solid ${isLight ? "rgba(217, 119, 6, 0.25)" : "rgba(245, 158, 11, 0.3)"}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "0.95rem",
+                flexShrink: 0,
+              }}
+            >
+              🏛️
+            </div>
             <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--text-primary)" }}>
               Presupuesto Estructurado por Pilares (Ingresos, Gastos Fijos, Estilo de Vida, Ahorro)
             </span>
             <span
               style={{
                 fontSize: "0.7rem",
-                color: "#a855f7",
-                background: "rgba(168, 85, 247, 0.12)",
+                fontWeight: 600,
+                color: isLight ? "#d97706" : "#f59e0b",
+                background: isLight ? "rgba(217, 119, 6, 0.1)" : "rgba(245, 158, 11, 0.14)",
                 padding: "2px 8px",
                 borderRadius: 12,
-                border: "1px solid rgba(168, 85, 247, 0.25)",
+                border: `1px solid ${isLight ? "rgba(217, 119, 6, 0.25)" : "rgba(245, 158, 11, 0.3)"}`,
               }}
             >
               Asignado: {formatMoney(totalAllocated, currency)} ({totalInflow > 0 ? Math.round((totalAllocated / totalInflow) * 100) : 0}%)
@@ -2231,13 +2431,21 @@ export default function CashFlowHub() {
               setShowPillars(!showPillars);
             }}
             style={{
-              background: "var(--bg-surface)",
-              border: "1px solid var(--border)",
+              background: showPillars
+                ? (isLight ? "rgba(217, 119, 6, 0.12)" : "rgba(245, 158, 11, 0.18)")
+                : "var(--bg-surface)",
+              border: showPillars
+                ? `1px solid ${isLight ? "#d97706" : "#f59e0b"}`
+                : "1px solid var(--border)",
               borderRadius: 6,
               padding: "4px 10px",
-              color: "var(--text-muted)",
+              color: showPillars
+                ? (isLight ? "#d97706" : "#f59e0b")
+                : "var(--text-muted)",
+              fontWeight: showPillars ? 600 : 500,
               fontSize: "0.74rem",
               cursor: "pointer",
+              transition: "all 0.2s ease",
             }}
           >
             {showPillars ? "▲ Ocultar Pilares" : "▼ Desplegar Pilares"}
@@ -2349,13 +2557,19 @@ export default function CashFlowHub() {
       {/* ── 9. Expenses Log & Executed Transactions Section (COLLAPSIBLE) ────────── */}
       <div
         style={{
-          background: "var(--bg-card)",
-          border: "1px solid var(--border)",
+          background: showExpenses
+            ? (isLight ? "rgba(147, 51, 234, 0.025)" : "rgba(192, 132, 252, 0.035)")
+            : "var(--bg-card)",
+          border: showExpenses
+            ? (isLight ? "1px solid rgba(147, 51, 234, 0.28)" : "1px solid rgba(192, 132, 252, 0.32)")
+            : "1px solid var(--border)",
+          borderLeft: `4px solid ${isLight ? "#9333ea" : "#c084fc"}`,
           borderRadius: 14,
           padding: showExpenses ? "16px" : "12px 18px",
           transition: "all 0.2s ease",
-          marginTop: 14,
-          boxShadow: "var(--shadow-card)",
+          boxShadow: showExpenses
+            ? (isLight ? "0 4px 18px rgba(147, 51, 234, 0.08)" : "0 4px 20px rgba(0, 0, 0, 0.28)")
+            : "var(--shadow-card)",
         }}
       >
         <div
@@ -2366,23 +2580,43 @@ export default function CashFlowHub() {
             cursor: "pointer",
             flexWrap: "wrap",
             gap: 10,
+            paddingBottom: showExpenses ? 12 : 0,
             marginBottom: showExpenses ? 14 : 0,
+            borderBottom: showExpenses
+              ? (isLight ? "1px solid rgba(147, 51, 234, 0.15)" : "1px solid rgba(192, 132, 252, 0.15)")
+              : "none",
           }}
           onClick={() => setShowExpenses(!showExpenses)}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <span>📋</span>
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 8,
+                background: isLight ? "rgba(147, 51, 234, 0.12)" : "rgba(192, 132, 252, 0.18)",
+                border: `1px solid ${isLight ? "rgba(147, 51, 234, 0.25)" : "rgba(192, 132, 252, 0.3)"}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "0.95rem",
+                flexShrink: 0,
+              }}
+            >
+              📋
+            </div>
             <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--text-primary)" }}>
               Historial de Gastos Reales, Ahorro & Abonos ({activePeriod})
             </span>
             <span
               style={{
                 fontSize: "0.7rem",
-                color: "#f43f5e",
-                background: "rgba(244, 63, 94, 0.12)",
+                fontWeight: 600,
+                color: isLight ? "#9333ea" : "#c084fc",
+                background: isLight ? "rgba(147, 51, 234, 0.1)" : "rgba(192, 132, 252, 0.14)",
                 padding: "2px 8px",
                 borderRadius: 12,
-                border: "1px solid rgba(244, 63, 94, 0.25)",
+                border: `1px solid ${isLight ? "rgba(147, 51, 234, 0.25)" : "rgba(192, 132, 252, 0.3)"}`,
               }}
             >
               {(expensesLog || []).filter(tx => !tx.period || tx.period === activePeriod).length} movimientos
@@ -2395,13 +2629,21 @@ export default function CashFlowHub() {
               setShowExpenses(!showExpenses);
             }}
             style={{
-              background: "var(--bg-surface)",
-              border: "1px solid var(--border)",
+              background: showExpenses
+                ? (isLight ? "rgba(147, 51, 234, 0.12)" : "rgba(192, 132, 252, 0.18)")
+                : "var(--bg-surface)",
+              border: showExpenses
+                ? `1px solid ${isLight ? "#9333ea" : "#c084fc"}`
+                : "1px solid var(--border)",
               borderRadius: 6,
               padding: "4px 10px",
-              color: "var(--text-muted)",
+              color: showExpenses
+                ? (isLight ? "#9333ea" : "#c084fc")
+                : "var(--text-muted)",
+              fontWeight: showExpenses ? 600 : 500,
               fontSize: "0.74rem",
               cursor: "pointer",
+              transition: "all 0.2s ease",
             }}
           >
             {showExpenses ? "▲ Ocultar Gastos" : "▼ Desplegar Gastos"}
@@ -2440,13 +2682,19 @@ export default function CashFlowHub() {
       {/* ── 10. Credit Cards & Installments Management Section (COLLAPSIBLE) ──────── */}
       <div
         style={{
-          background: "var(--bg-card)",
-          border: "1px solid var(--border)",
+          background: showCreditCards
+            ? (isLight ? "rgba(225, 29, 72, 0.025)" : "rgba(251, 113, 133, 0.035)")
+            : "var(--bg-card)",
+          border: showCreditCards
+            ? (isLight ? "1px solid rgba(225, 29, 72, 0.28)" : "1px solid rgba(251, 113, 133, 0.32)")
+            : "1px solid var(--border)",
+          borderLeft: `4px solid ${isLight ? "#e11d48" : "#fb7185"}`,
           borderRadius: 14,
           padding: showCreditCards ? "16px" : "12px 18px",
           transition: "all 0.2s ease",
-          marginTop: 14,
-          boxShadow: "var(--shadow-card)",
+          boxShadow: showCreditCards
+            ? (isLight ? "0 4px 18px rgba(225, 29, 72, 0.08)" : "0 4px 20px rgba(0, 0, 0, 0.28)")
+            : "var(--shadow-card)",
         }}
       >
         <div
@@ -2457,23 +2705,43 @@ export default function CashFlowHub() {
             cursor: "pointer",
             flexWrap: "wrap",
             gap: 10,
+            paddingBottom: showCreditCards ? 12 : 0,
             marginBottom: showCreditCards ? 14 : 0,
+            borderBottom: showCreditCards
+              ? (isLight ? "1px solid rgba(225, 29, 72, 0.15)" : "1px solid rgba(251, 113, 133, 0.15)")
+              : "none",
           }}
           onClick={() => setShowCreditCards(!showCreditCards)}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <span>💳</span>
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 8,
+                background: isLight ? "rgba(225, 29, 72, 0.12)" : "rgba(251, 113, 133, 0.18)",
+                border: `1px solid ${isLight ? "rgba(225, 29, 72, 0.25)" : "rgba(251, 113, 133, 0.3)"}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "0.95rem",
+                flexShrink: 0,
+              }}
+            >
+              💳
+            </div>
             <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--text-primary)" }}>
               Tarjetas de Crédito & Financiación Inteligente (MSI / Cuotas)
             </span>
             <span
               style={{
                 fontSize: "0.7rem",
-                color: "#10b981",
-                background: "rgba(16, 185, 129, 0.12)",
+                fontWeight: 600,
+                color: isLight ? "#e11d48" : "#fb7185",
+                background: isLight ? "rgba(225, 29, 72, 0.1)" : "rgba(251, 113, 133, 0.14)",
                 padding: "2px 8px",
                 borderRadius: 12,
-                border: "1px solid rgba(16, 185, 129, 0.25)",
+                border: `1px solid ${isLight ? "rgba(225, 29, 72, 0.25)" : "rgba(251, 113, 133, 0.3)"}`,
               }}
             >
               {creditCards.length} tarjeta(s) registrada(s)
@@ -2486,13 +2754,21 @@ export default function CashFlowHub() {
               setShowCreditCards(!showCreditCards);
             }}
             style={{
-              background: "var(--bg-surface)",
-              border: "1px solid var(--border)",
+              background: showCreditCards
+                ? (isLight ? "rgba(225, 29, 72, 0.12)" : "rgba(251, 113, 133, 0.18)")
+                : "var(--bg-surface)",
+              border: showCreditCards
+                ? `1px solid ${isLight ? "#e11d48" : "#fb7185"}`
+                : "1px solid var(--border)",
               borderRadius: 6,
               padding: "4px 10px",
-              color: "var(--text-muted)",
+              color: showCreditCards
+                ? (isLight ? "#e11d48" : "#fb7185")
+                : "var(--text-muted)",
+              fontWeight: showCreditCards ? 600 : 500,
               fontSize: "0.74rem",
               cursor: "pointer",
+              transition: "all 0.2s ease",
             }}
           >
             {showCreditCards ? "▲ Ocultar Tarjetas" : "▼ Desplegar Tarjetas"}
@@ -2523,6 +2799,7 @@ export default function CashFlowHub() {
             />
           </div>
         )}
+      </div>
       </div>
 
       {/* ── Banner de Referidos Financieros (Nu, Rappi, Plenti, ARQ) ── */}

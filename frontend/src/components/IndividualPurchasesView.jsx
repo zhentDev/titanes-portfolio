@@ -58,6 +58,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
   } = usePortfolioStore();
 
   const { theme } = useTheme();
+  const isLight = theme === "light";
   const chartColors = useMemo(() => getChartColors(theme), [theme]);
 
   const status = batchUpdateStatus?.[portfolioId] || {};
@@ -2555,7 +2556,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                   margin: "0 0 16px 0",
                   fontSize: "1.05rem",
                   fontWeight: 700,
-                  color: "#00e5ff",
+                  color: isLight ? "#0284c7" : "#00e5ff",
                   display: "flex",
                   alignItems: "center",
                   gap: 8,
@@ -2566,9 +2567,11 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                   <span
                     style={{
                       fontSize: "0.7rem",
-                      background: "#00e5ff20",
+                      background: isLight ? "rgba(2, 132, 199, 0.12)" : "rgba(0, 229, 255, 0.12)",
+                      color: isLight ? "#0284c7" : "#00e5ff",
                       padding: "2px 6px",
                       borderRadius: 10,
+                      fontWeight: 600,
                     }}
                   >
                     (Manual)
@@ -2582,11 +2585,11 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                       onClick={() => setShowExecutionModal(true)}
                       className="btn btn-sm"
                       style={{
-                        background: "#00e5ff",
-                        color: "#000",
+                        background: isLight ? "#0284c7" : "#00e5ff",
+                        color: isLight ? "#ffffff" : "#000",
                         fontWeight: 600,
                         border: "none",
-                        boxShadow: "0 0 10px rgba(0, 229, 255, 0.4)",
+                        boxShadow: isLight ? "0 2px 8px rgba(2, 132, 199, 0.3)" : "0 0 10px rgba(0, 229, 255, 0.4)",
                       }}
                     >
                       🚀 Ejecutar Plan
@@ -2596,9 +2599,10 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                   onClick={() => setShowPlanModal(true)}
                   className="btn btn-sm"
                   style={{
-                    background: "transparent",
-                    border: "1px solid rgba(0, 229, 255, 0.3)",
-                    color: "#00e5ff",
+                    background: isLight ? "rgba(2, 132, 199, 0.06)" : "transparent",
+                    border: isLight ? "1px solid rgba(2, 132, 199, 0.3)" : "1px solid rgba(0, 229, 255, 0.3)",
+                    color: isLight ? "#0284c7" : "#00e5ff",
+                    fontWeight: 600,
                   }}
                 >
                   ⚙️ Configurar
@@ -2619,7 +2623,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                     <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
                       Frecuencia Detectada
                     </div>
-                    <div style={{ fontSize: "1.1rem", fontWeight: 600, color: "#f1f5f9" }}>
+                    <div style={{ fontSize: "1.1rem", fontWeight: 700, color: isLight ? "#0f172a" : "#f1f5f9" }}>
                       {planAnalysis.frequencyDays
                         ? `Cada ${planAnalysis.frequencyDays} días`
                         : "---"}
@@ -2631,7 +2635,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                     </div>
                     <div
                       className="mono"
-                      style={{ fontSize: "1.1rem", fontWeight: 600, color: "#f1f5f9" }}
+                      style={{ fontSize: "1.1rem", fontWeight: 700, color: isLight ? "#0f172a" : "#f1f5f9" }}
                     >
                       ${planAnalysis.avgAmount?.toFixed(2) || "0.00"}
                     </div>
@@ -2644,11 +2648,11 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                       <div
                         style={{
                           fontSize: "1.1rem",
-                          fontWeight: 600,
+                          fontWeight: 700,
                           color: planAnalysis.nextDate
                             ? new Date().toISOString().split("T")[0] >= planAnalysis.nextDate
                               ? "#ef4444"
-                              : "#4ade80"
+                              : (isLight ? "#16a34a" : "#4ade80")
                             : "var(--text-muted)",
                         }}
                       >
@@ -2683,8 +2687,8 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                       className="mono"
                       style={{
                         fontSize: "1.1rem",
-                        fontWeight: 600,
-                        color: cashReserve > 0 ? "#f59e0b" : "var(--text-muted)",
+                        fontWeight: 700,
+                        color: cashReserve > 0 ? (isLight ? "#d97706" : "#f59e0b") : "var(--text-muted)",
                       }}
                     >
                       {cashReserve > 0 ? "+" : ""}${cashReserve.toFixed(2)}
@@ -2702,17 +2706,21 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                         <div
                           key={ticker}
                           style={{
-                            padding: "4px 10px",
-                            background: "rgba(255,255,255,0.05)",
+                            padding: "5px 12px",
+                            background: isLight ? "rgba(0, 0, 0, 0.05)" : "rgba(255, 255, 255, 0.05)",
+                            border: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.08)",
                             borderRadius: 12,
-                            fontSize: "0.8rem",
+                            fontSize: "0.82rem",
                             display: "flex",
                             alignItems: "center",
-                            gap: 6,
+                            gap: 8,
+                            color: isLight ? "#0f172a" : "#f1f5f9",
                           }}
                         >
-                          <span style={{ fontWeight: 700 }}>{ticker}</span>
-                          <span style={{ color: "#00e5ff" }}>{pct.toFixed(1)}%</span>
+                          <span style={{ fontWeight: 800 }}>{ticker}</span>
+                          <span style={{ color: isLight ? "#0284c7" : "#00e5ff", fontWeight: 700 }}>
+                            {pct.toFixed(1)}%
+                          </span>
                         </div>
                       ))}
                   </div>
