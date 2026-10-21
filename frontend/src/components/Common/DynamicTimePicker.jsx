@@ -32,7 +32,7 @@ function format12HourBadge(timeStr) {
 export default function DynamicTimePicker({
   value = "",
   onChange,
-  placeholder = "HH:MM (Opcional)",
+  placeholder = "HH:MM",
   disabled = false,
   align = "left",
   showPresets = true,
@@ -41,6 +41,7 @@ export default function DynamicTimePicker({
   id,
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const [typedText, setTypedText] = useState(value || "");
 
   const containerRef = useRef(null);
@@ -92,6 +93,7 @@ export default function DynamicTimePicker({
   };
 
   const handleInputBlur = () => {
+    setIsFocused(false);
     if (typedText && !/^\d{2}:\d{2}$/.test(typedText)) {
       // Try auto-padding single digit hour like "9:30" -> "09:30"
       if (/^\d:\d{2}$/.test(typedText)) {
@@ -136,6 +138,7 @@ export default function DynamicTimePicker({
   };
 
   const badge12h = format12HourBadge(typedText);
+  const displayValue = isFocused ? typedText : (badge12h || typedText);
 
   return (
     <div
@@ -150,20 +153,17 @@ export default function DynamicTimePicker({
         <input
           id={id}
           type="text"
-          className="dynamic-datepicker-field"
-          value={typedText}
+          className={`dynamic-datepicker-field ${!isFocused && badge12h ? "formatted-display" : ""}`}
+          value={displayValue}
+          onFocus={() => setIsFocused(true)}
           onChange={handleInputChange}
           onBlur={handleInputBlur}
           placeholder={placeholder}
           disabled={disabled}
-          maxLength={5}
+          maxLength={10}
           autoComplete="off"
+          title={badge12h ? `${badge12h} (${typedText})` : placeholder}
         />
-        {badge12h && (
-          <span className="dynamic-picker-format-badge" title="Formato 12 horas">
-            {badge12h}
-          </span>
-        )}
         {typedText && !disabled && (
           <button
             type="button"

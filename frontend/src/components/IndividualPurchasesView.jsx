@@ -3673,36 +3673,63 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text">Fecha de Compra</span>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, alignItems: "end" }}>
+                <div className="form-control" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: "100%" }}>
+                  <label
+                    className="label"
+                    style={{
+                      minHeight: 28,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "0 0 6px 0",
+                    }}
+                  >
+                    <span className="label-text" style={{ whiteSpace: "nowrap" }}>Fecha de Compra</span>
                   </label>
                   <DynamicDatePicker
                     value={date}
                     onChange={(val) => setDate(val)}
                   />
                 </div>
-                <div className="form-control">
-                  <label className="label" style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span className="label-text">Hora de Compra</span>
-                    <span
+                <div className="form-control" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: "100%" }}>
+                  <label
+                    className="label"
+                    style={{
+                      minHeight: 28,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 6,
+                      flexWrap: "nowrap",
+                      padding: "0 0 6px 0",
+                    }}
+                  >
+                    <span className="label-text" style={{ whiteSpace: "nowrap" }}>Hora</span>
+                    <button
+                      type="button"
                       style={{
                         fontSize: "0.68rem",
-                        color: "#00e5ff",
+                        color: theme === "light" ? "#0284c7" : "#00e5ff",
+                        background: theme === "light" ? "rgba(2, 132, 199, 0.08)" : "rgba(0, 229, 255, 0.1)",
+                        border: theme === "light" ? "1px solid rgba(2, 132, 199, 0.25)" : "1px solid rgba(0, 229, 255, 0.25)",
+                        borderRadius: 6,
+                        padding: "1px 6px",
                         cursor: "pointer",
-                        textDecoration: "underline",
+                        fontWeight: 700,
+                        whiteSpace: "nowrap",
+                        flexShrink: 0,
                       }}
                       onClick={() => setPurchaseTime(getMarketOpenTime(selectedMeta?.ticker, selectedMeta?.exchange))}
                       title="Fijar primera hora / apertura de mercado"
                     >
-                      🔔 Apertura mercado
-                    </span>
+                      🔔 Apertura
+                    </button>
                   </label>
                   <DynamicTimePicker
                     value={purchaseTime}
                     onChange={(val) => setPurchaseTime(val)}
-                    placeholder="HH:MM (Opcional)"
+                    placeholder="HH:MM"
                     align="right"
                   />
                 </div>
@@ -5140,19 +5167,19 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                   </div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div className="form-control">
-                    <label className="label">
-                      <span className="label-text" style={{ fontSize: "0.8rem" }}>Fecha de Venta</span>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, alignItems: "end" }}>
+                  <div className="form-control" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: "100%" }}>
+                    <label className="label" style={{ minHeight: 26, display: "flex", alignItems: "center", padding: "0 0 6px 0" }}>
+                      <span className="label-text" style={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}>Fecha de Venta</span>
                     </label>
                     <DynamicDatePicker
                       value={saleDate}
                       onChange={(val) => setSaleDate(val)}
                     />
                   </div>
-                  <div className="form-control">
-                    <label className="label">
-                      <span className="label-text" style={{ fontSize: "0.8rem" }}>Hora</span>
+                  <div className="form-control" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: "100%" }}>
+                    <label className="label" style={{ minHeight: 26, display: "flex", alignItems: "center", padding: "0 0 6px 0" }}>
+                      <span className="label-text" style={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}>Hora</span>
                     </label>
                     <DynamicTimePicker
                       value={saleTime}
@@ -5525,25 +5552,43 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div className="form-control">
-                    <label className="label">
-                      <span className="label-text" style={{ fontSize: "0.8rem" }}>Fecha</span>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, alignItems: "end" }}>
+                  <div className="form-control" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: "100%" }}>
+                    <label className="label" style={{ minHeight: 26, display: "flex", alignItems: "center", padding: "0 0 6px 0" }}>
+                      <span className="label-text" style={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}>Fecha</span>
                     </label>
                     <DynamicDatePicker
                       value={editDate}
                       onChange={(val) => setEditDate(val)}
                     />
                   </div>
-                  <div className="form-control">
-                    <label className="label" style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span className="label-text" style={{ fontSize: "0.8rem" }}>Hora</span>
-                      <span
+                  <div className="form-control" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: "100%" }}>
+                    <label
+                      className="label"
+                      style={{
+                        minHeight: 26,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 6,
+                        flexWrap: "nowrap",
+                        padding: "0 0 6px 0",
+                      }}
+                    >
+                      <span className="label-text" style={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}>Hora</span>
+                      <button
+                        type="button"
                         style={{
                           fontSize: "0.65rem",
-                          color: "#00e5ff",
+                          color: theme === "light" ? "#0284c7" : "#00e5ff",
+                          background: theme === "light" ? "rgba(2, 132, 199, 0.08)" : "rgba(0, 229, 255, 0.1)",
+                          border: theme === "light" ? "1px solid rgba(2, 132, 199, 0.25)" : "1px solid rgba(0, 229, 255, 0.25)",
+                          borderRadius: 6,
+                          padding: "1px 6px",
                           cursor: "pointer",
-                          textDecoration: "underline",
+                          fontWeight: 700,
+                          whiteSpace: "nowrap",
+                          flexShrink: 0,
                         }}
                         onClick={() =>
                           setEditPurchaseTime(
@@ -5553,7 +5598,7 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                         title="Fijar primera hora / apertura de mercado"
                       >
                         🔔 Apertura
-                      </span>
+                      </button>
                     </label>
                     <DynamicTimePicker
                       value={editPurchaseTime}

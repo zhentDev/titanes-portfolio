@@ -62,6 +62,7 @@ export default function DynamicDatePicker({
   id,
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const [typedText, setTypedText] = useState(value || "");
 
   // Calendar view state
@@ -127,6 +128,7 @@ export default function DynamicDatePicker({
   };
 
   const handleInputBlur = () => {
+    setIsFocused(false);
     // If not a valid date on blur, revert or keep if empty
     if (typedText && !parseLocalDate(typedText)) {
       if (value) {
@@ -276,6 +278,7 @@ export default function DynamicDatePicker({
   const humanDateBadge = parsedDisplay
     ? `${String(parsedDisplay.getDate()).padStart(2, "0")} ${MONTH_NAMES[parsedDisplay.getMonth()]?.slice(0, 3)} ${parsedDisplay.getFullYear()}`
     : null;
+  const displayValue = isFocused ? typedText : (humanDateBadge || typedText);
 
   return (
     <div
@@ -291,20 +294,17 @@ export default function DynamicDatePicker({
           ref={inputRef}
           id={id}
           type="text"
-          className="dynamic-datepicker-field"
-          value={typedText}
+          className={`dynamic-datepicker-field ${!isFocused && humanDateBadge ? "formatted-display" : ""}`}
+          value={displayValue}
+          onFocus={() => setIsFocused(true)}
           onChange={handleInputChange}
           onBlur={handleInputBlur}
           placeholder={placeholder}
           disabled={disabled}
-          maxLength={10}
+          maxLength={15}
           autoComplete="off"
+          title={humanDateBadge ? `${humanDateBadge} (${typedText})` : placeholder}
         />
-        {humanDateBadge && (
-          <span className="dynamic-picker-format-badge" title={`Fecha seleccionada: ${humanDateBadge}`}>
-            {humanDateBadge}
-          </span>
-        )}
         <button
           type="button"
           className="dynamic-datepicker-trigger-btn"

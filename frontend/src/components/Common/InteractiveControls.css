@@ -111,6 +111,9 @@ input[type="number"] {
   display: flex;
   align-items: center;
   width: 100%;
+  min-height: 40px;
+  height: 40px;
+  box-sizing: border-box;
   background: rgba(15, 23, 42, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
@@ -131,18 +134,30 @@ input[type="number"] {
 .dynamic-datepicker-field {
   flex: 1;
   min-width: 0;
+  width: 100%;
   background: transparent;
   border: none;
   outline: none;
   color: #f8fafc;
   font-family: "JetBrains Mono", "SF Mono", monospace;
-  font-size: 0.88rem;
-  font-weight: 500;
-  padding: 9px 12px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  padding: 8px 6px 8px 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dynamic-datepicker-field.formatted-display {
+  color: #38bdf8;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
 .dynamic-datepicker-field::placeholder {
-  color: #475569;
+  color: #64748b;
+  font-weight: 500;
+  font-size: 0.8rem;
 }
 
 .dynamic-datepicker-trigger-btn {
@@ -151,7 +166,8 @@ input[type="number"] {
   outline: none;
   color: #38bdf8;
   cursor: pointer;
-  padding: 8px 12px;
+  padding: 6px 10px 6px 6px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1018,6 +1034,10 @@ input[type="time"]:focus {
 
 [data-theme="light"] .dynamic-datepicker-field {
   color: #0f172a;
+}
+
+[data-theme="light"] .dynamic-datepicker-field.formatted-display {
+  color: #0284c7;
 }
 
 [data-theme="light"] .dynamic-datepicker-field::placeholder {
