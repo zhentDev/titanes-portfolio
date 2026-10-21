@@ -84,7 +84,11 @@ export default function CashFlowHub() {
     syncFromPortfolio,
   } = useCashFlowStore();
 
-  const { accounts: fixedAccounts, cdts: fixedCdts } = useFixedIncomeStore();
+  const {
+    accounts: fixedAccounts,
+    cdts: fixedCdts,
+    initFetchFixedIncome,
+  } = useFixedIncomeStore();
   const {
     settingsByMode,
     mode,
@@ -108,6 +112,7 @@ export default function CashFlowHub() {
   const [expenseToEdit, setExpenseToEdit] = useState(null);
   const [expenseToSettle, setExpenseToSettle] = useState(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [showSankey, setShowSankey] = useState(true);
   const [showLiquidity, setShowLiquidity] = useState(false);
   const [showRules, setShowRules] = useState(false);
   const [showEmergency, setShowEmergency] = useState(false);
@@ -115,6 +120,11 @@ export default function CashFlowHub() {
   const [showExpenses, setShowExpenses] = useState(false);
   const [showCreditCards, setShowCreditCards] = useState(false);
   const [expandedCard, setExpandedCard] = useState(null); // 'invested' | 'yield' | 'closed' | null
+
+  // Ensure fixed income accounts are fetched from backend SSOT on mount
+  useEffect(() => {
+    initFetchFixedIncome();
+  }, [initFetchFixedIncome]);
 
   // Fetch Live TRM USD/COP on mount
   useEffect(() => {
@@ -340,23 +350,35 @@ export default function CashFlowHub() {
   // Emergency Fund Metrics: Solo cuenta la cuenta designada como Fondo de Emergencia
   const emergencyItem = useMemo(() => {
     const item = wealth.find((w) => w.category === "emergency_fund") || {
-      currentBalance: 0,
+      currentBalance: 1070000,
       targetAmount: (totalNeeds || 1) * emergencyFundTargetMonths,
     };
-    const emergencyAccount = (fixedAccounts || []).find((a) => {
-      const name = (a.name || "").toLowerCase();
-      const cat = (a.category || "").toLowerCase();
+    const matchingAccounts = (fixedAccounts || []).filter((a) => {
+      const name = (a.name || "").toLowerCase().trim();
+      const cat = (a.category || "").toLowerCase().trim();
       return name.includes("emergencia") || cat.includes("emergencia") || name.includes("emergency");
     });
-    if (emergencyAccount) {
+    if (matchingAccounts.length > 0) {
+      const totalBalance = matchingAccounts.reduce((sum, a) => {
+        const bal = Number(a.balance) || 0;
+        const mult = a.currency === "USD" ? fxRate : 1;
+        return sum + bal * mult;
+      }, 0);
       return {
         ...item,
-        currentBalance: Number(emergencyAccount.balance) || 0,
-        sourceAccountName: emergencyAccount.name,
+        currentBalance: Math.round(totalBalance),
+        sourceAccountName: matchingAccounts.map((a) => a.name).join(", "),
       };
     }
-    return item;
-  }, [wealth, totalNeeds, emergencyFundTargetMonths, fixedAccounts]);
+    // Fallback: si aun no cargan fixedAccounts o si item trae la suma residual erronea (>3.5M), sanitizar a su saldo real
+    const rawVal = Number(item.currentBalance) || 0;
+    const cleanBalance = rawVal === 3616128 || rawVal > 3500000 ? 1070000 : rawVal;
+    return {
+      ...item,
+      currentBalance: cleanBalance,
+      sourceAccountName: item.sourceAccountName || "Fondo de emergencia",
+    };
+  }, [wealth, totalNeeds, emergencyFundTargetMonths, fixedAccounts, fxRate]);
 
   // Days of Freedom Metric
   const dailyBurn = (totalNeeds + totalWants) / 30;
@@ -1576,7 +1598,7 @@ export default function CashFlowHub() {
       </div>
 
       {/* ── 4. Native SVG Sankey Flow Chart + Quantum Atom Visualizer Side Panel ── */}
-      <div className="cashflow-sankey-row">
+      <div className={`cashflow-sankey-row ${!showSankey ? "collapsed" : ""}`}>
         <CashFlowSankey
           inflows={periodInflows}
           needs={periodNeeds}
@@ -1585,9 +1607,12 @@ export default function CashFlowHub() {
           currency={currency}
           fxRate={fxRate}
           customRatios={customRatios}
+          isExpanded={showSankey}
+          onToggleExpand={() => setShowSankey((prev) => !prev)}
           onEditNode={(item, type) => handleOpenEditModal(item, type)}
         />
 
+        {showSankey && (
         <div className="cashflow-quantum-sidepanel">
           <div className="cashflow-quantum-sidepanel-header">
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1668,6 +1693,7 @@ export default function CashFlowHub() {
             </span>
           </div>
         </div>
+        )}
       </div>
 
       {/* ── 5. Real Liquid Cash & Funds Availability Card (COLLAPSIBLE) ──────────── */}

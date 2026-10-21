@@ -17,12 +17,16 @@ export default function CashFlowSankey({
   fxRate = 4150,
   customRatios = { needs: 50, wants: 30, savings: 20 },
   onEditNode,
+  isExpanded: controlledExpanded,
+  onToggleExpand,
 }) {
   const { theme } = useTheme();
   const isLight = theme === "light";
   const formatAmount = (val, cur = currency) => formatCashFlowMoneyWithCode(val, cur, fxRate);
   const [hoveredItem, setHoveredItem] = useState(null);
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [internalExpanded, setInternalExpanded] = useState(true);
+  const isExpanded = controlledExpanded !== undefined ? controlledExpanded : internalExpanded;
+  const toggleExpand = onToggleExpand || (() => setInternalExpanded(!internalExpanded));
   const [viewOrientation, setViewOrientation] = useState("auto"); // 'auto' | 'horizontal' | 'vertical'
 
   // Detectar pantalla pequeña (< 900px)
@@ -373,7 +377,7 @@ export default function CashFlowSankey({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                setIsExpanded(!isExpanded);
+                toggleExpand();
               }}
               style={{
                 background: "rgba(255,255,255,0.06)",

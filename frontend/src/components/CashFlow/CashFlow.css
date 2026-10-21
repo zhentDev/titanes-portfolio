@@ -60,6 +60,10 @@
   width: 100%;
 }
 
+.cashflow-sankey-row.collapsed {
+  grid-template-columns: 1fr;
+}
+
 .cashflow-quantum-sidepanel {
   background: var(--bg-card);
   border: 1px solid rgba(0, 229, 255, 0.22);
