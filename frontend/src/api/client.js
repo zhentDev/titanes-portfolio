@@ -32,27 +32,42 @@ export function getAuthHeaders() {
 
 // Resilient fetch helper with automatic retry for server cold starts (Render sleep / 500s / 502s / 503s / 504s)
 async function safeFetch(url, options = {}, retries = 3, delayMs = 1500) {
+  const { timeoutMs, signal: externalSignal, ...restOptions } = options;
   const mergedHeaders = {
     ...getAuthHeaders(),
-    ...(options.headers || {}),
-  };
-  const finalOptions = {
-    ...options,
-    headers: mergedHeaders,
+    ...(restOptions.headers || {}),
   };
 
-  let lastError = null;
   let lastResponse = null;
 
   for (let i = 0; i <= retries; i++) {
+    const controller = new AbortController();
+    const perAttemptTimeout = timeoutMs || 15000;
+    const timer = setTimeout(() => controller.abort(), perAttemptTimeout);
+
+    const onExternalAbort = () => controller.abort();
+    if (externalSignal) {
+      if (externalSignal.aborted) {
+        clearTimeout(timer);
+        throw new Error("Request aborted");
+      }
+      externalSignal.addEventListener("abort", onExternalAbort, { once: true });
+    }
+
     try {
-      const res = await fetch(url, finalOptions);
+      const res = await fetch(url, {
+        ...restOptions,
+        headers: mergedHeaders,
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (externalSignal) externalSignal.removeEventListener("abort", onExternalAbort);
+
       if (res.ok) return res;
 
       lastResponse = res;
       // If server returned 500, 502, 503 or 504 (typical Render waking-up errors)
       if (res.status >= 500 && i < retries) {
-        // Exponential backoff: 1.5s -> 3s -> 4.5s... gives Render 10-15s to finish booting
         const waitTime = delayMs * (i + 1);
         console.warn(`[API] Servidor respondiendo ${res.status}. Posible inicio en frío de Render. Reintentando en ${waitTime}ms (intento ${i + 1}/${retries})...`);
         await new Promise((r) => setTimeout(r, waitTime));
@@ -60,7 +75,9 @@ async function safeFetch(url, options = {}, retries = 3, delayMs = 1500) {
       }
       return res;
     } catch (err) {
-      lastError = err;
+      clearTimeout(timer);
+      if (externalSignal) externalSignal.removeEventListener("abort", onExternalAbort);
+
       if (i < retries) {
         const waitTime = delayMs * (i + 1);
         console.warn(`[API] Fallo de conexión (${err.message}). Reintentando en ${waitTime}ms (intento ${i + 1}/${retries})...`);
@@ -114,21 +131,18 @@ async function fetchWithFallback(endpoint, staticFile, options = {}) {
 
   // Function to execute request against a base url
   const tryFetchBase = async (baseUrl, timeoutMs, retries = 0) => {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const res = await safeFetch(
         `${baseUrl}${endpoint}`,
-        { ...options, signal: controller.signal },
+        { ...options, timeoutMs },
         retries,
         1500,
       );
-      clearTimeout(timer);
       if (res && res.ok) {
         return await res.json();
       }
     } catch {
-      clearTimeout(timer);
+      // ignore fetch error and fall through to next base/static fallback
     }
     return null;
   };
@@ -323,7 +337,8 @@ export async function searchTickersMultiple(q) {
 export async function fetchRebalances(strategyId = "historical", options = {}) {
   const query = strategyId ? `?strategy_id=${encodeURIComponent(strategyId)}` : "";
   const staticFile = (!strategyId || strategyId === "historical") ? "rebalances.json" : null;
-  return fetchWithFallback(`/rebalances${query}`, staticFile, options);
+  const res = await fetchWithFallback(`/rebalances${query}`, staticFile, options);
+  return Array.isArray(res) ? res : [];
 }
 
 /** POST /api/rebalances */

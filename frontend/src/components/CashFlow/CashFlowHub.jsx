@@ -596,13 +596,16 @@ export default function CashFlowHub() {
       if (!monthBuckets[mKey]) {
         monthBuckets[mKey] = {
           period: mKey,
+          monthKey: mKey,
           periodLabel: formatPeriodName(mKey),
           positions: [],
+          items: [],
           totalPnlUSD: 0,
           count: 0,
         };
       }
       monthBuckets[mKey].positions.push(pos);
+      monthBuckets[mKey].items.push(pos);
       monthBuckets[mKey].totalPnlUSD += pos.realizedPnlUSD;
       monthBuckets[mKey].count += 1;
     });
@@ -611,6 +614,8 @@ export default function CashFlowHub() {
       .sort((a, b) => b.period.localeCompare(a.period))
       .map((m) => ({
         ...m,
+        monthKey: m.period,
+        items: m.positions,
         totalPnlCOP: Math.round(m.totalPnlUSD * fxRate),
       }));
 
@@ -1684,10 +1689,13 @@ export default function CashFlowHub() {
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
                 {realInvestmentMetrics.closedByMonthHistory.map((monthGroup) => {
-                  const isCurrentSelectedPeriod = monthGroup.monthKey === activePeriod;
+                  const mKey = monthGroup.period || monthGroup.monthKey || "Sin fecha";
+                  const isCurrentSelectedPeriod = mKey === activePeriod;
+                  const monthItems = monthGroup.positions || monthGroup.items || [];
+                  const totalPnlCOP = monthGroup.totalPnlCOP ?? Math.round((monthGroup.totalPnlUSD || 0) * fxRate);
                   return (
                     <div
-                      key={monthGroup.monthKey}
+                      key={mKey}
                       style={{
                         padding: "14px 16px",
                         borderRadius: "14px",
@@ -1722,7 +1730,7 @@ export default function CashFlowHub() {
                       >
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <span style={{ fontSize: "0.95rem", fontWeight: 800, color: isLight ? "#0f172a" : "#f8fafc" }}>
-                            🗓️ {formatPeriodName(monthGroup.monthKey)}
+                            🗓️ {monthGroup.periodLabel || formatPeriodName(mKey)}
                           </span>
                           <span
                             style={{
@@ -1755,14 +1763,14 @@ export default function CashFlowHub() {
                               color: monthGroup.totalPnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
                             }}
                           >
-                            (≈{monthGroup.totalPnlUSD >= 0 ? "+" : ""}${monthGroup.totalPnlCOP.toLocaleString("es-CO")} COP)
+                            (≈{monthGroup.totalPnlUSD >= 0 ? "+" : ""}${totalPnlCOP.toLocaleString("es-CO")} COP)
                           </span>
                         </div>
                       </div>
 
                       {/* Tarjetas de Operaciones del Mes */}
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 10 }}>
-                        {monthGroup.items.map((pos) => (
+                        {monthItems.map((pos) => (
                           <div
                             key={pos.id}
                             style={{

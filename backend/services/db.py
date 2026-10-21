@@ -1,6 +1,7 @@
 from datetime import date
 import json
 import os
+import threading
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional, List, Dict, Any
@@ -12,6 +13,9 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 _pg_pool = None
 _pg_pool_failed = False
+_duckdb_lock = threading.RLock()
+_active_duck_con = None
+_duck_con_depth = 0
 
 
 def get_pg_connection():
@@ -81,8 +85,25 @@ def pg_execute(sql: str, params: Optional[list | tuple] = None) -> bool:
     return False
 
 
+@contextmanager
 def get_connection():
-    return duckdb.connect(DB_PATH)
+    """Thread-safe, re-entrant DuckDB connection context manager."""
+    global _active_duck_con, _duck_con_depth
+    with _duckdb_lock:
+        if _active_duck_con is None:
+            _active_duck_con = duckdb.connect(DB_PATH)
+        _duck_con_depth += 1
+        try:
+            yield _active_duck_con
+        finally:
+            _duck_con_depth -= 1
+            if _duck_con_depth <= 0 and _active_duck_con is not None:
+                try:
+                    _active_duck_con.close()
+                except Exception:
+                    pass
+                _active_duck_con = None
+                _duck_con_depth = 0
 
 
 def init_db():
