@@ -478,24 +478,31 @@ export default function HoldingsTable({
                           e.stopPropagation();
                           onRemoveTicker(h.ticker);
                         }}
-                        title={`Quitar ${h.ticker} de la estrategia`}
+                        title={`Quitar ${h.ticker} de la estrategia (libera slot a Cash)`}
                         aria-label={`Quitar ${h.ticker}`}
                         style={{
-                          background: "transparent",
-                          border: `1px solid ${isLight ? "rgba(239, 68, 68, 0.25)" : "rgba(239, 68, 68, 0.35)"}`,
-                          borderRadius: "8px",
-                          padding: "3px 7px",
+                          background: isLight ? "rgba(239, 68, 68, 0.08)" : "rgba(239, 68, 68, 0.14)",
+                          border: `1px solid ${isLight ? "rgba(239, 68, 68, 0.28)" : "rgba(239, 68, 68, 0.38)"}`,
+                          borderRadius: "6px",
+                          width: "26px",
+                          height: "26px",
+                          padding: 0,
                           fontSize: "0.75rem",
                           fontWeight: 700,
                           cursor: "pointer",
                           color: "#ef4444",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
                           transition: "all 0.15s ease",
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.background = isLight ? "rgba(239, 68, 68, 0.1)" : "rgba(239, 68, 68, 0.2)";
+                          e.currentTarget.style.background = isLight ? "rgba(239, 68, 68, 0.18)" : "rgba(239, 68, 68, 0.28)";
+                          e.currentTarget.style.borderColor = "#ef4444";
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.background = "transparent";
+                          e.currentTarget.style.background = isLight ? "rgba(239, 68, 68, 0.08)" : "rgba(239, 68, 68, 0.14)";
+                          e.currentTarget.style.borderColor = isLight ? "rgba(239, 68, 68, 0.28)" : "rgba(239, 68, 68, 0.38)";
                         }}
                       >
                         ✕
@@ -629,11 +636,16 @@ export default function HoldingsTable({
                   textTransform: "uppercase",
                   letterSpacing: "0.04em",
                   whiteSpace: "nowrap",
-                  width: "90px",
+                  width: onRemoveTicker ? "120px" : "90px",
+                  minWidth: onRemoveTicker ? "110px" : "85px",
                 }}
-                title="Configura alertas de Profit Target o Stop Loss con aviso por correo"
+                title={
+                  onRemoveTicker
+                    ? "Configura alertas de precio o retira la acción de la estrategia"
+                    : "Configura alertas de Profit Target o Stop Loss con aviso por correo"
+                }
               >
-                🔔 Alerta
+                {onRemoveTicker ? "🔔 Alerta / Quitar" : "🔔 Alerta"}
               </th>
               <th
                 style={{
@@ -892,81 +904,112 @@ export default function HoldingsTable({
                     </span>
                   </td>
 
-                  {/* Stock Alert Bell */}
-                  <td style={{ padding: "10px 12px", textAlign: "center" }}>
-                    {isSelected ? (
-                      <button
-                        type="button"
-                        onClick={(e) => handleOpenAlertModal(h, e)}
-                        title={
-                          alerts.some((a) => a.ticker === h.ticker && a.is_active && !a.triggered_at)
-                            ? `Alerta activa: ${
-                                alerts.find((a) => a.ticker === h.ticker)?.alert_type === "STOP_LOSS" ? "Stop Loss" : "Take Profit"
-                              } (${alerts.find((a) => a.ticker === h.ticker)?.target_value >= 0 ? "+" : ""}${alerts.find((a) => a.ticker === h.ticker)?.target_value}%)`
-                            : "Configurar alerta de venta o stop loss"
-                        }
-                        style={{
-                          background: alerts.some((a) => a.ticker === h.ticker && a.is_active && !a.triggered_at)
-                            ? (isLight ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.2)")
-                            : "transparent",
-                          border: alerts.some((a) => a.ticker === h.ticker && a.is_active && !a.triggered_at)
-                            ? "1px solid rgba(16, 185, 129, 0.4)"
-                            : `1px solid ${isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.08)"}`,
-                          borderRadius: "6px",
-                          padding: "3px 8px",
-                          fontSize: "0.75rem",
-                          cursor: "pointer",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 4,
-                          color: alerts.some((a) => a.ticker === h.ticker && a.is_active && !a.triggered_at)
-                            ? "#10b981"
-                            : "var(--text-muted)",
-                          transition: "all 0.15s ease",
-                        }}
-                      >
-                        <span style={{ fontSize: "0.85rem" }}>🔔</span>
-                        {alerts.some((a) => a.ticker === h.ticker && a.is_active && !a.triggered_at) && (
-                          <span style={{ fontSize: "0.68rem", fontWeight: 700, whiteSpace: "nowrap" }}>
-                            {alerts.find((a) => a.ticker === h.ticker)?.target_value >= 0 ? "+" : ""}
-                            {alerts.find((a) => a.ticker === h.ticker)?.target_value}%
-                          </span>
-                        )}
-                      </button>
-                    ) : (
-                      <span style={{ color: "var(--text-muted)", fontSize: "0.7rem" }}>—</span>
-                    )}
-                    {isSelected && onRemoveTicker && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onRemoveTicker(h.ticker);
-                        }}
-                        title={`Quitar ${h.ticker} de la estrategia`}
-                        aria-label={`Quitar ${h.ticker}`}
-                        style={{
-                          background: "transparent",
-                          border: `1px solid ${isLight ? "rgba(239, 68, 68, 0.25)" : "rgba(239, 68, 68, 0.35)"}`,
-                          borderRadius: "6px",
-                          padding: "3px 8px",
-                          fontSize: "0.75rem",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          color: "#ef4444",
-                          marginLeft: "6px",
-                          transition: "all 0.15s ease",
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = isLight ? "rgba(239, 68, 68, 0.1)" : "rgba(239, 68, 68, 0.2)";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = "transparent";
-                        }}
-                      >
-                        ✕
-                      </button>
-                    )}
+                  {/* Stock Alert Bell & Remove Action */}
+                  <td style={{ padding: "8px 10px", textAlign: "center", whiteSpace: "nowrap" }}>
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 6,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {isSelected ? (
+                        <button
+                          type="button"
+                          onClick={(e) => handleOpenAlertModal(h, e)}
+                          title={
+                            alerts.some((a) => a.ticker === h.ticker && a.is_active && !a.triggered_at)
+                              ? `Alerta activa: ${
+                                  alerts.find((a) => a.ticker === h.ticker)?.alert_type === "STOP_LOSS" ? "Stop Loss" : "Take Profit"
+                                } (${alerts.find((a) => a.ticker === h.ticker)?.target_value >= 0 ? "+" : ""}${alerts.find((a) => a.ticker === h.ticker)?.target_value}%)`
+                              : "Configurar alerta de venta o stop loss"
+                          }
+                          style={{
+                            background: alerts.some((a) => a.ticker === h.ticker && a.is_active && !a.triggered_at)
+                              ? (isLight ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.2)")
+                              : (isLight ? "rgba(0,0,0,0.03)" : "rgba(255,255,255,0.04)"),
+                            border: alerts.some((a) => a.ticker === h.ticker && a.is_active && !a.triggered_at)
+                              ? "1px solid rgba(16, 185, 129, 0.4)"
+                              : `1px solid ${isLight ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.1)"}`,
+                            borderRadius: "6px",
+                            padding: "3px 8px",
+                            height: "26px",
+                            fontSize: "0.75rem",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                            color: alerts.some((a) => a.ticker === h.ticker && a.is_active && !a.triggered_at)
+                              ? "#10b981"
+                              : "var(--text-muted)",
+                            transition: "all 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!alerts.some((a) => a.ticker === h.ticker && a.is_active && !a.triggered_at)) {
+                              e.currentTarget.style.borderColor = isLight ? "rgba(0,0,0,0.25)" : "rgba(255,255,255,0.25)";
+                              e.currentTarget.style.background = isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.08)";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!alerts.some((a) => a.ticker === h.ticker && a.is_active && !a.triggered_at)) {
+                              e.currentTarget.style.borderColor = isLight ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.1)";
+                              e.currentTarget.style.background = isLight ? "rgba(0,0,0,0.03)" : "rgba(255,255,255,0.04)";
+                            }
+                          }}
+                        >
+                          <span style={{ fontSize: "0.85rem" }}>🔔</span>
+                          {alerts.some((a) => a.ticker === h.ticker && a.is_active && !a.triggered_at) && (
+                            <span style={{ fontSize: "0.68rem", fontWeight: 700, whiteSpace: "nowrap" }}>
+                              {alerts.find((a) => a.ticker === h.ticker)?.target_value >= 0 ? "+" : ""}
+                              {alerts.find((a) => a.ticker === h.ticker)?.target_value}%
+                            </span>
+                          )}
+                        </button>
+                      ) : (
+                        <span style={{ color: "var(--text-muted)", fontSize: "0.7rem" }}>—</span>
+                      )}
+                      {isSelected && onRemoveTicker && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRemoveTicker(h.ticker);
+                          }}
+                          title={`Quitar ${h.ticker} de la estrategia (libera el slot a Cash Q)`}
+                          aria-label={`Quitar ${h.ticker} de la estrategia`}
+                          style={{
+                            background: isLight ? "rgba(239, 68, 68, 0.08)" : "rgba(239, 68, 68, 0.14)",
+                            border: `1px solid ${isLight ? "rgba(239, 68, 68, 0.28)" : "rgba(239, 68, 68, 0.38)"}`,
+                            borderRadius: "6px",
+                            width: "26px",
+                            height: "26px",
+                            padding: 0,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "0.75rem",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            color: "#ef4444",
+                            transition: "all 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = isLight ? "rgba(239, 68, 68, 0.18)" : "rgba(239, 68, 68, 0.28)";
+                            e.currentTarget.style.borderColor = "#ef4444";
+                            e.currentTarget.style.transform = "scale(1.06)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = isLight ? "rgba(239, 68, 68, 0.08)" : "rgba(239, 68, 68, 0.14)";
+                            e.currentTarget.style.borderColor = isLight ? "rgba(239, 68, 68, 0.28)" : "rgba(239, 68, 68, 0.38)";
+                            e.currentTarget.style.transform = "scale(1)";
+                          }}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
                   </td>
 
                   {/* Return % or $ */}
