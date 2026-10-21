@@ -452,6 +452,14 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
     return () => clearInterval(interval);
   }, [load, navData, selectedHistoricalDate]);
 
+  useEffect(() => {
+    const handleGlobalRefresh = () => {
+      load(true);
+    };
+    window.addEventListener("refreshPortfolioCharts", handleGlobalRefresh);
+    return () => window.removeEventListener("refreshPortfolioCharts", handleGlobalRefresh);
+  }, [load]);
+
   // Derived metrics — ONLY ACTIVE INVESTED CAPITAL (no flat uninvested cash)
   const holdings = navData?.holdings || [];
   const cashReserved = navData?.summary?.cash_reserved ?? 0;
@@ -977,6 +985,8 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
               strategyName={activeStrategyName}
               summary={{ active_invested: activeInvested }}
               holdings={holdings}
+              onRefresh={() => load(true)}
+              isRefreshing={refreshing}
             />
           </div>
         </div>

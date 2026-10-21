@@ -552,6 +552,59 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
     return () => clearInterval(intervalId);
   }, [uniqueTickers.join(",")]);
 
+  const [isRefreshingChart, setIsRefreshingChart] = useState(false);
+
+  const handleManualChartRefresh = useCallback(async () => {
+    if (isRefreshingChart) return;
+    setIsRefreshingChart(true);
+    try {
+      const promises = [];
+      if (uniqueTickers.length > 0) {
+        promises.push(
+          fetchLiveQuotes(uniqueTickers)
+            .then((res) => {
+              if (Array.isArray(res)) {
+                const map = {};
+                res.forEach((q) => {
+                  if (q && q.ticker) map[q.ticker] = q;
+                });
+                setLiveQuotes((prev) => ({ ...prev, ...map }));
+              }
+            })
+            .catch(() => {})
+        );
+      }
+      if (earliestDate) {
+        const d = new Date(earliestDate);
+        d.setDate(d.getDate() - 14);
+        const safeStartDate = d.toISOString().split("T")[0];
+        promises.push(
+          fetchIndicesHistory(safeStartDate)
+            .then((res) => {
+              if (res && typeof res === "object") {
+                setIndicesHistory((prev) => ({ ...prev, ...res }));
+              }
+            })
+            .catch(() => {})
+        );
+      }
+      await Promise.all(promises);
+      toast.success("Gráfica y cotizaciones actualizadas", { id: "purchases-chart-refresh" });
+    } catch (e) {
+      console.error("Error refreshing purchases chart:", e);
+    } finally {
+      setTimeout(() => setIsRefreshingChart(false), 500);
+    }
+  }, [isRefreshingChart, uniqueTickers, earliestDate]);
+
+  useEffect(() => {
+    const handleGlobalRefresh = () => {
+      handleManualChartRefresh();
+    };
+    window.addEventListener("refreshPortfolioCharts", handleGlobalRefresh);
+    return () => window.removeEventListener("refreshPortfolioCharts", handleGlobalRefresh);
+  }, [handleManualChartRefresh]);
+
   const handleSearchTicker = async (e) => {
     e?.preventDefault();
     if (!ticker.trim()) return;
@@ -3053,12 +3106,47 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
               <div
                 style={{
                   display: "flex",
-                  gap: 4,
+                  gap: 6,
+                  alignItems: "center",
                   flexWrap: "wrap",
                   justifyContent: "flex-end",
                   maxWidth: "100%",
                 }}
               >
+                {/* Botón Actualizar Manual */}
+                <button
+                  type="button"
+                  onClick={handleManualChartRefresh}
+                  disabled={isRefreshingChart}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    padding: "3px 9px",
+                    borderRadius: 4,
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    cursor: isRefreshingChart ? "not-allowed" : "pointer",
+                    background: theme === "light" ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.04)",
+                    border: `1px solid ${theme === "light" ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.1)"}`,
+                    color: theme === "light" ? "#0284c7" : "#38bdf8",
+                    transition: "all 0.15s ease",
+                    minHeight: 26,
+                    opacity: isRefreshingChart ? 0.7 : 1,
+                  }}
+                  title="Actualizar cotizaciones e índices históricos sin recargar la página"
+                >
+                  <span
+                    style={{
+                      display: "inline-block",
+                      animation: isRefreshingChart ? "spin 0.8s linear infinite" : "none",
+                    }}
+                  >
+                    🔄
+                  </span>
+                  <span>{isRefreshingChart ? "Actualizando…" : "Actualizar"}</span>
+                </button>
+
                 {["1M", "3M", "6M", "YTD", "1Y", "5Y", "ALL"].map((range) => {
                   const isSelected = selectedTimeRange === range;
                   const isEnabled = isRangeEnabled(range);

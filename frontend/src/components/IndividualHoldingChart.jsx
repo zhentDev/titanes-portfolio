@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ColorType, LineStyle, createChart } from "lightweight-charts";
+import toast from "react-hot-toast";
 import { fetchHoldingChart } from "../api/client";
 import { useTheme } from "../context/ThemeContext";
 import { getChartColors } from "../utils/chartTheme";
@@ -253,6 +254,44 @@ export default function IndividualHoldingChart({
       isCancelled = true;
     };
   }, [selectedKey, selectedItem?.ticker, selectedItem?.entryDate, selectedItem?.shares, selectedItem?.costBasis, selectedItem?.startPrice]);
+
+  const [isRefreshingManual, setIsRefreshingManual] = useState(false);
+
+  const handleManualRefresh = useCallback(() => {
+    if (!selectedItem || loading || isRefreshingManual) return;
+    setIsRefreshingManual(true);
+    fetchHoldingChart({
+      ticker: selectedItem.ticker,
+      startDate: selectedItem.entryDate,
+      exitDate: null,
+      shares: selectedItem.shares,
+      costBasis: selectedItem.costBasis,
+      entryPrice: selectedItem.startPrice,
+    })
+      .then((res) => {
+        if (res) {
+          setChartData(res);
+          toast.success(`Gráfica de ${selectedItem.ticker} actualizada`, { id: "holding-chart-refresh" });
+        }
+      })
+      .catch((err) => {
+        console.error("Error refreshing holding chart:", err);
+        toast.error("Error al actualizar la gráfica");
+      })
+      .finally(() => {
+        setTimeout(() => setIsRefreshingManual(false), 500);
+      });
+  }, [selectedItem, loading, isRefreshingManual]);
+
+  useEffect(() => {
+    const handleGlobalRefresh = () => {
+      if (selectedItem) {
+        handleManualRefresh();
+      }
+    };
+    window.addEventListener("refreshPortfolioCharts", handleGlobalRefresh);
+    return () => window.removeEventListener("refreshPortfolioCharts", handleGlobalRefresh);
+  }, [handleManualRefresh, selectedItem]);
 
   // Effect 1: Initialize chart instance ONCE (or on theme change)
   useEffect(() => {
@@ -564,7 +603,7 @@ export default function IndividualHoldingChart({
             </select>
           </div>
 
-          <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             {selectedItem?.status === "PURCHASE_LOT" ? (
               <span
                 style={{
@@ -646,6 +685,39 @@ export default function IndividualHoldingChart({
                 </span>
               </span>
             )}
+
+            {/* Manual refresh button for individual holding chart */}
+            <button
+              type="button"
+              onClick={handleManualRefresh}
+              disabled={loading || isRefreshingManual}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "3px 9px",
+                borderRadius: 6,
+                fontSize: "0.72rem",
+                fontWeight: 700,
+                cursor: loading || isRefreshingManual ? "not-allowed" : "pointer",
+                background: isLight ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.04)",
+                border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.1)"}`,
+                color: isLight ? "#0284c7" : "#38bdf8",
+                transition: "all 0.15s ease",
+                opacity: loading || isRefreshingManual ? 0.7 : 1,
+              }}
+              title="Actualizar cotización y datos horarios de la acción sin recargar la página"
+            >
+              <span
+                style={{
+                  display: "inline-block",
+                  animation: loading || isRefreshingManual ? "spin 0.8s linear infinite" : "none",
+                }}
+              >
+                🔄
+              </span>
+              <span>{loading || isRefreshingManual ? "Actualizando…" : "Actualizar"}</span>
+            </button>
           </div>
         </div>
 

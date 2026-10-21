@@ -221,6 +221,16 @@ export default function App() {
     };
   }, [tickers, period, investment, numSlots, refreshKey, isPro]);
 
+  useEffect(() => {
+    const handleGlobalChartRefresh = () => {
+      setRefreshKey((k) => k + 1);
+    };
+    window.addEventListener("refreshPortfolioCharts", handleGlobalChartRefresh);
+    return () => {
+      window.removeEventListener("refreshPortfolioCharts", handleGlobalChartRefresh);
+    };
+  }, []);
+
   const [liveQuotesMap, setLiveQuotesMap] = useState({});
 
   useEffect(() => {
@@ -2673,6 +2683,8 @@ export default function App() {
                   selectLosers={selectLosers}
                   invertSelection={invertSelection}
                   isSimulating={isSimulating}
+                  onRefresh={() => setRefreshKey((k) => k + 1)}
+                  isRefreshing={loading}
                 />
               )}
             </div>

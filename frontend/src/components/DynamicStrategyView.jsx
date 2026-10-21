@@ -398,6 +398,20 @@ export default function DynamicStrategyView({
     };
   }, [strategy?.id, period, simulatedCapital, numSlots, activeTickers.join(","), navRefreshKey]);
 
+  useEffect(() => {
+    const handleGlobalRefresh = () => {
+      setNavRefreshKey((prev) => prev + 1);
+    };
+    window.addEventListener("refreshPortfolioCharts", handleGlobalRefresh);
+    return () => window.removeEventListener("refreshPortfolioCharts", handleGlobalRefresh);
+  }, []);
+
+  const handleManualNavRefresh = useCallback(() => {
+    if (isNavLoading) return;
+    setNavRefreshKey((prev) => prev + 1);
+    toast.success("Gráfica de estrategia actualizada", { id: "strat-nav-refresh" });
+  }, [isNavLoading]);
+
   // Client-side instantaneous filtering & scaling when user toggles positions
   const { filteredNavData, filteredHoldings, effectiveActiveInvested, effectiveSlotValue } = useMemo(() => {
     const rawHoldings = navData?.holdings || [];
@@ -2217,9 +2231,11 @@ export default function DynamicStrategyView({
                 justifyContent: "space-between",
                 alignItems: "center",
                 marginBottom: 14,
+                flexWrap: "wrap",
+                gap: 10,
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700 }}>📊 Crecimiento Histórico</h3>
                 <span
                   style={{
@@ -2253,6 +2269,39 @@ export default function DynamicStrategyView({
                   {isNavLoading && " ⏳"}
                 </span>
               </div>
+
+              {/* Botón Actualizar Gráfica de Estrategia */}
+              <button
+                type="button"
+                onClick={handleManualNavRefresh}
+                disabled={isNavLoading}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  padding: "4px 11px",
+                  borderRadius: 6,
+                  fontSize: "0.74rem",
+                  fontWeight: 700,
+                  cursor: isNavLoading ? "not-allowed" : "pointer",
+                  background: isLight ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.04)",
+                  border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.1)"}`,
+                  color: isLight ? "#0284c7" : "#38bdf8",
+                  transition: "all 0.15s ease",
+                  opacity: isNavLoading ? 0.7 : 1,
+                }}
+                title="Actualizar datos históricos y cotizaciones de la estrategia sin recargar la página"
+              >
+                <span
+                  style={{
+                    display: "inline-block",
+                    animation: isNavLoading ? "spin 0.8s linear infinite" : "none",
+                  }}
+                >
+                  🔄
+                </span>
+                <span>{isNavLoading ? "Actualizando…" : "Actualizar"}</span>
+              </button>
             </div>
 
             {/* ── Integrated Interactive Ticker Activator Bar (Position Switchers with Smooth Animations) ── */}

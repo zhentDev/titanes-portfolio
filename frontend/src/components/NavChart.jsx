@@ -34,6 +34,8 @@ export default function NavChart({
   isLiveMode = false,
   period = "3M",
   strategyName = null,
+  onRefresh = null,
+  isRefreshing = false,
 }) {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
@@ -43,6 +45,29 @@ export default function NavChart({
   const [manualScaleMode, setManualScaleMode] = useState(null); // null = auto, 'log' = force log, 'normal' = force normal
   const [chartReady, setChartReady] = useState(0);
   const [alerts, setAlerts] = useState([]);
+  const [localRefreshing, setLocalRefreshing] = useState(false);
+
+  const handleManualRefresh = useCallback(() => {
+    if (isRefreshing || localRefreshing) return;
+    setLocalRefreshing(true);
+
+    if (typeof onRefresh === "function") {
+      onRefresh();
+    } else if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("refreshPortfolioCharts"));
+    }
+
+    fetchStockAlerts()
+      .then((data) => {
+        if (Array.isArray(data)) setAlerts(data);
+      })
+      .catch(() => {});
+
+    setTimeout(() => {
+      setLocalRefreshing(false);
+      toast.success("Gráfica y cotizaciones actualizadas", { id: "navchart-refresh" });
+    }, 800);
+  }, [isRefreshing, localRefreshing, onRefresh]);
 
   useEffect(() => {
     let isMounted = true;
@@ -791,7 +816,40 @@ export default function NavChart({
             </button>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            {/* Manual Refresh Button */}
+            <button
+              type="button"
+              onClick={handleManualRefresh}
+              disabled={isRefreshing || localRefreshing}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "3px 9px",
+                borderRadius: 6,
+                fontSize: "0.72rem",
+                fontWeight: 700,
+                cursor: isRefreshing || localRefreshing ? "not-allowed" : "pointer",
+                background: isLight ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.04)",
+                border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.1)"}`,
+                color: isLight ? "#0284c7" : "#38bdf8",
+                transition: "all 0.15s ease",
+                opacity: isRefreshing || localRefreshing ? 0.7 : 1,
+              }}
+              title="Actualizar datos del mercado y re-renderizar la gráfica en vivo sin recargar la página"
+            >
+              <span
+                style={{
+                  display: "inline-block",
+                  animation: isRefreshing || localRefreshing ? "spin 0.8s linear infinite" : "none",
+                }}
+              >
+                🔄
+              </span>
+              <span>{isRefreshing || localRefreshing ? "Actualizando…" : "Actualizar"}</span>
+            </button>
+
             {/* Interactive Scale Mode Toggle */}
             <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
               <button
