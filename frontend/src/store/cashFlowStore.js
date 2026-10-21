@@ -33,6 +33,11 @@ const DEFAULT_RATIOS = {
   savings: 35,
 };
 
+// El sistema de ingresos inicia oficialmente a partir del pago de nómina del 23 de Octubre de 2026
+// (que financia el ciclo salarial Noviembre 2026: 23 Oct - 24 Nov).
+export const INCOME_SYSTEM_START_PERIOD = "2026-11";
+export const INCOME_SYSTEM_START_DATE = "2026-10-23";
+
 const DEFAULT_PAYROLL_ACCOUNT = {
   entityId: "nu",
   name: "Nu Colombia (Cuenta Nu Débito)",
@@ -41,6 +46,7 @@ const DEFAULT_PAYROLL_ACCOUNT = {
   color: "#820ad1",
   icon: "💜",
   payDay: 25,
+  activeFromDate: "2026-10-23",
   targetCycle: "next_month",
   paymentFrequency: "monthly",
 };
@@ -83,8 +89,8 @@ function cleanLegacyPeriods(periods = {}) {
 export const useCashFlowStore = create(
   (set, get) => ({
     // ── State ────────────────────────────────────────
-    startPeriod: getCurrentPeriod(), // Dynamic start month for the user (e.g. "2026-08")
-    activePeriod: getCurrentPeriod(), // Currently viewed period
+    startPeriod: INCOME_SYSTEM_START_PERIOD, // Activo a partir del pago del 23 de Oct (ciclo 2026-11: 23 Oct - 24 Nov)
+    activePeriod: getCurrentPeriod() < INCOME_SYSTEM_START_PERIOD ? INCOME_SYSTEM_START_PERIOD : getCurrentPeriod(), // Currently viewed period
     currency: "COP", // 'COP' | 'USD'
     allocationModel: "custom", // 'custom' | '50_30_20' | 'pay_yourself_first' | 'envelope'
     customRatios: DEFAULT_RATIOS,
@@ -123,14 +129,22 @@ export const useCashFlowStore = create(
         const now = new Date();
         const currentCalPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
-        // El período activo siempre inicia en el mes actual del sistema
-        const startP = source.startPeriod || currentCalPeriod;
-        const activeP = currentCalPeriod;
+        // El sistema de ingresos está activo únicamente a partir del pago del 23 de Octubre de 2026 (ciclo 2026-11: 23 Oct - 24 Nov)
+        const rawStartP = source.startPeriod || INCOME_SYSTEM_START_PERIOD;
+        const startP = rawStartP < INCOME_SYSTEM_START_PERIOD ? INCOME_SYSTEM_START_PERIOD : rawStartP;
+        const activeP = currentCalPeriod < startP ? startP : currentCalPeriod;
 
         const resolvedRatios =
           source.customRatios?.needs !== undefined && source.customRatios?.needs !== null
             ? source.customRatios
             : DEFAULT_RATIOS;
+
+        const cleanedPeriodsData = {};
+        Object.entries(source.periodsData || {}).forEach(([k, v]) => {
+          if (k >= INCOME_SYSTEM_START_PERIOD) {
+            cleanedPeriodsData[k] = v;
+          }
+        });
 
         const resolvedState = {
           startPeriod: startP,
@@ -139,7 +153,11 @@ export const useCashFlowStore = create(
           allocationModel: source.allocationModel || "custom",
           customRatios: resolvedRatios,
           emergencyFundTargetMonths: source.emergencyFundTargetMonths ?? 6,
-          payrollAccount: source.payrollAccount || DEFAULT_PAYROLL_ACCOUNT,
+          payrollAccount: {
+            ...DEFAULT_PAYROLL_ACCOUNT,
+            ...(source.payrollAccount || {}),
+            activeFromDate: "2026-10-23",
+          },
           creditCards: Array.isArray(source.creditCards) && source.creditCards.length > 0 ? source.creditCards : DEFAULT_CREDIT_CARDS,
           creditPurchases: source.creditPurchases || [],
           creditCardPayments: source.creditCardPayments || [],
@@ -173,7 +191,7 @@ export const useCashFlowStore = create(
             });
           })(),
           salaryHistory: source.salaryHistory || [],
-          periodsData: source.periodsData || {},
+          periodsData: cleanedPeriodsData,
           isInitialized: true,
         };
 

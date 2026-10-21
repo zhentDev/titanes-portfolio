@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import GlassModalWrapper from "../Common/GlassModalWrapper";
+import DynamicDatePicker from "../Common/DynamicDatePicker";
 import { BANK_PRESETS } from "../../utils/bankPresets";
 import "./CashFlow.css";
 
@@ -177,6 +178,7 @@ export default function PayrollEntityModal({
               </label>
               <div style={{ display: "flex", gap: 4 }}>
                 {[
+                  { day: 23, label: "Día 23" },
                   { day: 25, label: "Día 25" },
                   { day: 30, label: "Día 30" },
                   { day: 15, label: "Día 15" },
@@ -255,20 +257,13 @@ export default function PayrollEntityModal({
                 ¿Te consignaron en una fecha especial este mes? (Opcional - Reemplazar fecha de pago):
               </label>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <input
-                  type="date"
-                  style={{
-                    flex: 1,
-                    background: "rgba(13, 18, 38, 0.7)",
-                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                    borderRadius: "8px",
-                    padding: "7px 12px",
-                    color: "#f8fafc",
-                    fontSize: "0.82rem",
-                  }}
-                  value={customPayDate}
-                  onChange={(e) => setCustomPayDate(e.target.value)}
-                />
+                <div style={{ flex: 1 }}>
+                  <DynamicDatePicker
+                    value={customPayDate}
+                    onChange={(val) => setCustomPayDate(val)}
+                    placeholder="YYYY-MM-DD (ej. 2026-10-23)"
+                  />
+                </div>
                 {customPayDate && (
                   <button
                     type="button"

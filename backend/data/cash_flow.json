@@ -1,6 +1,6 @@
 {
-  "activePeriod": "2026-10",
-  "startPeriod": "2026-08",
+  "activePeriod": "2026-11",
+  "startPeriod": "2026-11",
   "currency": "COP",
   "allocationModel": "custom",
   "customRatios": {
@@ -274,7 +274,8 @@
     "icon": "💜",
     "payDay": 25,
     "targetCycle": "next_month",
-    "paymentFrequency": "monthly"
+    "paymentFrequency": "monthly",
+    "activeFromDate": "2026-10-23"
   },
   "creditPurchases": []
 }

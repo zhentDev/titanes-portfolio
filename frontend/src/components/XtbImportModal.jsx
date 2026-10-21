@@ -4,6 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { parseXtbTrades } from '../utils/xtbParser';
 import { getMarketOpenTime } from '../utils/marketHours';
 import { getAssetName } from '../utils/assetNames';
+import { DynamicDatePicker } from './Common';
 
 export default function XtbImportModal({
   isOpen,
@@ -409,20 +410,9 @@ export default function XtbImportModal({
               <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: isLight ? '#334155' : 'var(--text-secondary, #cbd5e1)', marginBottom: 6 }}>
                 📅 Fecha por defecto (para posiciones agrupadas):
               </label>
-              <input
-                type="date"
+              <DynamicDatePicker
                 value={defaultDate}
-                onChange={(e) => handleDefaultDateChange(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 10px',
-                  borderRadius: 8,
-                  background: isLight ? '#ffffff' : 'var(--bg-surface, #1e293b)',
-                  border: isLight ? '1px solid #cbd5e1' : '1px solid var(--border, rgba(255, 255, 255, 0.15))',
-                  color: isLight ? '#0f172a' : '#fff',
-                  fontSize: '0.82rem',
-                  outline: 'none',
-                }}
+                onChange={(val) => handleDefaultDateChange(val)}
               />
               <span style={{ display: 'block', fontSize: '0.7rem', color: isLight ? '#64748b' : 'var(--text-muted, #64748b)', marginTop: 4 }}>
                 Se asignará a filas que no incluyan fecha de apertura explícita.
@@ -542,19 +532,11 @@ export default function XtbImportModal({
                           </td>
                           <td style={{ padding: '8px 10px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                              <input
-                                type="date"
+                              <DynamicDatePicker
                                 value={t.date || defaultDate}
-                                onChange={(e) => handleUpdateTrade(t.id, 'date', e.target.value)}
-                                style={{
-                                  padding: '2px 6px',
-                                  fontSize: '0.72rem',
-                                  borderRadius: 4,
-                                  background: isLight ? '#ffffff' : 'var(--bg-surface, #1e293b)',
-                                  border: isLight ? '1px solid #cbd5e1' : '1px solid rgba(255, 255, 255, 0.15)',
-                                  color: isLight ? '#0f172a' : '#f1f5f9',
-                                  outline: 'none',
-                                }}
+                                onChange={(val) => handleUpdateTrade(t.id, 'date', val)}
+                                showPresets={false}
+                                style={{ minWidth: '155px' }}
                               />
                               <span style={{ fontSize: '0.66rem', color: t.isDateAutoDetected ? (isLight ? '#15803d' : '#34d399') : (isLight ? '#64748b' : '#94a3b8'), fontWeight: 600 }}>
                                 {t.isDateAutoDetected ? `🟢 Auto ${t.purchaseTime ? `(${t.purchaseTime.slice(0, 5)})` : '✓'}` : '⚪ Por defecto'}

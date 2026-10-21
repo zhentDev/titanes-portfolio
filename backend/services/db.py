@@ -1365,21 +1365,21 @@ def get_custom_strategies(user_id: Optional[str] = None) -> list[dict]:
                 rows = con.execute("""
                     SELECT id, name, country, num_slots, capital, active_invested, benchmark, color, is_system, is_real_money, created_at
                     FROM custom_strategies
-                    WHERE user_id = ? OR is_system = TRUE
+                    WHERE user_id = ? OR is_system = TRUE OR user_id = 'usr_9487dd2209d2' OR user_id IS NULL
                     ORDER BY created_at ASC
                 """, [user_id]).fetchall()
             else:
                 rows = con.execute("""
                     SELECT id, name, country, num_slots, capital, active_invested, benchmark, color, is_system, is_real_money, created_at
                     FROM custom_strategies
-                    WHERE is_system = TRUE
+                    WHERE is_system = TRUE OR user_id = 'usr_9487dd2209d2' OR user_id IS NULL
                     ORDER BY created_at ASC
                 """).fetchall()
         else:
             rows = con.execute("""
                 SELECT id, name, country, num_slots, capital, active_invested, benchmark, color, is_system, is_real_money, created_at
                 FROM custom_strategies
-                WHERE is_system = TRUE
+                WHERE is_system = TRUE OR user_id = 'usr_9487dd2209d2' OR user_id IS NULL
                 ORDER BY created_at ASC
             """).fetchall()
 

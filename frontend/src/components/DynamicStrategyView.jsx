@@ -16,7 +16,7 @@ import { toastConfirm } from "../utils/toastAlerts";
 import CreateStrategyModal from "./CreateStrategyModal";
 import InflationExplorerModal from "./InflationExplorerModal";
 import StrategyChart, { SYNTHETIC_RETURNS } from "./StrategyChart";
-import { InfoTooltip } from "./Common";
+import { DynamicDatePicker, InfoTooltip } from "./Common";
 import QuantumOrbitalLoader from "./QuantumOrbitalLoader";
 import HoldingsTable from "./HoldingsTable";
 import IndividualHoldingChart from "./IndividualHoldingChart";
@@ -107,6 +107,8 @@ export default function DynamicStrategyView({
     updateStrategyCapital,
     setStrategyRebalances,
     strategyRebalances,
+    saveStrategySummary,
+    saveLastKnownQuotes,
   } = usePortfolioStore();
 
   // Rebalance history for this specific custom strategy
@@ -329,11 +331,21 @@ export default function DynamicStrategyView({
               map[q.ticker] = q;
             });
             setTickerMetadata(map);
+            if (typeof saveLastKnownQuotes === "function") {
+              saveLastKnownQuotes(map);
+            }
           }
         })
         .catch(console.error);
     }
-  }, [activeTickers.join(",")]);
+  }, [activeTickers.join(","), saveLastKnownQuotes]);
+
+  // Persist calculated NAV summary in global store for instant access in CashFlowHub
+  useEffect(() => {
+    if (strategy?.id && navData?.summary && typeof saveStrategySummary === "function") {
+      saveStrategySummary(strategy.id, navData);
+    }
+  }, [strategy?.id, navData, saveStrategySummary]);
 
   // Sync to global store (NavChart needs this)
   useEffect(() => {
@@ -2986,20 +2998,9 @@ export default function DynamicStrategyView({
             >
               Fecha del Rebalanceo / Compra:
             </label>
-            <input
-              type="date"
+            <DynamicDatePicker
               value={date}
-              onChange={(e) => setDate(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "8px 12px",
-                borderRadius: "var(--radius)",
-                border: "1px solid var(--border)",
-                background: "var(--bg-surface)",
-                color: "var(--text-primary)",
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: "0.85rem",
-              }}
+              onChange={(val) => setDate(val)}
             />
           </div>
 
@@ -3267,24 +3268,16 @@ export default function DynamicStrategyView({
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       {editingRebalanceDate?.oldDate === reb.rebalance_date ? (
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <input
-                            type="date"
+                          <DynamicDatePicker
                             value={editingRebalanceDate.tempDate}
-                            onChange={(e) =>
+                            onChange={(val) =>
                               setEditingRebalanceDate({
                                 ...editingRebalanceDate,
-                                tempDate: e.target.value,
+                                tempDate: val,
                               })
                             }
-                            style={{
-                              background: "rgba(0,0,0,0.4)",
-                              border: `1px solid ${strategy.color}`,
-                              color: "#fff",
-                              borderRadius: 4,
-                              padding: "2px 6px",
-                              fontSize: "0.8rem",
-                              fontFamily: "'JetBrains Mono', monospace",
-                            }}
+                            showPresets={false}
+                            style={{ minWidth: "160px" }}
                           />
                           <button
                             type="button"

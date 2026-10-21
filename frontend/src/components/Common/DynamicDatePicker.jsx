@@ -153,6 +153,8 @@ export default function DynamicDatePicker({
 
     if (type === "today") {
       target = new Date();
+    } else if (type === "yesterday") {
+      target = new Date(Date.now() - 24 * 60 * 60 * 1000);
     } else if (type === "startOfMonth") {
       target = new Date(base.getFullYear(), base.getMonth(), 1);
     } else if (type === "+30d") {
@@ -270,13 +272,21 @@ export default function DynamicDatePicker({
     yearsOptions.push(y);
   }
 
+  const parsedDisplay = parseLocalDate(typedText);
+  const humanDateBadge = parsedDisplay
+    ? `${String(parsedDisplay.getDate()).padStart(2, "0")} ${MONTH_NAMES[parsedDisplay.getMonth()]?.slice(0, 3)} ${parsedDisplay.getFullYear()}`
+    : null;
+
   return (
     <div
       ref={containerRef}
       className={`dynamic-datepicker-wrapper interactive-control-base ${className}`}
       style={style}
     >
-      <div className={`dynamic-datepicker-input-group ${isOpen ? "active" : ""}`}>
+      <div
+        className={`dynamic-datepicker-input-group ${isOpen ? "active" : ""}`}
+        onClick={() => !disabled && setIsOpen(true)}
+      >
         <input
           ref={inputRef}
           id={id}
@@ -290,14 +300,36 @@ export default function DynamicDatePicker({
           maxLength={10}
           autoComplete="off"
         />
+        {humanDateBadge && (
+          <span className="dynamic-picker-format-badge" title={`Fecha seleccionada: ${humanDateBadge}`}>
+            {humanDateBadge}
+          </span>
+        )}
         <button
           type="button"
           className="dynamic-datepicker-trigger-btn"
-          onClick={() => !disabled && setIsOpen(!isOpen)}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!disabled) setIsOpen(!isOpen);
+          }}
           disabled={disabled}
-          title="Abrir calendario"
+          title="Abrir calendario interactivo"
         >
-          📅
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
         </button>
       </div>
 
@@ -360,6 +392,13 @@ export default function DynamicDatePicker({
                 onClick={() => handlePreset("today")}
               >
                 Hoy
+              </button>
+              <button
+                type="button"
+                className="datepicker-preset-chip"
+                onClick={() => handlePreset("yesterday")}
+              >
+                Ayer
               </button>
               <button
                 type="button"

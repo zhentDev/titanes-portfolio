@@ -21,7 +21,7 @@ import { useAuthStore } from "../store/authStore";
 import { analyzeInvestmentPlan } from "../utils/investmentPlanAnalyzer";
 import { toastConfirm, toastPrompt } from "../utils/toastAlerts";
 import { getBrokerEquivalenceInfo, getMarketOpenTime, MARKET_REGIONS, translateBrokerTicker } from "../utils/marketHours";
-import { InfoTooltip, MarketScheduleBadge } from "./Common";
+import { DynamicDatePicker, DynamicTimePicker, InfoTooltip, MarketScheduleBadge } from "./Common";
 import AffiliateBanner from "./Common/AffiliateBanner";
 import ChangeTickerModal from "./ChangeTickerModal";
 import InflationExplorerModal from "./InflationExplorerModal";
@@ -52,6 +52,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
     setAbortBatch,
     togglePortfolioPlan,
     updatePortfolioSettings,
+    lastKnownQuotes,
+    saveLastKnownQuotes,
+    savePortfolioSummary,
   } = usePortfolioStore();
 
   const { theme } = useTheme();
@@ -800,7 +803,8 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
       const invested = (p.shares && p.purchasePrice) ? p.shares * p.purchasePrice : (p.investedAmount ?? 0);
       const commission = Number(p.commissionAmount || 0);
       const liveQuote = liveQuotes[p.ticker];
-      const currentPrice = p.manualCurrentPrice || liveQuote?.price || p.purchasePrice;
+      const cachedQuote = lastKnownQuotes?.[p.ticker];
+      const currentPrice = p.manualCurrentPrice || liveQuote?.price || cachedQuote?.price || p.purchasePrice;
 
       // Calculate current value based on return ratio (ideal for ETFs/ETCs)
       const ratio = p.purchasePrice > 0 ? currentPrice / p.purchasePrice : 1;
@@ -927,12 +931,20 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
   }, [
     currentPurchases,
     liveQuotes,
+    lastKnownQuotes,
     fxData,
     portfolio.inflationRate,
     portfolio.useAutoColInflation,
     colInflationData,
     getClosestIndexPrice,
   ]);
+
+  // Persist liveQuotes in global store whenever updated
+  useEffect(() => {
+    if (liveQuotes && Object.keys(liveQuotes).length > 0 && typeof saveLastKnownQuotes === "function") {
+      saveLastKnownQuotes(liveQuotes);
+    }
+  }, [liveQuotes, saveLastKnownQuotes]);
 
   const summary = useMemo(() => {
     let totalInvested = 0;
@@ -1064,6 +1076,18 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
       netReturnPctReal,
     };
   }, [lotDataList, currentSales, fxData]);
+
+  // Persist calculated portfolio summary in global store for instant access in CashFlowHub
+  useEffect(() => {
+    if (portfolioId && summary && typeof savePortfolioSummary === "function") {
+      savePortfolioSummary(portfolioId, {
+        investedUSD: summary.totalInvested,
+        marketValueUSD: summary.totalCurrentValue,
+        openNetReturnUSD: summary.openNetReturn,
+        realizedPnlUSD: summary.realizedPnlTotal,
+      });
+    }
+  }, [portfolioId, summary?.totalInvested, summary?.totalCurrentValue, summary?.openNetReturn, summary?.realizedPnlTotal, savePortfolioSummary]);
 
   // Group lots by ticker
   const groupedLots = useMemo(() => {
@@ -3631,11 +3655,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                   <label className="label">
                     <span className="label-text">Fecha de Compra</span>
                   </label>
-                  <input
-                    type="date"
-                    className="input input-bordered"
+                  <DynamicDatePicker
                     value={date}
-                    onChange={(e) => setDate(e.target.value)}
+                    onChange={(val) => setDate(val)}
                   />
                 </div>
                 <div className="form-control">
@@ -3654,12 +3676,11 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                       🔔 Apertura mercado
                     </span>
                   </label>
-                  <input
-                    type="time"
-                    className="input input-bordered"
+                  <DynamicTimePicker
                     value={purchaseTime}
-                    onChange={(e) => setPurchaseTime(e.target.value)}
+                    onChange={(val) => setPurchaseTime(val)}
                     placeholder="HH:MM (Opcional)"
+                    align="right"
                   />
                 </div>
               </div>
@@ -5101,22 +5122,19 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                     <label className="label">
                       <span className="label-text" style={{ fontSize: "0.8rem" }}>Fecha de Venta</span>
                     </label>
-                    <input
-                      type="date"
-                      className="input input-bordered input-sm"
+                    <DynamicDatePicker
                       value={saleDate}
-                      onChange={(e) => setSaleDate(e.target.value)}
+                      onChange={(val) => setSaleDate(val)}
                     />
                   </div>
                   <div className="form-control">
                     <label className="label">
                       <span className="label-text" style={{ fontSize: "0.8rem" }}>Hora</span>
                     </label>
-                    <input
-                      type="time"
-                      className="input input-bordered input-sm"
+                    <DynamicTimePicker
                       value={saleTime}
-                      onChange={(e) => setSaleTime(e.target.value)}
+                      onChange={(val) => setSaleTime(val)}
+                      align="right"
                     />
                   </div>
                 </div>
@@ -5489,11 +5507,9 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                     <label className="label">
                       <span className="label-text" style={{ fontSize: "0.8rem" }}>Fecha</span>
                     </label>
-                    <input
-                      type="date"
-                      className="input input-bordered input-sm"
+                    <DynamicDatePicker
                       value={editDate}
-                      onChange={(e) => setEditDate(e.target.value)}
+                      onChange={(val) => setEditDate(val)}
                     />
                   </div>
                   <div className="form-control">
@@ -5516,11 +5532,10 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                         🔔 Apertura
                       </span>
                     </label>
-                    <input
-                      type="time"
-                      className="input input-bordered input-sm"
+                    <DynamicTimePicker
                       value={editPurchaseTime}
-                      onChange={(e) => setEditPurchaseTime(e.target.value)}
+                      onChange={(val) => setEditPurchaseTime(val)}
+                      align="right"
                     />
                   </div>
                 </div>

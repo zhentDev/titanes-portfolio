@@ -385,6 +385,19 @@ export const usePortfolioStore = create(
           isSystem: true,
           isRealMoney: false,
         },
+        {
+          id: "strat_1788304141581",
+          name: "Mejores acciones - sept 2026",
+          country: "🇺🇸",
+          numSlots: 20,
+          capital: 1010,
+          activeInvested: 353.5,
+          benchmark: "S&P 500",
+          color: "#a855f7",
+          createdAt: "2026-09-02T00:00:00.000Z",
+          isSystem: false,
+          isRealMoney: true,
+        },
       ],
       strategyRebalances: {
         strat_mm20: [
@@ -395,6 +408,181 @@ export const usePortfolioStore = create(
             tickers: ["ARLP", "ACLS", "BHC", "DIOD", "HAE", "NSIT", "POWI", "VECO", "OSK", "SM"],
           },
         ],
+        strat_1788304141581: [
+          {
+            date: "2026-09-02",
+            rebalance_date: "2026-09-02",
+            cash_added: 0,
+            tickers: ["OSIS", "PAYC", "DK", "HALO"],
+          },
+          {
+            date: "2026-09-03",
+            rebalance_date: "2026-09-03",
+            cash_added: 0,
+            tickers: ["OSIS", "PAYC", "DK", "HALO", "MCK"],
+          },
+          {
+            date: "2026-10-01",
+            rebalance_date: "2026-10-01",
+            cash_added: 0,
+            tickers: ["OSIS", "PAYC", "MCK", "ENS", "AYI", "ANF", "CRM"],
+          },
+        ],
+      },
+      // ── Persistent Last-Known Market Quotes & Strategy/Portfolio Summaries ──
+      lastKnownQuotes: {
+        SPCX: { ticker: "SPCX", name: "Space Exploration Technologies Corp.", price: 147.79, change_pct: -0.6654 },
+        SMH: { ticker: "SMH", name: "VanEck Semiconductor ETF", price: 546.36, change_pct: -0.4248 },
+        NVDA: { ticker: "NVDA", name: "NVIDIA Corporation", price: 216.47, change_pct: -0.3269 },
+        "SMH.L": { ticker: "SMH.L", name: "VanEck Semiconductor UCITS ETF", price: 101.08, change_pct: -1.9212 },
+        "GDX.L": { ticker: "GDX.L", name: "VanEck Gold Miners UCITS ETF", price: 98.55, change_pct: 0.3258 },
+        "IPLT.L": { ticker: "IPLT.L", name: "WisdomTree Physical Platinum", price: 23.5688, change_pct: 0.0161 },
+        "CNDX.L": { ticker: "CNDX.L", name: "iShares NASDAQ 100 UCITS ETF", price: 1696.6, change_pct: -0.7836 },
+        "CSPX.L": { ticker: "CSPX.L", name: "iShares Core S&P 500 UCITS ETF", price: 832.77, change_pct: -0.1008 },
+        "CNYA.L": { ticker: "CNYA.L", name: "iShares MSCI China A UCITS ETF", price: 5.3975, change_pct: -0.3692 },
+        "KWEB.L": { ticker: "KWEB.L", name: "KraneShares CSI China Internet ETF", price: 18.348, change_pct: -0.1469 },
+        "3CP.F": { ticker: "3CP.F", name: "WisdomTree Physical Platinum (Xetra)", price: 3.02, change_pct: -1.3072 },
+        "NNND.F": { ticker: "NNND.F", name: "iShares NASDAQ 100 UCITS ETF (Xetra)", price: 45.5, change_pct: -3.0987 },
+        "EMIM.L": { ticker: "EMIM.L", name: "iShares Core MSCI Emerging Markets IMI ETF", price: 3897.0, change_pct: -1.0411 },
+        "PAXG-USD": { ticker: "PAXG-USD", name: "PAX Gold (PAXG)", price: 4116.6699, change_pct: -0.0172 },
+      },
+      lastStrategySummaries: {
+        historical: {
+          summary: {
+            start_value: 2000,
+            end_value: 1946.06,
+            invested_value: 2000,
+            active_invested: 1066.67,
+            active_stock_value: 1012.73,
+            active_return: -53.94,
+            active_return_pct: -5.06,
+            total_realized_pnl: 23.42,
+            unrealized_pnl: -53.94,
+            total_strategy_pnl: -30.52,
+            total_strategy_return_pct: -2.86,
+            closed_count: 1,
+            num_holdings: 8,
+            num_slots: 15,
+          },
+          closed_holdings: [
+            {
+              ticker: "NTAP",
+              name: "NetApp, Inc.",
+              sector: "Almacenamiento Híbrido & Nube",
+              exchange: "NASDAQ",
+              shares: 0.73056,
+              entry_date: "2026-08-03",
+              entry_price: 182.5083,
+              exit_date: "2026-10-01",
+              exit_price: 214.566,
+              cost_basis: 133.33,
+              exit_value: 156.75,
+              realized_pnl: 23.42,
+              realized_return_pct: 17.57,
+              holding_days: 59,
+            },
+          ],
+          updatedAt: "2026-10-21T06:00:00.000Z",
+        },
+        strat_1788304141581: {
+          summary: {
+            start_value: 1010,
+            end_value: 1026.21,
+            invested_value: 1010,
+            active_invested: 353.5,
+            active_stock_value: 369.71,
+            active_return: 16.21,
+            active_return_pct: 4.59,
+            total_realized_pnl: 0.79,
+            unrealized_pnl: 16.21,
+            total_strategy_pnl: 17.0,
+            total_strategy_return_pct: 4.81,
+            closed_count: 2,
+            num_holdings: 7,
+            num_slots: 20,
+          },
+          closed_holdings: [
+            {
+              ticker: "DK",
+              name: "Delek US Holdings, Inc.",
+              sector: "Energy",
+              exchange: "NYQ",
+              shares: 0.706788,
+              entry_date: "2026-09-02",
+              entry_price: 71.45,
+              exit_date: "2026-10-01",
+              exit_price: 74.34,
+              cost_basis: 50.5,
+              exit_value: 52.54,
+              realized_pnl: 2.04,
+              realized_return_pct: 4.04,
+              holding_days: 29,
+            },
+            {
+              ticker: "HALO",
+              name: "Halozyme Therapeutics, Inc.",
+              sector: "Healthcare",
+              exchange: "NMS",
+              shares: 0.460514,
+              entry_date: "2026-09-02",
+              entry_price: 109.66,
+              exit_date: "2026-10-01",
+              exit_price: 106.94,
+              cost_basis: 50.5,
+              exit_value: 49.25,
+              realized_pnl: -1.25,
+              realized_return_pct: -2.48,
+              holding_days: 29,
+            },
+          ],
+          updatedAt: "2026-10-21T06:00:00.000Z",
+        },
+      },
+      lastPortfolioSummaries: {},
+      saveLastKnownQuotes: (quotesMapOrArray) => {
+        if (!quotesMapOrArray) return;
+        set((state) => {
+          const next = { ...(state.lastKnownQuotes || {}) };
+          if (Array.isArray(quotesMapOrArray)) {
+            quotesMapOrArray.forEach((q) => {
+              if (q?.ticker && q?.price != null) {
+                next[q.ticker] = { ...next[q.ticker], ...q, updatedAt: new Date().toISOString() };
+              }
+            });
+          } else if (typeof quotesMapOrArray === "object") {
+            Object.entries(quotesMapOrArray).forEach(([k, q]) => {
+              if (q && q.price != null) {
+                next[k] = { ...next[k], ...q, ticker: k, updatedAt: new Date().toISOString() };
+              }
+            });
+          }
+          return { lastKnownQuotes: next };
+        });
+      },
+      saveStrategySummary: (strategyId, navData) => {
+        if (!strategyId || !navData?.summary) return;
+        set((state) => ({
+          lastStrategySummaries: {
+            ...(state.lastStrategySummaries || {}),
+            [strategyId]: {
+              summary: navData.summary,
+              closed_holdings: navData.closed_holdings || state.lastStrategySummaries?.[strategyId]?.closed_holdings || [],
+              updatedAt: new Date().toISOString(),
+            },
+          },
+        }));
+      },
+      savePortfolioSummary: (portfolioId, summaryData) => {
+        if (!portfolioId || !summaryData) return;
+        set((state) => ({
+          lastPortfolioSummaries: {
+            ...(state.lastPortfolioSummaries || {}),
+            [portfolioId]: {
+              ...summaryData,
+              updatedAt: new Date().toISOString(),
+            },
+          },
+        }));
       },
 
       initFetchCustomStrategies: async () => {
@@ -702,9 +890,24 @@ export const usePortfolioStore = create(
         purchaseSales: s.purchaseSales,
         customStrategies: s.customStrategies,
         strategyRebalances: s.strategyRebalances,
+        lastKnownQuotes: s.lastKnownQuotes,
+        lastStrategySummaries: s.lastStrategySummaries,
+        lastPortfolioSummaries: s.lastPortfolioSummaries,
       }),
       merge: (persistedState, currentState) => {
         const merged = { ...currentState, ...persistedState };
+        merged.lastKnownQuotes = {
+          ...(currentState.lastKnownQuotes || {}),
+          ...(persistedState?.lastKnownQuotes || {}),
+        };
+        merged.lastStrategySummaries = {
+          ...(currentState.lastStrategySummaries || {}),
+          ...(persistedState?.lastStrategySummaries || {}),
+        };
+        merged.lastPortfolioSummaries = {
+          ...(currentState.lastPortfolioSummaries || {}),
+          ...(persistedState?.lastPortfolioSummaries || {}),
+        };
         if (!merged.settingsByMode) {
           merged.settingsByMode = currentState.settingsByMode;
         } else {
@@ -732,6 +935,12 @@ export const usePortfolioStore = create(
           };
           merged.customStrategies = [sysStrat, ...merged.customStrategies];
         }
+        if (!merged.customStrategies.find((s) => s.id === "strat_1788304141581")) {
+          const realStrat = currentState.customStrategies.find((s) => s.id === "strat_1788304141581");
+          if (realStrat) {
+            merged.customStrategies = [...merged.customStrategies, realStrat];
+          }
+        }
         if (!merged.strategyRebalances?.strat_mm20 || merged.strategyRebalances.strat_mm20.length === 0) {
           merged.strategyRebalances = {
             ...merged.strategyRebalances,
@@ -743,6 +952,12 @@ export const usePortfolioStore = create(
                 tickers: ["ARLP", "ACLS", "BHC", "DIOD", "HAE", "NSIT", "POWI", "VECO", "OSK", "SM"],
               },
             ],
+          };
+        }
+        if (!merged.strategyRebalances?.strat_1788304141581 || merged.strategyRebalances.strat_1788304141581.length === 0) {
+          merged.strategyRebalances = {
+            ...merged.strategyRebalances,
+            strat_1788304141581: currentState.strategyRebalances.strat_1788304141581,
           };
         }
         (merged.customStrategies || []).forEach((st) => {

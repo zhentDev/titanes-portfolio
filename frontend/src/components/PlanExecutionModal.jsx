@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { DynamicDatePicker } from "./Common";
 
 export default function PlanExecutionModal({
   isOpen,
@@ -149,11 +150,9 @@ export default function PlanExecutionModal({
           >
             Fecha de Ejecución (Suele ser hoy o la fecha sugerida)
           </label>
-          <input
-            type="date"
-            className="input"
+          <DynamicDatePicker
             value={executionDate}
-            onChange={(e) => setExecutionDate(e.target.value)}
+            onChange={(val) => setExecutionDate(val)}
           />
         </div>
 

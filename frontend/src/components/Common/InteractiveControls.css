@@ -165,6 +165,43 @@ input[type="number"] {
   color: #00e5ff;
 }
 
+.dynamic-picker-format-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  color: #38bdf8;
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-family: "JetBrains Mono", "SF Mono", monospace;
+  white-space: nowrap;
+  user-select: none;
+  margin-right: 2px;
+}
+
+/* Native date/time inputs global fallback styling */
+input[type="date"],
+input[type="time"] {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  color: #f8fafc;
+  font-family: "JetBrains Mono", "SF Mono", monospace;
+  font-size: 0.85rem;
+  padding: 8px 12px;
+  color-scheme: dark;
+  transition: all 0.2s ease;
+}
+
+input[type="date"]:focus,
+input[type="time"]:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4), 0 0 14px rgba(56, 189, 248, 0.2);
+  outline: none;
+}
+
 /* Glassmorphism Popover */
 .dynamic-datepicker-popover {
   position: absolute;
@@ -1055,5 +1092,19 @@ input[type="number"] {
 [data-theme="light"] .datepicker-preset-chip:hover {
   background: rgba(2, 132, 199, 0.15);
   color: #0284c7;
+}
+
+[data-theme="light"] .dynamic-picker-format-badge {
+  background: rgba(2, 132, 199, 0.1);
+  border: 1px solid rgba(2, 132, 199, 0.25);
+  color: #0284c7;
+}
+
+[data-theme="light"] input[type="date"],
+[data-theme="light"] input[type="time"] {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  color: #0f172a;
+  color-scheme: light;
 }
 

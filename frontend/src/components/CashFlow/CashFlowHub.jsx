@@ -94,9 +94,15 @@ export default function CashFlowHub() {
     mode,
     customStrategies,
     initFetchCustomStrategies,
+    initFetchPurchases,
     individualPurchases,
     purchaseSales,
     purchasePortfolios,
+    lastKnownQuotes,
+    lastStrategySummaries,
+    lastPortfolioSummaries,
+    saveLastKnownQuotes,
+    saveStrategySummary,
   } = usePortfolioStore();
 
   const [fxRate, setFxRate] = useState(4150);
@@ -165,6 +171,9 @@ export default function CashFlowHub() {
               if (q?.ticker) map[q.ticker] = q;
             });
             setLiveQuotesMap((prev) => ({ ...prev, ...map }));
+            if (typeof saveLastKnownQuotes === "function") {
+              saveLastKnownQuotes(map);
+            }
           }
         })
         .catch(console.error);
@@ -176,7 +185,7 @@ export default function CashFlowHub() {
       isCancelled = true;
       clearInterval(interval);
     };
-  }, [individualPurchases]);
+  }, [individualPurchases, saveLastKnownQuotes]);
 
   // Fetch NAV for Titanes Tech (historical)
   useEffect(() => {
@@ -190,13 +199,16 @@ export default function CashFlowHub() {
       .then((data) => {
         if (!isCancelled && data?.summary) {
           setHistoricalNavData(data);
+          if (typeof saveStrategySummary === "function") {
+            saveStrategySummary("historical", data);
+          }
         }
       })
       .catch(() => {});
     return () => {
       isCancelled = true;
     };
-  }, [settingsByMode?.historical?.investment, settingsByMode?.historical?.numSlots]);
+  }, [settingsByMode?.historical?.investment, settingsByMode?.historical?.numSlots, saveStrategySummary]);
 
   // Fetch NAV for Real Custom Strategy (e.g. strat_1788304141581)
   const realCustomStrat = useMemo(() => {
@@ -215,13 +227,16 @@ export default function CashFlowHub() {
       .then((data) => {
         if (!isCancelled && data?.summary) {
           setCustomRealNavData(data);
+          if (typeof saveStrategySummary === "function") {
+            saveStrategySummary(realCustomStrat.id, data);
+          }
         }
       })
       .catch(() => {});
     return () => {
       isCancelled = true;
     };
-  }, [realCustomStrat, settingsByMode]);
+  }, [realCustomStrat, settingsByMode, saveStrategySummary]);
 
   // Initialize store on mount
   useEffect(() => {
@@ -229,7 +244,10 @@ export default function CashFlowHub() {
     if (typeof initFetchCustomStrategies === "function") {
       initFetchCustomStrategies();
     }
-  }, [initFetchCashFlow, initFetchCustomStrategies]);
+    if (typeof initFetchPurchases === "function") {
+      initFetchPurchases();
+    }
+  }, [initFetchCashFlow, initFetchCustomStrategies, initFetchPurchases]);
 
   // Live Auto-Sync Passive Yields & Portfolio Equity
   useEffect(() => {
@@ -388,22 +406,23 @@ export default function CashFlowHub() {
 
   // ── Flujo en Paralelo: Patrimonio Total Invertido (Solo Dinero Real) ──
   const realInvestmentMetrics = useMemo(() => {
-    // 1. Estrategia 1: Titanes Tech (historical)
-    // El dinero invertido activo en acciones reales (excluye reserva/cash no invertido)
+    // 1. Estrategia 1: Titanes Tech (historical) — usa tiempo real o el último cálculo guardado
+    const histSource = historicalNavData?.summary ? historicalNavData : lastStrategySummaries?.historical;
     const titanesActiveInvestedUSD = Number(
-      historicalNavData?.summary?.active_invested ??
+      histSource?.summary?.active_invested ??
       (settingsByMode?.historical?.investment ? (settingsByMode.historical.investment * 8) / 15 : 1066.67)
     );
     const titanesBaseTotalUSD = Number(settingsByMode?.historical?.investment || 2000);
     const titanesReturnUSD = Number(
-      historicalNavData?.summary?.active_return ?? historicalNavData?.summary?.total_return ?? 0
+      histSource?.summary?.active_return ?? histSource?.summary?.total_return ?? 0
     );
     const titanesMarketValueUSD = titanesActiveInvestedUSD + titanesReturnUSD;
 
     // 2. Estrategia 2: Estrategia Personalizada con Dinero Real (ej. strat_1788304141581)
     const realStrats = (customStrategies || []).filter((s) => s.isRealMoney);
     const customBreakdowns = realStrats.map((strat) => {
-      const stratNav = strat.id === realCustomStrat?.id ? customRealNavData : null;
+      const liveStratNav = strat.id === realCustomStrat?.id && customRealNavData?.summary ? customRealNavData : null;
+      const stratNav = liveStratNav || lastStrategySummaries?.[strat.id];
       const baseCap = Number(strat.capital || settingsByMode?.[strat.id]?.investment || 1010);
       const activeInv = Number(
         stratNav?.summary?.active_invested ?? (baseCap * (strat.numSlots ? 7 / strat.numSlots : 0.35))
@@ -420,6 +439,7 @@ export default function CashFlowHub() {
         pnlUSD: ret,
         pnlPct,
         totalCapitalUSD: baseCap,
+        closedHoldings: stratNav?.closed_holdings || [],
       };
     });
 
@@ -433,6 +453,7 @@ export default function CashFlowHub() {
         pnlUSD: titanesReturnUSD,
         pnlPct: titanesActiveInvestedUSD > 0 ? (titanesReturnUSD / titanesActiveInvestedUSD) * 100 : 0,
         totalCapitalUSD: titanesBaseTotalUSD,
+        closedHoldings: histSource?.closed_holdings || [],
       },
       ...customBreakdowns,
     ];
@@ -458,10 +479,11 @@ export default function CashFlowHub() {
       const sh = Number(lot.shares || 0);
       const prc = Number(lot.purchasePrice || 0);
       if (sh > 0) {
-        const invested = lot.investedAmount != null ? Number(lot.investedAmount) : sh * prc;
-        const liveQuote = liveQuotesMap[lot.ticker];
+        const invested = (sh > 0 && prc > 0) ? sh * prc : (lot.investedAmount != null ? Number(lot.investedAmount) : sh * prc);
+        const liveQuote = liveQuotesMap[lot.ticker] || lastKnownQuotes?.[lot.ticker];
         const currentPrc = Number(lot.manualCurrentPrice || liveQuote?.price || prc);
-        const curVal = sh * currentPrc;
+        const ratio = prc > 0 ? currentPrc / prc : 1;
+        const curVal = invested * ratio;
 
         purchasesInvestedUSD += invested;
         purchasesMarketValueUSD += curVal;
@@ -474,6 +496,18 @@ export default function CashFlowHub() {
         portMap[portId].investedUSD += invested;
         portMap[portId].marketValueUSD += curVal;
         portMap[portId].count += 1;
+      }
+    });
+
+    // Fallback: si algún portafolio aún no cargó lotes pero tiene último resumen guardado en store
+    Object.values(portMap).forEach((g) => {
+      if (g.count === 0 && lastPortfolioSummaries?.[g.id]?.investedUSD > 0) {
+        const saved = lastPortfolioSummaries[g.id];
+        g.investedUSD = Number(saved.investedUSD || 0);
+        g.marketValueUSD = Number(saved.marketValueUSD || g.investedUSD);
+        g.count = Number(saved.count || 1);
+        purchasesInvestedUSD += g.investedUSD;
+        purchasesMarketValueUSD += g.marketValueUSD;
       }
     });
 
@@ -502,63 +536,91 @@ export default function CashFlowHub() {
     const totalUnrealizedPnlCOP = Math.round(totalUnrealizedPnlUSD * fxRate);
     const totalUnrealizedPnlPct = totalInvestedUSD > 0 ? (totalUnrealizedPnlUSD / totalInvestedUSD) * 100 : 0;
 
-    // 5. Posiciones Cerradas en el mes activo (Estrategias + Ventas individuales de compras)
-    const closedPositionsMonth = [];
+    // 5. Historial Completo de Posiciones Cerradas agrupadas por Mes (Estrategias + Ventas Individuales)
+    const allClosedPositions = [];
 
-    // 5a. De Titanes Tech (historical nav closed holdings)
-    if (historicalNavData?.closed_holdings?.length > 0) {
-      historicalNavData.closed_holdings.forEach((h) => {
+    // 5a. De todas las Estrategias Reales (Titanes Tech + Estrategias Reales Personalizadas)
+    strategiesItems.forEach((st) => {
+      (st.closedHoldings || []).forEach((h) => {
         const exitDate = h.exit_date || "";
-        if (exitDate.startsWith(activePeriod)) {
-          closedPositionsMonth.push({
-            id: `hist_closed_${h.ticker}_${exitDate}`,
-            source: "Titanes Tech",
-            ticker: h.ticker,
-            name: h.name || h.ticker,
-            exitDate,
-            realizedPnlUSD: Number(h.realized_pnl ?? 0),
-            realizedReturnPct: Number(h.realized_return_pct ?? 0),
-          });
-        }
-      });
-    }
-
-    // 5b. De Estrategia Personalizada Real (strat_1788304141581 closed holdings)
-    if (customRealNavData?.closed_holdings?.length > 0) {
-      customRealNavData.closed_holdings.forEach((h) => {
-        const exitDate = h.exit_date || "";
-        if (exitDate.startsWith(activePeriod)) {
-          closedPositionsMonth.push({
-            id: `strat_closed_${h.ticker}_${exitDate}`,
-            source: realCustomStrat?.name || "Estrategia Real",
-            ticker: h.ticker,
-            name: h.name || h.ticker,
-            exitDate,
-            realizedPnlUSD: Number(h.realized_pnl ?? 0),
-            realizedReturnPct: Number(h.realized_return_pct ?? 0),
-          });
-        }
-      });
-    }
-
-    // 5c. De Ventas de Compras Individuales (purchaseSales)
-    (purchaseSales || []).forEach((sale) => {
-      const saleDateStr = sale.saleDate || sale.sale_date || "";
-      if (saleDateStr.startsWith(activePeriod)) {
-        closedPositionsMonth.push({
-          id: sale.id || `sale_${saleDateStr}_${sale.ticker}`,
-          source: "Compra Individual",
-          ticker: sale.ticker,
-          name: sale.notes || sale.ticker,
-          exitDate: saleDateStr,
-          realizedPnlUSD: Number(sale.realizedPnl ?? sale.realized_pnl ?? 0),
-          realizedReturnPct: Number(sale.realizedReturnPct ?? 0),
+        allClosedPositions.push({
+          id: `${st.id}_closed_${h.ticker}_${exitDate}`,
+          source: st.name,
+          ticker: h.ticker,
+          name: h.name || h.ticker,
+          entryDate: h.entry_date || null,
+          exitDate,
+          period: exitDate ? exitDate.slice(0, 7) : activePeriod,
+          costBasisUSD: Number(h.cost_basis ?? 0),
+          exitValueUSD: Number(h.exit_value ?? 0),
+          realizedPnlUSD: Number(h.realized_pnl ?? 0),
+          realizedReturnPct: Number(h.realized_return_pct ?? 0),
         });
-      }
+      });
     });
 
+    // 5b. De Ventas de Compras Individuales (purchaseSales)
+    (purchaseSales || []).forEach((sale) => {
+      const saleDateStr = sale.saleDate || sale.sale_date || "";
+      const pnlUSD = Number(sale.realizedPnl ?? sale.realized_pnl ?? 0);
+      const costB = Number(sale.costBasis ?? sale.cost_basis ?? 0);
+      const retPct =
+        sale.realizedReturnPct != null
+          ? Number(sale.realizedReturnPct)
+          : costB > 0
+          ? (pnlUSD / costB) * 100
+          : 0;
+      const portName = portMap[sale.portfolioId]?.name || "Compra Individual";
+      allClosedPositions.push({
+        id: sale.id || `sale_${saleDateStr}_${sale.ticker}`,
+        source: portName,
+        ticker: sale.ticker,
+        name: sale.notes || sale.ticker,
+        entryDate: sale.purchaseDate || sale.purchase_date || null,
+        exitDate: saleDateStr,
+        period: saleDateStr ? saleDateStr.slice(0, 7) : activePeriod,
+        costBasisUSD: costB,
+        exitValueUSD: costB + pnlUSD,
+        realizedPnlUSD: pnlUSD,
+        realizedReturnPct: retPct,
+      });
+    });
+
+    // Ordenar todas las posiciones cerradas de más reciente a más antigua
+    allClosedPositions.sort((a, b) => (b.exitDate || "").localeCompare(a.exitDate || ""));
+
+    // Agrupar por mes YYYY-MM
+    const monthBuckets = {};
+    allClosedPositions.forEach((pos) => {
+      const mKey = pos.period || "Sin fecha";
+      if (!monthBuckets[mKey]) {
+        monthBuckets[mKey] = {
+          period: mKey,
+          periodLabel: formatPeriodName(mKey),
+          positions: [],
+          totalPnlUSD: 0,
+          count: 0,
+        };
+      }
+      monthBuckets[mKey].positions.push(pos);
+      monthBuckets[mKey].totalPnlUSD += pos.realizedPnlUSD;
+      monthBuckets[mKey].count += 1;
+    });
+
+    const closedByMonthHistory = Object.values(monthBuckets)
+      .sort((a, b) => b.period.localeCompare(a.period))
+      .map((m) => ({
+        ...m,
+        totalPnlCOP: Math.round(m.totalPnlUSD * fxRate),
+      }));
+
+    const closedPositionsMonth = allClosedPositions.filter((p) => p.period === activePeriod);
     const closedPnlMonthUSD = closedPositionsMonth.reduce((acc, c) => acc + c.realizedPnlUSD, 0);
     const closedCountMonth = closedPositionsMonth.length;
+
+    const totalHistoricalClosedPnlUSD = allClosedPositions.reduce((acc, c) => acc + c.realizedPnlUSD, 0);
+    const totalHistoricalClosedPnlCOP = Math.round(totalHistoricalClosedPnlUSD * fxRate);
+    const totalHistoricalClosedCount = allClosedPositions.length;
 
     return {
       // Base Cost Basis (Dinero realmente invertido activo)
@@ -584,10 +646,16 @@ export default function CashFlowHub() {
       strategiesItems,
       purchaseGroups,
       closedPositionsMonth,
+      closedByMonthHistory,
+      allClosedPositions,
       // Monthly Closed Realized
       closedPnlMonthUSD,
       closedPnlMonthCOP: Math.round(closedPnlMonthUSD * fxRate),
       closedCountMonth,
+      // Historical Closed Realized across all months
+      totalHistoricalClosedPnlUSD,
+      totalHistoricalClosedPnlCOP,
+      totalHistoricalClosedCount,
     };
   }, [
     customStrategies,
@@ -598,6 +666,9 @@ export default function CashFlowHub() {
     individualPurchases,
     purchasePortfolios,
     liveQuotesMap,
+    lastKnownQuotes,
+    lastStrategySummaries,
+    lastPortfolioSummaries,
     purchaseSales,
     activePeriod,
     fxRate,
@@ -854,7 +925,7 @@ export default function CashFlowHub() {
         </div>
       </div>
 
-      {/* ── 3. Top KPI Summary Cards Grid (with Real TRM Conversion) ── */}
+      {/* ── 3. Top KPI Summary Cards Grid (with Real TRM Conversion & Explanatory Comments) ── */}
       <div className="cashflow-kpi-grid">
         {/* KPI 1: Total Inflow */}
         <div className="cashflow-kpi-card emerald">
@@ -868,6 +939,18 @@ export default function CashFlowHub() {
           <div className="cashflow-kpi-footer">
             <span>Pasivo: {formatMoney(totalPassiveInflow, currency)}</span>
             <span style={{ color: "#00e5ff", fontWeight: 600 }}>{passivePctOfInflow}% del total</span>
+          </div>
+          <div
+            style={{
+              marginTop: 8,
+              paddingTop: 8,
+              borderTop: isLight ? "1px dashed rgba(16, 185, 129, 0.25)" : "1px dashed rgba(16, 185, 129, 0.2)",
+              fontSize: "0.73rem",
+              lineHeight: 1.4,
+              color: isLight ? "#475569" : "#94a3b8",
+            }}
+          >
+            💡 <strong>¿Qué significa?</strong> Es el total de dinero que entra en este ciclo mensual (tu salario neto del 23 + rendimientos pasivos de cuentas/inversiones). El <strong>% Pasivo</strong> mide cuánto de tu ingreso ya trabaja sin tu tiempo.
           </div>
         </div>
 
@@ -892,6 +975,18 @@ export default function CashFlowHub() {
             <span>Aporte: {formatMoney(totalWealth, currency)}</span>
             <span>Meta: {customRatios.savings}%</span>
           </div>
+          <div
+            style={{
+              marginTop: 8,
+              paddingTop: 8,
+              borderTop: isLight ? "1px dashed rgba(2, 132, 199, 0.25)" : "1px dashed rgba(0, 229, 255, 0.2)",
+              fontSize: "0.73rem",
+              lineHeight: 1.4,
+              color: isLight ? "#475569" : "#94a3b8",
+            }}
+          >
+            💡 <strong>¿Qué significa?</strong> Es el porcentaje real de tu ingreso que conservas y envías a construir patrimonio (Inversión + Ahorro). <strong>+20%</strong> es saludable y <strong>+30% (Nivel FIRE)</strong> acelera tu retiro temprano.
+          </div>
         </div>
 
         {/* KPI 3: Free Cash Flow Margin */}
@@ -908,6 +1003,18 @@ export default function CashFlowHub() {
           <div className="cashflow-kpi-footer">
             <span>Asignado: {formatMoney(totalAllocated, currency)}</span>
             <span>{totalInflow > 0 ? ((freeCashFlow / totalInflow) * 100).toFixed(0) : 0}% libre</span>
+          </div>
+          <div
+            style={{
+              marginTop: 8,
+              paddingTop: 8,
+              borderTop: isLight ? "1px dashed rgba(147, 51, 234, 0.25)" : "1px dashed rgba(192, 132, 252, 0.2)",
+              fontSize: "0.73rem",
+              lineHeight: 1.4,
+              color: isLight ? "#475569" : "#94a3b8",
+            }}
+          >
+            💡 <strong>¿Qué significa?</strong> Es el dinero sobrante sin asignar después de restar Gastos Fijos, Estilo de Vida y Ahorro/Inversión. Si está en <strong>$0</strong> tienes presupuesto base cero; si es positivo es tu colchón extra del mes.
           </div>
         </div>
 
@@ -926,12 +1033,22 @@ export default function CashFlowHub() {
             <span>Gasto Diario: {formatMoney(dailyBurn, currency)}</span>
             <span style={{ color: "#10b981", fontWeight: 700 }}>Aceleración FIRE</span>
           </div>
+          <div
+            style={{
+              marginTop: 8,
+              paddingTop: 8,
+              borderTop: isLight ? "1px dashed rgba(217, 119, 6, 0.25)" : "1px dashed rgba(251, 191, 36, 0.2)",
+              fontSize: "0.73rem",
+              lineHeight: 1.4,
+              color: isLight ? "#475569" : "#94a3b8",
+            }}
+          >
+            💡 <strong>¿Qué significa?</strong> Calcula cuántos días de tu costo de vida actual (Gasto Fijo + Salidas = {formatMoney(dailyBurn, currency)}/día) logras comprar cada mes con el dinero que ahorras e inviertes.
+          </div>
         </div>
       </div>
 
-      {/* ── Flujo en Paralelo: Patrimonio Invertido Real & Monitor de Posiciones Cerradas ── */}
-      {/* ── Flujo en Paralelo: Patrimonio Invertido Real, Valor Actual & Ganancia/Pérdida ── */}
-      {/* ── Flujo en Paralelo: Patrimonio Invertido Real, Valor Actual & Ganancia/Pérdida ── */}
+      {/* ── Flujo en Paralelo: Patrimonio Invertido Real, Valor Actual & Historial de Cerradas ── */}
       <div
         style={{
           display: "flex",
@@ -966,7 +1083,7 @@ export default function CashFlowHub() {
               background: expandedCard === "invested" ? (isLight ? "rgba(2, 132, 199, 0.08)" : "rgba(0, 229, 255, 0.08)") : "transparent",
               transition: "all 0.2s ease",
             }}
-            title="Haz clic para ver el desglose por Estrategias y Grupos de Compra"
+            title="Haz clic para ver el desglose por Estrategias y Grupos de Compra (Base vs Valor Actual)"
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span
@@ -1040,7 +1157,7 @@ export default function CashFlowHub() {
               borderLeft: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.08)",
               transition: "all 0.2s ease",
             }}
-            title="Haz clic para ver el desglose de rendimiento por Estrategias y Grupos"
+            title="Haz clic para ver el desglose de rendimiento en tiempo real / último cierre guardado"
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span
@@ -1125,7 +1242,7 @@ export default function CashFlowHub() {
             </div>
           </div>
 
-          {/* Tarjeta 3: Posiciones Cerradas / Rotación del Mes */}
+          {/* Tarjeta 3: Posiciones Cerradas / Historial por Mes */}
           <div
             onClick={() => setExpandedCard(expandedCard === "closed" ? null : "closed")}
             style={{
@@ -1139,7 +1256,7 @@ export default function CashFlowHub() {
               borderLeft: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.08)",
               transition: "all 0.2s ease",
             }}
-            title="Haz clic para ver las posiciones cerradas este mes en Titanes y Compras"
+            title="Haz clic para ver el historial mensual de posiciones cerradas en Estrategias y Compras"
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span
@@ -1154,7 +1271,7 @@ export default function CashFlowHub() {
                   gap: 6,
                 }}
               >
-                <span>💼</span> Cerradas en Mes ({formatPeriodName(activePeriod)})
+                <span>💼</span> Historial Cerradas por Mes
               </span>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span
@@ -1163,14 +1280,23 @@ export default function CashFlowHub() {
                     padding: "3px 8px",
                     borderRadius: "10px",
                     background:
-                      realInvestmentMetrics.closedPnlMonthUSD >= 0
+                      (realInvestmentMetrics.closedCountMonth > 0
+                        ? realInvestmentMetrics.closedPnlMonthUSD
+                        : realInvestmentMetrics.totalHistoricalClosedPnlUSD) >= 0
                         ? "rgba(16, 185, 129, 0.12)"
                         : "rgba(244, 63, 94, 0.12)",
-                    color: realInvestmentMetrics.closedPnlMonthUSD >= 0 ? (isLight ? "#059669" : "#34d399") : "#fb7185",
+                    color:
+                      (realInvestmentMetrics.closedCountMonth > 0
+                        ? realInvestmentMetrics.closedPnlMonthUSD
+                        : realInvestmentMetrics.totalHistoricalClosedPnlUSD) >= 0
+                        ? isLight
+                          ? "#059669"
+                          : "#34d399"
+                        : "#fb7185",
                     fontWeight: 800,
                   }}
                 >
-                  {realInvestmentMetrics.closedCountMonth} {realInvestmentMetrics.closedCountMonth === 1 ? "VENTA" : "VENTAS"}
+                  {realInvestmentMetrics.totalHistoricalClosedCount} HISTÓRICAS · {realInvestmentMetrics.closedByMonthHistory.length} MES(ES)
                 </span>
                 <span style={{ fontSize: "0.85rem", color: "var(--text-muted)", transform: expandedCard === "closed" ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
                   ▼
@@ -1183,33 +1309,37 @@ export default function CashFlowHub() {
                 style={{
                   fontSize: "clamp(1.4rem, 2vw, 1.7rem)",
                   fontWeight: 800,
-                  color: realInvestmentMetrics.closedPnlMonthUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
+                  color: realInvestmentMetrics.totalHistoricalClosedPnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
                   fontFamily: "var(--font-mono, monospace)",
                 }}
               >
-                {realInvestmentMetrics.closedPnlMonthUSD >= 0 ? "+" : ""}${realInvestmentMetrics.closedPnlMonthUSD.toFixed(2)} USD
+                {realInvestmentMetrics.totalHistoricalClosedPnlUSD >= 0 ? "+" : ""}${realInvestmentMetrics.totalHistoricalClosedPnlUSD.toFixed(2)} USD
               </span>
               <span
                 style={{
                   fontSize: "clamp(0.85rem, 1.1vw, 0.95rem)",
                   fontWeight: 700,
                   fontFamily: "var(--font-mono, monospace)",
-                  color: realInvestmentMetrics.closedPnlMonthUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
+                  color: realInvestmentMetrics.totalHistoricalClosedPnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
                 }}
               >
-                (≈{realInvestmentMetrics.closedPnlMonthUSD >= 0 ? "+" : ""}${realInvestmentMetrics.closedPnlMonthCOP.toLocaleString("es-CO")} COP)
+                (≈{realInvestmentMetrics.totalHistoricalClosedPnlUSD >= 0 ? "+" : ""}${realInvestmentMetrics.totalHistoricalClosedPnlCOP.toLocaleString("es-CO")} COP)
               </span>
             </div>
 
-            <div style={{ fontSize: "clamp(0.78rem, 1vw, 0.86rem)", color: "var(--text-muted)", marginTop: 2 }}>
-              {realInvestmentMetrics.closedCountMonth > 0
-                ? `${realInvestmentMetrics.closedCountMonth} posición(es) cerrada(s) con ganancias en el mes.`
-                : "Sin tomas de ganancia o ventas ejecutadas en este periodo."}
+            <div style={{ fontSize: "clamp(0.78rem, 1vw, 0.86rem)", color: "var(--text-muted)", marginTop: 2, display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 6 }}>
+              <span>
+                En {formatPeriodName(activePeriod)}:{" "}
+                <strong style={{ color: realInvestmentMetrics.closedPnlMonthUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e" }}>
+                  {realInvestmentMetrics.closedCountMonth} venta(s) ({realInvestmentMetrics.closedPnlMonthUSD >= 0 ? "+" : ""}${realInvestmentMetrics.closedPnlMonthUSD.toFixed(2)} USD)
+                </strong>
+              </span>
+              <span style={{ color: isLight ? "#0284c7" : "#38bdf8", fontWeight: 700 }}>Ver historial mensual ▼</span>
             </div>
           </div>
         </div>
 
-        {/* ── Desglose Expandible: Modalidad Lista Desplegable ── */}
+        {/* ── Desglose Expandible: Modalidad Lista Desplegable (Capital Invertido + Valor Actual de Mercado) ── */}
         {expandedCard === "invested" && (
           <div
             style={{
@@ -1222,10 +1352,15 @@ export default function CashFlowHub() {
               animation: "fadeIn 0.2s ease-in-out",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontSize: "clamp(0.9rem, 1.2vw, 1.05rem)", fontWeight: 700, color: isLight ? "#0f172a" : "#f8fafc" }}>
-                Desglose de Capital Invertido por Estrategia y Grupo de Compra:
-              </span>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+              <div>
+                <span style={{ fontSize: "clamp(0.9rem, 1.2vw, 1.05rem)", fontWeight: 700, color: isLight ? "#0f172a" : "#f8fafc" }}>
+                  Desglose de Capital Invertido y Valor de Mercado Actual (Tiempo Real / Último Guardado):
+                </span>
+                <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: 2 }}>
+                  Muestra tanto tu base invertida como la valoración real actual del mercado (nunca se queda plano en el costo inicial).
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => setExpandedCard(null)}
@@ -1271,15 +1406,21 @@ export default function CashFlowHub() {
                         {st.country} {st.name}
                       </div>
                       <div style={{ fontSize: "clamp(0.78rem, 1vw, 0.88rem)", color: "var(--text-muted)", marginTop: 2 }}>
-                        Capital Total Asignado: ${st.totalCapitalUSD} USD (≈${Math.round(st.totalCapitalUSD * fxRate).toLocaleString("es-CO")} COP)
+                        Base Invertida: <strong>${st.activeInvestedUSD.toFixed(2)} USD</strong> (≈${Math.round(st.activeInvestedUSD * fxRate).toLocaleString("es-CO")} COP)
+                      </div>
+                      <div style={{ fontSize: "clamp(0.76rem, 0.95vw, 0.84rem)", color: st.pnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e", marginTop: 3, fontWeight: 700 }}>
+                        Valor Mercado Actual: ${st.marketValueUSD.toFixed(2)} USD ({st.pnlUSD >= 0 ? "+" : ""}${st.pnlUSD.toFixed(2)} USD / {st.pnlPct >= 0 ? "+" : ""}{st.pnlPct.toFixed(2)}%)
                       </div>
                     </div>
                     <div style={{ textAlign: "right", flexShrink: 0 }}>
                       <div style={{ fontSize: "clamp(0.98rem, 1.3vw, 1.15rem)", fontWeight: 800, color: isLight ? "#0284c7" : "var(--accent-primary)", fontFamily: "var(--font-mono, monospace)" }}>
-                        ${st.activeInvestedUSD.toFixed(2)} USD
+                        ${st.marketValueUSD.toFixed(2)} USD
                       </div>
                       <div style={{ fontSize: "clamp(0.8rem, 1vw, 0.9rem)", fontWeight: 600, color: isLight ? "#475569" : "#94a3b8", fontFamily: "var(--font-mono, monospace)", marginTop: 2 }}>
-                        ${Math.round(st.activeInvestedUSD * fxRate).toLocaleString("es-CO")} COP
+                        ${Math.round(st.marketValueUSD * fxRate).toLocaleString("es-CO")} COP
+                      </div>
+                      <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
+                        Base: ${st.activeInvestedUSD.toFixed(2)} USD
                       </div>
                     </div>
                   </div>
@@ -1313,15 +1454,21 @@ export default function CashFlowHub() {
                         📁 {pg.name}
                       </div>
                       <div style={{ fontSize: "clamp(0.78rem, 1vw, 0.88rem)", color: "var(--text-muted)", marginTop: 2 }}>
-                        {pg.count} activo(s) / lote(s) en cartera
+                        {pg.count} activo(s) · Base Invertida: <strong>${pg.investedUSD.toFixed(2)} USD</strong>
+                      </div>
+                      <div style={{ fontSize: "clamp(0.76rem, 0.95vw, 0.84rem)", color: pg.pnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e", marginTop: 3, fontWeight: 700 }}>
+                        Valor Mercado Actual: ${pg.marketValueUSD.toFixed(2)} USD ({pg.pnlUSD >= 0 ? "+" : ""}${pg.pnlUSD.toFixed(2)} USD / {pg.pnlPct >= 0 ? "+" : ""}{pg.pnlPct.toFixed(2)}%)
                       </div>
                     </div>
                     <div style={{ textAlign: "right", flexShrink: 0 }}>
                       <div style={{ fontSize: "clamp(0.98rem, 1.3vw, 1.15rem)", fontWeight: 800, color: isLight ? "#0284c7" : "var(--accent-primary)", fontFamily: "var(--font-mono, monospace)" }}>
-                        ${pg.investedUSD.toFixed(2)} USD
+                        ${pg.marketValueUSD.toFixed(2)} USD
                       </div>
                       <div style={{ fontSize: "clamp(0.8rem, 1vw, 0.9rem)", fontWeight: 600, color: isLight ? "#475569" : "#94a3b8", fontFamily: "var(--font-mono, monospace)", marginTop: 2 }}>
-                        ${Math.round(pg.investedUSD * fxRate).toLocaleString("es-CO")} COP
+                        ${Math.round(pg.marketValueUSD * fxRate).toLocaleString("es-CO")} COP
+                      </div>
+                      <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
+                        Base: ${pg.investedUSD.toFixed(2)} USD
                       </div>
                     </div>
                   </div>
@@ -1489,7 +1636,7 @@ export default function CashFlowHub() {
           </div>
         )}
 
-        {/* ── Desglose Expandible: Posiciones Cerradas este Mes ── */}
+        {/* ── Desglose Expandible: Historial Completo de Posiciones Cerradas por Mes ── */}
         {expandedCard === "closed" && (
           <div
             style={{
@@ -1498,14 +1645,19 @@ export default function CashFlowHub() {
               borderTop: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.08)",
               display: "flex",
               flexDirection: "column",
-              gap: 14,
+              gap: 16,
               animation: "fadeIn 0.2s ease-in-out",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontSize: "clamp(0.9rem, 1.2vw, 1.05rem)", fontWeight: 700, color: isLight ? "#0f172a" : "#f8fafc" }}>
-                Detalle de Posiciones Cerradas / Ventas en {formatPeriodName(activePeriod)}:
-              </span>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+              <div>
+                <span style={{ fontSize: "clamp(0.9rem, 1.2vw, 1.05rem)", fontWeight: 700, color: isLight ? "#0f172a" : "#f8fafc" }}>
+                  📅 Historial de Posiciones Cerradas por Mes (Todas las Estrategias y Compras):
+                </span>
+                <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: 2 }}>
+                  Registro histórico agrupado mes a mes de todas las rotaciones y ventas realizadas.
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => setExpandedCard(null)}
@@ -1525,74 +1677,156 @@ export default function CashFlowHub() {
               </button>
             </div>
 
-            {realInvestmentMetrics.closedPositionsMonth.length === 0 ? (
+            {realInvestmentMetrics.closedByMonthHistory.length === 0 ? (
               <div style={{ fontSize: "clamp(0.85rem, 1.1vw, 0.95rem)", color: "var(--text-muted)", fontStyle: "italic", padding: "12px 0" }}>
-                No se registraron posiciones cerradas en este mes seleccionado.
+                No se han registrado posiciones cerradas en el historial.
               </div>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 12 }}>
-                {realInvestmentMetrics.closedPositionsMonth.map((pos) => (
-                  <div
-                    key={pos.id}
-                    style={{
-                      padding: "12px 16px",
-                      borderRadius: "12px",
-                      background: isLight ? "#ffffff" : "rgba(255, 255, 255, 0.03)",
-                      border: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.07)",
-                      boxShadow: isLight ? "0 2px 8px rgba(0, 0, 0, 0.04)" : "none",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 16,
-                    }}
-                  >
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontWeight: 800, fontSize: "clamp(0.95rem, 1.3vw, 1.1rem)", color: isLight ? "#0f172a" : "#f8fafc" }}>
-                          {pos.ticker}
-                        </span>
-                        <span
-                          style={{
-                            fontSize: "0.7rem",
-                            padding: "2px 8px",
-                            borderRadius: "6px",
-                            background: "rgba(0, 229, 255, 0.12)",
-                            color: "#00e5ff",
-                            fontWeight: 700,
-                          }}
-                        >
-                          {pos.source}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: "clamp(0.78rem, 1vw, 0.88rem)", color: "var(--text-muted)", marginTop: 4 }}>
-                        Cierre: {pos.exitDate} · {pos.name}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                {realInvestmentMetrics.closedByMonthHistory.map((monthGroup) => {
+                  const isCurrentSelectedPeriod = monthGroup.monthKey === activePeriod;
+                  return (
+                    <div
+                      key={monthGroup.monthKey}
+                      style={{
+                        padding: "14px 16px",
+                        borderRadius: "14px",
+                        background: isCurrentSelectedPeriod
+                          ? isLight
+                            ? "rgba(16, 185, 129, 0.06)"
+                            : "rgba(16, 185, 129, 0.06)"
+                          : isLight
+                          ? "rgba(248, 250, 252, 0.9)"
+                          : "rgba(255, 255, 255, 0.02)",
+                        border: isCurrentSelectedPeriod
+                          ? "1px solid rgba(16, 185, 129, 0.35)"
+                          : isLight
+                          ? "1px solid rgba(0, 0, 0, 0.08)"
+                          : "1px solid rgba(255, 255, 255, 0.07)",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 12,
+                      }}
+                    >
+                      {/* Cabecera del Mes */}
                       <div
                         style={{
-                          fontSize: "clamp(1rem, 1.4vw, 1.2rem)",
-                          fontWeight: 800,
-                          color: pos.realizedPnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
-                          fontFamily: "var(--font-mono, monospace)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          flexWrap: "wrap",
+                          gap: 10,
+                          paddingBottom: 8,
+                          borderBottom: isLight ? "1px solid rgba(0, 0, 0, 0.06)" : "1px solid rgba(255, 255, 255, 0.06)",
                         }}
                       >
-                        {pos.realizedPnlUSD >= 0 ? "+" : ""}${pos.realizedPnlUSD.toFixed(2)} USD
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <span style={{ fontSize: "0.95rem", fontWeight: 800, color: isLight ? "#0f172a" : "#f8fafc" }}>
+                            🗓️ {formatPeriodName(monthGroup.monthKey)}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: "0.72rem",
+                              padding: "2px 8px",
+                              borderRadius: "999px",
+                              background: isLight ? "rgba(2, 132, 199, 0.1)" : "rgba(0, 229, 255, 0.12)",
+                              color: isLight ? "#0284c7" : "#38bdf8",
+                              fontWeight: 700,
+                            }}
+                          >
+                            {monthGroup.count} {monthGroup.count === 1 ? "operación cerrada" : "operaciones cerradas"}
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 8, fontFamily: "var(--font-mono, monospace)" }}>
+                          <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Resultado del Mes:</span>
+                          <span
+                            style={{
+                              fontSize: "0.98rem",
+                              fontWeight: 800,
+                              color: monthGroup.totalPnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
+                            }}
+                          >
+                            {monthGroup.totalPnlUSD >= 0 ? "+" : ""}${monthGroup.totalPnlUSD.toFixed(2)} USD
+                          </span>
+                          <span
+                            style={{
+                              fontSize: "0.84rem",
+                              fontWeight: 700,
+                              color: monthGroup.totalPnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
+                            }}
+                          >
+                            (≈{monthGroup.totalPnlUSD >= 0 ? "+" : ""}${monthGroup.totalPnlCOP.toLocaleString("es-CO")} COP)
+                          </span>
+                        </div>
                       </div>
-                      <div
-                        style={{
-                          fontSize: "clamp(0.82rem, 1.1vw, 0.92rem)",
-                          fontWeight: 700,
-                          color: pos.realizedPnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
-                          fontFamily: "var(--font-mono, monospace)",
-                          marginTop: 2,
-                        }}
-                      >
-                        {pos.realizedPnlUSD >= 0 ? "+" : ""}${Math.round(pos.realizedPnlUSD * fxRate).toLocaleString("es-CO")} COP ({pos.realizedReturnPct >= 0 ? "+" : ""}{pos.realizedReturnPct.toFixed(2)}%)
+
+                      {/* Tarjetas de Operaciones del Mes */}
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 10 }}>
+                        {monthGroup.items.map((pos) => (
+                          <div
+                            key={pos.id}
+                            style={{
+                              padding: "10px 14px",
+                              borderRadius: "10px",
+                              background: isLight ? "#ffffff" : "rgba(255, 255, 255, 0.03)",
+                              border: isLight ? "1px solid rgba(0, 0, 0, 0.07)" : "1px solid rgba(255, 255, 255, 0.06)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              gap: 12,
+                            }}
+                          >
+                            <div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                <span style={{ fontWeight: 800, fontSize: "0.95rem", color: isLight ? "#0f172a" : "#f8fafc" }}>
+                                  {pos.ticker}
+                                </span>
+                                <span
+                                  style={{
+                                    fontSize: "0.68rem",
+                                    padding: "2px 7px",
+                                    borderRadius: "6px",
+                                    background: "rgba(0, 229, 255, 0.12)",
+                                    color: isLight ? "#0284c7" : "#00e5ff",
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  {pos.source}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: 3 }}>
+                                Cierre: <strong>{pos.exitDate}</strong> · {pos.name}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: "right", flexShrink: 0 }}>
+                              <div
+                                style={{
+                                  fontSize: "0.96rem",
+                                  fontWeight: 800,
+                                  color: pos.realizedPnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
+                                  fontFamily: "var(--font-mono, monospace)",
+                                }}
+                              >
+                                {pos.realizedPnlUSD >= 0 ? "+" : ""}${pos.realizedPnlUSD.toFixed(2)} USD
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: "0.78rem",
+                                  fontWeight: 700,
+                                  color: pos.realizedPnlUSD >= 0 ? (isLight ? "#059669" : "#10b981") : "#f43f5e",
+                                  fontFamily: "var(--font-mono, monospace)",
+                                  marginTop: 2,
+                                }}
+                              >
+                                {pos.realizedPnlUSD >= 0 ? "+" : ""}${Math.round(pos.realizedPnlUSD * fxRate).toLocaleString("es-CO")} COP ({pos.realizedReturnPct >= 0 ? "+" : ""}{pos.realizedReturnPct.toFixed(2)}%)
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

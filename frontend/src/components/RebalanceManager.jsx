@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { createRebalance, deleteRebalance, fetchRebalances, searchTicker } from "../api/client";
 import { usePortfolioStore } from "../store/portfolioStore";
 import { toastConfirm } from "../utils/toastAlerts";
+import { DynamicDatePicker } from "./Common";
 
 export default function RebalanceManager({ onRefresh }) {
   const { settingsByMode, mode, setInvestment } = usePortfolioStore();
@@ -455,20 +456,9 @@ export default function RebalanceManager({ onRefresh }) {
           >
             Fecha del Rebalanceo:
           </label>
-          <input
-            type="date"
+          <DynamicDatePicker
             value={date}
-            onChange={(e) => setDate(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "8px 12px",
-              borderRadius: "var(--radius-sm)",
-              border: "1px solid var(--border)",
-              background: "var(--bg-surface)",
-              color: "var(--text-primary)",
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: "0.85rem",
-            }}
+            onChange={(val) => setDate(val)}
           />
         </div>
 
