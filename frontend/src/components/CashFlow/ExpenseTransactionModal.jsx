@@ -131,7 +131,7 @@ export default function ExpenseTransactionModal({
       return {
         type: "credit_card",
         targetId: card?.id,
-        targetName: card ? `${card.name} (${cardInstallments} ${cardInstallments === 1 ? "cuota 0%" : "cuotas"})` : "Tarjeta de Crédito",
+        targetName: card ? `${card.name} (${cardInstallments} ${cardInstallments === 1 ? "cuota 0%" : "cuotas 0% MSI"})` : "Tarjeta de Crédito",
         installments: cardInstallments,
       };
     }
@@ -447,17 +447,25 @@ export default function ExpenseTransactionModal({
                 </div>
 
                 <div>
-                  <label style={{ fontSize: "0.72rem", color: "#94a3b8" }}>Cuotas:</label>
+                  <label style={{ fontSize: "0.72rem", color: "#94a3b8" }}>Cuotas (Sin Interés / MSI):</label>
                   <select
                     value={cardInstallments}
                     onChange={(e) => setCardInstallments(Number(e.target.value))}
                     style={{ width: "100%", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "6px", padding: "6px 8px", color: "#fff", fontSize: "0.78rem" }}
                   >
-                    <option value={1}>1 Cuota (0% Interés Corriente)</option>
-                    <option value={3}>3 Cuotas (MSI / Interés)</option>
-                    <option value={6}>6 Cuotas (MSI / Interés)</option>
-                    <option value={12}>12 Cuotas (MSI / Interés)</option>
-                    <option value={24}>24 Cuotas</option>
+                    <option value={1}>1 Cuota (0% Sin Interés)</option>
+                    <option value={2}>2 Cuotas Sin Interés (0% MSI)</option>
+                    <option value={3}>3 Cuotas Sin Interés (0% MSI)</option>
+                    <option value={4}>4 Cuotas Sin Interés (0% MSI)</option>
+                    <option value={5}>5 Cuotas Sin Interés (0% MSI)</option>
+                    <option value={6}>6 Cuotas Sin Interés (0% MSI)</option>
+                    <option value={8}>8 Cuotas Sin Interés (0% MSI)</option>
+                    <option value={9}>9 Cuotas Sin Interés (0% MSI)</option>
+                    <option value={10}>10 Cuotas Sin Interés (0% MSI)</option>
+                    <option value={12}>12 Cuotas Sin Interés (0% MSI)</option>
+                    <option value={18}>18 Cuotas Sin Interés (0% MSI)</option>
+                    <option value={24}>24 Cuotas Sin Interés (0% MSI)</option>
+                    <option value={36}>36 Cuotas Sin Interés (0% MSI)</option>
                   </select>
                 </div>
               </div>

@@ -2026,6 +2026,7 @@ export default function CashFlowHub() {
               icon="🔴"
               items={periodNeeds}
               expensesLog={periodExpenses}
+              activePeriod={activePeriod}
               totalInflow={totalInflow}
               targetRatio={customRatios.needs}
               currency={currency}
@@ -2033,6 +2034,7 @@ export default function CashFlowHub() {
               onAddItem={handleOpenAddModal}
               onEditItem={handleOpenEditModal}
               onDeleteItem={(id) => handleDeleteItem(id, "needs")}
+              onSaveTransaction={addExpenseTransaction}
               onDeleteTransaction={deleteExpenseTransaction}
               onEditTransaction={(tx) => {
                 setExpenseToEdit(tx);
@@ -2048,6 +2050,7 @@ export default function CashFlowHub() {
               icon="🟣"
               items={periodWants}
               expensesLog={periodExpenses}
+              activePeriod={activePeriod}
               totalInflow={totalInflow}
               targetRatio={customRatios.wants}
               currency={currency}
@@ -2055,6 +2058,7 @@ export default function CashFlowHub() {
               onAddItem={handleOpenAddModal}
               onEditItem={handleOpenEditModal}
               onDeleteItem={(id) => handleDeleteItem(id, "wants")}
+              onSaveTransaction={addExpenseTransaction}
               onDeleteTransaction={deleteExpenseTransaction}
               onEditTransaction={(tx) => {
                 setExpenseToEdit(tx);
@@ -2070,6 +2074,7 @@ export default function CashFlowHub() {
               icon="🔵"
               items={periodWealth}
               expensesLog={periodExpenses}
+              activePeriod={activePeriod}
               totalInflow={totalInflow}
               targetRatio={customRatios.savings}
               currency={currency}
@@ -2077,6 +2082,7 @@ export default function CashFlowHub() {
               onAddItem={handleOpenAddModal}
               onEditItem={handleOpenEditModal}
               onDeleteItem={(id) => handleDeleteItem(id, "wealth")}
+              onSaveTransaction={addExpenseTransaction}
               onDeleteTransaction={deleteExpenseTransaction}
               onEditTransaction={(tx) => {
                 setExpenseToEdit(tx);

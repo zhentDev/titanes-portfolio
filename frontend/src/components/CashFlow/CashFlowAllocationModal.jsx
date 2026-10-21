@@ -749,19 +749,69 @@ export default function CashFlowAllocationModal({
                   </div>
 
                   <div>
-                    <label style={{ fontSize: "0.72rem", color: "#94a3b8" }}>Cuotas:</label>
+                    <label style={{ fontSize: "0.72rem", color: "#94a3b8" }}>Cuotas (Sin Interés / MSI):</label>
                     <select
                       value={cardInstallments}
                       onChange={(e) => setCardInstallments(Number(e.target.value))}
                       style={{ width: "100%", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "6px", padding: "6px 8px", color: "#fff", fontSize: "0.78rem" }}
                     >
-                      <option value={1}>1 Cuota (0% Interés Corriente)</option>
-                      <option value={3}>3 Cuotas (MSI / Interés)</option>
-                      <option value={6}>6 Cuotas (MSI / Interés)</option>
-                      <option value={12}>12 Cuotas (MSI / Interés)</option>
-                      <option value={24}>24 Cuotas</option>
+                      <option value={1}>1 Cuota (0% Sin Interés)</option>
+                      <option value={2}>2 Cuotas Sin Interés (0% MSI)</option>
+                      <option value={3}>3 Cuotas Sin Interés (0% MSI)</option>
+                      <option value={4}>4 Cuotas Sin Interés (0% MSI)</option>
+                      <option value={5}>5 Cuotas Sin Interés (0% MSI)</option>
+                      <option value={6}>6 Cuotas Sin Interés (0% MSI)</option>
+                      <option value={8}>8 Cuotas Sin Interés (0% MSI)</option>
+                      <option value={9}>9 Cuotas Sin Interés (0% MSI)</option>
+                      <option value={10}>10 Cuotas Sin Interés (0% MSI)</option>
+                      <option value={12}>12 Cuotas Sin Interés (0% MSI)</option>
+                      <option value={18}>18 Cuotas Sin Interés (0% MSI)</option>
+                      <option value={24}>24 Cuotas Sin Interés (0% MSI)</option>
+                      <option value={36}>36 Cuotas Sin Interés (0% MSI)</option>
                     </select>
                   </div>
+                </div>
+              )}
+
+              {sourceType === "credit_card" && cardInstallments > 1 && Number(amount) > 0 && (
+                <div
+                  style={{
+                    marginTop: 8,
+                    background: "rgba(0, 229, 255, 0.08)",
+                    border: "1px solid rgba(0, 229, 255, 0.25)",
+                    borderRadius: "8px",
+                    padding: "6px 10px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 6,
+                    fontSize: "0.74rem",
+                  }}
+                >
+                  <span style={{ color: "#cbd5e1" }}>
+                    ⚡ <strong>{cardInstallments} cuotas sin interés (0% MSI)</strong> • Valor por cuota:{" "}
+                    <strong style={{ color: "#00e5ff", fontFamily: "JetBrains Mono, monospace" }}>
+                      {formatMoney(Math.round(Number(amount) / cardInstallments), currency)}/mes
+                    </strong>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setAmount(Math.round(Number(amount) / cardInstallments))}
+                    style={{
+                      background: "rgba(0, 229, 255, 0.16)",
+                      border: "1px solid rgba(0, 229, 255, 0.4)",
+                      color: "#00e5ff",
+                      borderRadius: "5px",
+                      padding: "2px 7px",
+                      fontSize: "0.7rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                    title="Si ingresaste el valor total de la compra, haz clic para dejar como tope mensual únicamente el valor de 1 cuota"
+                  >
+                    Usar valor de 1 cuota
+                  </button>
                 </div>
               )}
 

@@ -171,14 +171,19 @@ export default function CreditPurchaseModal({
                   cursor: "pointer",
                 }}
               >
-                <option value={1}>1 Cuota (0% Interés Corriente)</option>
-                <option value={2}>2 Cuotas</option>
-                <option value={3}>3 Cuotas</option>
-                <option value={6}>6 Cuotas</option>
-                <option value={12}>12 Cuotas</option>
-                <option value={18}>18 Cuotas</option>
-                <option value={24}>24 Cuotas</option>
-                <option value={36}>36 Cuotas</option>
+                <option value={1}>1 Cuota (0% Sin Interés)</option>
+                <option value={2}>2 Cuotas Sin Interés (0% MSI)</option>
+                <option value={3}>3 Cuotas Sin Interés (0% MSI)</option>
+                <option value={4}>4 Cuotas Sin Interés (0% MSI)</option>
+                <option value={5}>5 Cuotas Sin Interés (0% MSI)</option>
+                <option value={6}>6 Cuotas Sin Interés (0% MSI)</option>
+                <option value={8}>8 Cuotas Sin Interés (0% MSI)</option>
+                <option value={9}>9 Cuotas Sin Interés (0% MSI)</option>
+                <option value={10}>10 Cuotas Sin Interés (0% MSI)</option>
+                <option value={12}>12 Cuotas Sin Interés (0% MSI)</option>
+                <option value={18}>18 Cuotas Sin Interés (0% MSI)</option>
+                <option value={24}>24 Cuotas Sin Interés (0% MSI)</option>
+                <option value={36}>36 Cuotas Sin Interés (0% MSI)</option>
               </select>
             </div>
           </div>

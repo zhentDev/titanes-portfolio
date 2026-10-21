@@ -10,6 +10,7 @@ export default function PillarBreakdownCard({
   icon = "💼",
   items = [],
   expensesLog = [], // Array of real transactions for active period
+  activePeriod,
   totalInflow = 0,
   targetRatio = 0,
   currency = "COP",
@@ -17,6 +18,7 @@ export default function PillarBreakdownCard({
   onAddItem,
   onEditItem,
   onDeleteItem,
+  onSaveTransaction,
   onDeleteTransaction,
   onEditTransaction,
   onSettleTransaction,
@@ -85,6 +87,56 @@ export default function PillarBreakdownCard({
 
   const toggleExpand = (itemId) => {
     setExpandedItemId((prev) => (prev === itemId ? null : itemId));
+  };
+
+  const handleToggleSubItemEffective = (item, sub, subKey, matchedTx) => {
+    if (matchedTx && onDeleteTransaction) {
+      onDeleteTransaction(matchedTx.id);
+    } else if (onSaveTransaction) {
+      onSaveTransaction({
+        id: `tx_sub_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+        period: activePeriod,
+        budgetItemId: item.id,
+        budgetItemName: item.name,
+        budgetItemType: type,
+        subItemId: subKey,
+        subItemName: sub.name,
+        isAutoSubItemCheck: true,
+        description: `${item.name}: ${sub.name}`,
+        amount: Number(sub.amount) || 0,
+        currency,
+        date: new Date().toISOString().split("T")[0],
+        paymentSource: item.paymentSource || {
+          type: "payroll",
+          targetName: "Cuenta Nu Débito",
+        },
+        createdAt: new Date().toISOString(),
+      });
+    }
+  };
+
+  const handleToggleFullItemEffective = (item, itemAmt, matchedFullTx) => {
+    if (matchedFullTx && onDeleteTransaction) {
+      onDeleteTransaction(matchedFullTx.id);
+    } else if (onSaveTransaction) {
+      onSaveTransaction({
+        id: `tx_full_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+        period: activePeriod,
+        budgetItemId: item.id,
+        budgetItemName: item.name,
+        budgetItemType: type,
+        isAutoFullItemCheck: true,
+        description: `${item.name} (Efectivo del mes)`,
+        amount: Number(itemAmt) || 0,
+        currency,
+        date: new Date().toISOString().split("T")[0],
+        paymentSource: item.paymentSource || {
+          type: "payroll",
+          targetName: "Cuenta Nu Débito",
+        },
+        createdAt: new Date().toISOString(),
+      });
+    }
   };
 
   return (
@@ -309,6 +361,11 @@ export default function PillarBreakdownCard({
                             {source.targetName && (
                               <span style={{ color: source.type === "credit_card" ? "#f43f5e" : source.type === "fixed_pocket" ? "#38bdf8" : "#94a3b8", fontWeight: 600 }}>
                                 {sourceIcon} {source.targetName}
+                                {source.type === "credit_card" && Number(source.installments) > 1 && !source.targetName.includes("cuota") && (
+                                  <span style={{ color: "#00e5ff", marginLeft: 4 }}>
+                                    • {source.installments} cuotas (0% MSI)
+                                  </span>
+                                )}
                               </span>
                             )}
                             {item.dueDate ? ` • Vence: ${item.dueDate}` : ""}
@@ -428,7 +485,7 @@ export default function PillarBreakdownCard({
                       >
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
                           <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                            📋 Conceptos especificados
+                            📋 Conceptos especificados {type !== "inflow" && "(Marca ✓ al hacerlo efectivo)"}
                           </span>
                           {onEditItem && !isAutoSynced && (
                             <button
@@ -454,26 +511,87 @@ export default function PillarBreakdownCard({
                         {item.subItems.map((sub, sIdx) => {
                           const subAmt = Number(sub.amount) || 0;
                           const subPct = Number(itemAmt) > 0 ? ((subAmt / Number(itemAmt)) * 100).toFixed(0) : 0;
+                          const subKey = sub.id || `sub_${sIdx}_${sub.name}`;
+                          const matchedSubTx = itemTransactions.find(
+                            (tx) =>
+                              (sub.id && tx.subItemId === sub.id) ||
+                              tx.subItemId === subKey ||
+                              (sub.name && tx.subItemName?.toLowerCase() === sub.name.toLowerCase()) ||
+                              (sub.name && tx.description?.toLowerCase() === `${item.name}: ${sub.name}`.toLowerCase())
+                          );
+                          const isSubEffective = Boolean(matchedSubTx);
+
                           return (
                             <div
-                              key={sub.id || sIdx}
+                              key={subKey}
                               style={{
                                 display: "flex",
                                 justifyContent: "space-between",
                                 alignItems: "center",
                                 fontSize: "0.78rem",
-                                padding: "4px 0",
+                                padding: "5px 6px",
+                                borderRadius: "6px",
+                                background: isSubEffective
+                                  ? isLight
+                                    ? "rgba(16, 185, 129, 0.08)"
+                                    : "rgba(16, 185, 129, 0.1)"
+                                  : "transparent",
                                 borderBottom: sIdx < item.subItems.length - 1 ? (isLight ? "1px solid rgba(0,0,0,0.05)" : "1px solid rgba(255,255,255,0.05)") : "none",
+                                transition: "all 0.15s ease",
                               }}
                             >
-                              <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>
-                                • {sub.name}
-                              </span>
+                              <label
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 8,
+                                  cursor: type !== "inflow" && onSaveTransaction ? "pointer" : "default",
+                                  color: isSubEffective ? "#10b981" : "var(--text-primary)",
+                                  fontWeight: isSubEffective ? 600 : 500,
+                                }}
+                                title={
+                                  isSubEffective
+                                    ? "Desmarcar para revertir el descuento automático"
+                                    : "Marcar como efectivo para descontarlo automáticamente del disponible"
+                                }
+                              >
+                                {type !== "inflow" && onSaveTransaction && (
+                                  <input
+                                    type="checkbox"
+                                    checked={isSubEffective}
+                                    onChange={() => handleToggleSubItemEffective(item, sub, subKey, matchedSubTx)}
+                                    style={{
+                                      width: 15,
+                                      height: 15,
+                                      cursor: "pointer",
+                                      accentColor: "#10b981",
+                                    }}
+                                  />
+                                )}
+                                <span style={{ textDecoration: isSubEffective ? "line-through" : "none", opacity: isSubEffective ? 0.9 : 1 }}>
+                                  {sub.name}
+                                </span>
+                                {isSubEffective && (
+                                  <span
+                                    style={{
+                                      fontSize: "0.66rem",
+                                      background: "rgba(16, 185, 129, 0.2)",
+                                      color: "#10b981",
+                                      padding: "1px 6px",
+                                      borderRadius: "4px",
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    ✓ Efectivo
+                                  </span>
+                                )}
+                              </label>
+
                               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                 <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
                                   ({subPct}%)
                                 </span>
-                                <span style={{ fontFamily: "JetBrains Mono, monospace", fontWeight: 600, color: isLight ? "#0f172a" : "#f8fafc" }}>
+                                <span style={{ fontFamily: "JetBrains Mono, monospace", fontWeight: 600, color: isSubEffective ? "#10b981" : isLight ? "#0f172a" : "#f8fafc" }}>
                                   {formatMoney(subAmt, currency)}
                                 </span>
                               </div>
@@ -485,7 +603,7 @@ export default function PillarBreakdownCard({
                   </div>
                 ) : (
                   !isAutoSynced && onEditItem && (
-                    <div style={{ marginTop: 2 }}>
+                    <div style={{ marginTop: 2, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                       <button
                         type="button"
                         onClick={() => onEditItem(item, type)}
@@ -507,6 +625,39 @@ export default function PillarBreakdownCard({
                       >
                         <span>➕ Dividir en conceptos específicos</span>
                       </button>
+
+                      {type !== "inflow" && onSaveTransaction && Number(itemAmt) > 0 && (() => {
+                        const matchedFullTx = itemTransactions.find(
+                          (tx) => tx.isAutoFullItemCheck || Number(tx.amount) === Number(itemAmt)
+                        );
+                        const isFullEffective = Boolean(matchedFullTx);
+                        return (
+                          <label
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                              cursor: "pointer",
+                              fontSize: "0.72rem",
+                              fontWeight: 600,
+                              color: isFullEffective ? "#10b981" : "var(--text-secondary)",
+                              background: isFullEffective ? "rgba(16, 185, 129, 0.12)" : "transparent",
+                              border: isFullEffective ? "1px solid rgba(16, 185, 129, 0.35)" : "1px solid var(--border)",
+                              padding: "2px 8px",
+                              borderRadius: "6px",
+                            }}
+                            title="Marcar o desmarcar como efectivo para descontarlo automáticamente del disponible del mes"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isFullEffective}
+                              onChange={() => handleToggleFullItemEffective(item, itemAmt, matchedFullTx)}
+                              style={{ width: 14, height: 14, cursor: "pointer", accentColor: "#10b981" }}
+                            />
+                            <span>{isFullEffective ? "✓ Efectivo descontado" : "Hacer efectivo"}</span>
+                          </label>
+                        );
+                      })()}
                     </div>
                   )
                 )}
