@@ -461,6 +461,13 @@ export default function NavChart({
 
       const baseLine = navData.map((pt) => {
         const ptDate = pt.date || pt.time;
+        // En modo Live / Intradía, la línea Base de la gráfica es siempre la apertura de esa sesión intradía
+        if (isLiveMode) {
+          return {
+            date: ptDate,
+            value: navData[0].value,
+          };
+        }
         if (sortedRebs.length > 0 && slotVal > 0) {
           const ptStr = String(ptDate).slice(0, 10);
           const validRebs = sortedRebs.filter((r) => (r.date || "") <= ptStr);
@@ -480,7 +487,7 @@ export default function NavChart({
         for (const h of holdings) {
           if (h.selected !== false && h.shares > 0) {
             const entry = h.entry_date || (rebalances?.[0]?.date || "");
-            if (!entry || ptDate >= entry) {
+            if (!entry || String(ptDate) >= String(entry)) {
               activeCount++;
             }
           }
@@ -495,7 +502,7 @@ export default function NavChart({
     }
 
     chartRef.current.timeScale().fitContent();
-  }, [navData, sp500Data, nasdaqData, investment, numSlots, rebalances, holdings, chartReady, isMobile]);
+  }, [navData, sp500Data, nasdaqData, investment, numSlots, rebalances, holdings, chartReady, isMobile, isLiveMode]);
 
   const lastNav = navData?.[navData.length - 1]?.value;
   const lastSP = sp500Data?.[sp500Data.length - 1]?.value;
@@ -505,13 +512,16 @@ export default function NavChart({
   const currentSP = hoverValues?.sp500 ?? lastSP;
   const currentNasdaq = hoverValues?.nasdaq ?? lastNasdaq;
 
-  // Active invested capital for the latest period or the hovered point in time
-  const currentBase = hoverValues?.base ?? summary?.active_invested ?? baseActive;
+  // En modo Live / Intradía, la referencia de la gráfica es la apertura de la sesión (baseActive = navData[0].value),
+  // garantizando coherencia total al mover o quitar el cursor. En modo histórico, usa active_invested.
+  const currentBase = isLiveMode
+    ? (hoverValues?.base ?? baseActive)
+    : (hoverValues?.base ?? summary?.active_invested ?? baseActive);
 
   // Real % returns:
-  // When hovering, dynamically compute return against the active base capital on that date.
-  // When not hovering, use the official summary active return if available.
-  const navPct = hoverValues
+  // When hovering (or in Live intraday mode), dynamically compute return against currentBase.
+  // When not hovering in historical mode, use the official summary active return if available.
+  const navPct = isLiveMode || hoverValues
     ? (currentBase && currentNav != null ? ((currentNav - currentBase) / currentBase) * 100 : null)
     : (summary?.active_return_pct != null
         ? summary.active_return_pct
@@ -1070,7 +1080,7 @@ export default function NavChart({
               <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", fontWeight: 600 }}>
                 <span style={{ width: 10, height: 2, background: chartColors.base || "#94a3b8", flexShrink: 0, borderRadius: 1 }} />
                 <span style={{ color: isLight ? "#475569" : "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  Base
+                  {isLiveMode ? "Apertura Día" : "Base"}
                 </span>
               </div>
             )}

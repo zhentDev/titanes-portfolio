@@ -269,6 +269,7 @@ except Exception as e:
 
 _memory_cache: dict[str, tuple[float, object]] = {}
 _cache_lock = threading.Lock()
+_yf_download_lock = threading.Lock()
 HISTORICAL_TTL = 3600  # 1 hour for daily historical data
 LIVE_TTL = 60  # 1 minute for live quotes
 
@@ -362,10 +363,11 @@ def get_historical_prices(
     else:
         download_kwargs["period"] = yf_period
 
-    raw: pd.DataFrame = yf.download(
-        all_tickers,
-        **download_kwargs,
-    )
+    with _yf_download_lock:
+        raw: pd.DataFrame = yf.download(
+            all_tickers,
+            **download_kwargs,
+        )
 
     # yfinance returns MultiIndex when multiple tickers
     if isinstance(raw.columns, pd.MultiIndex):
@@ -515,56 +517,61 @@ def get_live_quotes(tickers: list[str]) -> list[dict]:
 def get_intraday(ticker: str, target_date: str | None = None) -> list[dict]:
     """
     Return intraday 5-minute prices for a single ticker (today or a specific historical date YYYY-MM-DD).
+    Uses Ticker.history() instead of yf.download() to avoid yfinance global shared-state race conditions
+    when multiple tickers are requested concurrently.
     """
     t_clean = ticker.strip().upper()
-    cache_key = f"intraday:{t_clean}:{target_date or 'today'}"
+    cache_key = f"intraday_v2:{t_clean}:{target_date or 'today'}"
     cached = _cache_get(cache_key)
-    if cached is not None:
+    if cached is not None and isinstance(cached, list) and len(cached) > 0:
         return cached  # type: ignore[return-value]
 
+    records = []
     try:
+        t = get_yf_ticker(t_clean)
         if target_date:
             from datetime import datetime, timedelta
             start_dt = datetime.strptime(target_date, "%Y-%m-%d")
             end_dt = start_dt + timedelta(days=1)
-            df = yf.download(
-                t_clean,
+            df = t.history(
                 start=start_dt.strftime("%Y-%m-%d"),
                 end=end_dt.strftime("%Y-%m-%d"),
                 interval="5m",
                 auto_adjust=True,
-                progress=False,
-                session=_yf_session,
             )
+            if not df.empty:
+                df = df[df.index.strftime("%Y-%m-%d") == target_date]
         else:
-            df = yf.download(
-                t_clean,
+            df = t.history(
                 period="1d",
                 interval="5m",
                 auto_adjust=True,
-                progress=False,
-                session=_yf_session,
             )
 
-        records = []
-        for idx, row in df.iterrows():
-            # Check for NaN safely
-            try:
-                val = float(row.iloc[0] if isinstance(row, pd.Series) else row["Close"])
-                if pd.isna(val):
+        if not df.empty:
+            close_series = df["Close"] if "Close" in df.columns else df.iloc[:, 0]
+            if isinstance(close_series, pd.DataFrame):
+                close_series = close_series.iloc[:, 0]
+
+            for idx, val in close_series.items():
+                try:
+                    fval = float(val)
+                    if pd.isna(fval) or fval <= 0:
+                        continue
+                    records.append(
+                        {
+                            "time": int(idx.timestamp()),
+                            "value": round(fval, 4),
+                        }
+                    )
+                except Exception:
                     continue
-                records.append(
-                    {
-                        "time": int(idx.timestamp()),
-                        "value": round(val, 4),
-                    }
-                )
-            except Exception:
-                continue
     except Exception:
         records = []
 
-    _cache_set(cache_key, records)
+    if records:
+        ttl = LIVE_TTL if not target_date else HISTORICAL_TTL
+        _cache_set(cache_key, records, ttl=ttl)
     return records
 
 

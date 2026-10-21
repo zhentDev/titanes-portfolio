@@ -193,8 +193,96 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
         let chartLoaded = false;
         try {
           const targetDateToFetch = targetDate || selectedHistoricalDate;
-          const intradayPromises = activeTickers.map((t) => fetchIntraday(t, targetDateToFetch).catch(() => []));
-          const intradayResults = await Promise.all(intradayPromises);
+
+          // Determinar los holdings que estaban realmente activos en la fecha consultada
+          let sessionHoldings = activeHoldings;
+          if (targetDateToFetch) {
+            const allKnownHoldings = [
+              ...activeHoldings,
+              ...((currentNav?.closed_holdings || []).map((ch) => ({
+                ...ch,
+                current_price: ch.exit_price || ch.entry_price,
+                start_price: ch.entry_price,
+                selected: true,
+              }))),
+            ];
+            const filteredForDate = allKnownHoldings.filter((h) => {
+              const entryD = String(h.entry_date || "2026-08-03").slice(0, 10);
+              const exitD = h.exit_date ? String(h.exit_date).slice(0, 10) : null;
+              return entryD <= targetDateToFetch && (!exitD || exitD > targetDateToFetch);
+            });
+            if (filteredForDate.length > 0) {
+              sessionHoldings = filteredForDate;
+            }
+          }
+
+          const sessionTickers = sessionHoldings.map((h) => h.ticker);
+          const intradayPromises = sessionTickers.map((t) =>
+            fetchIntraday(t, targetDateToFetch).catch(() => []),
+          );
+          const rawIntradayResults = await Promise.all(intradayPromises);
+
+          // Helper para obtener el precio de referencia esperado de cada activo en la fecha consultada
+          const getExpectedPriceForHolding = (holding) => {
+            if (!holding) return 0;
+            const liveQ = safeQuotesData.find((q) => q.ticker === holding.ticker);
+            if (!targetDateToFetch) {
+              return (
+                liveQ?.price ??
+                liveQ?.previous_close ??
+                holding.current_price ??
+                holding.start_price ??
+                0
+              );
+            }
+            if (Array.isArray(holding.history) && holding.history.length > 0 && holding.start_price > 0) {
+              let matchedFactor = null;
+              for (let i = holding.history.length - 1; i >= 0; i--) {
+                const hd = String(holding.history[i]?.date || "").slice(0, 10);
+                if (hd && hd <= targetDateToFetch) {
+                  matchedFactor = Number(holding.history[i].factor);
+                  break;
+                }
+              }
+              if (matchedFactor == null && holding.history[0]?.factor) {
+                matchedFactor = Number(holding.history[0].factor);
+              }
+              if (matchedFactor && matchedFactor > 0) {
+                return holding.start_price * matchedFactor;
+              }
+            }
+            return (
+              holding.current_price ??
+              liveQ?.price ??
+              holding.exit_price ??
+              holding.start_price ??
+              0
+            );
+          };
+
+          // Sanitizar cada serie intradía y corregir cualquier contaminación de caché por carrera en yfinance
+          const intradayResults = rawIntradayResults.map((series, idx) => {
+            const holding = sessionHoldings[idx];
+            const expectedPrice = getExpectedPriceForHolding(holding);
+            const cleanSeries = (Array.isArray(series) ? series : []).filter(
+              (p) => p && typeof p.time === "number" && typeof p.value === "number" && !isNaN(p.value) && p.value > 0,
+            );
+            if (cleanSeries.length === 0) return [];
+
+            const lastVal = cleanSeries[cleanSeries.length - 1].value;
+            if (expectedPrice > 0 && lastVal > 0) {
+              const relDiff = Math.abs(lastVal - expectedPrice) / expectedPrice;
+              // Si el precio intradía difiere >25% del precio real del activo en esa fecha, reescalar al nivel real del activo
+              if (relDiff > 0.25) {
+                const scaleFactor = expectedPrice / lastVal;
+                return cleanSeries.map((pt) => ({
+                  time: pt.time,
+                  value: Number((pt.value * scaleFactor).toFixed(4)),
+                }));
+              }
+            }
+            return cleanSeries;
+          });
 
           // Verificar si hay datos intradía válidos en al menos una parte de los tickers
           const validResults = intradayResults.filter(
@@ -202,11 +290,43 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
           );
 
           if (validResults.length > 0) {
+            // Agrupar timestamps por fecha de sesión (America/New_York) para evitar mezclar días distintos
+            const dateCounts = new Map();
+            const timeToDateStr = new Map();
+
+            intradayResults.forEach((series) => {
+              if (Array.isArray(series)) {
+                series.forEach((p) => {
+                  if (p && p.time) {
+                    const dStr = new Date(p.time * 1000).toLocaleDateString("en-CA", {
+                      timeZone: "America/New_York",
+                    });
+                    timeToDateStr.set(p.time, dStr);
+                    dateCounts.set(dStr, (dateCounts.get(dStr) || 0) + 1);
+                  }
+                });
+              }
+            });
+
+            // Seleccionar la fecha dominante (o targetDateToFetch si existe en los datos)
+            let dominantDate = targetDateToFetch;
+            if (!dominantDate || !dateCounts.has(dominantDate)) {
+              let maxCount = -1;
+              for (const [dStr, count] of dateCounts.entries()) {
+                if (count > maxCount || (count === maxCount && dStr > (dominantDate || ""))) {
+                  maxCount = count;
+                  dominantDate = dStr;
+                }
+              }
+            }
+
             const allTimes = new Set();
             intradayResults.forEach((series) => {
               if (Array.isArray(series)) {
                 series.forEach((p) => {
-                  if (p && p.time) allTimes.add(p.time);
+                  if (p && p.time && (!dominantDate || timeToDateStr.get(p.time) === dominantDate)) {
+                    allTimes.add(p.time);
+                  }
                 });
               }
             });
@@ -219,24 +339,26 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
               let validPoint = true;
 
               intradayResults.forEach((series, i) => {
-                const ticker = activeTickers[i];
-                const holding = activeHoldings.find((h) => h.ticker === ticker);
-                // Usar exactamente las acciones reales del holding activo consolidado
+                const holding = sessionHoldings[i];
                 const shares = holding ? (Number(holding.shares) || 0) : 0;
 
                 const safeSeries = Array.isArray(series) ? series : [];
                 // Buscar el punto exacto o el precio más cercano anterior (stepwise holding)
                 let point = safeSeries.find((p) => p && p.time === t);
-                if (!point) {
-                  // Fallback: punto más cercano previo para activos con menor liquidez
+                if (!point && safeSeries.length > 0) {
                   for (let idx = safeSeries.length - 1; idx >= 0; idx--) {
                     if (safeSeries[idx]?.time <= t) {
                       point = safeSeries[idx];
                       break;
                     }
                   }
+                  // Si t es anterior a la primera vela del activo en esa mañana (ej. 09:30 vs 09:35),
+                  // usar la primera vela de apertura de ese mismo día (nunca el precio de cierre de hoy)
+                  if (!point) {
+                    point = safeSeries[0];
+                  }
                 }
-                const price = point?.value ?? safeQuotesData.find((q) => q.ticker === ticker)?.price;
+                const price = point?.value ?? getExpectedPriceForHolding(holding);
 
                 if (price && !isNaN(price)) {
                   stockValue += price * shares;
@@ -255,6 +377,19 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
             }
 
             if (chartSeries.length > 1) {
+              // En modo Hoy Live, alinear el último punto de la curva con la cotización actual consolidada
+              if (!targetDateToFetch) {
+                const currentLiveTotal = sessionHoldings.reduce((sum, h) => {
+                  const p = getExpectedPriceForHolding(h);
+                  return sum + (Number(h.shares) || 0) * p;
+                }, 0);
+                if (currentLiveTotal > 0) {
+                  chartSeries[chartSeries.length - 1] = {
+                    ...chartSeries[chartSeries.length - 1],
+                    value: round2(currentLiveTotal),
+                  };
+                }
+              }
               setIntradayChart(chartSeries);
               chartLoaded = true;
             }
@@ -776,6 +911,63 @@ export default function LiveMode({ navData: initialNavData, investment = 2000 })
           </div>
 
           <div style={{ width: "100%", minHeight: "320px", overflow: "hidden" }}>
+            {(() => {
+              const sessionOpenVal = intradayChart[0]?.value || activeInvested;
+              const sessionEndVal = intradayChart[intradayChart.length - 1]?.value || displayStockValue;
+              const sessionDiff = sessionEndVal - sessionOpenVal;
+              const sessionPct = sessionOpenVal > 0 ? (sessionDiff / sessionOpenVal) * 100 : 0;
+              const cumDiff = sessionEndVal - activeInvested;
+              const cumPct = activeInvested > 0 ? (cumDiff / activeInvested) * 100 : 0;
+              return (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: 10,
+                    padding: "8px 12px",
+                    marginBottom: 10,
+                    borderRadius: 8,
+                    background: isLight ? "rgba(2, 132, 199, 0.05)" : "rgba(255, 255, 255, 0.03)",
+                    border: `1px solid ${isLight ? "rgba(2, 132, 199, 0.15)" : "rgba(255, 255, 255, 0.07)"}`,
+                    fontSize: "0.75rem",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                    <span>
+                      <span style={{ color: "var(--text-muted)" }}>Apertura Día (Base Sesión): </span>
+                      <strong className="mono" style={{ color: "var(--text-primary)" }}>${sessionOpenVal.toFixed(2)}</strong>
+                    </span>
+                    <span>
+                      <span style={{ color: "var(--text-muted)" }}>{selectedHistoricalDate ? "Cierre Día: " : "Valor Actual: "}</span>
+                      <strong className="mono" style={{ color: "var(--accent-primary)" }}>${sessionEndVal.toFixed(2)}</strong>
+                      <span
+                        className="mono"
+                        style={{
+                          marginLeft: 6,
+                          fontWeight: 700,
+                          color: sessionDiff >= 0 ? "var(--gain)" : "var(--loss)",
+                        }}
+                      >
+                        ({sessionDiff >= 0 ? "+" : ""}${sessionDiff.toFixed(2)} / {sessionPct >= 0 ? "+" : ""}{sessionPct.toFixed(2)}% hoy)
+                      </span>
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ color: "var(--text-muted)" }}>vs. Capital Base Invertido (${activeInvested.toFixed(2)}):</span>
+                    <strong
+                      className="mono"
+                      style={{
+                        color: cumDiff >= 0 ? "var(--gain)" : "var(--loss)",
+                      }}
+                    >
+                      {cumDiff >= 0 ? "+" : ""}${cumDiff.toFixed(2)} ({cumPct >= 0 ? "+" : ""}{cumPct.toFixed(2)}% acum.)
+                    </strong>
+                  </div>
+                </div>
+              );
+            })()}
             <NavChart
               navData={intradayChart}
               investment={activeInvested}

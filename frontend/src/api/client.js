@@ -257,7 +257,9 @@ export async function fetchLiveQuotes(tickers) {
 
 /** GET /api/prices/intraday/:ticker */
 export async function fetchIntraday(ticker, date = null) {
-  const url = date ? `/prices/intraday/${ticker}?date=${encodeURIComponent(date)}` : `/prices/intraday/${ticker}`;
+  const url = date
+    ? `/prices/intraday/${ticker}?date=${encodeURIComponent(date)}&v=2`
+    : `/prices/intraday/${ticker}?v=2`;
   return fetchWithFallback(url, null);
 }
 
