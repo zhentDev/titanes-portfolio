@@ -224,6 +224,25 @@ def resolve_account(db: dict[str, Any], entity: dict[str, Any], account_query: s
     # Filter candidate accounts for this entity first
     candidate_accounts = [a for a in accounts if a.get("entityId") == entity_id]
 
+    # 0. Check if account_query is a numeric index from dialog (e.g. "1", "2", "3")
+    if cleaned_query.isdigit():
+        idx = int(cleaned_query)
+        if idx == 1:
+            for a in candidate_accounts:
+                if any(k in normalize_text(a.get("name")) for k in ["nomina", "principal", "ahorros"]):
+                    return a
+            # Will be auto-created below as Cuenta Nómina / Principal
+            cleaned_query = "Cuenta Nómina / Principal"
+            aq_norm = normalize_text(cleaned_query)
+        else:
+            pockets = [
+                a for a in candidate_accounts
+                if not any(k in normalize_text(a.get("name")) for k in ["nomina", "principal", "ahorros"])
+            ]
+            pocket_idx = idx - 2
+            if 0 <= pocket_idx < len(pockets):
+                return pockets[pocket_idx]
+
     # 1. Check exact ID match in entity accounts
     for a in candidate_accounts:
         if a.get("id") == account_query or a.get("id") == cleaned_query:
@@ -489,7 +508,17 @@ def register_mobile_transaction(
         tx_type = "debit"
         signed_amount = -amount_val
 
-    # 2b. If entity is Google Wallet, resolve bank from card mention in notification text
+    # 2b. Auto-correct entity if notification text clearly belongs to another bank
+    if any(k in search_context for k in ["rappicuenta", "rappipay", "rappi"]):
+        if "rappi" not in normalize_text(payload.entity):
+            logger.info(f"[Webhook] Auto-correcting entity from '{payload.entity}' to 'RappiPay' based on notification text.")
+            payload.entity = "RappiPay"
+    elif any(k in search_context for k in ["nubank", "cuenta nu", "tarjeta nu"]):
+        if "nu" not in normalize_text(payload.entity):
+            logger.info(f"[Webhook] Auto-correcting entity from '{payload.entity}' to 'Nu Colombia' based on notification text.")
+            payload.entity = "Nu Colombia"
+
+    # If entity is Google Wallet, resolve bank from card mention in notification text
     if normalize_text(payload.entity) in ("google wallet", "billetera de google", "google pay", "gpay"):
         for bank_alias, target_bank in [
             ("nu", "Nu Colombia"),
@@ -528,7 +557,16 @@ def register_mobile_transaction(
 
     # 6. Create Transaction Object
     tx_id = f"tx_mb_{int(now_colombia.timestamp() * 1000)}_{uuid.uuid4().hex[:6]}"
-    clean_desc = payload.description.strip() or ("Gasto bancario" if tx_type == "debit" else "Abono bancario")
+    clean_desc = payload.description.strip()
+    generic_phrases = ["en tus movimientos el detalle", "fue exitoso", "revisa en tus movimientos", "movimientos el detalle"]
+    if any(p in clean_desc.lower() for p in generic_phrases) or not clean_desc:
+        m_via = re.search(r"a través de\s+([A-Za-z0-9\-\s]+?)(?:fue exitoso|\.|\.\.\.|$)", payload.raw_text or "", re.IGNORECASE)
+        if m_via:
+            clean_desc = f"Envío {m_via.group(1).strip()}"
+        elif "rappicuenta" in search_context:
+            clean_desc = "Transferencia RappiCuenta"
+        else:
+            clean_desc = "Gasto bancario" if tx_type == "debit" else "Abono bancario"
 
     new_tx = {
         "id": tx_id,
