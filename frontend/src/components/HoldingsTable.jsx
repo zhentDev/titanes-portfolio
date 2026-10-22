@@ -37,15 +37,25 @@ export default function HoldingsTable({
 
   useEffect(() => {
     let isMounted = true;
-    fetchStockAlerts("strategy", strategyId)
-      .then((data) => {
-        if (isMounted && Array.isArray(data)) {
-          setAlerts(data);
-        }
-      })
-      .catch(() => {});
+    const loadAlerts = () => {
+      fetchStockAlerts("strategy", strategyId)
+        .then((data) => {
+          if (isMounted && Array.isArray(data)) {
+            setAlerts(data);
+          }
+        })
+        .catch(() => {});
+    };
+
+    loadAlerts();
+
+    const handleUpdate = () => {
+      if (isMounted) loadAlerts();
+    };
+    window.addEventListener("stockAlertsUpdated", handleUpdate);
     return () => {
       isMounted = false;
+      window.removeEventListener("stockAlertsUpdated", handleUpdate);
     };
   }, [strategyId]);
 

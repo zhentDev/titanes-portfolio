@@ -500,40 +500,156 @@ export async function fetchColInflationHistory() {
 }
 
 /** ── Stock Sell Alerts (Profit Target / Stop Loss) ── **/
+const STOCK_ALERTS_STORAGE_KEY = "titanes_stock_alerts_v1";
+
+function getLocalAlertsStore() {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(STOCK_ALERTS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function setLocalAlertsStore(alerts) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(STOCK_ALERTS_STORAGE_KEY, JSON.stringify(alerts));
+  } catch {}
+}
+
 export async function fetchStockAlerts(scope = null, targetId = null) {
-  const params = new URLSearchParams();
-  if (scope) params.set("scope", scope);
-  if (targetId) params.set("target_id", targetId);
-  const q = params.toString() ? `?${params.toString()}` : "";
-  const res = await safeFetch(`${BASE}/alerts${q}`);
-  if (!res.ok) return [];
-  return res.json();
+  const localList = getLocalAlertsStore();
+  const filterFn = (a) => {
+    if (scope && a.scope && a.scope !== scope) return false;
+    if (targetId && a.target_id && a.target_id !== targetId) return false;
+    return true;
+  };
+  const filteredLocal = localList.filter(filterFn);
+
+  try {
+    const params = new URLSearchParams();
+    if (scope) params.set("scope", scope);
+    if (targetId) params.set("target_id", targetId);
+    const q = params.toString() ? `?${params.toString()}` : "";
+    const res = await safeFetch(`${BASE}/alerts${q}`, {}, 1, 1000);
+    if (res && res.ok) {
+      const serverData = await res.json();
+      if (Array.isArray(serverData)) {
+        // Lossless union merge: remote + local by id or ticker+scope+target_id
+        const alertMap = new Map();
+        serverData.forEach((a) => {
+          if (a && a.id) alertMap.set(a.id, a);
+          else if (a && a.ticker) alertMap.set(`${a.ticker}_${a.scope}_${a.target_id}`, a);
+        });
+
+        let localHadMissingOnServer = false;
+        filteredLocal.forEach((la) => {
+          const key = la.id || `${la.ticker}_${la.scope}_${la.target_id}`;
+          if (!alertMap.has(key)) {
+            alertMap.set(key, la);
+            localHadMissingOnServer = true;
+          }
+        });
+
+        const merged = Array.from(alertMap.values());
+        // Update local storage with full union
+        const updatedAll = [
+          ...localList.filter((a) => !filterFn(a)),
+          ...merged,
+        ];
+        setLocalAlertsStore(updatedAll);
+
+        // If local had alerts that the server lacked (e.g. Render restarted container), push them upstream
+        if (localHadMissingOnServer) {
+          filteredLocal.forEach((la) => {
+            const serverHasIt = serverData.some((sa) => sa.id === la.id || (sa.ticker === la.ticker && sa.scope === la.scope));
+            if (!serverHasIt) {
+              safeFetch(`${BASE}/alerts`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(la),
+              }).catch(() => {});
+            }
+          });
+        }
+
+        return merged;
+      }
+    }
+  } catch (err) {
+    console.warn("[Alerts] Error fetching from server, using local fallback:", err);
+  }
+
+  return filteredLocal;
 }
 
 export async function saveStockAlert(alertData) {
-  const res = await safeFetch(`${BASE}/alerts`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(alertData),
-  });
-  if (!res.ok) throw new Error("Error guardando alerta");
-  const data = await res.json();
+  const localList = getLocalAlertsStore();
+  const alertId = alertData.id || `alt_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const cleanAlert = {
+    ...alertData,
+    id: alertId,
+    target_id: alertData.target_id || "historical",
+    scope: alertData.scope || "strategy",
+    created_at: alertData.created_at || new Date().toISOString(),
+  };
+
+  // 1. Immediately persist locally so it's NEVER lost
+  const filtered = localList.filter((a) => a.id !== cleanAlert.id && !(a.ticker === cleanAlert.ticker && a.scope === cleanAlert.scope && a.target_id === cleanAlert.target_id));
+  filtered.push(cleanAlert);
+  setLocalAlertsStore(filtered);
+
   if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("stockAlertsUpdated", { detail: data }));
+    window.dispatchEvent(new CustomEvent("stockAlertsUpdated", { detail: cleanAlert }));
   }
-  return data;
+
+  // 2. Sync to server in background
+  try {
+    const res = await safeFetch(`${BASE}/alerts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(cleanAlert),
+    });
+    if (res && res.ok) {
+      const serverSaved = await res.json();
+      if (serverSaved && serverSaved.id) {
+        const updated = filtered.map((a) => (a.id === cleanAlert.id ? { ...a, ...serverSaved } : a));
+        setLocalAlertsStore(updated);
+        return serverSaved;
+      }
+    }
+  } catch (e) {
+    console.warn("[Alerts] Saved locally, server sync queued/failed:", e);
+  }
+
+  return cleanAlert;
 }
 
 export async function deleteStockAlert(alertId) {
-  const res = await safeFetch(`${BASE}/alerts/${alertId}`, {
-    method: "DELETE",
-  });
-  if (!res.ok) throw new Error("Error eliminando alerta");
-  const data = await res.json();
+  // 1. Immediately remove locally
+  const localList = getLocalAlertsStore();
+  const filtered = localList.filter((a) => a.id !== alertId);
+  setLocalAlertsStore(filtered);
+
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent("stockAlertsUpdated", { detail: { alertId } }));
   }
-  return data;
+
+  // 2. Remove on server
+  try {
+    const res = await safeFetch(`${BASE}/alerts/${alertId}`, {
+      method: "DELETE",
+    });
+    if (res && res.ok) {
+      return await res.json();
+    }
+  } catch (e) {
+    console.warn("[Alerts] Deleted locally, server sync failed:", e);
+  }
+
+  return { success: true, id: alertId };
 }
 
 export async function evaluateStockAlerts({ scope, targetId, positions }) {

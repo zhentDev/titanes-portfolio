@@ -88,15 +88,25 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
 
   useEffect(() => {
     let isMounted = true;
-    fetchStockAlerts("purchase", portfolioId)
-      .then((data) => {
-        if (isMounted && Array.isArray(data)) {
-          setAlerts(data);
-        }
-      })
-      .catch(() => {});
+    const loadAlerts = () => {
+      fetchStockAlerts("purchase", portfolioId)
+        .then((data) => {
+          if (isMounted && Array.isArray(data)) {
+            setAlerts(data);
+          }
+        })
+        .catch(() => {});
+    };
+
+    loadAlerts();
+
+    const handleUpdate = () => {
+      if (isMounted) loadAlerts();
+    };
+    window.addEventListener("stockAlertsUpdated", handleUpdate);
     return () => {
       isMounted = false;
+      window.removeEventListener("stockAlertsUpdated", handleUpdate);
     };
   }, [portfolioId]);
 
