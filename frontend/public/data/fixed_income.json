@@ -149,7 +149,7 @@
       "name": "Impresora",
       "type": "pocket",
       "currency": "COP",
-      "balance": 227483.88,
+      "balance": 226483.88,
       "interestRateEA": 9.0,
       "isTaxExemptGMF": true,
       "rateHistory": [
@@ -449,7 +449,7 @@
       "accountId": "acc_1789616855068",
       "date": "2026-10-22",
       "description": "Retiro de Impresora",
-      "amount": -9000,
+      "amount": -10000,
       "currency": "COP",
       "type": "debit",
       "createdAt": "2026-10-22T13:21:05.328Z"

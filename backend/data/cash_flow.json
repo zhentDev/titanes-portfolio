@@ -4,9 +4,9 @@
   "currency": "COP",
   "allocationModel": "custom",
   "customRatios": {
-    "needs": 40.0,
-    "wants": 20.0,
-    "savings": 40.0
+    "needs": 40,
+    "wants": 20,
+    "savings": 40
   },
   "emergencyFundTargetMonths": 6,
   "inflows": [
@@ -29,7 +29,7 @@
       "id": "in_fixed_yield",
       "name": "Ingreso por Renta Fija",
       "category": "passive_fixed",
-      "amount": 23690,
+      "amount": 23935,
       "currency": "COP",
       "isPassive": true,
       "isAutoSynced": true,
@@ -46,7 +46,7 @@
       "id": "in_stock_div",
       "name": "Ingreso por Renta Variable",
       "category": "passive_equity",
-      "amount": 42103,
+      "amount": 41395,
       "currency": "COP",
       "isPassive": true,
       "isAutoSynced": true,
@@ -65,15 +65,18 @@
       "id": "need_housing",
       "name": "Arriendo / Vivienda & Admin",
       "category": "housing",
-      "amount": 1200000,
+      "amount": 473950,
       "currency": "COP",
       "dueDate": null,
       "paymentSource": {
         "type": "payroll",
-        "targetName": "Cuenta Nu Débito"
+        "targetName": "Nu Colombia (Cuenta Nu Débito)"
       },
       "icon": "🏠",
-      "createdAt": "2026-09-19T16:57:44.254Z"
+      "createdAt": "2026-09-19T16:57:44.254Z",
+      "isOneTime": false,
+      "targetPeriod": null,
+      "subItems": []
     },
     {
       "id": "need_utilities",
@@ -84,40 +87,53 @@
       "dueDate": null,
       "paymentSource": {
         "type": "payroll",
-        "targetName": "Cuenta Nu Débito"
+        "targetName": "Nu Colombia (Cuenta Nu Débito)"
       },
       "icon": "💡",
-      "createdAt": "2026-09-19T16:57:44.254Z"
+      "createdAt": "2026-09-19T16:57:44.254Z",
+      "isOneTime": false,
+      "targetPeriod": null,
+      "subItems": [
+        {
+          "id": "sub_1792692729310_tryk",
+          "name": "Plan movil",
+          "amount": 37000
+        }
+      ]
     },
     {
       "id": "need_groceries",
       "name": "Alimentación & Supermercado",
       "category": "groceries",
-      "amount": 700000,
+      "amount": 300000,
       "currency": "COP",
       "dueDate": null,
       "paymentSource": {
-        "type": "credit_card",
-        "targetId": "cc_nu",
-        "targetName": "Tarjeta Nu (1 cuota 0%)",
-        "installments": 1
+        "type": "payroll",
+        "targetName": "Nu Colombia (Cuenta Nu Débito)"
       },
       "icon": "🛒",
-      "createdAt": "2026-09-19T16:57:44.254Z"
+      "createdAt": "2026-09-19T16:57:44.254Z",
+      "isOneTime": false,
+      "targetPeriod": null,
+      "subItems": []
     },
     {
       "id": "need_health_transport",
       "name": "Salud, EPS & Transporte",
       "category": "health_transport",
-      "amount": 320000,
+      "amount": 150000,
       "currency": "COP",
       "dueDate": null,
       "paymentSource": {
         "type": "payroll",
-        "targetName": "Cuenta Nu Débito"
+        "targetName": "Nu Colombia (Cuenta Nu Débito)"
       },
-      "icon": "🏥",
-      "createdAt": "2026-09-19T16:57:44.254Z"
+      "icon": "🎯",
+      "createdAt": "2026-09-19T16:57:44.254Z",
+      "isOneTime": false,
+      "targetPeriod": null,
+      "subItems": []
     }
   ],
   "wants": [
@@ -141,13 +157,25 @@
       "amount": 150000,
       "currency": "COP",
       "paymentSource": {
-        "type": "credit_card",
-        "targetId": "cc_rappi",
-        "targetName": "RappiCard (1 cuota)",
-        "installments": 1
+        "type": "payroll",
+        "targetName": "Nu Colombia (Cuenta Nu Débito)"
       },
       "icon": "🍿",
-      "createdAt": "2026-09-19T16:57:44.254Z"
+      "createdAt": "2026-09-19T16:57:44.254Z",
+      "isOneTime": false,
+      "targetPeriod": null,
+      "subItems": [
+        {
+          "id": "sub_1792692847730_r6mr",
+          "name": "GYM",
+          "amount": 83000
+        },
+        {
+          "id": "sub_1792692859280_9ohl",
+          "name": "Gemini + YT Primium",
+          "amount": 31000
+        }
+      ]
     },
     {
       "id": "want_leisure",
@@ -156,11 +184,16 @@
       "amount": 200000,
       "currency": "COP",
       "paymentSource": {
-        "type": "payroll",
-        "targetName": "Cuenta Nu Débito"
+        "type": "credit_card",
+        "targetId": "cc_rappi",
+        "targetName": "RappiCard Visa (MSI) (1 cuota 0%)",
+        "installments": 1
       },
       "icon": "🎮",
-      "createdAt": "2026-09-19T16:57:44.254Z"
+      "createdAt": "2026-09-19T16:57:44.254Z",
+      "isOneTime": false,
+      "targetPeriod": null,
+      "subItems": []
     }
   ],
   "wealth": [
@@ -179,7 +212,7 @@
       },
       "icon": "🛡️",
       "createdAt": "2026-09-19T16:57:44.254Z",
-      "sourceAccountName": "Fondo de emergencia (RappiPay)"
+      "sourceAccountName": "Fondo de emergencia"
     },
     {
       "id": "wealth_tech_etf",
@@ -187,7 +220,7 @@
       "category": "equity_investment",
       "targetAmount": 30000000,
       "monthlyContribution": 500000,
-      "currentBalance": 25261699,
+      "currentBalance": 24837265,
       "currency": "COP",
       "linkedModule": "variable_income",
       "paymentSource": {
@@ -203,7 +236,7 @@
       "category": "fixed_savings",
       "targetAmount": 15000000,
       "monthlyContribution": 300000,
-      "currentBalance": 2952832,
+      "currentBalance": 8335170,
       "currency": "COP",
       "linkedModule": "fixed_income",
       "paymentSource": {
@@ -239,7 +272,7 @@
       "color": "#820ad1",
       "icon": "💜",
       "totalLimit": 200000,
-      "usedLimit": 11900,
+      "usedLimit": 192806,
       "closingDay": 15,
       "paymentDay": 2,
       "rateEA": 24.5,
@@ -253,10 +286,10 @@
       "bankId": "rappi",
       "color": "#ff441f",
       "icon": "🧡",
-      "totalLimit": 2350000,
-      "usedLimit": 2004157,
+      "totalLimit": 600000,
+      "usedLimit": 589850,
       "closingDay": 20,
-      "paymentDay": 5,
+      "paymentDay": 1,
       "rateEA": 24,
       "currency": "COP",
       "cardType": "Cashback / MSI",
@@ -264,7 +297,146 @@
     }
   ],
   "creditCardPayments": [],
-  "periodsData": {},
+  "periodsData": {
+    "2026-11": {
+      "needs": [
+        {
+          "id": "need_housing",
+          "name": "Arriendo / Vivienda & Admin",
+          "category": "housing",
+          "amount": 473950,
+          "currency": "COP",
+          "dueDate": null,
+          "paymentSource": {
+            "type": "payroll",
+            "targetName": "Nu Colombia (Cuenta Nu Débito)"
+          },
+          "icon": "🏠",
+          "createdAt": "2026-09-19T16:57:44.254Z",
+          "isOneTime": false,
+          "targetPeriod": null,
+          "subItems": []
+        },
+        {
+          "id": "need_utilities",
+          "name": "Servicios Públicos, Luz & Fibra Óptica",
+          "category": "utilities",
+          "amount": 280000,
+          "currency": "COP",
+          "dueDate": null,
+          "paymentSource": {
+            "type": "payroll",
+            "targetName": "Nu Colombia (Cuenta Nu Débito)"
+          },
+          "icon": "💡",
+          "createdAt": "2026-09-19T16:57:44.254Z",
+          "isOneTime": false,
+          "targetPeriod": null,
+          "subItems": [
+            {
+              "id": "sub_1792692729310_tryk",
+              "name": "Plan movil",
+              "amount": 37000
+            }
+          ]
+        },
+        {
+          "id": "need_groceries",
+          "name": "Alimentación & Supermercado",
+          "category": "groceries",
+          "amount": 300000,
+          "currency": "COP",
+          "dueDate": null,
+          "paymentSource": {
+            "type": "payroll",
+            "targetName": "Nu Colombia (Cuenta Nu Débito)"
+          },
+          "icon": "🛒",
+          "createdAt": "2026-09-19T16:57:44.254Z",
+          "isOneTime": false,
+          "targetPeriod": null,
+          "subItems": []
+        },
+        {
+          "id": "need_health_transport",
+          "name": "Salud, EPS & Transporte",
+          "category": "health_transport",
+          "amount": 150000,
+          "currency": "COP",
+          "dueDate": null,
+          "paymentSource": {
+            "type": "payroll",
+            "targetName": "Nu Colombia (Cuenta Nu Débito)"
+          },
+          "icon": "🎯",
+          "createdAt": "2026-09-19T16:57:44.254Z",
+          "isOneTime": false,
+          "targetPeriod": null,
+          "subItems": []
+        }
+      ],
+      "wants": [
+        {
+          "id": "want_dining",
+          "name": "Restaurantes, Cafés & Salidas",
+          "category": "dining",
+          "amount": 350000,
+          "currency": "COP",
+          "paymentSource": {
+            "type": "payroll",
+            "targetName": "Cuenta Nu Débito"
+          },
+          "icon": "🍷",
+          "createdAt": "2026-09-19T16:57:44.254Z"
+        },
+        {
+          "id": "want_subs",
+          "name": "Suscripciones (Netflix, Spotify, Gym)",
+          "category": "subscriptions",
+          "amount": 150000,
+          "currency": "COP",
+          "paymentSource": {
+            "type": "payroll",
+            "targetName": "Nu Colombia (Cuenta Nu Débito)"
+          },
+          "icon": "🍿",
+          "createdAt": "2026-09-19T16:57:44.254Z",
+          "isOneTime": false,
+          "targetPeriod": null,
+          "subItems": [
+            {
+              "id": "sub_1792692847730_r6mr",
+              "name": "GYM",
+              "amount": 83000
+            },
+            {
+              "id": "sub_1792692859280_9ohl",
+              "name": "Gemini + YT Primium",
+              "amount": 31000
+            }
+          ]
+        },
+        {
+          "id": "want_leisure",
+          "name": "Ocio, Hobbies & Compras",
+          "category": "leisure",
+          "amount": 200000,
+          "currency": "COP",
+          "paymentSource": {
+            "type": "credit_card",
+            "targetId": "cc_rappi",
+            "targetName": "RappiCard Visa (MSI) (1 cuota 0%)",
+            "installments": 1
+          },
+          "icon": "🎮",
+          "createdAt": "2026-09-19T16:57:44.254Z",
+          "isOneTime": false,
+          "targetPeriod": null,
+          "subItems": []
+        }
+      ]
+    }
+  },
   "payrollAccount": {
     "entityId": "nu",
     "name": "Nu Colombia (Cuenta Nu Débito)",
@@ -273,9 +445,9 @@
     "color": "#820ad1",
     "icon": "💜",
     "payDay": 25,
+    "activeFromDate": "2026-10-23",
     "targetCycle": "next_month",
-    "paymentFrequency": "monthly",
-    "activeFromDate": "2026-10-23"
+    "paymentFrequency": "monthly"
   },
   "creditPurchases": []
 }

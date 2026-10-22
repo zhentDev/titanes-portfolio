@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ColorType, createChart } from "lightweight-charts";
-import { fetchFxHistory } from "../../api/client";
+import { fetchFxHistory, fetchColInflationHistory } from "../../api/client";
 import { useTheme } from "../../context/ThemeContext";
 import { getChartColors } from "../../utils/chartTheme";
 
@@ -61,6 +61,8 @@ export default function FxRateExplorer({
 
   // Data state
   const [rawFxData, setRawFxData] = useState({ current: 0, history: {} });
+  const [rawInflationData, setRawInflationData] = useState({ monthly_rates: [], latest: null });
+  const [showInflation, setShowInflation] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -87,6 +89,7 @@ export default function FxRateExplorer({
   const chartContainerRef = useRef(null);
   const chartInstanceRef = useRef(null);
   const areaSeriesRef = useRef(null);
+  const inflationSeriesRef = useRef(null);
 
   // Fetch FX data (lazy: only loads when component is mounted / tab activated)
   useEffect(() => {
@@ -111,6 +114,15 @@ export default function FxRateExplorer({
       .finally(() => {
         if (isMounted) setIsLoading(false);
       });
+
+    fetchColInflationHistory()
+      .then((res) => {
+        if (!isMounted) return;
+        if (res && res.monthly_rates) {
+          setRawInflationData(res);
+        }
+      })
+      .catch((err) => console.warn("Error fetching inflation history:", err));
 
     return () => {
       isMounted = false;
@@ -209,6 +221,22 @@ export default function FxRateExplorer({
     };
   }, [rawFxData, isInverted, selectedRange, minDate]);
 
+  // Filtered inflation data matching active time range
+  const filteredInflation = useMemo(() => {
+    if (!rawInflationData?.monthly_rates || rawInflationData.monthly_rates.length === 0 || historyList.length === 0) {
+      return [];
+    }
+    const minTime = historyList[0].time;
+    const maxTime = historyList[historyList.length - 1].time;
+    return rawInflationData.monthly_rates
+      .filter((r) => r.date && r.yoy != null && r.date >= minTime && r.date <= maxTime)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map((r) => ({
+        time: r.date,
+        value: Number(Number(r.yoy).toFixed(2)),
+      }));
+  }, [rawInflationData, historyList]);
+
   // Compute purchase markers for highlighted stock/ETF points
   const purchaseMarkers = useMemo(() => {
     if (!historyList || historyList.length === 0 || !purchaseDates || purchaseDates.length === 0) {
@@ -290,7 +318,14 @@ export default function FxRateExplorer({
         vertLine: { color: chartColors.crosshairColor, width: 1, style: 2 },
         horzLine: { color: chartColors.crosshairColor, width: 1, style: 2 },
       },
+      leftPriceScale: {
+        visible: showInflation,
+        borderColor: chartColors.borderColor,
+        textColor: isLight ? "#b45309" : "#fbbf24",
+        scaleMargins: { top: 0.15, bottom: 0.15 },
+      },
       rightPriceScale: {
+        visible: true,
         borderColor: chartColors.borderColor,
         textColor: chartColors.textColor,
         scaleMargins: { top: 0.1, bottom: 0.1 },
@@ -322,6 +357,26 @@ export default function FxRateExplorer({
 
     areaSeriesRef.current = areaSeries;
 
+    if (showInflation) {
+      const inflationSeries = chart.addLineSeries({
+        priceScaleId: "left",
+        color: isLight ? "#d97706" : "#f59e0b",
+        lineWidth: 2,
+        lineStyle: 0,
+        title: "IPC Colombia (%)",
+        priceFormat: {
+          type: "custom",
+          formatter: (val) => `${val.toFixed(2)}%`,
+        },
+      });
+      inflationSeriesRef.current = inflationSeries;
+      if (filteredInflation.length > 0) {
+        inflationSeries.setData(filteredInflation);
+      }
+    } else {
+      inflationSeriesRef.current = null;
+    }
+
     if (historyList.length > 0) {
       areaSeries.setData(historyList);
       if (purchaseMarkers.length > 0) {
@@ -347,7 +402,7 @@ export default function FxRateExplorer({
         chartInstanceRef.current = null;
       }
     };
-  }, [isInverted, theme, chartColors, isLight, isLoading]);
+  }, [isInverted, theme, chartColors, isLight, isLoading, showInflation]);
 
   // Update chart data whenever historyList or purchaseMarkers changes without recreating the chart
   useEffect(() => {
@@ -361,6 +416,12 @@ export default function FxRateExplorer({
       chartInstanceRef.current.timeScale().fitContent();
     }
   }, [historyList, purchaseMarkers]);
+
+  useEffect(() => {
+    if (inflationSeriesRef.current && showInflation && filteredInflation.length > 0) {
+      inflationSeriesRef.current.setData(filteredInflation);
+    }
+  }, [filteredInflation, showInflation]);
 
   // Switch / Toggle inversion
   const handleToggleInversion = () => {
@@ -647,11 +708,45 @@ export default function FxRateExplorer({
             gap: 12,
           }}
         >
-          {/* Stats summary */}
-          <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+          {/* Stats summary & Dual Series Legend */}
+          <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
             <span style={{ fontSize: "0.95rem", fontWeight: 700 }}>
               📈 Gráfica Histórica ({activeFromSym} / {activeToSym})
             </span>
+
+            {/* Badges for dual scales */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span
+                style={{
+                  fontSize: "0.7rem",
+                  padding: "2px 8px",
+                  borderRadius: 6,
+                  fontWeight: 700,
+                  background: isInverted ? (isLight ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.2)") : (isLight ? "rgba(2, 132, 199, 0.15)" : "rgba(0, 229, 255, 0.15)"),
+                  color: isInverted ? (isLight ? "#059669" : "#34d399") : (isLight ? "#0284c7" : "var(--accent-primary)"),
+                  border: `1px solid ${isInverted ? "rgba(16, 185, 129, 0.3)" : "rgba(0, 229, 255, 0.3)"}`,
+                }}
+              >
+                ● {activeFromSym}/{activeToSym} (Eje Derecho)
+              </span>
+
+              {showInflation && (
+                <span
+                  style={{
+                    fontSize: "0.7rem",
+                    padding: "2px 8px",
+                    borderRadius: 6,
+                    fontWeight: 700,
+                    background: isLight ? "rgba(245, 158, 11, 0.12)" : "rgba(245, 158, 11, 0.2)",
+                    color: isLight ? "#b45309" : "#fbbf24",
+                    border: `1px solid ${isLight ? "rgba(217, 119, 6, 0.4)" : "rgba(245, 158, 11, 0.4)"}`,
+                  }}
+                  title="Inflación anual acumulada en Colombia según DANE / Banco de la República"
+                >
+                  ● Inflación IPC CO {rawInflationData?.latest?.yoy ? `${rawInflationData.latest.yoy}%` : ""} (Eje Izquierdo)
+                </span>
+              )}
+            </div>
 
             {stats && (
               <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: "0.78rem" }}>
@@ -687,18 +782,55 @@ export default function FxRateExplorer({
             )}
           </div>
 
-          {/* Timeframe Buttons */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-              background: isLight ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.04)",
-              padding: 3,
-              borderRadius: 8,
-              border: `1px solid ${isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.06)"}`,
-            }}
-          >
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            {/* Toggle Inflación */}
+            <button
+              type="button"
+              onClick={() => setShowInflation((v) => !v)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                background: showInflation
+                  ? isLight ? "rgba(245, 158, 11, 0.15)" : "rgba(245, 158, 11, 0.22)"
+                  : isLight ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.05)",
+                border: `1px solid ${showInflation ? (isLight ? "rgba(217, 119, 6, 0.4)" : "rgba(245, 158, 11, 0.45)") : isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.1)"}`,
+                borderRadius: 8,
+                padding: "4px 10px",
+                fontSize: "0.75rem",
+                fontWeight: 700,
+                color: showInflation ? (isLight ? "#b45309" : "#fbbf24") : "var(--text-muted)",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+              title="Superponer la curva de Inflación Anual IPC de Colombia en el eje izquierdo del gráfico"
+            >
+              <span>📊 Inflación IPC</span>
+              <span
+                style={{
+                  fontSize: "0.65rem",
+                  padding: "1px 5px",
+                  borderRadius: 4,
+                  background: showInflation ? (isLight ? "#d97706" : "#f59e0b") : (isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.1)"),
+                  color: showInflation ? "#ffffff" : "var(--text-muted)",
+                }}
+              >
+                {showInflation ? "ON" : "OFF"}
+              </span>
+            </button>
+
+            {/* Timeframe Buttons */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                background: isLight ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.04)",
+                padding: 3,
+                borderRadius: 8,
+                border: `1px solid ${isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.06)"}`,
+              }}
+            >
             {RANGES.map((r) => {
               const isSelected = selectedRange === r.label;
               return (
@@ -728,6 +860,7 @@ export default function FxRateExplorer({
                 </button>
               );
             })}
+            </div>
           </div>
         </div>
 
