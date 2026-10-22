@@ -257,6 +257,13 @@ export function calculateAccountYield(account, transactions = [], historicalRate
   // Period tracking
   const periodMap = new Map();
 
+  // Check if daily compounding is suppressed for this entity/account (e.g. RappiPay with fixed/registered base balances)
+  const isRappi =
+    account.entityId === "ent_1789616750396" ||
+    (account.name || "").toLowerCase().includes("impresora") ||
+    (account.name || "").toLowerCase().includes("rappi");
+  const disableCompounding = Boolean(account.disableDailyCompounding || isRappi);
+
   for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
     const dStr = d.toISOString().slice(0, 10);
 
@@ -276,8 +283,9 @@ export function calculateAccountYield(account, transactions = [], historicalRate
     }
 
     // If account has explicit recorded interest transactions (e.g. Finandina monthly payouts),
+    // or if daily simulation is suppressed for fixed-balance accounts (RappiPay),
     // we do not synthesize daily compound interest on top of recorded payouts.
-    if (explicitInterestTotal === 0) {
+    if (explicitInterestTotal === 0 && !disableCompounding) {
       const rateEA = getRateForDateAndBalance(dStr, currBalance);
       // Colombian banking standard (SFC) for high-yield savings: base 360 days
       const dailyRate = Math.pow(1 + rateEA / 100, 1 / 360) - 1;
@@ -308,14 +316,16 @@ export function calculateAccountYield(account, transactions = [], historicalRate
   }
 
   const finalEarnedInterest = explicitInterestTotal > 0 ? explicitInterestTotal : simulatedInterest;
-  const liquidTotal = Math.max(0, netCapital + finalEarnedInterest);
+  const liquidTotal = disableCompounding && account.balance !== undefined && account.balance !== null
+    ? Math.max(0, Number(account.balance))
+    : Math.max(0, netCapital + finalEarnedInterest);
 
   const periodBreakdown = Array.from(periodMap.values());
 
   return {
     // Líquido Cajita
-    netCapital: Math.max(0, netCapital),
-    liquidNetCapital: Math.max(0, netCapital),
+    netCapital: disableCompounding && account.balance !== undefined ? Number(account.balance) : Math.max(0, netCapital),
+    liquidNetCapital: disableCompounding && account.balance !== undefined ? Number(account.balance) : Math.max(0, netCapital),
     liquidEarnedInterest: Math.max(0, finalEarnedInterest),
     liquidTotalBalance: liquidTotal,
 

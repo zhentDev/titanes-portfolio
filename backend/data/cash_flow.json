@@ -4,9 +4,9 @@
   "currency": "COP",
   "allocationModel": "custom",
   "customRatios": {
-    "needs": 35,
-    "wants": 30,
-    "savings": 35
+    "needs": 40.0,
+    "wants": 20.0,
+    "savings": 40.0
   },
   "emergencyFundTargetMonths": 6,
   "inflows": [

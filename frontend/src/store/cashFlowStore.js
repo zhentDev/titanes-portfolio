@@ -28,9 +28,9 @@ import { getCurrentPeriod } from "../utils/periodUtils";
 let syncDebounceTimer = null;
 
 const DEFAULT_RATIOS = {
-  needs: 35,
-  wants: 30,
-  savings: 35,
+  needs: 40,
+  wants: 20,
+  savings: 40,
 };
 
 // El sistema de ingresos inicia oficialmente a partir del pago de nómina del 23 de Octubre de 2026
@@ -120,77 +120,121 @@ export const useCashFlowStore = create(
 
         const res = await fetchCashFlowData({ bypassCache: true });
         const source = res || cachedLocal;
-        if (!source) {
+        if (!source && !cachedLocal) {
           set({ isInitialized: true });
           return;
         }
+
+        // Helper for lossless union of array of objects by id
+        const unionById = (serverArr = [], localArr = []) => {
+          const map = new Map();
+          (serverArr || []).forEach((item) => {
+            if (item && item.id) map.set(item.id, { ...item });
+          });
+          (localArr || []).forEach((item) => {
+            if (item && item.id) {
+              const existing = map.get(item.id);
+              map.set(item.id, existing ? { ...existing, ...item } : { ...item });
+            }
+          });
+          return Array.from(map.values());
+        };
 
         // Mes calendario actual en tiempo real (ej. "2026-10", "2026-11", etc.)
         const now = new Date();
         const currentCalPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
         // El sistema de ingresos está activo únicamente a partir del pago del 23 de Octubre de 2026 (ciclo 2026-11: 23 Oct - 24 Nov)
-        const rawStartP = source.startPeriod || INCOME_SYSTEM_START_PERIOD;
+        const rawStartP = source?.startPeriod || cachedLocal?.startPeriod || INCOME_SYSTEM_START_PERIOD;
         const startP = rawStartP < INCOME_SYSTEM_START_PERIOD ? INCOME_SYSTEM_START_PERIOD : rawStartP;
         const activeP = currentCalPeriod < startP ? startP : currentCalPeriod;
 
-        const resolvedRatios =
-          source.customRatios?.needs !== undefined && source.customRatios?.needs !== null
-            ? source.customRatios
-            : DEFAULT_RATIOS;
+        // Custom ratios: user's 40/20/40 configuration prevails over fallback 35/30/35
+        let resolvedRatios = DEFAULT_RATIOS;
+        const localR = cachedLocal?.customRatios;
+        const remoteR = res?.customRatios;
+        if (localR?.needs !== undefined && localR.needs !== 35) {
+          resolvedRatios = localR;
+        } else if (remoteR?.needs !== undefined && remoteR.needs !== 35) {
+          resolvedRatios = remoteR;
+        } else if (localR?.needs !== undefined) {
+          resolvedRatios = localR;
+        } else if (remoteR?.needs !== undefined) {
+          resolvedRatios = remoteR;
+        }
 
-        const cleanedPeriodsData = {};
-        Object.entries(source.periodsData || {}).forEach(([k, v]) => {
-          if (k >= INCOME_SYSTEM_START_PERIOD) {
-            cleanedPeriodsData[k] = v;
+        const cleanedPeriodsData = {
+          ...(cachedLocal?.periodsData || {}),
+          ...(source?.periodsData || {}),
+        };
+        Object.keys(cleanedPeriodsData).forEach((k) => {
+          if (k < INCOME_SYSTEM_START_PERIOD) {
+            delete cleanedPeriodsData[k];
           }
+        });
+
+        // Losslessly merged items
+        const rawCreditCards = unionById(source?.creditCards, cachedLocal?.creditCards);
+        const mergedCreditCards = rawCreditCards.length > 0 ? rawCreditCards : DEFAULT_CREDIT_CARDS;
+        const mergedCreditPurchases = unionById(source?.creditPurchases, cachedLocal?.creditPurchases);
+        const mergedCreditCardPayments = unionById(source?.creditCardPayments, cachedLocal?.creditCardPayments);
+        const mergedExpensesLog = unionById(source?.expensesLog, cachedLocal?.expensesLog);
+
+        const mergedInflows = (() => {
+          const rawInfs = unionById(source?.inflows, cachedLocal?.inflows);
+          let infs = rawInfs.length > 0 ? rawInfs : DEFAULT_INFLOWS;
+          if (!infs.some((i) => i.id === "in_stock_div" || i.category === "passive_equity")) {
+            const defaultStockDiv = DEFAULT_INFLOWS.find((i) => i.id === "in_stock_div");
+            if (defaultStockDiv) {
+              infs = [...infs, defaultStockDiv];
+            }
+          }
+          return infs;
+        })();
+
+        const rawNeeds = unionById(source?.needs, cachedLocal?.needs);
+        const mergedNeeds = rawNeeds.length > 0 ? rawNeeds : DEFAULT_NEEDS;
+
+        const rawWants = unionById(source?.wants, cachedLocal?.wants);
+        const mergedWants = rawWants.length > 0 ? rawWants : DEFAULT_WANTS;
+
+        const rawWealth = unionById(source?.wealth, cachedLocal?.wealth);
+        const mergedWealth = (rawWealth.length > 0 ? rawWealth : DEFAULT_WEALTH).map((w) => {
+          if (w.category === "emergency_fund" || w.id === "wealth_emergency") {
+            const bal = Number(w.currentBalance) || 0;
+            if (bal === 3616128 || bal > 3500000) {
+              return {
+                ...w,
+                currentBalance: 1070000,
+                sourceAccountName: w.sourceAccountName || "Fondo de emergencia (RappiPay)",
+              };
+            }
+          }
+          return w;
         });
 
         const resolvedState = {
           startPeriod: startP,
           activePeriod: activeP,
-          currency: source.currency || "COP",
-          allocationModel: source.allocationModel || "custom",
+          currency: source?.currency || cachedLocal?.currency || "COP",
+          allocationModel: source?.allocationModel || cachedLocal?.allocationModel || "custom",
           customRatios: resolvedRatios,
-          emergencyFundTargetMonths: source.emergencyFundTargetMonths ?? 6,
+          emergencyFundTargetMonths: source?.emergencyFundTargetMonths ?? cachedLocal?.emergencyFundTargetMonths ?? 6,
           payrollAccount: {
             ...DEFAULT_PAYROLL_ACCOUNT,
-            ...(source.payrollAccount || {}),
+            ...(cachedLocal?.payrollAccount || {}),
+            ...(source?.payrollAccount || {}),
             activeFromDate: "2026-10-23",
           },
-          creditCards: Array.isArray(source.creditCards) && source.creditCards.length > 0 ? source.creditCards : DEFAULT_CREDIT_CARDS,
-          creditPurchases: source.creditPurchases || [],
-          creditCardPayments: source.creditCardPayments || [],
-          expensesLog: Array.isArray(source.expensesLog) ? source.expensesLog : [],
-          inflows: (() => {
-            let infs = Array.isArray(source.inflows) && source.inflows.length > 0 ? source.inflows : DEFAULT_INFLOWS;
-            if (!infs.some((i) => i.id === "in_stock_div" || i.category === "passive_equity")) {
-              const defaultStockDiv = DEFAULT_INFLOWS.find((i) => i.id === "in_stock_div");
-              if (defaultStockDiv) {
-                infs = [...infs, defaultStockDiv];
-              }
-            }
-            return infs;
-          })(),
-          needs: Array.isArray(source.needs) && source.needs.length > 0 ? source.needs : DEFAULT_NEEDS,
-          wants: Array.isArray(source.wants) && source.wants.length > 0 ? source.wants : DEFAULT_WANTS,
-          wealth: (() => {
-            const rawWealth = Array.isArray(source.wealth) && source.wealth.length > 0 ? source.wealth : DEFAULT_WEALTH;
-            return rawWealth.map((w) => {
-              if (w.category === "emergency_fund" || w.id === "wealth_emergency") {
-                const bal = Number(w.currentBalance) || 0;
-                if (bal === 3616128 || bal > 3500000) {
-                  return {
-                    ...w,
-                    currentBalance: 1070000,
-                    sourceAccountName: w.sourceAccountName || "Fondo de emergencia",
-                  };
-                }
-              }
-              return w;
-            });
-          })(),
-          salaryHistory: source.salaryHistory || [],
+          creditCards: mergedCreditCards,
+          creditPurchases: mergedCreditPurchases,
+          creditCardPayments: mergedCreditCardPayments,
+          expensesLog: mergedExpensesLog,
+          inflows: mergedInflows,
+          needs: mergedNeeds,
+          wants: mergedWants,
+          wealth: mergedWealth,
+          salaryHistory: unionById(source?.salaryHistory, cachedLocal?.salaryHistory),
           periodsData: cleanedPeriodsData,
           isInitialized: true,
         };

@@ -149,7 +149,7 @@
       "name": "Impresora",
       "type": "pocket",
       "currency": "COP",
-      "balance": 236483.88222876663,
+      "balance": 236483.88,
       "interestRateEA": 9,
       "isTaxExemptGMF": true,
       "rateHistory": [
@@ -158,7 +158,8 @@
           "rateEA": 9
         }
       ],
-      "createdAt": "2026-09-17T03:47:35.068Z"
+      "createdAt": "2026-09-17T03:47:35.068Z",
+      "disableDailyCompounding": true
     },
     {
       "id": "acc_1789760692910",
@@ -166,7 +167,7 @@
       "name": "Fondo de emergencia",
       "type": "pocket",
       "currency": "COP",
-      "balance": 1070000,
+      "balance": 1070000.0,
       "interestRateEA": 9,
       "isTaxExemptGMF": true,
       "rateHistory": [
@@ -175,7 +176,8 @@
           "rateEA": 9
         }
       ],
-      "createdAt": "2026-09-18T19:44:52.910Z"
+      "createdAt": "2026-09-18T19:44:52.910Z",
+      "disableDailyCompounding": true
     }
   ],
   "cdts": [

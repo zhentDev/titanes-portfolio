@@ -28,11 +28,11 @@ BACKUP_FILE = DATA_DIR / "cash_flow_backup.json"
 PUBLIC_DATA_FILE = Path(__file__).resolve().parent.parent.parent / "frontend" / "public" / "data" / "cash_flow.json"
 
 DEFAULT_CASH_FLOW_DATA = {
-    "activePeriod": "2026-08",
-    "startPeriod": "2026-08",
+    "activePeriod": "2026-11",
+    "startPeriod": "2026-11",
     "currency": "COP",
     "allocationModel": "custom",
-    "customRatios": {"needs": 35.0, "wants": 30.0, "savings": 35.0},
+    "customRatios": {"needs": 40.0, "wants": 20.0, "savings": 40.0},
     "emergencyFundTargetMonths": 6,
     "inflows": [],
     "needs": [],
@@ -250,6 +250,20 @@ def sync_cash_flow_state(payload: CashFlowSyncPayload, request: Request):
             return v.model_dump()
         return v
 
+    def merge_lists_by_id(existing_list, incoming_list):
+        if incoming_list is None:
+            return existing_list or []
+        dumped = [dump_val(x) for x in incoming_list] if isinstance(incoming_list, list) else incoming_list
+        if not dumped:
+            return existing_list or []
+        existing_map = {item.get("id"): item for item in (existing_list or []) if isinstance(item, dict) and item.get("id")}
+        for item in dumped:
+            if isinstance(item, dict) and item.get("id"):
+                existing_map[item["id"]] = item
+            else:
+                existing_map[uuid.uuid4().hex[:8]] = item
+        return list(existing_map.values())
+
     if payload.startPeriod is not None:
         db["startPeriod"] = payload.startPeriod
     if payload.activePeriod is not None:
@@ -259,29 +273,38 @@ def sync_cash_flow_state(payload: CashFlowSyncPayload, request: Request):
     if payload.allocationModel is not None:
         db["allocationModel"] = payload.allocationModel
     if payload.customRatios is not None:
-        db["customRatios"] = dump_val(payload.customRatios)
+        ratios = dump_val(payload.customRatios)
+        if isinstance(ratios, dict) and ratios.get("needs") is not None:
+            current_ratios = db.get("customRatios") or {}
+            # Safeguard: prevent accidental fallback 35/30/35 from downgrading 40/20/40
+            if ratios.get("needs") == 35 and current_ratios.get("needs") == 40:
+                pass
+            else:
+                db["customRatios"] = ratios
     if payload.emergencyFundTargetMonths is not None:
         db["emergencyFundTargetMonths"] = payload.emergencyFundTargetMonths
     if payload.inflows is not None:
-        db["inflows"] = [dump_val(item) for item in payload.inflows]
+        db["inflows"] = merge_lists_by_id(db.get("inflows"), payload.inflows)
     if payload.needs is not None:
-        db["needs"] = [dump_val(item) for item in payload.needs]
+        db["needs"] = merge_lists_by_id(db.get("needs"), payload.needs)
     if payload.wants is not None:
-        db["wants"] = [dump_val(item) for item in payload.wants]
+        db["wants"] = merge_lists_by_id(db.get("wants"), payload.wants)
     if payload.wealth is not None:
-        db["wealth"] = [dump_val(item) for item in payload.wealth]
+        db["wealth"] = merge_lists_by_id(db.get("wealth"), payload.wealth)
     if payload.payrollAccount is not None:
         db["payrollAccount"] = dump_val(payload.payrollAccount)
     if payload.creditCards is not None:
-        db["creditCards"] = [dump_val(item) for item in payload.creditCards] if isinstance(payload.creditCards, list) else payload.creditCards
+        db["creditCards"] = merge_lists_by_id(db.get("creditCards"), payload.creditCards)
     if payload.creditPurchases is not None:
-        db["creditPurchases"] = [dump_val(item) for item in payload.creditPurchases] if isinstance(payload.creditPurchases, list) else payload.creditPurchases
+        db["creditPurchases"] = merge_lists_by_id(db.get("creditPurchases"), payload.creditPurchases)
     if payload.expensesLog is not None:
-        db["expensesLog"] = [dump_val(item) for item in payload.expensesLog] if isinstance(payload.expensesLog, list) else payload.expensesLog
+        db["expensesLog"] = merge_lists_by_id(db.get("expensesLog"), payload.expensesLog)
     if payload.creditCardPayments is not None:
-        db["creditCardPayments"] = [dump_val(item) for item in payload.creditCardPayments] if isinstance(payload.creditCardPayments, list) else payload.creditCardPayments
+        db["creditCardPayments"] = merge_lists_by_id(db.get("creditCardPayments"), payload.creditCardPayments)
     if payload.periodsData is not None:
-        db["periodsData"] = dump_val(payload.periodsData)
+        existing_periods = db.get("periodsData") or {}
+        incoming_periods = dump_val(payload.periodsData) or {}
+        db["periodsData"] = {**existing_periods, **incoming_periods}
 
     save_cash_flow_db(db, user_id)
     return {"status": "ok", "message": "Cash flow synchronized successfully", "data": db}
