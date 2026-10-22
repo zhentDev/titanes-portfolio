@@ -829,7 +829,9 @@ export default function HoldingsTable({
                   <td style={{ padding: "10px 12px", textAlign: "right" }}>
                     {isSelected ? (() => {
                       const chg1d = h.change_pct_1d ?? 0;
-                      const chgUsd1d = h.change_usd_1d ?? 0;
+                      const chgUsd1dPerShare = h.change_usd_1d ?? 0;
+                      const shares = h.shares || 0;
+                      const chgUsd1dHolding = shares > 0 ? shares * chgUsd1dPerShare : chgUsd1dPerShare;
                       const isUp1d = chg1d >= 0;
                       const isAbrupt = Math.abs(chg1d) >= 3.0;
                       const isExtreme = Math.abs(chg1d) >= 6.0;
@@ -850,8 +852,12 @@ export default function HoldingsTable({
                             <span>{isUp1d ? "+" : ""}{chg1d.toFixed(2)}%</span>
                           </span>
                           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                            <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }} className="mono">
-                              {chgUsd1d >= 0 ? "+" : ""}${chgUsd1d.toFixed(2)}
+                            <span
+                              style={{ fontSize: "0.68rem", color: "var(--text-muted)", cursor: "help" }}
+                              className="mono"
+                              title={`Impacto hoy en tu posición: ${chgUsd1dHolding >= 0 ? "+" : ""}$${chgUsd1dHolding.toFixed(2)} USD (${shares > 0 ? `${shares.toFixed(4)} acc × ${chgUsd1dPerShare >= 0 ? "+" : ""}$${chgUsd1dPerShare.toFixed(2)}/acc` : "1 acc"})`}
+                            >
+                              {chgUsd1dHolding >= 0 ? "+" : ""}${chgUsd1dHolding.toFixed(2)}
                             </span>
                             {isExtreme ? (
                               <span

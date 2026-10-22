@@ -1997,6 +1997,25 @@ export default function FixedIncomeHub() {
                                   • ⏳ {yieldData.activeCDTsCount} CDT(s)
                                 </span>
                               )}
+                              {yieldData.isMonthlyDisbursement && (
+                                <span
+                                  style={{
+                                    color: isLight ? "#92400e" : "#fbbf24",
+                                    fontSize: "0.68rem",
+                                    fontWeight: 700,
+                                    background: isLight ? "rgba(245, 158, 11, 0.12)" : "rgba(245, 158, 11, 0.15)",
+                                    padding: "2px 6px",
+                                    borderRadius: 4,
+                                    border: `1px solid ${isLight ? "rgba(217, 119, 6, 0.35)" : "rgba(245, 158, 11, 0.3)"}`,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 3,
+                                  }}
+                                  title="RappiPay genera rendimientos diarios que se abonan en efectivo a tu saldo el primer día de cada mes"
+                                >
+                                  🗓️ Abono el 1º de cada mes
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -2013,21 +2032,44 @@ export default function FixedIncomeHub() {
                             </div>
 
                             {/* 2. Rendimientos Líquidos */}
-                            <div style={{ textAlign: "right", paddingLeft: 8, borderLeft: "1px solid var(--border)" }} title="Rendimientos diarios ganados en la cuenta">
+                            <div style={{ textAlign: "right", paddingLeft: 8, borderLeft: "1px solid var(--border)" }} title={yieldData.isMonthlyDisbursement ? `Total devengado: +$${yieldData.liquidEarnedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })} (+$${yieldData.creditedYield.toLocaleString("en-US", { maximumFractionDigits: 2 })} ya abonado en caja + $${yieldData.pendingMonthlyYield.toLocaleString("en-US", { maximumFractionDigits: 2 })} en curso por abonar el ${yieldData.nextPayoutDateLabel})` : "Rendimientos diarios ganados en la cuenta"}>
                               <span style={{ color: "var(--text-muted)", fontSize: "0.68rem", display: "block" }}>📈 Rentabilidad</span>
                               <span className="mono" style={{ color: "#10b981", fontWeight: 700, fontSize: "0.85rem" }}>
                                 +${yieldData.liquidEarnedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })}
                               </span>
+                              {yieldData.isMonthlyDisbursement && yieldData.pendingMonthlyYield > 0 && (
+                                <span style={{ color: isLight ? "#b45309" : "#fbbf24", fontSize: "0.63rem", display: "block", fontWeight: 600 }}>
+                                  ⏳ (+${yieldData.pendingMonthlyYield.toLocaleString("en-US", { maximumFractionDigits: 0 })} el {yieldData.nextPayoutDateLabel})
+                                </span>
+                              )}
                             </div>
 
                             {/* 3. Saldo Total Líquido */}
-                            <div style={{ textAlign: "right", paddingLeft: 10, borderLeft: "1px solid var(--border)" }} title="Saldo líquido disponible actualmente en la cuenta">
-                              <span style={{ color: "#0284c7", fontSize: "0.68rem", display: "block", fontWeight: 700 }}>💰 Saldo Líquido</span>
-                              <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 800, fontSize: "1.05rem" }}>
-                                ${yieldData.liquidTotalBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })}{" "}
-                                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{acc.currency}</span>
-                              </span>
-                            </div>
+                            {yieldData.isMonthlyDisbursement ? (
+                              <>
+                                <div style={{ textAlign: "right", paddingLeft: 10, borderLeft: "1px solid var(--border)" }} title="Saldo efectivamente disponible en caja hoy (con rendimientos de meses anteriores ya abonados)">
+                                  <span style={{ color: "#0284c7", fontSize: "0.68rem", display: "block", fontWeight: 700 }}>💵 Disp. en Caja</span>
+                                  <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 800, fontSize: "1.02rem" }}>
+                                    ${yieldData.liquidAvailableBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })}{" "}
+                                    <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>{acc.currency}</span>
+                                  </span>
+                                </div>
+                                <div style={{ textAlign: "right", paddingLeft: 8, borderLeft: "1px solid var(--border)" }} title="Saldo acumulado total sumando rendimientos devengados en curso que se abonarán el 1º">
+                                  <span style={{ color: isLight ? "#047857" : "#34d399", fontSize: "0.68rem", display: "block", fontWeight: 700 }}>✨ Total + Devengado</span>
+                                  <span className="mono" style={{ color: isLight ? "#065f46" : "#6ee7b7", fontWeight: 700, fontSize: "0.88rem" }}>
+                                    ${yieldData.liquidTotalBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })}
+                                  </span>
+                                </div>
+                              </>
+                            ) : (
+                              <div style={{ textAlign: "right", paddingLeft: 10, borderLeft: "1px solid var(--border)" }} title="Saldo líquido disponible actualmente en la cuenta">
+                                <span style={{ color: "#0284c7", fontSize: "0.68rem", display: "block", fontWeight: 700 }}>💰 Saldo Líquido</span>
+                                <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 800, fontSize: "1.05rem" }}>
+                                  ${yieldData.liquidTotalBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })}{" "}
+                                  <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{acc.currency}</span>
+                                </span>
+                              </div>
+                            )}
 
                             {/* 4. CDTs Activos vinculados a esta cuenta */}
                             {yieldData.activeCDTsList.length > 0 && (
@@ -2073,13 +2115,16 @@ export default function FixedIncomeHub() {
 
                           {/* Action Buttons */}
                           <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                            {Math.abs(acc.balance - yieldData.liquidTotalBalance) > 1 && (
-                              <button
-                                type="button"
-                                onClick={async () => {
-                                  await updateAccount({ ...acc, balance: yieldData.liquidTotalBalance });
-                                  toast.success(`Saldo de "${acc.name}" actualizado a $${yieldData.liquidTotalBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })} COP`);
-                                }}
+                            {(() => {
+                              const targetBalance = yieldData.isMonthlyDisbursement ? yieldData.liquidAvailableBalance : yieldData.liquidTotalBalance;
+                              if (Math.abs(acc.balance - targetBalance) <= 1) return null;
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    await updateAccount({ ...acc, balance: targetBalance });
+                                    toast.success(`Saldo de "${acc.name}" actualizado a $${targetBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })} COP`);
+                                  }}
                                 style={{
                                   background: "rgba(16, 185, 129, 0.15)",
                                   border: "1px solid rgba(16, 185, 129, 0.4)",
@@ -2093,11 +2138,12 @@ export default function FixedIncomeHub() {
                                   alignItems: "center",
                                   gap: 4,
                                 }}
-                                title="Sincronizar el saldo oficial de la cuenta con el valor real calculado"
+                                title={yieldData.isMonthlyDisbursement ? `Sincronizar saldo disponible en caja ($${targetBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })})` : "Sincronizar el saldo oficial de la cuenta con el valor real calculado"}
                               >
                                 <span>🔄 Sincronizar</span>
                               </button>
-                            )}
+                              );
+                            })()}
 
                             {accTx.length > 0 && (
                               <button

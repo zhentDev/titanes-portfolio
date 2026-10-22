@@ -4375,6 +4375,8 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                             const lq = liveQuotes[group.ticker];
                             const chg1d = Number(lq?.change_pct ?? lq?.regularMarketChangePercent ?? 0);
                             const chgUsd1d = Number(lq?.change ?? lq?.regularMarketChange ?? 0);
+                            const totalShares = Number(group.totalShares || 0);
+                            const chgHoldingUsd = totalShares > 0 ? totalShares * chgUsd1d : chgUsd1d;
                             const has1d = lq && (lq.change_pct != null || lq.regularMarketChangePercent != null);
                             const isExtreme = Math.abs(chg1d) >= 6;
                             const isAbrupt = Math.abs(chg1d) >= 3;
@@ -4401,8 +4403,12 @@ export default function IndividualPurchasesView({ portfolioId = "hist_default", 
                                       {isUp1d ? "+" : ""}{chg1d.toFixed(2)}%
                                     </div>
                                     <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, marginTop: 1, whiteSpace: "nowrap" }}>
-                                      <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }} className="mono">
-                                        {chgUsd1d >= 0 ? "+" : ""}${chgUsd1d.toFixed(2)}
+                                      <span
+                                        style={{ fontSize: "0.65rem", color: "var(--text-muted)", cursor: "help" }}
+                                        className="mono"
+                                        title={`Impacto hoy en lote: ${chgHoldingUsd >= 0 ? "+" : ""}$${chgHoldingUsd.toFixed(2)} USD (${totalShares > 0 ? `${totalShares.toFixed(4)} acc × ${chgUsd1d >= 0 ? "+" : ""}$${chgUsd1d.toFixed(2)}/acc` : "1 acc"})`}
+                                      >
+                                        {chgHoldingUsd >= 0 ? "+" : ""}${chgHoldingUsd.toFixed(2)}
                                       </span>
                                       {isExtreme ? (
                                         <span

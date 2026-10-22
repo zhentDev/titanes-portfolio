@@ -211,6 +211,22 @@ export function calculateAccountYield(account, transactions = [], historicalRate
 
   const netCapital = totalDeposits - totalWithdrawals;
 
+  const isMonthlyDisbursement = Boolean(
+    account.payoutSchedule === "monthly_1st" ||
+      (account.entityId && (account.entityId === "ent_1789616750396" || account.entityId.toLowerCase().includes("rappi"))) ||
+      (account.name && (account.name.toLowerCase().includes("rappi") || account.name.toLowerCase().includes("impresora") || account.name.toLowerCase().includes("fondo de emergencia"))) ||
+      (account.type && account.type.toLowerCase().includes("rappi"))
+  );
+
+  const asOfDateStr = asOfDate || new Date().toISOString().slice(0, 10);
+  const currentMonthStartStr = asOfDateStr.slice(0, 7) + "-01";
+
+  // Label for next monthly disbursement date (1st of next month)
+  const asOfDt = new Date(asOfDateStr + "T00:00:00");
+  const nextPayoutMonth = asOfDt.getMonth() === 11 ? 0 : asOfDt.getMonth() + 1;
+  const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+  const nextPayoutDateLabel = `1º de ${monthNames[nextPayoutMonth]}`;
+
   if (sortedTx.length === 0) {
     const baseBal = Number(account.balance || 0);
     return {
@@ -218,6 +234,11 @@ export function calculateAccountYield(account, transactions = [], historicalRate
       liquidNetCapital: baseBal,
       liquidEarnedInterest: 0,
       liquidTotalBalance: baseBal,
+      liquidAvailableBalance: baseBal,
+      isMonthlyDisbursement,
+      creditedYield: 0,
+      pendingMonthlyYield: 0,
+      nextPayoutDateLabel,
       totalDeposits: baseBal,
       totalWithdrawals: 0,
       totalEarnedInterest: 0,
@@ -246,6 +267,8 @@ export function calculateAccountYield(account, transactions = [], historicalRate
 
   let currBalance = 0;
   let simulatedInterest = 0;
+  let creditedYield = 0;
+  let pendingMonthlyYield = 0;
 
   // Track matured CDT injections by maturity date
   const maturedCdtByDate = {};
@@ -284,6 +307,16 @@ export function calculateAccountYield(account, transactions = [], historicalRate
       const dailyInterest = currBalance * dailyRate;
 
       simulatedInterest += dailyInterest;
+
+      // Classify whether this day's yield is already credited or pending monthly payout
+      if (isMonthlyDisbursement) {
+        if (dStr < currentMonthStartStr) {
+          creditedYield += dailyInterest;
+        } else {
+          pendingMonthlyYield += dailyInterest;
+        }
+      }
+
       currBalance += dailyInterest;
 
       // Track period
@@ -310,6 +343,11 @@ export function calculateAccountYield(account, transactions = [], historicalRate
   const finalEarnedInterest = explicitInterestTotal > 0 ? explicitInterestTotal : simulatedInterest;
   const liquidTotal = Math.max(0, netCapital + finalEarnedInterest);
 
+  // Available cash in hand: if monthly disbursement, current in-progress month's yields are not yet in hand
+  const liquidAvail = isMonthlyDisbursement
+    ? Math.max(0, netCapital + creditedYield + explicitInterestTotal)
+    : liquidTotal;
+
   const periodBreakdown = Array.from(periodMap.values());
 
   return {
@@ -318,6 +356,13 @@ export function calculateAccountYield(account, transactions = [], historicalRate
     liquidNetCapital: Math.max(0, netCapital),
     liquidEarnedInterest: Math.max(0, finalEarnedInterest),
     liquidTotalBalance: liquidTotal,
+    liquidAvailableBalance: liquidAvail,
+
+    // Monthly disbursement schedule specific fields
+    isMonthlyDisbursement,
+    creditedYield: isMonthlyDisbursement ? creditedYield : finalEarnedInterest,
+    pendingMonthlyYield: isMonthlyDisbursement ? pendingMonthlyYield : 0,
+    nextPayoutDateLabel,
 
     totalDeposits,
     totalWithdrawals,
