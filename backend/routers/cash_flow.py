@@ -88,41 +88,31 @@ def load_cash_flow_db(user_id: Optional[str] = None) -> dict[str, Any]:
     # 2. Owner or Public Showcase: Try reading from Database (Postgres / DuckDB)
     effective_uid = user_id or OWNER_ID
     db_data = get_user_cash_flow_db(effective_uid)
-    if db_data and (db_data.get("inflows") or db_data.get("needs") or db_data.get("wants") or db_data.get("wealth")):
-        for k, v in DEFAULT_CASH_FLOW_DATA.items():
-            if k not in db_data or db_data[k] is None:
-                db_data[k] = v
+    if db_data:
         return db_data
 
-    # For Owner or Public Showcase: seed from existing JSON backup without deleting anything
-    seed_data = None
+    # Fallback only if database is completely uninitialized: read existing JSON backup
     if target_file.exists():
         try:
             with open(target_file, "r", encoding="utf-8") as f:
-                seed_data = json.load(f)
+                data = json.load(f)
+                save_cash_flow_db(data, effective_uid)
+                return data
         except Exception:
             pass
 
-    if (not seed_data or not (seed_data.get("inflows") or seed_data.get("needs") or seed_data.get("wants") or seed_data.get("wealth"))):
-        if DATA_FILE.exists():
-            try:
-                with open(DATA_FILE, "r", encoding="utf-8") as df:
-                    candidate = json.load(df)
-                if candidate.get("inflows") or candidate.get("needs") or candidate.get("wants") or candidate.get("wealth"):
-                    seed_data = candidate
-            except Exception:
-                pass
+    if DATA_FILE.exists():
+        try:
+            with open(DATA_FILE, "r", encoding="utf-8") as df:
+                data = json.load(df)
+                save_cash_flow_db(data, effective_uid)
+                return data
+        except Exception:
+            pass
 
-    if not seed_data:
-        seed_data = DEFAULT_CASH_FLOW_DATA.copy()
-
-    for k, v in DEFAULT_CASH_FLOW_DATA.items():
-        if k not in seed_data or seed_data[k] is None:
-            seed_data[k] = v
-
-    # Save to Database and maintain JSON backup
-    save_cash_flow_db(seed_data, effective_uid)
-    return seed_data
+    clean_defaults = DEFAULT_CASH_FLOW_DATA.copy()
+    save_cash_flow_db(clean_defaults, effective_uid)
+    return clean_defaults
 
 
 def save_cash_flow_db(data: dict[str, Any], user_id: Optional[str] = None) -> None:

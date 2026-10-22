@@ -149,23 +149,13 @@ export const useCashFlowStore = create(
         const startP = rawStartP < INCOME_SYSTEM_START_PERIOD ? INCOME_SYSTEM_START_PERIOD : rawStartP;
         const activeP = currentCalPeriod < startP ? startP : currentCalPeriod;
 
-        // Custom ratios: user's 40/20/40 configuration prevails over fallback 35/30/35
-        let resolvedRatios = DEFAULT_RATIOS;
-        const localR = cachedLocal?.customRatios;
-        const remoteR = res?.customRatios;
-        if (localR?.needs !== undefined && localR.needs !== 35) {
-          resolvedRatios = localR;
-        } else if (remoteR?.needs !== undefined && remoteR.needs !== 35) {
-          resolvedRatios = remoteR;
-        } else if (localR?.needs !== undefined) {
-          resolvedRatios = localR;
-        } else if (remoteR?.needs !== undefined) {
-          resolvedRatios = remoteR;
-        }
+        // Custom ratios: user's exact configuration from local or remote prevails 100%
+        const userRatios = cachedLocal?.customRatios || source?.customRatios;
+        const resolvedRatios = userRatios || DEFAULT_RATIOS;
 
         const cleanedPeriodsData = {
-          ...(cachedLocal?.periodsData || {}),
           ...(source?.periodsData || {}),
+          ...(cachedLocal?.periodsData || {}),
         };
         Object.keys(cleanedPeriodsData).forEach((k) => {
           if (k < INCOME_SYSTEM_START_PERIOD) {
@@ -173,45 +163,16 @@ export const useCashFlowStore = create(
           }
         });
 
-        // Losslessly merged items
+        // Exact user items — no forced dummy templates or reset logic
         const rawCreditCards = unionById(source?.creditCards, cachedLocal?.creditCards);
-        const mergedCreditCards = rawCreditCards.length > 0 ? rawCreditCards : DEFAULT_CREDIT_CARDS;
+        const mergedCreditCards = rawCreditCards;
         const mergedCreditPurchases = unionById(source?.creditPurchases, cachedLocal?.creditPurchases);
         const mergedCreditCardPayments = unionById(source?.creditCardPayments, cachedLocal?.creditCardPayments);
         const mergedExpensesLog = unionById(source?.expensesLog, cachedLocal?.expensesLog);
-
-        const mergedInflows = (() => {
-          const rawInfs = unionById(source?.inflows, cachedLocal?.inflows);
-          let infs = rawInfs.length > 0 ? rawInfs : DEFAULT_INFLOWS;
-          if (!infs.some((i) => i.id === "in_stock_div" || i.category === "passive_equity")) {
-            const defaultStockDiv = DEFAULT_INFLOWS.find((i) => i.id === "in_stock_div");
-            if (defaultStockDiv) {
-              infs = [...infs, defaultStockDiv];
-            }
-          }
-          return infs;
-        })();
-
-        const rawNeeds = unionById(source?.needs, cachedLocal?.needs);
-        const mergedNeeds = rawNeeds.length > 0 ? rawNeeds : DEFAULT_NEEDS;
-
-        const rawWants = unionById(source?.wants, cachedLocal?.wants);
-        const mergedWants = rawWants.length > 0 ? rawWants : DEFAULT_WANTS;
-
-        const rawWealth = unionById(source?.wealth, cachedLocal?.wealth);
-        const mergedWealth = (rawWealth.length > 0 ? rawWealth : DEFAULT_WEALTH).map((w) => {
-          if (w.category === "emergency_fund" || w.id === "wealth_emergency") {
-            const bal = Number(w.currentBalance) || 0;
-            if (bal === 3616128 || bal > 3500000) {
-              return {
-                ...w,
-                currentBalance: 1070000,
-                sourceAccountName: w.sourceAccountName || "Fondo de emergencia (RappiPay)",
-              };
-            }
-          }
-          return w;
-        });
+        const mergedInflows = unionById(source?.inflows, cachedLocal?.inflows);
+        const mergedNeeds = unionById(source?.needs, cachedLocal?.needs);
+        const mergedWants = unionById(source?.wants, cachedLocal?.wants);
+        const mergedWealth = unionById(source?.wealth, cachedLocal?.wealth);
 
         const resolvedState = {
           startPeriod: startP,
