@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useTheme } from "../context/ThemeContext";
 import InfoTooltip from "./Common/InfoTooltip";
-import { testStockAlertEmail } from "../api/client";
+import { testStockAlertEmail, testStockAlertTelegram } from "../api/client";
+import { useAuthStore } from "../store/authStore";
 
 export default function StockAlertModal({
   isOpen,
@@ -47,10 +48,17 @@ export default function StockAlertModal({
   const [isActive, setIsActive] = useState(true);
   const [notifyEmail, setNotifyEmail] = useState(true);
   const [notifyApp, setNotifyApp] = useState(true);
+  const [notifyTelegram, setNotifyTelegram] = useState(true);
   const [customEmail, setCustomEmail] = useState(userEmail || "");
   const [isSaving, setIsSaving] = useState(false);
   const [testingEmail, setTestingEmail] = useState(false);
   const [emailTestResult, setEmailTestResult] = useState(null);
+  const [testingTelegram, setTestingTelegram] = useState(false);
+  const [telegramTestResult, setTelegramTestResult] = useState(null);
+
+  const authUser = useAuthStore((state) => state.user);
+  const effectiveEmail = (authUser?.email || userEmail || customEmail || "").toLowerCase().trim();
+  const isOwner = effectiveEmail === "caballerojesus703@hotmail.com";
 
 
   useEffect(() => {
@@ -65,6 +73,7 @@ export default function StockAlertModal({
       setIsActive(initialAlert.is_active !== false);
       setNotifyEmail(initialAlert.notify_email !== false);
       setNotifyApp(initialAlert.notify_app !== false);
+      setNotifyTelegram(initialAlert.notify_telegram !== false);
       setCustomEmail(initialAlert.user_email || userEmail || "");
     } else {
       setAlertType("PROFIT_TARGET");
@@ -72,6 +81,7 @@ export default function StockAlertModal({
       setIsActive(true);
       setNotifyEmail(true);
       setNotifyApp(true);
+      setNotifyTelegram(true);
       setCustomEmail(userEmail || "");
     }
   }, [initialAlert, isOpen, userEmail, defaultProfitTarget, defaultStopLoss]);
@@ -132,6 +142,19 @@ export default function StockAlertModal({
     }
   };
 
+  const handleTestTelegram = async () => {
+    setTestingTelegram(true);
+    setTelegramTestResult(null);
+    try {
+      const res = await testStockAlertTelegram();
+      setTelegramTestResult(res);
+    } catch (err) {
+      setTelegramTestResult({ success: false, error: err.message });
+    } finally {
+      setTestingTelegram(false);
+    }
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     setIsSaving(true);
@@ -146,6 +169,7 @@ export default function StockAlertModal({
         is_active: isActive,
         notify_email: notifyEmail,
         notify_app: notifyApp,
+        notify_telegram: notifyTelegram,
         user_email: customEmail.trim() || undefined,
         isParentGroup,
       };
@@ -745,6 +769,74 @@ export default function StockAlertModal({
                     </div>
                   )}
                 </div>
+              )}
+
+              {isOwner && (
+                <>
+                  <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: "0.8rem", marginTop: 4 }}>
+                    <input
+                      type="checkbox"
+                      checked={notifyTelegram}
+                      onChange={(e) => setNotifyTelegram(e.target.checked)}
+                      style={{ accentColor: "var(--accent-primary)", width: 16, height: 16 }}
+                    />
+                    <span>📱 Enviar aviso directo al celular vía Telegram Bot (Exclusivo)</span>
+                  </label>
+
+                  {notifyTelegram && (
+                    <div style={{ marginLeft: 26, display: "flex", flexDirection: "column", gap: 6 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                        <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+                          Alerta sonora inmediata en tu teléfono móvil
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleTestTelegram}
+                          disabled={testingTelegram}
+                          title="Enviar un mensaje de prueba al bot de Telegram"
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: 6,
+                            border: `1px solid ${isLight ? "rgba(34, 197, 94, 0.35)" : "rgba(34, 197, 94, 0.45)"}`,
+                            background: isLight ? "rgba(34, 197, 94, 0.08)" : "rgba(34, 197, 94, 0.12)",
+                            color: isLight ? "#16a34a" : "#4ade80",
+                            fontSize: "0.75rem",
+                            fontWeight: 700,
+                            cursor: testingTelegram ? "not-allowed" : "pointer",
+                            whiteSpace: "nowrap",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                          }}
+                        >
+                          {testingTelegram ? "⏳ Probando..." : "🧪 Probar Telegram"}
+                        </button>
+                      </div>
+
+                      {telegramTestResult && (
+                        <div
+                          style={{
+                            padding: "8px 12px",
+                            borderRadius: 6,
+                            fontSize: "0.74rem",
+                            lineHeight: 1.4,
+                            background: telegramTestResult.success
+                              ? isLight ? "rgba(16, 185, 129, 0.12)" : "rgba(16, 185, 129, 0.2)"
+                              : isLight ? "rgba(239, 68, 68, 0.1)" : "rgba(239, 68, 68, 0.2)",
+                            border: `1px solid ${telegramTestResult.success ? "rgba(16, 185, 129, 0.4)" : "rgba(239, 68, 68, 0.4)"}`,
+                            color: telegramTestResult.success
+                              ? isLight ? "#047857" : "#34d399"
+                              : isLight ? "#b91c1c" : "#fca5a5",
+                          }}
+                        >
+                          <div style={{ fontWeight: 700 }}>
+                            {telegramTestResult.success ? "✅ " : "⚠️ "}{telegramTestResult.message || telegramTestResult.error}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

@@ -14,6 +14,7 @@ from services.db import (
     trigger_stock_alert_db,
 )
 from services.email_notifier import send_sell_alert_email, send_test_email, get_smtp_config
+from services.telegram_notifier import send_sell_alert_telegram, send_test_telegram, get_telegram_config
 from services.market_data import get_live_quotes
 
 router = APIRouter(prefix="/alerts", tags=["Stock Alerts"])
@@ -30,6 +31,7 @@ class StockAlertCreate(BaseModel):
     is_active: bool = True
     notify_email: bool = True
     notify_app: bool = True
+    notify_telegram: bool = True
     user_email: Optional[str] = None
 
 
@@ -140,6 +142,21 @@ def check_and_evaluate_alerts(body: CheckAlertsRequest, request: Request):
                     scope_title=scope_title,
                 )
 
+            # 3. Send Telegram notification directly to phone (Strictly exclusive to owner)
+            telegram_sent = False
+            is_owner_target = str(recipient).strip().lower() == OWNER_EMAIL or str(user_email).strip().lower() == OWNER_EMAIL
+            if alert.get("notify_telegram", True) and is_owner_target:
+                telegram_sent = send_sell_alert_telegram(
+                    ticker=clean_ticker,
+                    company_name=name,
+                    alert_type=alert_type,
+                    target_value=target_val,
+                    current_return_pct=ret_pct,
+                    current_price=current_p,
+                    entry_price=entry_p,
+                    scope_title=scope_title,
+                )
+
             triggered_item = {
                 "alert_id": alert["id"],
                 "ticker": clean_ticker,
@@ -152,6 +169,7 @@ def check_and_evaluate_alerts(body: CheckAlertsRequest, request: Request):
                 "entry_price": entry_p,
                 "scope_title": scope_title,
                 "email_sent": email_sent,
+                "telegram_sent": telegram_sent,
                 "recipient": recipient,
             }
             triggered_list.append(triggered_item)
@@ -171,5 +189,33 @@ def test_user_email(body: TestEmailRequest, request: Request):
     user = get_optional_current_user(request)
     target_email = body.email or (user["email"] if user and "email" in user else None)
     result = send_test_email(to_email=target_email)
+    return result
+
+
+# Owner email with exclusive access to phone Telegram alerts
+OWNER_EMAIL = "caballerojesus703@hotmail.com"
+
+
+@router.post("/test-telegram")
+def test_user_telegram(request: Request):
+    """
+    Sends a test Telegram alert message to verify Bot Token and Chat ID.
+    Strictly exclusive to caballerojesus703@hotmail.com.
+    """
+    user = get_optional_current_user(request)
+    user_email = (user.get("email") if user else "").strip().lower()
+
+    # Allow webhook secret for local/simulator testing or owner email
+    webhook_secret = request.headers.get("X-Webhook-Secret")
+    expected_secret = os.getenv("WEBHOOK_SECRET_KEY", "titanes_sec_e8b919f4088a53e6b4d32091c6e1a4e2")
+    is_valid_secret = webhook_secret and webhook_secret.strip() == expected_secret.strip()
+
+    if not is_valid_secret and user_email != OWNER_EMAIL:
+        raise HTTPException(
+            status_code=403,
+            detail="Acceso restringido: Las alertas por Telegram son exclusivas del propietario de Titanes Portfolio."
+        )
+
+    result = send_test_telegram()
     return result
 

@@ -2,6 +2,7 @@
 frontend/node_modules/
 frontend/dist/
 .DS_Store
+*.exe~
 
 # Python & Tooling
 __pycache__/
@@ -21,6 +22,7 @@ backend/titanes_backup.duckdb
 backend/data/*.duckdb
 backend/data/users/
 backend/*.db
+backend/data/remote_render_*_backup.json
 
 # Environment & AI tools
 .env

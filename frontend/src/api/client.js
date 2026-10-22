@@ -675,6 +675,18 @@ export async function testStockAlertEmail(email = null) {
   return res.json();
 }
 
+export async function testStockAlertTelegram() {
+  const res = await safeFetch(`${BASE}/alerts/test-telegram`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.detail || "Error en el servidor al enviar alerta de prueba por Telegram");
+  }
+  return res.json();
+}
+
 
 export async function createPurchaseLot(lot) {
   const res = await safeFetch(`${BASE}/purchases/lots`, {
