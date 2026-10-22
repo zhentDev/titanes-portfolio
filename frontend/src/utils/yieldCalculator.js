@@ -277,7 +277,7 @@ export function calculateAccountYield(account, transactions = [], historicalRate
 
     // If account has explicit recorded interest transactions (e.g. Finandina monthly payouts),
     // we do not synthesize daily compound interest on top of recorded payouts.
-    if (explicitInterestTotal === 0 && !account.disableDailyCompounding) {
+    if (explicitInterestTotal === 0) {
       const rateEA = getRateForDateAndBalance(dStr, currBalance);
       // Colombian banking standard (SFC) for high-yield savings: base 360 days
       const dailyRate = Math.pow(1 + rateEA / 100, 1 / 360) - 1;

@@ -106,7 +106,10 @@ export const useFixedIncomeStore = create(
               }
             }
           });
-          let finalAccounts = Array.from(accMap.values());
+          let finalAccounts = Array.from(accMap.values()).map((acc) => {
+            const { disableDailyCompounding, ...rest } = acc;
+            return rest;
+          });
 
           // If local had new transactions that remote lacked, push them upstream
           if (localHadExtraTx && finalTransactions.length > (res?.transactions?.length || 0)) {
