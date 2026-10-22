@@ -159,6 +159,12 @@ def resolve_entity(db: dict[str, Any], entity_query: str) -> dict[str, Any]:
         "pibank": "Pibank",
         "lulo": "Lulo Bank",
         "lulo bank": "Lulo Bank",
+        "google wallet": "Google Wallet",
+        "billetera de google": "Google Wallet",
+        "google pay": "Google Wallet",
+        "gpay": "Google Wallet",
+        "nequi": "Nequi Colombia",
+        "nequi colombia": "Nequi Colombia",
     }
 
     resolved_name = alias_map.get(eq_norm, entity_query.strip())
@@ -192,9 +198,26 @@ def resolve_entity(db: dict[str, Any], entity_query: str) -> dict[str, Any]:
     return new_entity
 
 
+def clean_account_query(query: str) -> str:
+    """Clean selection strings from interactive dialogs (strip emojis, balances, bank prefixes)."""
+    if not query:
+        return ""
+    # Strip common leading emojis and icons
+    s = re.sub(r"^[^\w\s]+", "", query).strip()
+    # Remove trailing balance like ($119,257) or ($0)
+    s = re.sub(r"\s*\(\$[\d\.,]+\)\s*$", "", s).strip()
+    # Remove bank prefix like "Nu - " or "Rappi: "
+    if " - " in s:
+        s = s.split(" - ", 1)[1].strip()
+    elif ": " in s:
+        s = s.split(": ", 1)[1].strip()
+    return s.strip()
+
+
 def resolve_account(db: dict[str, Any], entity: dict[str, Any], account_query: str) -> dict[str, Any]:
     """Finds an existing account/pocket belonging to the entity or globally, or auto-creates it."""
-    aq_norm = normalize_text(account_query)
+    cleaned_query = clean_account_query(account_query)
+    aq_norm = normalize_text(cleaned_query)
     accounts = db.get("accounts", [])
     entity_id = entity.get("id")
 
@@ -203,7 +226,7 @@ def resolve_account(db: dict[str, Any], entity: dict[str, Any], account_query: s
 
     # 1. Check exact ID match in entity accounts
     for a in candidate_accounts:
-        if a.get("id") == account_query:
+        if a.get("id") == account_query or a.get("id") == cleaned_query:
             return a
 
     # 2. Check exact name match in entity accounts
@@ -217,14 +240,20 @@ def resolve_account(db: dict[str, Any], entity: dict[str, Any], account_query: s
         if aq_norm in a_norm or a_norm in aq_norm:
             return a
 
-    # 4. Fallback search across all accounts if entity filter was too strict
+    # 4. Check if requesting salary / principal account
+    is_main_account = any(k in aq_norm for k in ["principal", "nomina", "ahorros", "cuenta"])
+    if is_main_account:
+        for a in candidate_accounts:
+            if any(k in normalize_text(a.get("name")) for k in ["nomina", "principal", "ahorros"]):
+                return a
+
+    # 5. Fallback search across all accounts if entity filter was too strict
     for a in accounts:
         if a.get("id") == account_query or normalize_text(a.get("name")) == aq_norm:
             return a
 
-    # 5. Account not found -> Auto-create account under this entity
-    is_main_account = any(k in aq_norm for k in ["principal", "ahorros", "cuenta"])
-    clean_name = account_query.strip()
+    # 6. Account not found -> Auto-create account under this entity
+    clean_name = "Cuenta Nómina / Principal" if is_main_account else cleaned_query
     new_acc_id = f"acc_{re.sub(r'[^a-z0-9]', '', aq_norm)[:10]}_{uuid.uuid4().hex[:4]}"
     new_account = {
         "id": new_acc_id,
@@ -317,6 +346,106 @@ def list_mobile_accounts(
     }
 
 
+@router.get("/mobile-pockets")
+def get_mobile_pockets(
+    bank: str | None = Query(None, description="Bank or entity name (Nu, Rappi, Caja Social, Google Wallet, etc.)"),
+    tx_type: str = Query("debit", description="Transaction type: 'debit' (gasto) or 'credit' (ingreso)"),
+    token: str | None = Query(None),
+    secret: str | None = Query(None),
+    x_webhook_secret: str | None = Header(None, alias="X-Webhook-Secret"),
+    authorization: str | None = Header(None),
+    user_id: str | None = Query(None),
+):
+    """Dynamically returns available accounts and pockets formatted for MacroDroid interactive dialogs.
+
+    - Prioritizes 'Cuenta Nómina / Principal'
+    - Follows with active savings pockets (Cajitas) with live balances
+    - Provides ready-to-use array ('pockets') and CSV string ('pockets_csv')
+    """
+    verify_secret_auth(token, secret, x_webhook_secret, authorization)
+    effective_uid = user_id or OWNER_ID
+    db = load_fixed_income_db(effective_uid)
+
+    entities = db.get("entities", [])
+    accounts = db.get("accounts", [])
+
+    is_all_banks = not bank or normalize_text(bank) in (
+        "all", "todas", "todos", "google wallet", "billetera de google", "google pay", "gpay"
+    )
+
+    if not is_all_banks:
+        matched_entity = resolve_entity(db, bank)
+        ent_id = matched_entity.get("id")
+        ent_accounts = [a for a in accounts if a.get("entityId") == ent_id]
+
+        # Prioritize Nómina / Principal
+        principal_acc = next(
+            (a for a in ent_accounts if any(k in normalize_text(a.get("name")) for k in ["nomina", "principal", "ahorros"])),
+            None
+        )
+
+        pockets_list = []
+        clean_names = []
+
+        # 1. Main / Salary account first
+        if principal_acc:
+            pockets_list.append(f"⭐ {principal_acc['name']} (${principal_acc.get('balance', 0):,.0f})")
+            clean_names.append(principal_acc["name"])
+        else:
+            pockets_list.append("⭐ Cuenta Nómina / Principal ($0)")
+            clean_names.append("Cuenta Nómina / Principal")
+
+        # 2. Pockets (Cajitas)
+        for a in ent_accounts:
+            if principal_acc and a.get("id") == principal_acc.get("id"):
+                continue
+            bal = a.get("balance", 0.0)
+            pockets_list.append(f"📦 {a['name']} (${bal:,.0f})")
+            clean_names.append(a["name"])
+
+        # 3. Cancel / Ignore option
+        pockets_list.append("❌ Ignorar / Cancelar")
+        clean_names.append("Ignorar / Cancelar")
+
+        return {
+            "success": True,
+            "entity": {
+                "id": matched_entity.get("id"),
+                "name": matched_entity.get("name"),
+            },
+            "tx_type": tx_type,
+            "pockets": pockets_list,
+            "pocket_names": clean_names,
+            "pockets_csv": ",".join(clean_names),
+        }
+
+    # All banks / Google Wallet fallback
+    all_pockets = []
+    all_names = []
+    for ent in entities:
+        short_bank = ent.get("name", "").replace("Colombia", "").replace("(Ahorros)", "").strip()
+        ent_accs = [a for a in accounts if a.get("entityId") == ent.get("id")]
+        for a in ent_accs:
+            bal = a.get("balance", 0.0)
+            all_pockets.append(f"{short_bank}: {a['name']} (${bal:,.0f})")
+            all_names.append(f"{short_bank} - {a['name']}")
+
+    all_pockets.append("❌ Ignorar / Cancelar")
+    all_names.append("Ignorar / Cancelar")
+
+    return {
+        "success": True,
+        "entity": {
+            "id": "all",
+            "name": "Billetera de Google / Múltiples Bancos",
+        },
+        "tx_type": tx_type,
+        "pockets": all_pockets,
+        "pocket_names": all_names,
+        "pockets_csv": ",".join(all_names),
+    }
+
+
 @router.post("/mobile-transaction")
 def register_mobile_transaction(
     payload: MobileTransactionPayload,
@@ -345,14 +474,34 @@ def register_mobile_transaction(
             detail=f"Monto inválido o no detectable: '{payload.amount}'",
         )
 
-    # 2. Determine transaction type (debit vs credit)
+    # 2. Determine transaction type (debit vs credit) with smart keyword detection
     norm_type = normalize_text(payload.type)
-    if any(k in norm_type for k in ["credit", "ingreso", "abono", "entrada", "consignacion"]):
+    search_context = f"{payload.description} {payload.raw_text or ''}".lower()
+    credit_keywords = [
+        "recibiste", "te transfirieron", "abono", "consignacion",
+        "consignación", "nomina", "nómina", "devolucion", "devolución", "pago recibido"
+    ]
+
+    if any(k in norm_type for k in ["credit", "ingreso", "abono", "entrada", "consignacion"]) or any(k in search_context for k in credit_keywords):
         tx_type = "credit"
         signed_amount = amount_val
     else:
         tx_type = "debit"
         signed_amount = -amount_val
+
+    # 2b. If entity is Google Wallet, resolve bank from card mention in notification text
+    if normalize_text(payload.entity) in ("google wallet", "billetera de google", "google pay", "gpay"):
+        for bank_alias, target_bank in [
+            ("nu", "Nu Colombia"),
+            ("rappi", "RappiPay"),
+            ("caja social", "Banco Caja Social"),
+            ("finandina", "Finandina"),
+            ("plenti", "Plenti (Ahorros)"),
+            ("nequi", "Nequi Colombia"),
+        ]:
+            if bank_alias in search_context:
+                payload.entity = target_bank
+                break
 
     # 3. Resolve Entity and Account
     entity = resolve_entity(db, payload.entity)
