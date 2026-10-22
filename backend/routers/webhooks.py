@@ -1,0 +1,436 @@
+"""Mobile Webhooks Router for Titanes Portfolio.
+
+Automates bank expense and income registration triggered by Android automation tools
+(e.g., MacroDroid, Tasker) via secure webhook endpoints.
+Updates account balances, registers transactions in DuckDB and fixed_income.json,
+and keeps the dual database in perfect sync.
+"""
+
+import logging
+import os
+import re
+import unicodedata
+import uuid
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import Any
+
+from dotenv import load_dotenv
+from fastapi import APIRouter, Header, HTTPException, Query, Request
+from pydantic import BaseModel, Field
+
+from routers.fixed_income import OWNER_ID, load_fixed_income_db, save_fixed_income_db
+
+# Ensure environment variables are loaded
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env")
+
+logger = logging.getLogger("webhooks")
+router = APIRouter()
+
+# Timezone Colombia (UTC-5)
+COLOMBIA_TZ = timezone(timedelta(hours=-5))
+
+
+def get_current_colombia_time() -> datetime:
+    return datetime.now(COLOMBIA_TZ)
+
+
+def normalize_text(text: str | None) -> str:
+    """Normalize text removing accents, punctuation, and lowering for robust matching."""
+    if not text:
+        return ""
+    text_str = str(text).lower().strip()
+    return "".join(
+        c for c in unicodedata.normalize("NFD", text_str)
+        if unicodedata.category(c) != "Mn"
+    )
+
+
+def parse_cop_amount(val: Any) -> float:
+    """Safely parse Colombian currency representations into positive float.
+
+    Handles:
+      - 35000 -> 35000.0
+      - "$35.000" -> 35000.0 (Colombian thousand separator)
+      - "1.250.000,50" -> 1250000.5
+      - "$ 45,000" -> 45000.0
+      - 45000.5 -> 45000.5
+    """
+    if isinstance(val, (int, float)):
+        return abs(float(val))
+    if not isinstance(val, str):
+        return 0.0
+
+    s = val.replace("$", "").replace("COP", "").replace("cop", "").strip()
+
+    # Comma and dot both present: 1.250.000,50 -> 1250000.50
+    if "," in s and "." in s:
+        s = s.replace(".", "").replace(",", ".")
+    elif "," in s:
+        parts = s.split(",")
+        if len(parts) == 2 and len(parts[1]) in (1, 2):
+            s = parts[0].replace(".", "") + "." + parts[1]
+        else:
+            s = s.replace(",", "")
+    elif "." in s:
+        parts = s.split(".")
+        # If last part has 3 digits or there are multiple dots, it's thousands separator
+        if len(parts[-1]) == 3 or len(parts) > 2:
+            s = s.replace(".", "")
+
+    cleaned = re.sub(r"[^\d.]", "", s)
+    try:
+        return abs(float(cleaned)) if cleaned else 0.0
+    except ValueError:
+        return 0.0
+
+
+def verify_secret_auth(
+    token: str | None = None,
+    secret: str | None = None,
+    x_webhook_secret: str | None = None,
+    authorization: str | None = None,
+) -> bool:
+    """Verify webhook authentication against WEBHOOK_SECRET_KEY in environment."""
+    expected_secret = os.getenv("WEBHOOK_SECRET_KEY", "titanes_sec_e8b919f4088a53e6b4d32091c6e1a4e2")
+    if not expected_secret:
+        logger.error("[Webhook Auth] WEBHOOK_SECRET_KEY is not defined in environment variables.")
+        raise HTTPException(status_code=500, detail="Server configuration error: WEBHOOK_SECRET_KEY is missing.")
+
+    candidate = None
+    if x_webhook_secret:
+        candidate = x_webhook_secret.strip()
+    elif authorization:
+        parts = authorization.strip().split()
+        candidate = parts[-1] if len(parts) > 1 else parts[0]
+    elif token:
+        candidate = token.strip()
+    elif secret:
+        candidate = secret.strip()
+
+    if not candidate or candidate != expected_secret.strip():
+        logger.warning(f"[Webhook Auth] Unauthorized attempt. Received: '{candidate}'")
+        raise HTTPException(
+            status_code=401,
+            detail="Unauthorized: Invalid or missing webhook authentication key.",
+        )
+    return True
+
+
+# --- Models ---
+
+
+class MobileTransactionPayload(BaseModel):
+    entity: str = Field(..., description="Entity name or ID (e.g. 'Nu Colombia', 'Nu', 'RappiPay', 'Caja Social')")
+    account: str = Field(..., description="Account or pocket name/id (e.g. 'acc_viaje', 'Viaje', 'Estudios', 'Principal')")
+    amount: Any = Field(..., description="Amount (e.g. 45000, '$45.000', 35000.5)")
+    description: str = Field(..., description="Commerce or transaction description (e.g. 'Éxito', 'Uber', 'D1')")
+    type: str = Field("debit", description="Transaction type: 'debit' (gasto/compra) or 'credit' (ingreso/abono)")
+    date: str | None = Field(None, description="Date in YYYY-MM-DD or ISO format. Defaults to current date in Colombia")
+    category: str | None = Field(None, description="Optional category (e.g. 'Alimentación', 'Transporte')")
+    raw_text: str | None = Field(None, description="Raw notification body from Android for logging/audit")
+    user_id: str | None = Field(None, description="Target user ID (defaults to OWNER_ID)")
+
+
+# --- Resolution Helpers ---
+
+
+def resolve_entity(db: dict[str, Any], entity_query: str) -> dict[str, Any]:
+    """Finds an existing entity by ID or name (including common aliases), or auto-creates it."""
+    eq_norm = normalize_text(entity_query)
+    entities = db.get("entities", [])
+
+    # Common aliases mapping
+    alias_map = {
+        "nu": "Nu Colombia",
+        "nubank": "Nu Colombia",
+        "cuenta nu": "Nu Colombia",
+        "tarjeta nu": "Nu Colombia",
+        "rappi": "RappiPay",
+        "rappipay": "RappiPay",
+        "davivienda rappi": "RappiPay",
+        "finandina": "Finandina",
+        "banco finandina": "Finandina",
+        "caja social": "Banco Caja Social",
+        "banco caja social": "Banco Caja Social",
+        "bcs": "Banco Caja Social",
+        "plenti": "Plenti (Ahorros)",
+        "pibank": "Pibank",
+        "lulo": "Lulo Bank",
+        "lulo bank": "Lulo Bank",
+    }
+
+    resolved_name = alias_map.get(eq_norm, entity_query.strip())
+    resolved_norm = normalize_text(resolved_name)
+
+    # 1. Search exact ID or normalized name
+    for e in entities:
+        if normalize_text(e.get("id")) == eq_norm or normalize_text(e.get("name")) == resolved_norm:
+            return e
+
+    # 2. Substring matching
+    for e in entities:
+        e_norm = normalize_text(e.get("name"))
+        if resolved_norm in e_norm or e_norm in resolved_norm:
+            return e
+
+    # 3. Not found -> auto-create new entity so expense is never discarded
+    clean_id_suffix = re.sub(r"[^a-z0-9]", "", resolved_norm)[:12] or "bank"
+    new_entity_id = f"ent_{clean_id_suffix}_{uuid.uuid4().hex[:4]}"
+    new_entity = {
+        "id": new_entity_id,
+        "name": resolved_name,
+        "country": "🇨🇴",
+        "color": "#3b82f6",
+        "icon": "🏦",
+        "createdAt": get_current_colombia_time().isoformat(),
+    }
+    entities.append(new_entity)
+    db["entities"] = entities
+    logger.info(f"[Webhook] Auto-created new entity: {new_entity}")
+    return new_entity
+
+
+def resolve_account(db: dict[str, Any], entity: dict[str, Any], account_query: str) -> dict[str, Any]:
+    """Finds an existing account/pocket belonging to the entity or globally, or auto-creates it."""
+    aq_norm = normalize_text(account_query)
+    accounts = db.get("accounts", [])
+    entity_id = entity.get("id")
+
+    # Filter candidate accounts for this entity first
+    candidate_accounts = [a for a in accounts if a.get("entityId") == entity_id]
+
+    # 1. Check exact ID match in entity accounts
+    for a in candidate_accounts:
+        if a.get("id") == account_query:
+            return a
+
+    # 2. Check exact name match in entity accounts
+    for a in candidate_accounts:
+        if normalize_text(a.get("name")) == aq_norm:
+            return a
+
+    # 3. Check substring match in entity accounts (e.g. "viaje" in "Cajita Viaje")
+    for a in candidate_accounts:
+        a_norm = normalize_text(a.get("name"))
+        if aq_norm in a_norm or a_norm in aq_norm:
+            return a
+
+    # 4. Fallback search across all accounts if entity filter was too strict
+    for a in accounts:
+        if a.get("id") == account_query or normalize_text(a.get("name")) == aq_norm:
+            return a
+
+    # 5. Account not found -> Auto-create account under this entity
+    is_main_account = any(k in aq_norm for k in ["principal", "ahorros", "cuenta"])
+    clean_name = account_query.strip()
+    new_acc_id = f"acc_{re.sub(r'[^a-z0-9]', '', aq_norm)[:10]}_{uuid.uuid4().hex[:4]}"
+    new_account = {
+        "id": new_acc_id,
+        "entityId": entity_id,
+        "name": clean_name if clean_name else "Cuenta Principal",
+        "type": "savings" if is_main_account else "pocket",
+        "currency": "COP",
+        "balance": 0.0,
+        "interestRateEA": 12.0,
+        "isTaxExemptGMF": True,
+        "rateHistory": [
+            {
+                "date": get_current_colombia_time().strftime("%Y-%m-%d"),
+                "rateEA": 12.0,
+            }
+        ],
+        "createdAt": get_current_colombia_time().isoformat(),
+    }
+    accounts.append(new_account)
+    db["accounts"] = accounts
+    logger.info(f"[Webhook] Auto-created new account: {new_account}")
+    return new_account
+
+
+# --- Endpoints ---
+
+
+@router.get("/health")
+def webhook_health(
+    token: str | None = Query(None),
+    secret: str | None = Query(None),
+    x_webhook_secret: str | None = Header(None, alias="X-Webhook-Secret"),
+    authorization: str | None = Header(None),
+):
+    """Healthcheck endpoint to verify endpoint status and authentication from mobile."""
+    verify_secret_auth(token, secret, x_webhook_secret, authorization)
+    now_col = get_current_colombia_time()
+    return {
+        "status": "healthy",
+        "service": "Titanes Portfolio Mobile Webhooks",
+        "server_time_colombia": now_col.isoformat(),
+    }
+
+
+@router.get("/mobile-accounts")
+def list_mobile_accounts(
+    token: str | None = Query(None),
+    secret: str | None = Query(None),
+    x_webhook_secret: str | None = Header(None, alias="X-Webhook-Secret"),
+    authorization: str | None = Header(None),
+    user_id: str | None = Query(None),
+):
+    """Returns available entities and their pockets/accounts with balances.
+
+    Ideal for setting up MacroDroid variables and interactive dialog options.
+    """
+    verify_secret_auth(token, secret, x_webhook_secret, authorization)
+    effective_uid = user_id or OWNER_ID
+    db = load_fixed_income_db(effective_uid)
+
+    entities = db.get("entities", [])
+    accounts = db.get("accounts", [])
+
+    grouped = []
+    for ent in entities:
+        ent_accounts = [
+            {
+                "id": acc.get("id"),
+                "name": acc.get("name"),
+                "type": acc.get("type", "savings"),
+                "balance": acc.get("balance", 0.0),
+                "currency": acc.get("currency", "COP"),
+            }
+            for acc in accounts
+            if acc.get("entityId") == ent.get("id")
+        ]
+        grouped.append({
+            "id": ent.get("id"),
+            "name": ent.get("name"),
+            "country": ent.get("country", "🇨🇴"),
+            "icon": ent.get("icon", "🏦"),
+            "accounts": ent_accounts,
+        })
+
+    return {
+        "success": True,
+        "total_entities": len(entities),
+        "total_accounts": len(accounts),
+        "entities": grouped,
+    }
+
+
+@router.post("/mobile-transaction")
+def register_mobile_transaction(
+    payload: MobileTransactionPayload,
+    request: Request,
+    token: str | None = Query(None),
+    secret: str | None = Query(None),
+    x_webhook_secret: str | None = Header(None, alias="X-Webhook-Secret"),
+    authorization: str | None = Header(None),
+):
+    """Register mobile bank transaction from Android automation (MacroDroid).
+
+    - Authenticated via WEBHOOK_SECRET_KEY
+    - Deducts (or increases) account balance
+    - Appends transaction to DuckDB, PostgreSQL, and JSON
+    """
+    verify_secret_auth(token, secret, x_webhook_secret, authorization)
+
+    effective_uid = payload.user_id or OWNER_ID
+    db = load_fixed_income_db(effective_uid)
+
+    # 1. Parse amount
+    amount_val = parse_cop_amount(payload.amount)
+    if amount_val <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Monto inválido o no detectable: '{payload.amount}'",
+        )
+
+    # 2. Determine transaction type (debit vs credit)
+    norm_type = normalize_text(payload.type)
+    if any(k in norm_type for k in ["credit", "ingreso", "abono", "entrada", "consignacion"]):
+        tx_type = "credit"
+        signed_amount = amount_val
+    else:
+        tx_type = "debit"
+        signed_amount = -amount_val
+
+    # 3. Resolve Entity and Account
+    entity = resolve_entity(db, payload.entity)
+    account = resolve_account(db, entity, payload.account)
+
+    # 4. Resolve date (America/Bogota timezone)
+    now_colombia = get_current_colombia_time()
+    if payload.date:
+        # Extract YYYY-MM-DD
+        tx_date = payload.date.split("T")[0]
+    else:
+        tx_date = now_colombia.strftime("%Y-%m-%d")
+
+    # 5. Update Account Balance
+    previous_balance = float(account.get("balance", 0.0))
+    new_balance = round(previous_balance + signed_amount, 2)
+    account["balance"] = new_balance
+
+    # Update account in db list
+    for idx, a in enumerate(db.get("accounts", [])):
+        if a.get("id") == account.get("id"):
+            db["accounts"][idx]["balance"] = new_balance
+            break
+
+    # 6. Create Transaction Object
+    tx_id = f"tx_mb_{int(now_colombia.timestamp() * 1000)}_{uuid.uuid4().hex[:6]}"
+    clean_desc = payload.description.strip() or ("Gasto bancario" if tx_type == "debit" else "Abono bancario")
+
+    new_tx = {
+        "id": tx_id,
+        "accountId": account["id"],
+        "entityId": entity["id"],
+        "date": tx_date,
+        "description": clean_desc,
+        "amount": signed_amount,
+        "currency": account.get("currency", "COP"),
+        "type": tx_type,
+        "category": payload.category or "Gasto Móvil",
+        "source": "macrodroid_webhook",
+        "rawText": payload.raw_text or "",
+        "createdAt": now_colombia.isoformat(),
+    }
+
+    if "transactions" not in db or not isinstance(db["transactions"], list):
+        db["transactions"] = []
+
+    # Insert at top of transactions list
+    db["transactions"].insert(0, new_tx)
+
+    # 7. Persist to DuckDB, Postgres, and JSON
+    save_fixed_income_db(db, effective_uid)
+
+    logger.info(
+        f"[Webhook] Successfully registered {tx_type.upper()} tx {tx_id}: "
+        f"{signed_amount:,.2f} COP in '{account['name']}' ({entity['name']}). "
+        f"Balance: {previous_balance:,.2f} -> {new_balance:,.2f} COP"
+    )
+
+    action_label = "descontado" if tx_type == "debit" else "abonado"
+
+    return {
+        "success": True,
+        "message": (
+            f"Se ha {action_label} exitosamente ${abs(signed_amount):,.2f} COP "
+            f"de '{account['name']}' ({entity['name']})."
+        ),
+        "tx_id": tx_id,
+        "entity": {
+            "id": entity["id"],
+            "name": entity["name"],
+        },
+        "account": {
+            "id": account["id"],
+            "name": account["name"],
+            "previous_balance": previous_balance,
+            "new_balance": new_balance,
+            "currency": account.get("currency", "COP"),
+        },
+        "transaction": new_tx,
+        "timestamp": now_colombia.isoformat(),
+    }

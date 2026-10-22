@@ -35,6 +35,7 @@ from routers.purchases import router as purchases_router
 from routers.rebalance import router as rebalance_router
 from routers.warren import router as warren_router
 from routers.alerts import router as alerts_router
+from routers.webhooks import router as webhooks_router
 
 app = FastAPI(
     title="Titanes Portfolio API",
@@ -132,6 +133,7 @@ app.include_router(fixed_income_router, prefix="/api/fixed-income", tags=["fixed
 app.include_router(cash_flow_router, prefix="/api", tags=["cash-flow"])
 app.include_router(warren_router, prefix="/api", tags=["warren"])
 app.include_router(alerts_router, prefix="/api")
+app.include_router(webhooks_router, prefix="/api/webhooks", tags=["webhooks"])
 
 
 @app.get("/")
