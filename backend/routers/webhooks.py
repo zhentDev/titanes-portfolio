@@ -19,6 +19,7 @@ from dotenv import load_dotenv
 from fastapi import APIRouter, Header, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
+from routers.cash_flow import load_cash_flow_db, save_cash_flow_db
 from routers.fixed_income import OWNER_ID, load_fixed_income_db, save_fixed_income_db
 
 # Ensure environment variables are loaded
@@ -406,13 +407,23 @@ def get_mobile_pockets(
         pockets_list = []
         clean_names = []
 
+        ent_clean_name = matched_entity.get("name", "")
+        if "nu" in normalize_text(ent_clean_name):
+            default_main_label = "Cuenta Nu Débito (Nómina)"
+        elif "rappi" in normalize_text(ent_clean_name):
+            default_main_label = "Cuenta Rappi (Principal)"
+        elif "finandina" in normalize_text(ent_clean_name):
+            default_main_label = "Cuenta Finandina (Principal)"
+        else:
+            default_main_label = f"Cuenta {ent_clean_name} (Principal)"
+
         # 1. Main / Salary account first
         if principal_acc:
             pockets_list.append(f"⭐ {principal_acc['name']} (${principal_acc.get('balance', 0):,.0f})")
             clean_names.append(principal_acc["name"])
         else:
-            pockets_list.append("⭐ Cuenta Nómina / Principal ($0)")
-            clean_names.append("Cuenta Nómina / Principal")
+            pockets_list.append(f"⭐ {default_main_label} ($0)")
+            clean_names.append(default_main_label)
 
         # 2. Pockets (Cajitas)
         for a in ent_accounts:
@@ -589,8 +600,43 @@ def register_mobile_transaction(
     # Insert at top of transactions list
     db["transactions"].insert(0, new_tx)
 
-    # 7. Persist to DuckDB, Postgres, and JSON
+    # 7. Persist to DuckDB, Postgres, and JSON (Fixed Income)
     save_fixed_income_db(db, effective_uid)
+
+    # 8. Dual-sync to Cash Flow expensesLog (for real-time monthly budget tracking)
+    cf_synced = False
+    try:
+        cf = load_cash_flow_db(effective_uid)
+        if "expensesLog" not in cf or not isinstance(cf["expensesLog"], list):
+            cf["expensesLog"] = []
+
+        active_period = cf.get("activePeriod") or tx_date[:7]
+        is_payroll = any(k in normalize_text(account.get("name")) for k in ["nomina", "principal", "ahorros", "debito"])
+
+        cf_tx = {
+            "id": f"cf_{tx_id}",
+            "period": active_period,
+            "budgetItemId": None,
+            "budgetItemName": clean_desc,
+            "budgetItemType": "needs" if tx_type == "debit" else "income",
+            "description": clean_desc,
+            "amount": amount_val,
+            "currency": account.get("currency", "COP"),
+            "date": tx_date,
+            "type": tx_type,
+            "paymentSource": {
+                "type": "payroll" if is_payroll else "fixed_pocket",
+                "targetId": account.get("id"),
+                "targetName": account.get("name"),
+            },
+            "createdAt": now_colombia.isoformat(),
+        }
+        cf["expensesLog"].insert(0, cf_tx)
+        save_cash_flow_db(cf, effective_uid)
+        cf_synced = True
+        logger.info(f"[Webhook] Dual-synced transaction {tx_id} to Cash Flow expensesLog (period {active_period}).")
+    except Exception as e:
+        logger.error(f"[Webhook] Failed to dual-sync to Cash Flow: {e}")
 
     logger.info(
         f"[Webhook] Successfully registered {tx_type.upper()} tx {tx_id}: "
@@ -604,7 +650,7 @@ def register_mobile_transaction(
         "success": True,
         "message": (
             f"Se ha {action_label} exitosamente ${abs(signed_amount):,.2f} COP "
-            f"de '{account['name']}' ({entity['name']})."
+            f"en '{account['name']}' ({entity['name']})."
         ),
         "tx_id": tx_id,
         "entity": {
@@ -619,5 +665,6 @@ def register_mobile_transaction(
             "currency": account.get("currency", "COP"),
         },
         "transaction": new_tx,
+        "cash_flow_synced": cf_synced,
         "timestamp": now_colombia.isoformat(),
     }
