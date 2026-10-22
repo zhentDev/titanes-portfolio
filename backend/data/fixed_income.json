@@ -50,7 +50,7 @@
       "name": "Cajita Viaje",
       "type": "pocket",
       "currency": "COP",
-      "balance": 119256.50442583702,
+      "balance": 119256.5,
       "interestRateEA": 9.35,
       "isTaxExemptGMF": true,
       "startDate": "2023-06-01",
@@ -149,8 +149,8 @@
       "name": "Impresora",
       "type": "pocket",
       "currency": "COP",
-      "balance": 236483.88,
-      "interestRateEA": 9,
+      "balance": 227483.88,
+      "interestRateEA": 9.0,
       "isTaxExemptGMF": true,
       "rateHistory": [
         {
@@ -158,8 +158,7 @@
           "rateEA": 9
         }
       ],
-      "createdAt": "2026-09-17T03:47:35.068Z",
-      "disableDailyCompounding": true
+      "createdAt": "2026-09-17T03:47:35.068Z"
     },
     {
       "id": "acc_1789760692910",
@@ -167,7 +166,7 @@
       "name": "Fondo de emergencia",
       "type": "pocket",
       "currency": "COP",
-      "balance": 1070000.0,
+      "balance": 1070000,
       "interestRateEA": 9,
       "isTaxExemptGMF": true,
       "rateHistory": [
@@ -176,8 +175,7 @@
           "rateEA": 9
         }
       ],
-      "createdAt": "2026-09-18T19:44:52.910Z",
-      "disableDailyCompounding": true
+      "createdAt": "2026-09-18T19:44:52.910Z"
     }
   ],
   "cdts": [
@@ -447,6 +445,16 @@
   ],
   "transactions": [
     {
+      "id": "tx_1792675265328_f4xpcj",
+      "accountId": "acc_1789616855068",
+      "date": "2026-10-22",
+      "description": "Retiro de Impresora",
+      "amount": -9000,
+      "currency": "COP",
+      "type": "debit",
+      "createdAt": "2026-10-22T13:21:05.328Z"
+    },
+    {
       "id": "tx_1792615245462_agv3rk",
       "accountId": "acc_viaje",
       "date": "2026-10-20",
@@ -477,6 +485,26 @@
       "createdAt": "2026-10-21T20:40:33.115Z"
     },
     {
+      "id": "tx_1792615545342_qkxuer",
+      "accountId": "acc_1789616855068",
+      "date": "2026-10-11",
+      "description": "Retiro de Impresora",
+      "amount": -60000,
+      "currency": "COP",
+      "type": "debit",
+      "createdAt": "2026-10-21T20:45:45.342Z"
+    },
+    {
+      "id": "tx_1792615527626_pi1zyl",
+      "accountId": "acc_1789616855068",
+      "date": "2026-10-08",
+      "description": "Retiro de Impresora",
+      "amount": -40000,
+      "currency": "COP",
+      "type": "debit",
+      "createdAt": "2026-10-21T20:45:27.626Z"
+    },
+    {
       "id": "tx_1792615187097_e776it",
       "accountId": "acc_viaje",
       "date": "2026-10-08",
@@ -487,6 +515,16 @@
       "createdAt": "2026-10-21T20:39:47.097Z"
     },
     {
+      "id": "tx_1792615512951_l5oo25",
+      "accountId": "acc_1789616855068",
+      "date": "2026-10-05",
+      "description": "Retiro de Impresora",
+      "amount": -100000,
+      "currency": "COP",
+      "type": "debit",
+      "createdAt": "2026-10-21T20:45:12.951Z"
+    },
+    {
       "id": "tx_1792615165415_r6v0rc",
       "accountId": "acc_viaje",
       "date": "2026-10-05",
@@ -495,6 +533,16 @@
       "currency": "COP",
       "type": "debit",
       "createdAt": "2026-10-21T20:39:25.415Z"
+    },
+    {
+      "id": "tx_1792615620604_yzd40w",
+      "accountId": "acc_1789760692910",
+      "date": "2026-10-03",
+      "description": "Retiro de Fondo de emergencia",
+      "amount": -90000,
+      "currency": "COP",
+      "type": "debit",
+      "createdAt": "2026-10-21T20:47:00.604Z"
     },
     {
       "id": "tx_1790923930084_qs0xxk",
