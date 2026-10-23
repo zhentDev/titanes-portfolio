@@ -266,6 +266,14 @@ export default function FixedIncomeHub() {
     return amount;
   };
 
+  const formatMoney = (amount, currency = "COP") => {
+    const val = Number(amount || 0);
+    if (currency === "USD" || currency === "USDC") {
+      return `USD $${val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    return `$${Math.round(val).toLocaleString("en-US")}`;
+  };
+
   // ── Auto-generate Monthly Yield Transactions Handler ──────────
   const handleGenerateMonthlyYields = async (account) => {
     try {
@@ -298,26 +306,38 @@ export default function FixedIncomeHub() {
     }
   };
 
-  // ── Active Entities Filter ──────────────────────────────
+  // ── Active Entities Filter (Exclude pure 0% wallets like Nequi / Daviplata) ──
   const activeEntities = useMemo(() => {
-    if (showAllEntities) return entities;
     return entities.filter((entity) => {
-      const hasAcc = accounts.some((a) => a.entityId === entity.id);
+      const entNameLower = (entity.name || "").toLowerCase();
+      if (entNameLower.includes("nequi") || entNameLower.includes("daviplata")) return false;
+
+      const hasYieldAcc = accounts.some(
+        (a) =>
+          a.entityId === entity.id &&
+          Number(a.interestRateEA || 0) > 0 &&
+          a.accountCategory !== "digital_wallet" &&
+          a.type !== "wallet"
+      );
       const hasCdt = cdts.some((c) => c.entityId === entity.id);
-      return hasAcc || hasCdt;
+
+      if (showAllEntities) return hasYieldAcc || hasCdt || !accounts.some((a) => a.entityId === entity.id);
+      return hasYieldAcc || hasCdt;
     });
   }, [entities, accounts, cdts, showAllEntities]);
 
+  const activeEntityIdSet = useMemo(() => new Set(activeEntities.map((e) => e.id)), [activeEntities]);
+
   // ── Filtered data by selected entity view (all vs specific bank) ──
   const viewAccounts = useMemo(() => {
-    if (selectedEntityView === "all") return accounts;
+    if (selectedEntityView === "all") return accounts.filter((a) => activeEntityIdSet.has(a.entityId));
     return accounts.filter((a) => a.entityId === selectedEntityView);
-  }, [accounts, selectedEntityView]);
+  }, [accounts, selectedEntityView, activeEntityIdSet]);
 
   const viewCDTs = useMemo(() => {
-    if (selectedEntityView === "all") return cdts;
+    if (selectedEntityView === "all") return cdts.filter((c) => activeEntityIdSet.has(c.entityId));
     return cdts.filter((c) => c.entityId === selectedEntityView);
-  }, [cdts, selectedEntityView]);
+  }, [cdts, selectedEntityView, activeEntityIdSet]);
 
   const viewTransactions = useMemo(() => {
     if (selectedEntityView === "all") return transactions;
@@ -327,7 +347,7 @@ export default function FixedIncomeHub() {
 
   // ── Financial Metrics Aggregation ───────────────────────
   const metrics = useMemo(() => {
-    let liquidBalance = 0; // Solo cuentas de inversión / cajitas que generan rendimiento
+    let liquidBalance = 0; // Solo cuentas de inversión / cajitas que generan rendimiento (descontando CDTs activos)
     let transactionalBalance = 0; // Cuentas transaccionales de nómina y billeteras (0% E.A.)
     let totalDailyIncome = 0;
     let weightedRateSum = 0;
@@ -337,7 +357,7 @@ export default function FixedIncomeHub() {
       const isZeroYield = acc.accountCategory === "digital_wallet" || acc.accountCategory === "payroll" || Number(acc.interestRateEA || 0) === 0 || acc.type === "wallet";
       const accTx = viewTransactions.filter((t) => (t.accountId ? t.accountId === acc.id : (t.description || "").toLowerCase().includes(acc.name.toLowerCase())));
       const yieldData = calculateAccountYield(acc, accTx, historicalRates, viewCDTs);
-      const val = convertAmount(yieldData.liquidTotalBalance || acc.balance, acc.currency);
+      const val = convertAmount(yieldData.liquidTotalBalance ?? acc.balance, acc.currency);
 
       if (isZeroYield) {
         transactionalBalance += val;
@@ -351,16 +371,11 @@ export default function FixedIncomeHub() {
         (historicalRates?.entities?.[acc.entityId]?.savings_rates?.slice(-1)[0]?.rateEA || 9.30)
       );
 
-      // Account's active CDT capital (congelado de esta cajita)
-      const accActiveCDTs = viewCDTs.filter((c) => c.status !== "matured" && (c.accountId === acc.id || (c.category || "").toLowerCase().includes(acc.name.toLowerCase().replace("cajita", "").trim())));
-      const accCDTCapital = accActiveCDTs.reduce((sum, c) => sum + convertAmount(c.capital || 0, c.currency), 0);
-      const unfrozenLiquid = Math.max(0, val - accCDTCapital);
-
       const dailyRate = Math.pow(1 + currentRateEA / 100, 1 / 360) - 1;
-      const dailyIncome = unfrozenLiquid * dailyRate;
+      const dailyIncome = val * dailyRate;
 
       totalDailyIncome += dailyIncome;
-      weightedRateSum += currentRateEA * unfrozenLiquid;
+      weightedRateSum += currentRateEA * val;
     });
 
     // 2. CDTs Activos (Capital + Rendimientos Devengados + Tasa CDT)
@@ -644,8 +659,21 @@ export default function FixedIncomeHub() {
             const cdtYieldRaw = capRaw * (Math.pow(1 + rEA / 100, daysEl / 360) - 1) * rete;
             const cdtYield = convertAmount(cdtYieldRaw, c.currency);
 
+            const isLinkedToPocket = investmentAccounts.some((acc) => {
+              if (c.entityId !== acc.entityId) return false;
+              const accNameLower = (acc.name || "").toLowerCase().replace("cajita", "").trim();
+              const catLower = (c.category || "").toLowerCase();
+              const nameLower = (c.name || "").toLowerCase();
+              return (
+                (accNameLower && (catLower.includes(accNameLower) || nameLower.includes(accNameLower))) ||
+                c.accountId === acc.id
+              );
+            });
+
             activeCDTsExtraYield += cdtYield;
-            activeCDTsCapitalOnDay += cap;
+            if (!isLinkedToPocket) {
+              activeCDTsCapitalOnDay += cap;
+            }
             activeCDTsRateSum += rEA * cap;
           }
         }
@@ -1506,7 +1534,7 @@ export default function FixedIncomeHub() {
                 border: "1px solid rgba(16, 185, 129, 0.2)",
               }}
             >
-              {accounts.length} cuenta(s) • {cdts.filter((c) => c.status !== "matured").length} CDT(s) activo(s)
+              {accounts.filter((a) => activeEntityIdSet.has(a.entityId)).length} cuenta(s) • {cdts.filter((c) => activeEntityIdSet.has(c.entityId) && c.status !== "matured").length} CDT(s) activo(s)
             </span>
           </div>
 
@@ -1595,8 +1623,8 @@ export default function FixedIncomeHub() {
 
           const accountsLiquidInvested = investedAccounts.reduce((sum, a) => {
             const accTx = transactions.filter(t => t.accountId ? t.accountId === a.id : (t.description || "").toLowerCase().includes(a.name.toLowerCase()));
-            const yieldData = calculateAccountYield(a, accTx, historicalRates);
-            return sum + (yieldData.totalCalculatedBalance || a.balance || 0);
+            const yieldData = calculateAccountYield(a, accTx, historicalRates, cdts);
+            return sum + (yieldData.liquidTotalBalance ?? a.balance ?? 0);
           }, 0);
 
           const accountsTransactionalTotal = transactionalAccounts.reduce((sum, a) => {
@@ -2029,50 +2057,33 @@ export default function FixedIncomeHub() {
                     <div
                       key={acc.id}
                       style={{
-                        background: "rgba(255, 255, 255, 0.03)",
-                        borderRadius: 10,
-                        border: `1px solid ${isExpanded ? "rgba(16, 185, 129, 0.3)" : "rgba(255, 255, 255, 0.06)"}`,
+                        background: isLight ? "#ffffff" : "rgba(255, 255, 255, 0.03)",
+                        borderRadius: 12,
+                        border: `1px solid ${isExpanded ? "rgba(16, 185, 129, 0.35)" : "var(--border)"}`,
                         transition: "all 0.2s ease",
                       }}
                     >
                       <div
                         style={{
-                          padding: "14px 16px",
+                          padding: "16px 18px",
                           display: "flex",
-                          flexWrap: "wrap",
-                          justifyContent: "space-between",
-                          alignItems: "center",
+                          flexDirection: "column",
                           gap: 14,
                         }}
                       >
-                        {/* Left: Expand button + Account Name + Rate info */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 12, flex: "1 1 240px", minWidth: 220 }}>
-                          <button
-                            type="button"
-                            onClick={() => toggleAccountExpand(acc.id)}
-                            style={{
-                              background: isExpanded ? "rgba(16, 185, 129, 0.2)" : "var(--bg-card-hover)",
-                              border: `1px solid ${isExpanded ? "var(--gain)" : "var(--border)"}`,
-                              borderRadius: 8,
-                              color: isExpanded ? "var(--gain)" : "var(--text-secondary)",
-                              cursor: "pointer",
-                              padding: "6px 11px",
-                              fontSize: "0.76rem",
-                              fontWeight: 700,
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 6,
-                              flexShrink: 0,
-                            }}
-                            title="Ver / Ocultar movimientos y desglose de rentabilidad"
-                          >
-                            <span>{isExpanded ? "▲" : "▼"}</span>
-                            <span>Movimientos {accTx.length > 0 ? `(${accTx.length})` : ""}</span>
-                          </button>
-
-                          <div style={{ minWidth: 0 }}>
+                        {/* Fila 1: Identidad de la Cuenta (Izquierda) + Barra de Acciones (Derecha) */}
+                        <div
+                          style={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            justifyContent: "space-between",
+                            alignItems: "flex-start",
+                            gap: 12,
+                          }}
+                        >
+                          <div style={{ minWidth: 0, flex: "1 1 260px" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                              <span style={{ fontWeight: 700, color: "var(--text-primary)", fontSize: "1.02rem", letterSpacing: "0.2px" }}>
+                              <span style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "1.05rem", letterSpacing: "0.2px" }}>
                                 {acc.name}
                               </span>
 
@@ -2081,7 +2092,7 @@ export default function FixedIncomeHub() {
                                 style={{
                                   fontSize: "0.68rem",
                                   fontWeight: 700,
-                                  padding: "2px 6px",
+                                  padding: "2px 7px",
                                   borderRadius: 6,
                                   background: acc.syncType === "manual"
                                     ? (isLight ? "rgba(100, 116, 139, 0.12)" : "rgba(148, 163, 184, 0.15)")
@@ -2107,7 +2118,7 @@ export default function FixedIncomeHub() {
                                   style={{
                                     fontSize: "0.68rem",
                                     fontWeight: 700,
-                                    padding: "2px 6px",
+                                    padding: "2px 7px",
                                     borderRadius: 6,
                                     background: isLight ? "rgba(59, 130, 246, 0.1)" : "rgba(59, 130, 246, 0.2)",
                                     color: isLight ? "#1d4ed8" : "#93c5fd",
@@ -2125,15 +2136,15 @@ export default function FixedIncomeHub() {
                                   style={{
                                     fontSize: "0.68rem",
                                     fontWeight: 700,
-                                    padding: "2px 6px",
+                                    padding: "2px 7px",
                                     borderRadius: 6,
                                     background: isLight ? "rgba(168, 85, 247, 0.12)" : "rgba(168, 85, 247, 0.2)",
                                     color: isLight ? "#7e22ce" : "#c084fc",
                                     border: isLight ? "1px solid rgba(168, 85, 247, 0.3)" : "1px solid rgba(168, 85, 247, 0.3)",
                                   }}
-                                  title="Billetera tradicional de bajo monto sin rendimiento (entradas y salidas)"
+                                  title="Cuenta transaccional sin rendimiento (entradas y salidas)"
                                 >
-                                  👛 Billetera (Sin rendimiento)
+                                  👛 Principal (0% E.A.)
                                 </span>
                               )}
 
@@ -2143,7 +2154,7 @@ export default function FixedIncomeHub() {
                                   style={{
                                     fontSize: "0.68rem",
                                     fontWeight: 700,
-                                    padding: "2px 6px",
+                                    padding: "2px 7px",
                                     borderRadius: 6,
                                     background: isLight ? "rgba(245, 158, 11, 0.12)" : "rgba(245, 158, 11, 0.2)",
                                     color: isLight ? "#d97706" : "#fbbf24",
@@ -2155,17 +2166,18 @@ export default function FixedIncomeHub() {
                                 </span>
                               )}
                             </div>
-                            <div style={{ fontSize: "0.76rem", color: "var(--text-secondary)", marginTop: 3, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+
+                            <div style={{ fontSize: "0.76rem", color: "var(--text-secondary)", marginTop: 5, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                               <span>
                                 {acc.type === "crypto" ? "Tasa Staking:" : "Tasa actual:"}{" "}
                                 {acc.accountCategory === "payroll" ? (
                                   <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>0.00% E.A. (Cuenta Nómina / Débito)</span>
                                 ) : acc.accountCategory === "digital_wallet" || Number(acc.interestRateEA || 0) === 0 ? (
                                   <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>
-                                    0.00% E.A. {acc.entityId === "ent_1789616750396" ? "(Cuenta Principal)" : "(Billetera digital)"}
+                                    0.00% E.A. {acc.entityId === "ent_1789616750396" ? "(Cuenta Principal)" : "(Cuenta Transaccional)"}
                                   </span>
                                 ) : (
-                                  <span style={{ color: "#10b981", fontWeight: 700, fontSize: "0.78rem" }}>
+                                  <span style={{ color: "#10b981", fontWeight: 700, fontSize: "0.8rem" }}>
                                     {Number(
                                       acc.type === "crypto"
                                         ? (acc.interestRateEA || 8.00)
@@ -2180,13 +2192,13 @@ export default function FixedIncomeHub() {
                                 </span>
                               )}
                               {acc.isTaxExemptGMF && acc.type !== "crypto" && (
-                                <span style={{ color: "var(--accent-primary)", fontSize: "0.7rem", fontWeight: 700 }}>
+                                <span style={{ color: "var(--accent-primary)", fontSize: "0.72rem", fontWeight: 700 }}>
                                   • Exenta 4×1000
                                 </span>
                               )}
                               {yieldData.activeCDTsCount > 0 && (
-                                <span style={{ color: isLight ? "#92400e" : "#f59e0b", fontSize: "0.7rem", fontWeight: 700 }}>
-                                  • ⏳ {yieldData.activeCDTsCount} CDT(s)
+                                <span style={{ color: isLight ? "#92400e" : "#f59e0b", fontSize: "0.72rem", fontWeight: 700 }}>
+                                  • ⏳ {yieldData.activeCDTsCount} CDT(s) activo(s)
                                 </span>
                               )}
                               {!isAccZeroYield && yieldData.isMonthlyDisbursement && (
@@ -2210,117 +2222,31 @@ export default function FixedIncomeHub() {
                               )}
                             </div>
                           </div>
-                        </div>
 
-                        {/* Right: Metric Badges + Actions */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-end", flex: "1 1 auto", minWidth: 0 }}>
-                          {isAccZeroYield ? (
-                            <div style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--bg-surface)", padding: "6px 14px", borderRadius: 10, border: "1px solid var(--border)", flexWrap: "wrap", justifyContent: "flex-end" }}>
-                              <div style={{ textAlign: "right" }} title="Saldo disponible para transacciones cotidianas y pagos">
-                                <span style={{ color: "var(--text-muted)", fontSize: "0.68rem", display: "block", fontWeight: 700, textTransform: "uppercase" }}>
-                                  {acc.accountCategory === "payroll" ? "💼 Saldo Nómina" : "👛 Saldo Disponible"}
-                                </span>
-                                <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 800, fontSize: "1.08rem" }}>
-                                  ${Number(acc.balance || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
-                                  <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{acc.currency}</span>
-                                </span>
-                              </div>
-                            </div>
-                          ) : (
-                            <div style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--bg-surface)", padding: "6px 12px", borderRadius: 10, border: "1px solid var(--border)", flexWrap: "wrap", justifyContent: "flex-end", maxWidth: "100%" }}>
-                              {/* 1. Ingresado Neto Líquido */}
-                              <div style={{ textAlign: "right" }} title="Capital neto depositado líquido en la cuenta">
-                                <span style={{ color: "var(--text-muted)", fontSize: "0.68rem", display: "block" }}>📥 Aportado Neto</span>
-                                <span className="mono" style={{ color: "var(--text-secondary)", fontWeight: 700, fontSize: "0.85rem" }}>
-                                  ${yieldData.liquidNetCapital.toLocaleString("en-US", { maximumFractionDigits: 2 })}
-                                </span>
-                              </div>
+                          {/* Barra de Acciones Compacta y Ordenada a la Derecha */}
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                            <button
+                              type="button"
+                              onClick={() => toggleAccountExpand(acc.id)}
+                              style={{
+                                background: isExpanded ? "rgba(16, 185, 129, 0.18)" : "var(--bg-surface)",
+                                border: `1px solid ${isExpanded ? "#10b981" : "var(--border)"}`,
+                                borderRadius: 8,
+                                color: isExpanded ? "#10b981" : "var(--text-primary)",
+                                cursor: "pointer",
+                                padding: "5px 11px",
+                                fontSize: "0.74rem",
+                                fontWeight: 700,
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 6,
+                              }}
+                              title="Ver / Ocultar movimientos y desglose de rentabilidad"
+                            >
+                              <span style={{ fontSize: "0.66rem" }}>{isExpanded ? "▲" : "▼"}</span>
+                              <span>Movimientos {accTx.length > 0 ? `(${accTx.length})` : ""}</span>
+                            </button>
 
-                              {/* 2. Rendimientos Líquidos */}
-                              <div style={{ textAlign: "right", paddingLeft: 8, borderLeft: "1px solid var(--border)" }} title={yieldData.isMonthlyDisbursement ? `Total devengado: +$${yieldData.liquidEarnedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })} (+$${yieldData.creditedYield.toLocaleString("en-US", { maximumFractionDigits: 2 })} ya abonado en caja + $${yieldData.pendingMonthlyYield.toLocaleString("en-US", { maximumFractionDigits: 2 })} en curso por abonar el ${yieldData.nextPayoutDateLabel})` : "Rendimientos diarios ganados en la cuenta"}>
-                                <span style={{ color: "var(--text-muted)", fontSize: "0.68rem", display: "block" }}>📈 Rentabilidad</span>
-                                <span className="mono" style={{ color: "#10b981", fontWeight: 700, fontSize: "0.85rem" }}>
-                                  +${yieldData.liquidEarnedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })}
-                                </span>
-                                {yieldData.isMonthlyDisbursement && yieldData.pendingMonthlyYield > 0 && (
-                                  <span style={{ color: isLight ? "#b45309" : "#fbbf24", fontSize: "0.63rem", display: "block", fontWeight: 600 }}>
-                                    ⏳ (+${yieldData.pendingMonthlyYield.toLocaleString("en-US", { maximumFractionDigits: 0 })} el {yieldData.nextPayoutDateLabel})
-                                  </span>
-                                )}
-                              </div>
-
-                              {/* 3. Saldo Total Líquido */}
-                              {yieldData.isMonthlyDisbursement ? (
-                                <>
-                                  <div style={{ textAlign: "right", paddingLeft: 10, borderLeft: "1px solid var(--border)" }} title="Saldo efectivamente disponible en caja hoy (con rendimientos de meses anteriores ya abonados)">
-                                    <span style={{ color: "#0284c7", fontSize: "0.68rem", display: "block", fontWeight: 700 }}>💵 Disp. en Caja</span>
-                                    <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 800, fontSize: "1.02rem" }}>
-                                      ${yieldData.liquidAvailableBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })}{" "}
-                                      <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>{acc.currency}</span>
-                                    </span>
-                                  </div>
-                                  <div style={{ textAlign: "right", paddingLeft: 8, borderLeft: "1px solid var(--border)" }} title="Saldo acumulado total sumando rendimientos devengados en curso que se abonarán el 1º">
-                                    <span style={{ color: isLight ? "#047857" : "#34d399", fontSize: "0.68rem", display: "block", fontWeight: 700 }}>✨ Total + Devengado</span>
-                                    <span className="mono" style={{ color: isLight ? "#065f46" : "#6ee7b7", fontWeight: 700, fontSize: "0.88rem" }}>
-                                      ${yieldData.liquidTotalBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })}
-                                    </span>
-                                  </div>
-                                </>
-                              ) : (
-                                <div style={{ textAlign: "right", paddingLeft: 10, borderLeft: "1px solid var(--border)" }} title="Saldo líquido disponible actualmente en la cuenta">
-                                  <span style={{ color: "#0284c7", fontSize: "0.68rem", display: "block", fontWeight: 700 }}>💰 Saldo Líquido</span>
-                                  <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 800, fontSize: "1.05rem" }}>
-                                    ${yieldData.liquidTotalBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })}{" "}
-                                    <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{acc.currency}</span>
-                                  </span>
-                                </div>
-                              )}
-
-                              {/* 4. CDTs Activos vinculados a esta cuenta */}
-                              {yieldData.activeCDTsList.length > 0 && (
-                                <div
-                                  style={{
-                                    textAlign: "right",
-                                    paddingLeft: 10,
-                                    borderLeft: "1px solid var(--border)",
-                                  }}
-                                  title="Capital activo en CDT(s) vinculados a esta cuenta más rendimientos devengados a hoy"
-                                >
-                                  <span style={{ color: isLight ? "#92400e" : "#f59e0b", fontSize: "0.68rem", display: "block", fontWeight: 700 }}>
-                                    ⏳ En {yieldData.activeCDTsList.length} CDT(s)
-                                  </span>
-                                  <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: "0.92rem" }}>
-                                    ${(yieldData.activeCDTsCapital + yieldData.activeCDTsAccruedInterest).toLocaleString("en-US", { maximumFractionDigits: 2 })}
-                                  </span>
-                                  <span style={{ color: "#10b981", fontSize: "0.68rem", display: "block", fontWeight: 600 }}>
-                                    (+${yieldData.activeCDTsAccruedInterest.toLocaleString("en-US", { maximumFractionDigits: 0 })} rend.)
-                                  </span>
-                                </div>
-                              )}
-
-                              {/* 5. Total Consolidado Cuenta (Líquido + CDTs) */}
-                              {yieldData.activeCDTsList.length > 0 && (
-                                <div
-                                  style={{
-                                    textAlign: "right",
-                                    paddingLeft: 10,
-                                    borderLeft: "1px solid var(--border)",
-                                  }}
-                                  title="Total consolidado de esta cuenta (Saldo Líquido disponible + CDTs activos)"
-                                >
-                                  <span style={{ color: "var(--text-secondary)", fontSize: "0.68rem", display: "block", fontWeight: 700 }}>
-                                    💼 Total Cuenta
-                                  </span>
-                                  <span className="mono" style={{ color: "#10b981", fontWeight: 800, fontSize: "1.05rem" }}>
-                                    ${(yieldData.liquidTotalBalance + yieldData.activeCDTsCapital + yieldData.activeCDTsAccruedInterest).toLocaleString("en-US", { maximumFractionDigits: 2 })}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Action Buttons */}
-                          <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                             {!isAccZeroYield && (() => {
                               const targetBalance = yieldData.isMonthlyDisbursement ? yieldData.liquidAvailableBalance : yieldData.liquidTotalBalance;
                               if (Math.abs(acc.balance - targetBalance) <= 1) return null;
@@ -2329,25 +2255,25 @@ export default function FixedIncomeHub() {
                                   type="button"
                                   onClick={async () => {
                                     await updateAccount({ ...acc, balance: targetBalance });
-                                    toast.success(`Saldo de "${acc.name}" actualizado a $${targetBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })} COP`);
+                                    toast.success(`Saldo líquido de "${acc.name}" sincronizado a $${targetBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })} COP`);
                                   }}
-                                style={{
-                                  background: "rgba(16, 185, 129, 0.15)",
-                                  border: "1px solid rgba(16, 185, 129, 0.4)",
-                                  borderRadius: 6,
-                                  color: "#10b981",
-                                  fontSize: "0.72rem",
-                                  fontWeight: 700,
-                                  cursor: "pointer",
-                                  padding: "4px 8px",
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: 4,
-                                }}
-                                title={yieldData.isMonthlyDisbursement ? `Sincronizar saldo disponible en caja ($${targetBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })})` : "Sincronizar el saldo oficial de la cuenta con el valor real calculado"}
-                              >
-                                <span>🔄 Sincronizar</span>
-                              </button>
+                                  style={{
+                                    background: "rgba(16, 185, 129, 0.15)",
+                                    border: "1px solid rgba(16, 185, 129, 0.4)",
+                                    borderRadius: 8,
+                                    color: "#10b981",
+                                    fontSize: "0.73rem",
+                                    fontWeight: 700,
+                                    cursor: "pointer",
+                                    padding: "5px 10px",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 4,
+                                  }}
+                                  title={`Sincronizar el saldo oficial de la cuenta con el saldo líquido real ($${targetBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })})`}
+                                >
+                                  <span>🔄 Sincronizar</span>
+                                </button>
                               );
                             })()}
 
@@ -2356,13 +2282,13 @@ export default function FixedIncomeHub() {
                                 onClick={() => handleGenerateMonthlyYields(acc)}
                                 style={{
                                   background: "rgba(56, 189, 248, 0.12)",
-                                  border: "1px solid rgba(56, 189, 248, 0.4)",
-                                  borderRadius: 6,
+                                  border: "1px solid rgba(56, 189, 248, 0.35)",
+                                  borderRadius: 8,
                                   color: "#38bdf8",
-                                  fontSize: "0.72rem",
+                                  fontSize: "0.73rem",
                                   fontWeight: 700,
                                   cursor: "pointer",
-                                  padding: "4px 8px",
+                                  padding: "5px 10px",
                                   display: "inline-flex",
                                   alignItems: "center",
                                   gap: 4,
@@ -2376,13 +2302,13 @@ export default function FixedIncomeHub() {
                             <button
                               onClick={() => handleEdit(acc, "account")}
                               style={{
-                                background: "rgba(255, 255, 255, 0.04)",
-                                border: "1px solid rgba(255, 255, 255, 0.1)",
-                                borderRadius: 6,
-                                color: "#94a3b8",
+                                background: "var(--bg-surface)",
+                                border: "1px solid var(--border)",
+                                borderRadius: 8,
+                                color: "var(--text-secondary)",
                                 cursor: "pointer",
-                                fontSize: "0.85rem",
-                                padding: "4px 7px",
+                                fontSize: "0.82rem",
+                                padding: "5px 8px",
                               }}
                               title="Editar Cuenta"
                             >
@@ -2392,12 +2318,12 @@ export default function FixedIncomeHub() {
                               onClick={() => handleDeleteAccount(acc)}
                               style={{
                                 background: "rgba(244, 63, 94, 0.08)",
-                                border: "1px solid rgba(244, 63, 94, 0.2)",
-                                borderRadius: 6,
+                                border: "1px solid rgba(244, 63, 94, 0.25)",
+                                borderRadius: 8,
                                 color: "#f43f5e",
                                 cursor: "pointer",
-                                fontSize: "0.85rem",
-                                padding: "4px 7px",
+                                fontSize: "0.82rem",
+                                padding: "5px 8px",
                               }}
                               title="Eliminar Cuenta"
                             >
@@ -2405,6 +2331,181 @@ export default function FixedIncomeHub() {
                             </button>
                           </div>
                         </div>
+
+                        {/* Fila 2: Grilla Espaciosa de Métricas Financieras */}
+                        {isAccZeroYield ? (
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              background: "var(--bg-surface)",
+                              padding: "10px 16px",
+                              borderRadius: 10,
+                              border: "1px solid var(--border)",
+                              flexWrap: "wrap",
+                              gap: 8,
+                            }}
+                          >
+                            <span style={{ color: "var(--text-secondary)", fontSize: "0.78rem", fontWeight: 700 }}>
+                              {acc.accountCategory === "payroll" ? "💼 Saldo Disponible en Nómina / Débito" : "👛 Saldo Disponible en Cuenta Principal"}
+                            </span>
+                            <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 800, fontSize: "1.12rem" }}>
+                              ${Number(acc.balance || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
+                              <span style={{ fontSize: "0.74rem", color: "var(--text-muted)", fontWeight: 600 }}>{acc.currency}</span>
+                            </span>
+                          </div>
+                        ) : (
+                          <div
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns: "repeat(auto-fit, minmax(135px, 1fr))",
+                              gap: 10,
+                              background: "var(--bg-surface)",
+                              padding: "12px 14px",
+                              borderRadius: 10,
+                              border: "1px solid var(--border)",
+                            }}
+                          >
+                            {/* 1. Aportado Neto Líquido */}
+                            <div
+                              style={{
+                                padding: "4px 8px",
+                                borderRight: "1px solid var(--border)",
+                              }}
+                              title="Capital neto depositado líquido en la cuenta (descontando retiros y capital congelado en CDTs)"
+                            >
+                              <span style={{ color: "var(--text-muted)", fontSize: "0.7rem", display: "block", fontWeight: 600 }}>
+                                📥 Aportado Neto
+                              </span>
+                              <span className="mono" style={{ color: "var(--text-secondary)", fontWeight: 700, fontSize: "0.95rem", display: "block", marginTop: 2 }}>
+                                ${yieldData.liquidNetCapital.toLocaleString("en-US", { maximumFractionDigits: 2 })}
+                              </span>
+                              {yieldData.liquidNetCapital === 0 && (yieldData.activeCDTsCapital > 0 || yieldData.totalDeposits > 0) && (
+                                <span style={{ color: "var(--text-muted)", fontSize: "0.62rem", display: "block", marginTop: 1 }}>
+                                  (En CDT / Retirado)
+                                </span>
+                              )}
+                            </div>
+
+                            {/* 2. Rentabilidad */}
+                            <div
+                              style={{
+                                padding: "4px 8px",
+                                borderRight: "1px solid var(--border)",
+                              }}
+                              title={yieldData.isMonthlyDisbursement ? `Total devengado: +$${yieldData.liquidEarnedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })} (+$${yieldData.creditedYield.toLocaleString("en-US", { maximumFractionDigits: 2 })} ya abonado en caja + $${yieldData.pendingMonthlyYield.toLocaleString("en-US", { maximumFractionDigits: 2 })} en curso por abonar el ${yieldData.nextPayoutDateLabel})` : "Rendimientos diarios acumulados ganados en esta cajita"}
+                            >
+                              <span style={{ color: "var(--text-muted)", fontSize: "0.7rem", display: "block", fontWeight: 600 }}>
+                                📈 Rentabilidad
+                              </span>
+                              <span className="mono" style={{ color: "#10b981", fontWeight: 700, fontSize: "0.95rem", display: "block", marginTop: 2 }}>
+                                +${yieldData.liquidEarnedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })}
+                              </span>
+                              {yieldData.isMonthlyDisbursement && yieldData.pendingMonthlyYield > 0 && (
+                                <span style={{ color: isLight ? "#b45309" : "#fbbf24", fontSize: "0.63rem", display: "block", fontWeight: 600, marginTop: 1 }}>
+                                  ⏳ (+${yieldData.pendingMonthlyYield.toLocaleString("en-US", { maximumFractionDigits: 0 })} el {yieldData.nextPayoutDateLabel})
+                                </span>
+                              )}
+                            </div>
+
+                            {/* 3. Saldo Líquido Disponible (Descontando CDT) */}
+                            {yieldData.isMonthlyDisbursement ? (
+                              <>
+                                <div
+                                  style={{
+                                    padding: "4px 8px",
+                                    borderRight: "1px solid var(--border)",
+                                  }}
+                                  title="Saldo efectivamente disponible en caja hoy (con rendimientos de meses anteriores ya abonados)"
+                                >
+                                  <span style={{ color: "#0284c7", fontSize: "0.7rem", display: "block", fontWeight: 700 }}>
+                                    💵 Disp. en Caja
+                                  </span>
+                                  <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 800, fontSize: "1.02rem", display: "block", marginTop: 2 }}>
+                                    ${yieldData.liquidAvailableBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
+                                    <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>{acc.currency}</span>
+                                  </span>
+                                </div>
+                                <div
+                                  style={{
+                                    padding: "4px 8px",
+                                  }}
+                                  title="Saldo acumulado total sumando rendimientos devengados en curso que se abonarán el 1º"
+                                >
+                                  <span style={{ color: isLight ? "#047857" : "#34d399", fontSize: "0.7rem", display: "block", fontWeight: 700 }}>
+                                    ✨ Total + Devengado
+                                  </span>
+                                  <span className="mono" style={{ color: isLight ? "#065f46" : "#6ee7b7", fontWeight: 700, fontSize: "0.95rem", display: "block", marginTop: 2 }}>
+                                    ${yieldData.liquidTotalBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </span>
+                                </div>
+                              </>
+                            ) : (
+                              <div
+                                style={{
+                                  padding: "4px 8px",
+                                  borderRight: yieldData.activeCDTsList.length > 0 ? "1px solid var(--border)" : "none",
+                                }}
+                                title="Saldo líquido disponible actualmente en la cajita (descontando el capital congelado en CDTs activos)"
+                              >
+                                <span style={{ color: "#38bdf8", fontSize: "0.7rem", display: "block", fontWeight: 700 }}>
+                                  💰 Saldo Líquido
+                                </span>
+                                <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 800, fontSize: "1.05rem", display: "block", marginTop: 2 }}>
+                                  ${yieldData.liquidTotalBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
+                                  <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600 }}>{acc.currency}</span>
+                                </span>
+                                {yieldData.activeCDTsCapital > 0 && (
+                                  <span style={{ color: "var(--text-muted)", fontSize: "0.62rem", display: "block", marginTop: 1 }}>
+                                    (Libre fuera de CDT)
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* 4. CDTs Activos vinculados a esta cajita */}
+                            {yieldData.activeCDTsList.length > 0 && (
+                              <div
+                                style={{
+                                  padding: "4px 8px",
+                                  borderRight: "1px solid var(--border)",
+                                }}
+                                title={`Capital en CDT: $${yieldData.activeCDTsCapital.toLocaleString("en-US")} + Rendimientos devengados a hoy: +$${yieldData.activeCDTsAccruedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })}`}
+                              >
+                                <span style={{ color: isLight ? "#92400e" : "#f59e0b", fontSize: "0.7rem", display: "block", fontWeight: 700 }}>
+                                  ⏳ En {yieldData.activeCDTsList.length} CDT(s)
+                                </span>
+                                <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 800, fontSize: "0.98rem", display: "block", marginTop: 2 }}>
+                                  ${(yieldData.activeCDTsCapital + yieldData.activeCDTsAccruedInterest).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                                <span style={{ color: "#10b981", fontSize: "0.65rem", display: "block", fontWeight: 600, marginTop: 1 }}>
+                                  (+${yieldData.activeCDTsAccruedInterest.toLocaleString("en-US", { maximumFractionDigits: 0 })} rend. a hoy)
+                                </span>
+                              </div>
+                            )}
+
+                            {/* 5. Total Consolidado Cuenta (Líquido + CDTs) */}
+                            {yieldData.activeCDTsList.length > 0 && (
+                              <div
+                                style={{
+                                  padding: "4px 8px",
+                                }}
+                                title="Total consolidado de esta cajita (Saldo Líquido disponible + Capital y rendimientos en CDTs activos)"
+                              >
+                                <span style={{ color: "var(--text-secondary)", fontSize: "0.7rem", display: "block", fontWeight: 700 }}>
+                                  💼 Total Cuenta
+                                </span>
+                                <span className="mono" style={{ color: "#10b981", fontWeight: 800, fontSize: "1.06rem", display: "block", marginTop: 2 }}>
+                                  ${(yieldData.liquidTotalBalance + yieldData.activeCDTsCapital + yieldData.activeCDTsAccruedInterest).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                                <span style={{ color: "var(--text-muted)", fontSize: "0.62rem", display: "block", marginTop: 1 }}>
+                                  (Líquido + CDT)
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {/* Desplegable Compacto de Movimientos con Filtros Interactivos, CDTs y Desglose */}
@@ -3611,9 +3712,37 @@ export default function FixedIncomeHub() {
                 const isSelected = currentSelectedId === entity.id;
                 const entAccounts = accounts.filter((a) => a.entityId === entity.id);
                 const entCdts = cdts.filter((c) => c.entityId === entity.id && c.status !== "matured");
-                const totalAccBal = entAccounts.reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
-                const totalCdtCap = entCdts.reduce((sum, c) => sum + (Number(c.capital) || 0), 0);
-                const totalEntityCap = totalAccBal + totalCdtCap;
+
+                const isAccTrans = (acc) =>
+                  acc.accountCategory === "payroll" ||
+                  acc.accountCategory === "digital_wallet" ||
+                  acc.type === "wallet" ||
+                  Number(acc.interestRateEA || 0) === 0;
+
+                const entInvestedAccounts = entAccounts.filter((a) => !isAccTrans(a));
+                const entTransactionalAccounts = entAccounts.filter((a) => isAccTrans(a));
+
+                const liquidInvested = entInvestedAccounts.reduce((sum, a) => {
+                  const accTx = transactions.filter((t) =>
+                    t.accountId ? t.accountId === a.id : (t.description || "").toLowerCase().includes(a.name.toLowerCase())
+                  );
+                  const yData = calculateAccountYield(a, accTx, historicalRates, cdts);
+                  return sum + (yData.liquidTotalBalance ?? a.balance ?? 0);
+                }, 0);
+
+                const transactionalBal = entTransactionalAccounts.reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
+
+                const cdtTotalWithYield = entCdts.reduce((sum, cdt) => {
+                  const rateDecimal = (cdt.interestRateEA || 0) / 100;
+                  const reteMul = 1 - (cdt.reteFuentePct || 4) / 100;
+                  const startD = new Date(cdt.startDate);
+                  const nowD = new Date();
+                  const daysEl = Math.max(0, Math.floor((nowD - startD) / (1000 * 60 * 60 * 24)));
+                  const gain = (cdt.capital || 0) * (Math.pow(1 + rateDecimal, daysEl / 360) - 1) * reteMul;
+                  return sum + (Number(cdt.capital) || 0) + gain;
+                }, 0);
+
+                const totalEntityInvested = liquidInvested + cdtTotalWithYield;
                 const entCurr = entAccounts[0]?.currency || entCdts[0]?.currency || "COP";
 
                 return (
@@ -3636,23 +3765,26 @@ export default function FixedIncomeHub() {
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                      <span
+                      <div
                         style={{
-                          width: 32,
-                          height: 32,
+                          width: 34,
+                          height: 34,
                           borderRadius: 8,
-                          background: entity.color || "#6366f1",
-                          color: "#ffffff",
+                          overflow: "hidden",
+                          background: `${entity.color || "#6366f1"}22`,
+                          border: `1px solid ${entity.color || "#6366f1"}44`,
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          fontSize: "0.78rem",
-                          fontWeight: 800,
                           flexShrink: 0,
                         }}
                       >
-                        {entity.name?.slice(0, 2).toUpperCase() || "🏦"}
-                      </span>
+                        <img
+                          src={entity.logoUrl || svgToDataUri(getBankPreset(entity.name).logoSvg)}
+                          alt={entity.name}
+                          style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                        />
+                      </div>
                       <div style={{ minWidth: 0 }}>
                         <strong
                           style={{
@@ -3673,12 +3805,18 @@ export default function FixedIncomeHub() {
                     </div>
 
                     <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 8 }}>
-                      <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.82rem", fontWeight: 700, color: isSelected ? "#10b981" : "var(--text-primary)" }}>
-                        {formatMoney(totalEntityCap, entCurr)}
+                      <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.84rem", fontWeight: 800, color: isSelected ? "#10b981" : "var(--text-primary)" }}>
+                        {formatMoney(totalEntityInvested, entCurr)}
                       </div>
-                      <span style={{ fontSize: "0.68rem", color: isSelected ? "#38bdf8" : "var(--text-muted)", fontWeight: 600 }}>
-                        {isSelected ? "Activa ➔" : "Ver"}
-                      </span>
+                      {transactionalBal > 0 ? (
+                        <span style={{ fontSize: "0.64rem", color: "#60a5fa", display: "block", fontWeight: 600 }}>
+                          +{formatMoney(transactionalBal, entCurr)} Nómina
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: "0.68rem", color: isSelected ? "#38bdf8" : "var(--text-muted)", fontWeight: 600 }}>
+                          {isSelected ? "Activa ➔" : "Ver"}
+                        </span>
+                      )}
                     </div>
                   </div>
                 );

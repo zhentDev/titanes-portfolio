@@ -269,12 +269,13 @@ export function calculateAccountYield(account, transactions = [], historicalRate
 
   if (sortedTx.length === 0) {
     const baseBal = Number(account.balance || 0);
+    const liquidBase = Math.max(0, baseBal - activeCDTsCapital);
     return {
       netCapital: baseBal,
-      liquidNetCapital: baseBal,
+      liquidNetCapital: liquidBase,
       liquidEarnedInterest: 0,
-      liquidTotalBalance: baseBal,
-      liquidAvailableBalance: baseBal,
+      liquidTotalBalance: liquidBase,
+      liquidAvailableBalance: liquidBase,
       isMonthlyDisbursement,
       creditedYield: 0,
       pendingMonthlyYield: 0,
@@ -282,7 +283,7 @@ export function calculateAccountYield(account, transactions = [], historicalRate
       totalDeposits: baseBal,
       totalWithdrawals: 0,
       totalEarnedInterest: 0,
-      totalCalculatedBalance: baseBal,
+      totalCalculatedBalance: liquidBase,
       activeCDTsCount: activeCDTsList.length,
       activeCDTsCapital,
       activeCDTsAccruedInterest,
@@ -291,8 +292,8 @@ export function calculateAccountYield(account, transactions = [], historicalRate
       maturedCDTsTotalCapital,
       maturedCDTsTotalProfit,
       maturedCDTsList,
-      consolidatedTotal: baseBal + activeCDTsCapital + activeCDTsAccruedInterest,
-      consolidatedNetCapital: baseBal + activeCDTsCapital,
+      consolidatedTotal: liquidBase + activeCDTsCapital + activeCDTsAccruedInterest,
+      consolidatedNetCapital: liquidBase + activeCDTsCapital,
       consolidatedTotalYield: activeCDTsAccruedInterest + maturedCDTsTotalProfit,
       periodBreakdown: [],
     };
@@ -381,19 +382,23 @@ export function calculateAccountYield(account, transactions = [], historicalRate
   }
 
   const finalEarnedInterest = explicitInterestTotal > 0 ? explicitInterestTotal : simulatedInterest;
-  const liquidTotal = Math.max(0, netCapital + finalEarnedInterest);
+  const grossPocketBalance = Math.max(0, netCapital + finalEarnedInterest);
+  // Discount active CDT capital that is locked/frozen out of this pocket
+  const liquidTotal = Math.max(0, grossPocketBalance - activeCDTsCapital);
 
   // Available cash in hand: if monthly disbursement, current in-progress month's yields are not yet in hand
   const liquidAvail = isMonthlyDisbursement
-    ? Math.max(0, netCapital + creditedYield + explicitInterestTotal)
+    ? Math.max(0, netCapital + creditedYield + explicitInterestTotal - activeCDTsCapital)
     : liquidTotal;
+
+  const liquidNetCap = Math.max(0, netCapital - activeCDTsCapital);
 
   const periodBreakdown = Array.from(periodMap.values());
 
   return {
-    // Líquido Cajita
+    // Líquido Cajita (Descontando lo congelado en CDTs activos)
     netCapital: Math.max(0, netCapital),
-    liquidNetCapital: Math.max(0, netCapital),
+    liquidNetCapital: liquidNetCap,
     liquidEarnedInterest: Math.max(0, finalEarnedInterest),
     liquidTotalBalance: liquidTotal,
     liquidAvailableBalance: liquidAvail,
@@ -421,9 +426,9 @@ export function calculateAccountYield(account, transactions = [], historicalRate
     maturedCDTsTotalProfit,
     maturedCDTsList,
 
-    // Totales Consolidados (Cajita + CDTs)
+    // Totales Consolidados (Cajita Líquido + CDTs Activos)
     consolidatedTotal: liquidTotal + activeCDTsCapital + activeCDTsAccruedInterest,
-    consolidatedNetCapital: Math.max(0, netCapital) + activeCDTsCapital,
+    consolidatedNetCapital: liquidNetCap + activeCDTsCapital,
     consolidatedTotalYield: Math.max(0, finalEarnedInterest) + activeCDTsAccruedInterest + maturedCDTsTotalProfit,
 
     periodBreakdown,
