@@ -124,6 +124,9 @@ export const usePortfolioStore = create(
             });
           }
         } catch (err) {
+          if (err.name === "AbortError" || (err.message && err.message.toLowerCase().includes("abort"))) {
+            return;
+          }
           console.error("Error fetching purchases from backend:", err);
         }
       },

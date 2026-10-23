@@ -332,6 +332,7 @@ export default function QuantumOrbitalLoader({
   const { theme } = useTheme();
   const isLight = theme === "light";
   const canvasRef = useRef(null);
+  const containerRef = useRef(null);
   const [currentInfo, setCurrentInfo] = useState({
     from: ORBITALS[0],
     to: ORBITALS[1],
@@ -352,10 +353,10 @@ export default function QuantumOrbitalLoader({
     // Handle canvas dimensions safely using ResizeObserver
     const updateDimensions = (w, h) => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const minW = compact ? 50 : 280;
+      const minW = compact ? 50 : 200;
       const minH = compact ? 50 : 200;
-      const safeW = Math.max(minW, Math.floor(w || canvas.clientWidth || (typeof width === "number" ? width : 600)));
-      const safeH = Math.max(minH, Math.floor(h || canvas.clientHeight || height || 360));
+      const safeW = Math.max(minW, Math.min(compact ? 240 : 450, Math.floor(w || containerRef.current?.clientWidth || 320)));
+      const safeH = Math.max(minH, Math.min(compact ? 200 : 520, Math.floor(h || containerRef.current?.clientHeight || 360)));
       canvasWidth = safeW;
       canvasHeight = safeH;
 
@@ -365,10 +366,11 @@ export default function QuantumOrbitalLoader({
       }
     };
 
-    updateDimensions(canvas.clientWidth, canvas.clientHeight);
+    updateDimensions(containerRef.current?.clientWidth, containerRef.current?.clientHeight);
 
     let resizeObserver = null;
-    if (typeof ResizeObserver !== "undefined") {
+    const observedEl = containerRef.current || canvas;
+    if (typeof ResizeObserver !== "undefined" && observedEl) {
       resizeObserver = new ResizeObserver((entries) => {
         for (const entry of entries) {
           const { width: w, height: h } = entry.contentRect;
@@ -377,7 +379,7 @@ export default function QuantumOrbitalLoader({
           }
         }
       });
-      resizeObserver.observe(canvas);
+      resizeObserver.observe(observedEl);
     }
 
     // Precompute cloud positions for each orbital state
@@ -396,7 +398,7 @@ export default function QuantumOrbitalLoader({
     let startTime = performance.now();
     let rotY = 0;
     let rotX = 0.25;
-    let lastUiUpdate = 0;
+    let lastCycleIndex = -1;
 
     const render = (now) => {
       if (!isRunning) return;
@@ -416,13 +418,13 @@ export default function QuantumOrbitalLoader({
       const fromOrb = ORBITALS[fromIdx] || ORBITALS[0];
       const toOrb = ORBITALS[toIdx] || ORBITALS[1] || ORBITALS[0];
 
-      // Throttled UI state updates (every 100ms) without interfering with 60fps render
-      if (now - lastUiUpdate > 100) {
-        lastUiUpdate = now;
+      // Only trigger React re-renders when orbital transition step changes (zero re-render spam)
+      if (cycleIndex !== lastCycleIndex) {
+        lastCycleIndex = cycleIndex;
         setCurrentInfo({
           from: fromOrb,
           to: toOrb,
-          progress: Math.floor(t * 100),
+          progress: 0,
         });
       }
 
@@ -555,6 +557,7 @@ export default function QuantumOrbitalLoader({
 
   return (
     <div
+      ref={containerRef}
       style={{
         position: "relative",
         display: "flex",
@@ -576,9 +579,13 @@ export default function QuantumOrbitalLoader({
       <canvas
         ref={canvasRef}
         style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
           width: "100%",
           height: "100%",
           display: "block",
+          pointerEvents: "none",
         }}
       />
 

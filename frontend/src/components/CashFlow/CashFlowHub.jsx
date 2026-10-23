@@ -2049,7 +2049,8 @@ export default function CashFlowHub() {
             style={{
               flex: 1,
               width: "100%",
-              minHeight: 380,
+              minHeight: 340,
+              maxHeight: 480,
               display: "flex",
               alignItems: "stretch",
               justifyContent: "center",
