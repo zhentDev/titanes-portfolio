@@ -11,6 +11,7 @@ export default function AssignMovementModal({
   creditCards = [],
   debts = [],
   budgetItems = [],
+  fixedIncomeAccounts = [],
   expensesLog = [],
   activePeriod,
   onSaveTransaction,
@@ -40,8 +41,41 @@ export default function AssignMovementModal({
   });
   const [selectedDebtId, setSelectedDebtId] = useState(debts[0]?.id || "");
   const [selectedCardId, setSelectedCardId] = useState(creditCards[0]?.id || "");
+  const [selectedDestAccountId, setSelectedDestAccountId] = useState(movement?.destinationAccountId || "");
 
   const movementAmount = Number(movement?.amount) || 0;
+
+  // ── Cuentas principales destino (para rubros de Ahorro / Fondo de Emergencia) ──
+  // Por cada bolsillo de ahorro que coincide con el rubro, se ofrece la cuenta
+  // PRINCIPAL de su entidad: el dinero entra primero allí y luego, desde Renta Fija,
+  // se pasa al bolsillo como movimiento interno.
+  const getDestinationOptions = (envelope) => {
+    if (!envelope || envelope.pillarType !== "wealth") return [];
+    const accs = fixedIncomeAccounts || [];
+    const envName = (envelope.name || "").toLowerCase();
+    const isEmergency = envelope.category === "emergency_fund" || envName.includes("emergencia");
+    const pockets = accs.filter((a) => {
+      const n = (a.name || "").toLowerCase();
+      if (isEmergency) return n.includes("emergencia") || n.includes("emergency");
+      return Number(a.interestRateEA || 0) > 0 && a.accountCategory !== "payroll";
+    });
+    const seen = new Set();
+    const options = [];
+    pockets.forEach((pocket) => {
+      const principal =
+        accs.find((a) => a.id === pocket.fallbackAccountId) ||
+        accs.find(
+          (a) =>
+            a.entityId === pocket.entityId &&
+            a.id !== pocket.id &&
+            (a.accountCategory === "digital_wallet" || Number(a.interestRateEA || 0) === 0)
+        );
+      if (!principal || seen.has(principal.id)) return;
+      seen.add(principal.id);
+      options.push({ principal, pocket });
+    });
+    return options;
+  };
 
   const handleToggleSubItemCheck = (e, item, sub, subKey, matchedTx) => {
     e.stopPropagation();
@@ -99,12 +133,17 @@ export default function AssignMovementModal({
     if (activeTab === "budget_envelope") {
       const envelope = budgetItems.find((b) => b.id === selectedEnvelopeId);
       if (!envelope) return;
+      const destOptions = getDestinationOptions(envelope);
+      const destOpt =
+        destOptions.find((o) => o.principal.id === selectedDestAccountId) ||
+        (destOptions.length === 1 ? destOptions[0] : null);
       onReclassify({
         movementId: movement.id,
         destinationType: "budget_envelope",
         targetId: envelope.id,
         targetItem: envelope,
         subItem: selectedSubItem,
+        destinationAccount: destOpt ? destOpt.principal : null,
       });
     } else if (activeTab === "debt") {
       const debt = debts.find((d) => d.id === selectedDebtId);
@@ -128,8 +167,16 @@ export default function AssignMovementModal({
     onClose();
   };
 
+  const selectedEnvelopeObj = (budgetItems || []).find((b) => b.id === selectedEnvelopeId);
+  const destinationOptions = getDestinationOptions(selectedEnvelopeObj);
+  const needsDestinationChoice =
+    activeTab === "budget_envelope" &&
+    destinationOptions.length > 1 &&
+    !destinationOptions.some((o) => o.principal.id === selectedDestAccountId);
+
   const isConfirmDisabled =
     (activeTab === "budget_envelope" && !selectedEnvelopeId) ||
+    needsDestinationChoice ||
     (activeTab === "debt" && !selectedDebtId) ||
     (activeTab === "credit_card" && !selectedCardId);
 
@@ -617,6 +664,75 @@ export default function AssignMovementModal({
                 })
               )}
             </div>
+
+            {/* Selector de Cuenta Destino (Ahorro / Fondo de Emergencia) */}
+            {destinationOptions.length > 0 && (
+              <div
+                style={{
+                  marginTop: -8,
+                  marginBottom: 18,
+                  padding: "12px 14px",
+                  borderRadius: 12,
+                  background: isLight ? "rgba(16, 185, 129, 0.06)" : "rgba(16, 185, 129, 0.08)",
+                  border: isLight ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(16, 185, 129, 0.35)",
+                }}
+              >
+                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: isLight ? "#047857" : "#34d399", marginBottom: 4 }}>
+                  🏦 ¿A qué cuenta llegó este dinero?
+                </div>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: 10, lineHeight: 1.4 }}>
+                  Se abonará en la <strong>cuenta principal</strong> de la entidad. Luego, desde Renta Fija, podrás moverlo al bolsillo con un <strong>movimiento interno</strong>.
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {destinationOptions.map(({ principal, pocket }) => {
+                    const isChosen =
+                      selectedDestAccountId === principal.id ||
+                      (destinationOptions.length === 1 && !selectedDestAccountId);
+                    return (
+                      <button
+                        key={principal.id}
+                        type="button"
+                        onClick={() => setSelectedDestAccountId(principal.id)}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          gap: 10,
+                          textAlign: "left",
+                          padding: "9px 12px",
+                          borderRadius: 10,
+                          cursor: "pointer",
+                          border: isChosen
+                            ? "2px solid #10b981"
+                            : isLight ? "1px solid rgba(0,0,0,0.1)" : "1px solid var(--border)",
+                          background: isChosen
+                            ? (isLight ? "rgba(16, 185, 129, 0.12)" : "rgba(16, 185, 129, 0.18)")
+                            : (isLight ? "#ffffff" : "var(--bg-surface)"),
+                          color: "var(--text-primary)",
+                        }}
+                      >
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: "0.8rem", fontWeight: 700 }}>
+                            {isChosen ? "✅ " : "○ "}{principal.name}
+                          </div>
+                          <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 2 }}>
+                            ➔ luego a: {pocket.name} ({Number(pocket.interestRateEA || 0)}% E.A.)
+                          </div>
+                        </div>
+                        <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.74rem", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
+                          {formatMoney(principal.balance, principal.currency || currency)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {needsDestinationChoice && (
+                  <div style={{ fontSize: "0.7rem", color: isLight ? "#b45309" : "#fbbf24", fontWeight: 600, marginTop: 8 }}>
+                    ⚠️ Elige la cuenta destino para continuar.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 

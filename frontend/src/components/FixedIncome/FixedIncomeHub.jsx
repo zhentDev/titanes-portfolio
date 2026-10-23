@@ -50,7 +50,11 @@ export default function FixedIncomeHub() {
     updateTransactionsYear,
     migrateEntityProducts,
     initFetchFixedIncome,
+    transferBetweenAccounts,
   } = useFixedIncomeStore();
+
+  // Movimiento interno: { fromId, toId, amount } (Principal ➔ Bolsillo de la misma entidad)
+  const [internalTransfer, setInternalTransfer] = useState(null);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTab, setModalTab] = useState("account");
@@ -2345,7 +2349,23 @@ export default function FixedIncomeHub() {
                         </div>
 
                         {/* Fila 2: Grilla Espaciosa de Métricas Financieras */}
-                        {isAccZeroYield ? (
+                        {isAccZeroYield ? (() => {
+                          const siblingPockets = (accounts || [])
+                            .filter(
+                              (a) =>
+                                a.entityId === acc.entityId &&
+                                a.id !== acc.id &&
+                                Number(a.interestRateEA || 0) > 0
+                            )
+                            .sort((a, b) => {
+                              const ae = (a.name || "").toLowerCase().includes("emergencia") ? 0 : 1;
+                              const be = (b.name || "").toLowerCase().includes("emergencia") ? 0 : 1;
+                              return ae - be || Number(b.balance || 0) - Number(a.balance || 0);
+                            });
+                          const canMove = siblingPockets.length > 0 && Number(acc.balance || 0) > 0;
+                          const isMoving = internalTransfer?.fromId === acc.id;
+                          return (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                           <div
                             style={{
                               display: "flex",
@@ -2362,12 +2382,128 @@ export default function FixedIncomeHub() {
                             <span style={{ color: "var(--text-secondary)", fontSize: "0.78rem", fontWeight: 700 }}>
                               {acc.accountCategory === "payroll" ? "💼 Saldo Disponible en Nómina / Débito" : "👛 Saldo Disponible en Cuenta Principal"}
                             </span>
-                            <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 800, fontSize: "1.12rem" }}>
-                              ${Number(acc.balance || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
-                              <span style={{ fontSize: "0.74rem", color: "var(--text-muted)", fontWeight: 600 }}>{acc.currency}</span>
-                            </span>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                              <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 800, fontSize: "1.12rem" }}>
+                                ${Number(acc.balance || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
+                                <span style={{ fontSize: "0.74rem", color: "var(--text-muted)", fontWeight: 600 }}>{acc.currency}</span>
+                              </span>
+                              {canMove && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setInternalTransfer(
+                                      isMoving
+                                        ? null
+                                        : { fromId: acc.id, toId: siblingPockets[0].id, amount: String(Number(acc.balance || 0)) }
+                                    )
+                                  }
+                                  style={{
+                                    background: isMoving ? "rgba(16, 185, 129, 0.2)" : (isLight ? "rgba(16, 185, 129, 0.1)" : "rgba(16, 185, 129, 0.14)"),
+                                    border: `1px solid ${isLight ? "rgba(5, 150, 105, 0.45)" : "rgba(16, 185, 129, 0.45)"}`,
+                                    color: isLight ? "#047857" : "#34d399",
+                                    borderRadius: 8,
+                                    padding: "5px 11px",
+                                    fontSize: "0.74rem",
+                                    fontWeight: 700,
+                                    cursor: "pointer",
+                                  }}
+                                  title="Mover dinero de la cuenta principal a un bolsillo de esta misma entidad"
+                                >
+                                  {isMoving ? "✕ Cancelar" : "🔁 Mover a bolsillo"}
+                                </button>
+                              )}
+                            </div>
                           </div>
-                        ) : (
+
+                          {isMoving && (
+                            <div
+                              style={{
+                                display: "flex",
+                                flexWrap: "wrap",
+                                alignItems: "flex-end",
+                                gap: 10,
+                                padding: "12px 14px",
+                                borderRadius: 10,
+                                background: isLight ? "rgba(16, 185, 129, 0.06)" : "rgba(16, 185, 129, 0.08)",
+                                border: `1px dashed ${isLight ? "rgba(5, 150, 105, 0.45)" : "rgba(16, 185, 129, 0.4)"}`,
+                              }}
+                            >
+                              <div style={{ flex: "1 1 220px", minWidth: 0 }}>
+                                <label style={{ fontSize: "0.68rem", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
+                                  Destino (movimiento interno)
+                                </label>
+                                <select
+                                  value={internalTransfer.toId}
+                                  onChange={(e) => setInternalTransfer((p) => ({ ...p, toId: e.target.value }))}
+                                  style={{
+                                    width: "100%",
+                                    background: "var(--bg-card)",
+                                    border: "1px solid var(--border)",
+                                    borderRadius: 6,
+                                    color: "var(--text-primary)",
+                                    fontSize: "0.78rem",
+                                    padding: "6px 8px",
+                                  }}
+                                >
+                                  {siblingPockets.map((p) => (
+                                    <option key={p.id} value={p.id}>
+                                      {p.name} — {Number(p.interestRateEA || 0)}% E.A.
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div style={{ flex: "0 1 160px" }}>
+                                <label style={{ fontSize: "0.68rem", fontWeight: 700, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
+                                  Monto ({acc.currency})
+                                </label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={internalTransfer.amount}
+                                  onChange={(e) => setInternalTransfer((p) => ({ ...p, amount: e.target.value }))}
+                                  style={{
+                                    width: "100%",
+                                    background: "var(--bg-card)",
+                                    border: "1px solid var(--border)",
+                                    borderRadius: 6,
+                                    color: "var(--text-primary)",
+                                    fontSize: "0.8rem",
+                                    padding: "6px 8px",
+                                    fontFamily: "JetBrains Mono, monospace",
+                                  }}
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                disabled={!(Number(internalTransfer.amount) > 0)}
+                                onClick={async () => {
+                                  const ok = await transferBetweenAccounts({
+                                    fromAccountId: acc.id,
+                                    toAccountId: internalTransfer.toId,
+                                    amount: Number(internalTransfer.amount),
+                                  });
+                                  if (ok) setInternalTransfer(null);
+                                }}
+                                style={{
+                                  background: "#10b981",
+                                  border: "none",
+                                  borderRadius: 8,
+                                  color: "#04101e",
+                                  fontWeight: 800,
+                                  fontSize: "0.78rem",
+                                  padding: "8px 14px",
+                                  cursor: Number(internalTransfer.amount) > 0 ? "pointer" : "not-allowed",
+                                  opacity: Number(internalTransfer.amount) > 0 ? 1 : 0.5,
+                                }}
+                              >
+                                ✓ Confirmar movimiento
+                              </button>
+                            </div>
+                          )}
+                          </div>
+                          );
+                        })() : (
                           <div
                             style={{
                               display: "grid",

@@ -585,6 +585,15 @@ def register_mobile_transaction(
         if "nu" not in normalize_text(payload.entity):
             logger.info(f"[Webhook] Auto-correcting entity from '{payload.entity}' to 'Nu Colombia' based on notification text.")
             payload.entity = "Nu Colombia"
+    elif "finandina" in search_context:
+        # Finandina notifica por SMS (remitente 890809), p.ej.:
+        # "Banco Finandina te informa que recibiste $350.000 con exito a la llave Bre-B ..."
+        if "finandina" not in normalize_text(payload.entity):
+            logger.info(f"[Webhook] Auto-correcting entity from '{payload.entity}' to 'Finandina' based on SMS text.")
+            payload.entity = "Finandina"
+        # Los movimientos Bre-B / transferencias llegan a la cuenta principal FlexiDigital +
+        if not payload.account or normalize_text(payload.account) in ("", "sms", "mensaje", "finandina", "banco finandina"):
+            payload.account = "FlexiDigital + (Principal)"
 
     # If entity is Google Wallet, resolve bank from card mention in notification text
     if normalize_text(payload.entity) in ("google wallet", "billetera de google", "google pay", "gpay"):

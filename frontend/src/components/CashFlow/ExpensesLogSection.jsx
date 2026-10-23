@@ -744,6 +744,7 @@ export default function ExpensesLogSection({
           creditCards={creditCards}
           debts={debts}
           budgetItems={budgetItems}
+          fixedIncomeAccounts={fixedIncomeAccounts}
           expensesLog={periodExpenses}
           activePeriod={activePeriod}
           onSaveTransaction={onSaveTransaction}

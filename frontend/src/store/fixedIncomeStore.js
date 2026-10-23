@@ -587,6 +587,118 @@ export const useFixedIncomeStore = create(
         }
       },
 
+      // ── Inter-account Money Movements ─────────────────
+      /**
+       * Acredita un movimiento proveniente del Flujo de Caja (p.ej. transferencia de
+       * nómina asignada al Fondo de Emergencia) en la cuenta principal elegida.
+       * Idempotente: usa `tx_cf_<movementId>` para no duplicar el abono.
+       */
+      creditAccountFromCashFlow: async ({ accountId, amount, date, description, movementId }) => {
+        const amt = Math.abs(Number(amount || 0));
+        const state = get();
+        const acc = state.accounts.find((a) => a.id === accountId);
+        if (!acc || amt <= 0) return;
+        const txId = `tx_cf_${movementId || Date.now()}`;
+        if ((state.transactions || []).some((t) => t.id === txId)) {
+          toast("Este movimiento ya estaba abonado en la cuenta", { icon: "ℹ️" });
+          return;
+        }
+        const newTx = {
+          id: txId,
+          accountId: acc.id,
+          entityId: acc.entityId,
+          date: date || new Date().toISOString().slice(0, 10),
+          description: description || "Transferencia recibida",
+          amount: amt,
+          currency: acc.currency || "COP",
+          type: "credit",
+          category: "Transferencia desde Flujo de Caja",
+          source: "cashflow_assignment",
+          createdAt: new Date().toISOString(),
+        };
+        const updatedAcc = { ...acc, balance: Number(acc.balance || 0) + amt };
+        const updatedAccounts = state.accounts.map((a) => (a.id === acc.id ? updatedAcc : a));
+        const updatedTx = [newTx, ...(state.transactions || [])];
+        set({ accounts: updatedAccounts, transactions: updatedTx });
+        try {
+          await syncFixedIncomeStateApi({
+            entities: state.entities,
+            accounts: updatedAccounts,
+            cdts: state.cdts,
+            transactions: updatedTx,
+          });
+        } catch (e) {
+          console.warn("[FixedIncome] creditAccountFromCashFlow sync failed:", e);
+        }
+        toast.success(`+$${amt.toLocaleString("es-CO")} abonados en ${acc.name}`, { icon: "🏦" });
+      },
+
+      /**
+       * Movimiento interno entre cuentas de la misma entidad
+       * (p.ej. FlexiDigital + Principal ➔ Bolsillo Fondo de Emergencia).
+       */
+      transferBetweenAccounts: async ({ fromAccountId, toAccountId, amount, date, note }) => {
+        const amt = Math.abs(Number(amount || 0));
+        const state = get();
+        const from = state.accounts.find((a) => a.id === fromAccountId);
+        const to = state.accounts.find((a) => a.id === toAccountId);
+        if (!from || !to || amt <= 0) return false;
+        if (amt > Number(from.balance || 0) + 0.01) {
+          toast.error(`Saldo insuficiente en ${from.name}`);
+          return false;
+        }
+        const stamp = Date.now();
+        const txDate = date || new Date().toISOString().slice(0, 10);
+        const nowIso = new Date().toISOString();
+        const debitTx = {
+          id: `tx_int_${stamp}_out`,
+          accountId: from.id,
+          entityId: from.entityId,
+          date: txDate,
+          description: `Movimiento interno ➔ ${to.name}${note ? ` (${note})` : ""}`,
+          amount: -amt,
+          currency: from.currency || "COP",
+          type: "debit",
+          category: "Movimiento Interno",
+          source: "internal_transfer",
+          linkedTxId: `tx_int_${stamp}_in`,
+          createdAt: nowIso,
+        };
+        const creditTx = {
+          id: `tx_int_${stamp}_in`,
+          accountId: to.id,
+          entityId: to.entityId,
+          date: txDate,
+          description: `Depósito desde ${from.name}${note ? ` (${note})` : ""}`,
+          amount: amt,
+          currency: to.currency || "COP",
+          type: "credit",
+          category: "Movimiento Interno",
+          source: "internal_transfer",
+          linkedTxId: debitTx.id,
+          createdAt: nowIso,
+        };
+        const updatedAccounts = state.accounts.map((a) => {
+          if (a.id === from.id) return { ...a, balance: Math.max(0, Number(a.balance || 0) - amt) };
+          if (a.id === to.id) return { ...a, balance: Number(a.balance || 0) + amt };
+          return a;
+        });
+        const updatedTx = [creditTx, debitTx, ...(state.transactions || [])];
+        set({ accounts: updatedAccounts, transactions: updatedTx });
+        try {
+          await syncFixedIncomeStateApi({
+            entities: state.entities,
+            accounts: updatedAccounts,
+            cdts: state.cdts,
+            transactions: updatedTx,
+          });
+        } catch (e) {
+          console.warn("[FixedIncome] transferBetweenAccounts sync failed:", e);
+        }
+        toast.success(`$${amt.toLocaleString("es-CO")} movidos de ${from.name} a ${to.name}`, { icon: "🔁" });
+        return true;
+      },
+
       // ── View Settings Actions ─────────────────────────
       setPreferredCurrency: (curr) => set({ preferredCurrency: curr }),
       setProjectionTimeline: (timeline) => set({ projectionTimeline: timeline }),

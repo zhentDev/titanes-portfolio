@@ -468,7 +468,7 @@ export const useCashFlowStore = create(
       },
 
       // ── Universal Movement Reclassification / Imputation ──
-      reclassifyMovement: ({ movementId, destinationType, targetId, targetItem, subItem }) => {
+      reclassifyMovement: ({ movementId, destinationType, targetId, targetItem, subItem, destinationAccount }) => {
         const state = get();
         const expense = (state.expensesLog || []).find((e) => e.id === movementId);
         if (!expense) return;
@@ -593,6 +593,12 @@ export const useCashFlowStore = create(
               description: cleanDesc,
               isDebtPayment: false,
               debtId: null,
+              ...(destinationAccount
+                ? {
+                    destinationAccountId: destinationAccount.id,
+                    destinationAccountName: destinationAccount.name,
+                  }
+                : {}),
             };
           });
 

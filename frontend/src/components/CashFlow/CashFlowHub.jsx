@@ -98,7 +98,26 @@ export default function CashFlowHub() {
     accounts: fixedAccounts,
     cdts: fixedCdts,
     initFetchFixedIncome,
+    creditAccountFromCashFlow,
   } = useFixedIncomeStore();
+
+  // Reclasifica el movimiento y, si se eligió una cuenta destino (p.ej. Principal de
+  // Finandina o RappiPay para el Fondo de Emergencia), abona el dinero en esa cuenta.
+  const handleReclassifyMovement = (payload) => {
+    reclassifyMovement(payload);
+    if (payload?.destinationAccount?.id && typeof creditAccountFromCashFlow === "function") {
+      const mv = (expensesLog || []).find((e) => e.id === payload.movementId);
+      if (mv) {
+        creditAccountFromCashFlow({
+          accountId: payload.destinationAccount.id,
+          amount: mv.amount,
+          date: mv.date,
+          movementId: mv.id,
+          description: `Transferencia para ${payload.targetItem?.name || "Ahorro"} (desde ${mv.paymentSource?.targetName || "Nómina"})`,
+        });
+      }
+    }
+  };
   const {
     settingsByMode,
     mode,
@@ -2886,7 +2905,7 @@ export default function CashFlowHub() {
               onConfirmSettlement={settleLoanTransaction}
               onToggleExpenseLoan={toggleExpenseLoan}
               onConvertExpenseToCardPayment={convertExpenseToCardPayment}
-              onReclassifyMovement={reclassifyMovement}
+              onReclassifyMovement={handleReclassifyMovement}
             />
           </div>
         )}
