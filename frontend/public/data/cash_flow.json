@@ -29,7 +29,7 @@
       "id": "in_fixed_yield",
       "name": "Ingreso por Renta Fija",
       "category": "passive_fixed",
-      "amount": 23891,
+      "amount": 23898,
       "currency": "COP",
       "isPassive": true,
       "isAutoSynced": true,
@@ -46,7 +46,7 @@
       "id": "in_stock_div",
       "name": "Ingreso por Renta Variable",
       "category": "passive_equity",
-      "amount": 40955,
+      "amount": 40962,
       "currency": "COP",
       "isPassive": true,
       "isAutoSynced": true,
@@ -220,7 +220,7 @@
       "category": "equity_investment",
       "targetAmount": 30000000,
       "monthlyContribution": 500000,
-      "currentBalance": 24572769,
+      "currentBalance": 24577458,
       "currency": "COP",
       "linkedModule": "variable_income",
       "paymentSource": {
@@ -236,7 +236,7 @@
       "category": "fixed_savings",
       "targetAmount": 15000000,
       "monthlyContribution": 300000,
-      "currentBalance": 8320715,
+      "currentBalance": 8321737,
       "currency": "COP",
       "linkedModule": "fixed_income",
       "paymentSource": {
@@ -271,12 +271,12 @@
       "budgetItemName": "Gasto Nu Débito",
       "budgetItemType": "needs",
       "description": "Gasto Nu Débito",
-      "amount": 13000.0,
+      "amount": 13000,
       "currency": "COP",
       "date": "2026-10-23",
       "type": "debit",
       "cascaded": false,
-      "shortfall": 0.0,
+      "shortfall": 0,
       "fallbackAccountName": null,
       "paymentSource": {
         "type": "payroll",
@@ -312,7 +312,7 @@
       "color": "#820ad1",
       "icon": "💜",
       "totalLimit": 200000,
-      "usedLimit": 192806,
+      "usedLimit": 0,
       "closingDay": 15,
       "paymentDay": 2,
       "rateEA": 24.5,
@@ -336,7 +336,23 @@
       "createdAt": "2026-09-19T16:57:44.254Z"
     }
   ],
-  "creditCardPayments": [],
+  "creditCardPayments": [
+    {
+      "id": "pay_tx_mb_1792789337918_65be26",
+      "period": "2026-11",
+      "cardId": "cc_nu",
+      "cardName": "Tarjeta Nu Mastercard",
+      "amount": 192806,
+      "currency": "COP",
+      "date": "2026-10-23",
+      "description": "Pago Tarjeta Nu Mastercard (Abono completo)",
+      "sourceType": "payroll",
+      "sourceAccountId": "acc_nu_debito",
+      "sourceAccount": "Cuenta Nu Débito (Nómina)",
+      "notes": "¡Bravo! Pagaste tu tarjeta de crédito Nu - Recibimos tu pago por $192.806,00",
+      "createdAt": "2026-10-23T16:02:17.918167-05:00"
+    }
+  ],
   "periodsData": {
     "2026-11": {
       "needs": [

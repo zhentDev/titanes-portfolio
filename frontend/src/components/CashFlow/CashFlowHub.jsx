@@ -84,6 +84,7 @@ export default function CashFlowHub() {
     recordSalaryAdjustment,
     settleLoanTransaction,
     toggleExpenseLoan,
+    convertExpenseToCardPayment,
     addDebt,
     updateDebt,
     deleteDebt,
@@ -274,6 +275,55 @@ export default function CashFlowHub() {
       initFetchPurchases();
     }
   }, [initFetchCashFlow, initFetchCustomStrategies, initFetchPurchases]);
+
+  // Live auto-polling for mobile webhook movements (every 10s when active and no modal open)
+  useEffect(() => {
+    const pollInterval = setInterval(() => {
+      if (
+        cardConfigModalOpen ||
+        expenseModalOpen ||
+        paymentModalOpen ||
+        debtModalOpen ||
+        debtPaymentModalOpen ||
+        payrollEntityModalOpen ||
+        payrollModalOpen ||
+        creditPurchaseModalOpen
+      ) {
+        return;
+      }
+      initFetchCashFlow({ silent: true });
+    }, 10000);
+
+    // Instant refresh when user returns to tab / unlocks phone
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === "visible") {
+        initFetchCashFlow({ silent: true });
+        if (typeof initFetchFixedIncome === "function") {
+          initFetchFixedIncome();
+        }
+      }
+    };
+
+    window.addEventListener("focus", handleVisibilityOrFocus);
+    document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+
+    return () => {
+      clearInterval(pollInterval);
+      window.removeEventListener("focus", handleVisibilityOrFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+    };
+  }, [
+    cardConfigModalOpen,
+    expenseModalOpen,
+    paymentModalOpen,
+    debtModalOpen,
+    debtPaymentModalOpen,
+    payrollEntityModalOpen,
+    payrollModalOpen,
+    creditPurchaseModalOpen,
+    initFetchCashFlow,
+    initFetchFixedIncome,
+  ]);
 
   // Live Auto-Sync Passive Yields & Portfolio Equity
   useEffect(() => {
@@ -2818,6 +2868,7 @@ export default function CashFlowHub() {
               onDeletePayment={deleteCreditCardPayment}
               onConfirmSettlement={settleLoanTransaction}
               onToggleExpenseLoan={toggleExpenseLoan}
+              onConvertExpenseToCardPayment={convertExpenseToCardPayment}
             />
           </div>
         )}

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { formatCashFlowMoney } from "../../utils/cashFlowFormatters";
+import GlassModalWrapper from "../Common/GlassModalWrapper";
 import LoanSettlementModal from "./LoanSettlementModal";
 import "./CashFlow.css";
 
@@ -19,10 +20,13 @@ export default function ExpensesLogSection({
   onDeletePayment,
   onConfirmSettlement,
   onToggleExpenseLoan,
+  onConvertExpenseToCardPayment,
 }) {
   const formatMoney = (val, cur = currency) => formatCashFlowMoney(val, cur, fxRate);
   const [filterSource, setFilterSource] = useState("all");
   const [settlingTransaction, setSettlingTransaction] = useState(null);
+  const [cardAssignModalItem, setCardAssignModalItem] = useState(null);
+  const [selectedCardToAssign, setSelectedCardToAssign] = useState(creditCards[0]?.id || "");
 
   const periodExpenses = useMemo(() => {
     return (expensesLog || [])
@@ -494,6 +498,36 @@ export default function ExpensesLogSection({
                         </button>
                       </>
                     )}
+
+                    {/* Option to reclassify as credit card payment & liberate quota */}
+                    {!isLoan && creditCards?.length > 0 && onConvertExpenseToCardPayment && (
+                      <>
+                        <span>•</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedCardToAssign(creditCards[0]?.id || "");
+                            setCardAssignModalItem(item);
+                          }}
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            color: "#10b981",
+                            fontSize: "0.72rem",
+                            cursor: "pointer",
+                            padding: 0,
+                            textDecoration: "underline",
+                            fontWeight: 600,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 3,
+                          }}
+                          title="Asignar este movimiento como pago a tarjeta y liberar cupo automáticamente"
+                        >
+                          <span>💳</span> Asignar a Pago Tarjeta
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -581,6 +615,139 @@ export default function ExpensesLogSection({
           fixedIncomeAccounts={fixedIncomeAccounts}
           onConfirmSettlement={onConfirmSettlement}
         />
+      )}
+
+      {/* Modal: Asignar Movimiento a Pago de Tarjeta & Liberar Cupo */}
+      {cardAssignModalItem && (
+        <GlassModalWrapper
+          isOpen={Boolean(cardAssignModalItem)}
+          onClose={() => setCardAssignModalItem(null)}
+          maxWidth={500}
+        >
+          <div style={{ padding: "24px 26px" }}>
+            <div className="cashflow-modal-header" style={{ paddingBottom: 14 }}>
+              <h3 className="cashflow-modal-title">
+                <span>💳</span> Asignar a Pago de Tarjeta
+              </h3>
+              <button
+                type="button"
+                className="cashflow-modal-close-btn"
+                onClick={() => setCardAssignModalItem(null)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <p style={{ fontSize: "0.84rem", color: "var(--text-muted)", marginBottom: 16 }}>
+              Convierte este movimiento en un <strong>Abono a Tarjeta de Crédito</strong>. El valor se restará de la deuda actual de la tarjeta seleccionada liberando cupo inmediatamente.
+            </p>
+
+            <div
+              style={{
+                background: "var(--bg-surface)",
+                border: "1px solid var(--border)",
+                borderRadius: "12px",
+                padding: "14px 18px",
+                marginBottom: 18,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                  {cardAssignModalItem.description || cardAssignModalItem.budgetItemName || "Movimiento"}
+                </span>
+                <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.1rem", fontWeight: 800, color: "#10b981" }}>
+                  {formatMoney(cardAssignModalItem.amount, currency)}
+                </span>
+              </div>
+              <div style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}>
+                <span>Fecha: {cardAssignModalItem.date}</span> • <span>Origen: {cardAssignModalItem.paymentSource?.targetName || "Nómina"}</span>
+              </div>
+            </div>
+
+            <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "var(--text-muted)", marginBottom: 8 }}>
+              Selecciona la Tarjeta a la que se aplicó este abono:
+            </label>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 22 }}>
+              {creditCards.map((card) => {
+                const isSelected = selectedCardToAssign === card.id;
+                const currentUsed = Number(card.usedLimit) || 0;
+                const newUsed = Math.max(0, currentUsed - Number(cardAssignModalItem.amount));
+                const totalLimit = Number(card.totalLimit) || 0;
+
+                return (
+                  <div
+                    key={card.id}
+                    onClick={() => setSelectedCardToAssign(card.id)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "12px 16px",
+                      borderRadius: "12px",
+                      border: isSelected ? "2px solid #10b981" : "1px solid var(--border)",
+                      background: isSelected ? "rgba(16, 185, 129, 0.12)" : "var(--bg-surface)",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: "1.3rem" }}>{card.icon || "💳"}</span>
+                      <div>
+                        <strong style={{ fontSize: "0.88rem", color: "var(--text-primary)", display: "block" }}>
+                          {card.name}
+                        </strong>
+                        <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
+                          Deuda actual: <span style={{ color: "#f43f5e", fontWeight: 600 }}>{formatMoney(currentUsed, currency)}</span> / {formatMoney(totalLimit, currency)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: "right" }}>
+                      <span style={{ fontSize: "0.7rem", color: "#10b981", display: "block", fontWeight: 600 }}>
+                        Liberará cupo
+                      </span>
+                      <span style={{ fontSize: "0.78rem", color: "var(--text-primary)", fontWeight: 700 }}>
+                        Nueva deuda: {formatMoney(newUsed, currency)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
+              <button
+                type="button"
+                className="cashflow-btn secondary"
+                onClick={() => setCardAssignModalItem(null)}
+                style={{ padding: "9px 18px", fontSize: "0.84rem" }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="cashflow-btn primary"
+                disabled={!selectedCardToAssign}
+                onClick={() => {
+                  if (onConvertExpenseToCardPayment && cardAssignModalItem && selectedCardToAssign) {
+                    onConvertExpenseToCardPayment(cardAssignModalItem.id, selectedCardToAssign);
+                    setCardAssignModalItem(null);
+                  }
+                }}
+                style={{
+                  padding: "9px 18px",
+                  fontSize: "0.84rem",
+                  background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  borderColor: "#10b981",
+                  fontWeight: 700,
+                }}
+              >
+                <span>⚡</span> Confirmar y Liberar Cupo
+              </button>
+            </div>
+          </div>
+        </GlassModalWrapper>
       )}
     </div>
   );

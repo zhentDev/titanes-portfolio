@@ -203,6 +203,19 @@ export default function FixedIncomeHub() {
         if (res?.latest?.yoy) setColInflationRate(res.latest.yoy);
       })
       .catch(console.error);
+
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === "visible") {
+        initFetchFixedIncome();
+      }
+    };
+    window.addEventListener("focus", handleVisibilityOrFocus);
+    document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleVisibilityOrFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+    };
   }, [initFetchFixedIncome]);
 
   const handleDeleteAccount = async (acc) => {

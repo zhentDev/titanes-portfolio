@@ -406,6 +406,67 @@ export const useCashFlowStore = create(
         toast.success("Gasto real eliminado", { icon: "🗑️" });
       },
 
+      // ── Convert Generic Expense into Credit Card Payment (Libera Cupo) ──
+      convertExpenseToCardPayment: (expenseId, targetCardId) => {
+        const state = get();
+        const expense = (state.expensesLog || []).find((e) => e.id === expenseId);
+        if (!expense) return;
+
+        const targetCard = (state.creditCards || []).find((c) => c.id === targetCardId);
+        if (!targetCard) return;
+
+        const amount = Number(expense.amount) || 0;
+
+        // 1. Liberate Credit Card quota
+        const updatedCards = (state.creditCards || []).map((c) => {
+          if (c.id === targetCardId) {
+            const currentUsed = Number(c.usedLimit) || 0;
+            return { ...c, usedLimit: Math.max(0, currentUsed - amount) };
+          }
+          return c;
+        });
+
+        // 2. Remove from expensesLog so living expenses are not distorted
+        const filteredExpenses = (state.expensesLog || []).filter((e) => e.id !== expenseId);
+
+        // 3. Insert into creditCardPayments
+        const paymentRecord = {
+          id: `pay_conv_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          period: expense.period || state.activePeriod,
+          cardId: targetCard.id,
+          cardName: targetCard.name,
+          amount: amount,
+          currency: expense.currency || state.currency,
+          date: expense.date || new Date().toISOString().split("T")[0],
+          description: `Pago ${targetCard.name} (Asignado manualmente)`,
+          sourceType: expense.paymentSource?.type || "payroll",
+          sourceAccountId: expense.paymentSource?.targetId || null,
+          sourceAccount: expense.paymentSource?.targetName || state.payrollAccount?.name || "Nómina",
+          notes: `Reclasificado desde: ${expense.description || expense.budgetItemName || "Gasto"}`,
+          createdAt: new Date().toISOString(),
+        };
+
+        const updatedPayments = [paymentRecord, ...(state.creditCardPayments || [])];
+
+        set({
+          creditCards: updatedCards,
+          expensesLog: filteredExpenses,
+          creditCardPayments: updatedPayments,
+        });
+
+        try {
+          localStorage.setItem("titanes_cash_flow_store_v2", JSON.stringify({
+            ...state,
+            creditCards: updatedCards,
+            expensesLog: filteredExpenses,
+            creditCardPayments: updatedPayments,
+          }));
+        } catch {}
+
+        get().syncStateWithBackend();
+        toast.success(`¡Pago asignado a ${targetCard.name}! Cupo liberado exitosamente 🎉`, { icon: "💳" });
+      },
+
       // ── Debts & Liabilities CRUD ────────────────────────
       addDebt: (debt) => {
         const newDebt = {

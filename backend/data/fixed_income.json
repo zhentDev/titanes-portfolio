@@ -221,7 +221,7 @@
       "accountCategory": "payroll",
       "syncType": "api",
       "currency": "COP",
-      "balance": 3483000.0,
+      "balance": 3290194.0,
       "interestRateEA": 0,
       "isTaxExemptGMF": true,
       "rateHistory": [],
@@ -551,6 +551,25 @@
     }
   ],
   "transactions": [
+    {
+      "id": "tx_mb_1792789337918_65be26",
+      "accountId": "acc_nu_debito",
+      "entityId": "ent_nu",
+      "date": "2026-10-23",
+      "description": "Pago Tarjeta Nu Mastercard",
+      "amount": -192806.0,
+      "currency": "COP",
+      "type": "debit",
+      "category": "Pago Tarjeta de Crédito",
+      "source": "macrodroid_webhook",
+      "rawText": "¡Bravo! Pagaste tu tarjeta de crédito Nu - Recibimos tu pago por $192.806,00. En un rato podrás verlo en tu app.",
+      "cascaded": false,
+      "coveredByPocket": null,
+      "shortfall": null,
+      "fallbackAccountId": null,
+      "fallbackAccountName": null,
+      "createdAt": "2026-10-23T16:02:17.918167-05:00"
+    },
     {
       "id": "tx_mb_1792788686385_8823d4",
       "accountId": "acc_nu_debito",

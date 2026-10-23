@@ -663,19 +663,54 @@ def register_mobile_transaction(
                 db["accounts"][idx]["balance"] = new_balance
                 break
 
-    # 6. Create Transaction Object
+    # 5b. Smart Detection: Credit Card Debt Payment (Abono a Tarjeta de Crédito)
+    cc_payment_phrases = [
+        "pagaste tu tarjeta", "pago de tu tarjeta", "pago de tarjeta", "pago tarjeta",
+        "abono a tarjeta", "abono tarjeta", "pago de credito", "pago de crédito",
+        "recibimos tu pago por", "recibimos tu pago", "pago de factura", "pago factura"
+    ]
+    card_tokens = ["tarjeta", "credito", "crédito", "nu", "rappi", "visa", "mastercard"]
+    is_cc_payment = any(p in search_context for p in cc_payment_phrases) and (
+        any(c in search_context for c in card_tokens) or "tarjeta" in search_context
+    )
+
+    detected_card_id = None
+    detected_card_name = None
+    if is_cc_payment:
+        if any(k in search_context for k in ["nu", "mastercard"]):
+            detected_card_id = "cc_nu"
+            detected_card_name = "Tarjeta Nu Mastercard"
+        elif any(k in search_context for k in ["rappi", "visa"]):
+            detected_card_id = "cc_rappi"
+            detected_card_name = "RappiCard Visa (MSI)"
+        elif "nu" in normalize_text(entity.get("name", "")):
+            detected_card_id = "cc_nu"
+            detected_card_name = "Tarjeta Nu Mastercard"
+        elif "rappi" in normalize_text(entity.get("name", "")):
+            detected_card_id = "cc_rappi"
+            detected_card_name = "RappiCard Visa (MSI)"
+
+    # 6. Create Transaction Object & Clean Description
     tx_id = f"tx_mb_{int(now_colombia.timestamp() * 1000)}_{uuid.uuid4().hex[:6]}"
     clean_desc = payload.description.strip()
-    generic_phrases = ["en tus movimientos el detalle", "fue exitoso", "revisa en tus movimientos", "movimientos el detalle"]
-    if any(p in clean_desc.lower() for p in generic_phrases) or not clean_desc or clean_desc.lower() in ("gasto", "gasto bancario", "movimiento"):
+    generic_bad_descriptions = ["tu app", "app", "movimientos", "el detalle", "fue exitoso", "revisa en tus movimientos", "gasto", "gasto bancario", "movimiento"]
+
+    if is_cc_payment:
+        clean_desc = f"Pago {detected_card_name or 'Tarjeta de Crédito'}"
+    elif any(b in clean_desc.lower() for b in generic_bad_descriptions) or not clean_desc:
+        m_en = re.search(r"\ben\s+([A-Za-z0-9\s\.\-_]+?)(?:\s+por|\.|\.\.\.|\,|$)", payload.raw_text or "", re.IGNORECASE)
         m_via = re.search(r"a través de\s+([A-Za-z0-9\-\s]+?)(?:fue exitoso|\.|\.\.\.|$)", payload.raw_text or "", re.IGNORECASE)
         m_sender = re.search(r'(?:Nu\s*-\s*)?(?:Banco\s+)?([A-Za-z0-9\s]+?)\s+te\s+envi[oó]', payload.raw_text or "", re.IGNORECASE)
-        if m_via:
+        if m_en and len(m_en.group(1).strip()) > 1:
+            clean_desc = f"Compra en {m_en.group(1).strip()}"
+        elif m_via:
             clean_desc = f"Envío {m_via.group(1).strip()}"
         elif m_sender and m_sender.group(1).strip():
             clean_desc = f"Consignación {m_sender.group(1).strip()}"
         elif "rappicuenta" in search_context:
             clean_desc = "Transferencia RappiCuenta"
+        elif "debito" in search_context or "débito" in search_context:
+            clean_desc = f"Gasto {account['name']}"
         else:
             clean_desc = "Gasto bancario" if tx_type == "debit" else "Abono bancario"
 
@@ -686,6 +721,8 @@ def register_mobile_transaction(
             cascade_note = f" (Cascada: 100% completado ${shortfall:,.0f} desde {principal_acc['name']} porque {account['name']} estaba en $0)"
         clean_desc += cascade_note
 
+    tx_category = "Pago Tarjeta de Crédito" if is_cc_payment else (payload.category or "Gasto Móvil")
+
     new_tx = {
         "id": tx_id,
         "accountId": account["id"],
@@ -695,7 +732,7 @@ def register_mobile_transaction(
         "amount": signed_amount,
         "currency": account.get("currency", "COP"),
         "type": tx_type,
-        "category": payload.category or "Gasto Móvil",
+        "category": tx_category,
         "source": "macrodroid_webhook",
         "rawText": payload.raw_text or "",
         "cascaded": cascaded,
@@ -715,41 +752,84 @@ def register_mobile_transaction(
     # 7. Persist to DuckDB, Postgres, and JSON (Fixed Income)
     save_fixed_income_db(db, effective_uid)
 
-    # 8. Dual-sync to Cash Flow expensesLog (for real-time monthly budget tracking)
+    # 8. Dual-sync to Cash Flow (for real-time monthly budget tracking & card limit release)
     cf_synced = False
+    card_limit_released = False
     try:
         cf = load_cash_flow_db(effective_uid)
-        if "expensesLog" not in cf or not isinstance(cf["expensesLog"], list):
-            cf["expensesLog"] = []
-
         active_period = cf.get("activePeriod") or tx_date[:7]
         is_payroll = any(k in normalize_text(account.get("name")) for k in ["nomina", "principal", "ahorros", "debito"])
 
-        cf_tx = {
-            "id": f"cf_{tx_id}",
-            "period": active_period,
-            "budgetItemId": None,
-            "budgetItemName": clean_desc,
-            "budgetItemType": "needs" if tx_type == "debit" else "income",
-            "description": clean_desc,
-            "amount": amount_val,
-            "currency": account.get("currency", "COP"),
-            "date": tx_date,
-            "type": tx_type,
-            "cascaded": cascaded,
-            "shortfall": shortfall if cascaded else 0.0,
-            "fallbackAccountName": principal_acc["name"] if cascaded and principal_acc else None,
-            "paymentSource": {
-                "type": "payroll" if is_payroll else "fixed_pocket",
-                "targetId": account.get("id"),
-                "targetName": account.get("name"),
-            },
-            "createdAt": now_colombia.isoformat(),
-        }
-        cf["expensesLog"].insert(0, cf_tx)
-        save_cash_flow_db(cf, effective_uid)
-        cf_synced = True
-        logger.info(f"[Webhook] Dual-synced transaction {tx_id} to Cash Flow expensesLog (period {active_period}).")
+        if is_cc_payment:
+            # 8a. Match credit card and automatically release used limit
+            cards = cf.get("creditCards", [])
+            matched_card = None
+            if detected_card_id:
+                matched_card = next((c for c in cards if c.get("id") == detected_card_id), None)
+            if not matched_card:
+                matched_card = next((c for c in cards if (c.get("usedLimit") or 0) > 0), None) or (cards[0] if cards else None)
+
+            if matched_card:
+                old_used = float(matched_card.get("usedLimit", 0.0))
+                new_used = max(0.0, round(old_used - amount_val, 2))
+                matched_card["usedLimit"] = new_used
+                card_limit_released = True
+                clean_desc = f"Pago {matched_card['name']}"
+                logger.info(f"[Webhook] Liberado cupo en {matched_card['name']}: {old_used} -> {new_used} COP")
+
+            # Record in creditCardPayments
+            if "creditCardPayments" not in cf or not isinstance(cf["creditCardPayments"], list):
+                cf["creditCardPayments"] = []
+
+            payment_entry = {
+                "id": f"pay_{tx_id}",
+                "period": active_period,
+                "cardId": matched_card["id"] if matched_card else "cc_generic",
+                "cardName": matched_card["name"] if matched_card else "Tarjeta de Crédito",
+                "amount": amount_val,
+                "currency": account.get("currency", "COP"),
+                "date": tx_date,
+                "description": f"Pago {matched_card['name'] if matched_card else 'Tarjeta'}",
+                "sourceType": "payroll" if is_payroll else "fixed_pocket",
+                "sourceAccountId": account.get("id"),
+                "sourceAccount": account.get("name"),
+                "notes": payload.raw_text or clean_desc,
+                "createdAt": now_colombia.isoformat(),
+            }
+            cf["creditCardPayments"].insert(0, payment_entry)
+            save_cash_flow_db(cf, effective_uid)
+            cf_synced = True
+            logger.info(f"[Webhook] Dual-synced credit card payment {tx_id} to Cash Flow creditCardPayments.")
+        else:
+            # 8b. Regular expense: Record in expensesLog
+            if "expensesLog" not in cf or not isinstance(cf["expensesLog"], list):
+                cf["expensesLog"] = []
+
+            cf_tx = {
+                "id": f"cf_{tx_id}",
+                "period": active_period,
+                "budgetItemId": None,
+                "budgetItemName": clean_desc,
+                "budgetItemType": "needs" if tx_type == "debit" else "income",
+                "description": clean_desc,
+                "amount": amount_val,
+                "currency": account.get("currency", "COP"),
+                "date": tx_date,
+                "type": tx_type,
+                "cascaded": cascaded,
+                "shortfall": shortfall if cascaded else 0.0,
+                "fallbackAccountName": principal_acc["name"] if cascaded and principal_acc else None,
+                "paymentSource": {
+                    "type": "payroll" if is_payroll else "fixed_pocket",
+                    "targetId": account.get("id"),
+                    "targetName": account.get("name"),
+                },
+                "createdAt": now_colombia.isoformat(),
+            }
+            cf["expensesLog"].insert(0, cf_tx)
+            save_cash_flow_db(cf, effective_uid)
+            cf_synced = True
+            logger.info(f"[Webhook] Dual-synced transaction {tx_id} to Cash Flow expensesLog (period {active_period}).")
     except Exception as e:
         logger.error(f"[Webhook] Failed to dual-sync to Cash Flow: {e}")
 
@@ -759,7 +839,12 @@ def register_mobile_transaction(
         f"Balance: {previous_balance:,.2f} -> {new_balance:,.2f} COP"
     )
 
-    if cascaded and principal_acc:
+    if is_cc_payment:
+        action_msg = (
+            f"Pago a {clean_desc} por ${amount_val:,.2f} COP registrado exitosamente desde '{account['name']}'. "
+            f"¡Cupo de tarjeta liberado automáticamente en Flujo de Caja!"
+        )
+    elif cascaded and principal_acc:
         action_msg = (
             f"Movimiento de ${amount_val:,.2f} COP procesado en cascada: "
             f"${covered_by_pocket:,.2f} COP cubiertos por '{account['name']}' (saldo $0) "
@@ -776,6 +861,8 @@ def register_mobile_transaction(
         "success": True,
         "message": action_msg,
         "tx_id": tx_id,
+        "is_credit_card_payment": is_cc_payment,
+        "card_limit_released": card_limit_released,
         "cascaded": cascaded,
         "shortfall": shortfall if cascaded else 0.0,
         "entity": {
