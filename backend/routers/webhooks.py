@@ -433,9 +433,9 @@ def get_mobile_pockets(
         ent_id = matched_entity.get("id")
         ent_accounts = [a for a in accounts if a.get("entityId") == ent_id]
 
-        # Prioritize Nómina / Principal
+        # Prioritize Nómina / Principal / Wallet disponible
         principal_acc = next(
-            (a for a in ent_accounts if any(k in normalize_text(a.get("name")) for k in ["nomina", "principal", "ahorros"])),
+            (a for a in ent_accounts if any(k in normalize_text(a.get("name")) for k in ["nomina", "principal", "ahorros", "disponible", "debito"]) or a.get("accountCategory") in ["payroll", "digital_wallet"]),
             None
         )
 
