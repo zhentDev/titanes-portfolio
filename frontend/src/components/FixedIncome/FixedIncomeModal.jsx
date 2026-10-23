@@ -495,16 +495,16 @@ export default function FixedIncomeModal({
       }
     }
 
-    const isWallet = accountCategory === "digital_wallet";
+    const isZeroYield = accountCategory === "digital_wallet" || accountCategory === "payroll";
     const accountData = {
       entityId: finalEntityId,
       name: accountName,
-      type: isWallet ? "wallet" : accountType,
+      type: accountCategory === "digital_wallet" ? "wallet" : accountType,
       syncType: accountSyncType,
       accountCategory,
       currency: accountCurrency,
       balance: Number(accountBalance || 0),
-      interestRateEA: isWallet ? 0 : Number(accountRateEA || 0),
+      interestRateEA: isZeroYield ? 0 : Number(accountRateEA || 0),
       isTaxExemptGMF: accountTaxExempt,
       startDate: accountStartDate,
       createdAt: editItem?.createdAt || `${accountStartDate}T00:00:00.000Z`,
@@ -776,6 +776,7 @@ export default function FixedIncomeModal({
                         setAccountRateEA("0");
                         setAccountType("wallet");
                       } else if (cat === "payroll") {
+                        setAccountRateEA("0");
                         setAccountType("savings");
                       }
                     }}
@@ -783,7 +784,7 @@ export default function FixedIncomeModal({
                   >
                     <option value="high_yield">⚡ Ahorro Alto Rendimiento (Intereses E.A.)</option>
                     <option value="digital_wallet">👛 Billetera Digital / Bajo Monto (Nequi, Daviplata - 0% E.A.)</option>
-                    <option value="payroll">💼 Nómina / Débito Principal</option>
+                    <option value="payroll">💼 Nómina / Débito Transaccional (0.0% E.A.)</option>
                     <option value="cash">💵 Efectivo / Caja Menor (Manual)</option>
                   </select>
                 </div>
@@ -800,7 +801,7 @@ export default function FixedIncomeModal({
                     className="fi-select"
                   >
                     <option value="pocket">⚡ Bolsillo / Cajita</option>
-                    <option value="savings">💳 Cuenta de Ahorro</option>
+                    <option value="savings">💳 Cuenta de Ahorro / Nómina</option>
                     <option value="wallet">💵 Billetera / Cash Yield</option>
                   </select>
                 </div>
@@ -849,6 +850,19 @@ export default function FixedIncomeModal({
                       }}
                     >
                       <span>👛 <strong>0.00% E.A.</strong> — Billetera tradicional de bajo monto sin rendimiento. Solo para entradas y salidas cotidianas.</span>
+                    </div>
+                  ) : accountCategory === "payroll" ? (
+                    <div
+                      style={{
+                        padding: "10px 12px",
+                        borderRadius: 8,
+                        background: isLight ? "rgba(59, 130, 246, 0.08)" : "rgba(59, 130, 246, 0.15)",
+                        border: "1px dashed rgba(59, 130, 246, 0.35)",
+                        fontSize: "0.78rem",
+                        color: "var(--text-secondary)",
+                      }}
+                    >
+                      <span>💼 <strong>0.00% E.A.</strong> — Cuenta de nómina / débito transaccional sin rendimiento. Los rendimientos se generan exclusivamente en las cajitas o bolsillos.</span>
                     </div>
                   ) : (
                     <FloatingInput

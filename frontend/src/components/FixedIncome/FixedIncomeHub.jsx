@@ -312,21 +312,28 @@ export default function FixedIncomeHub() {
 
   // ── Financial Metrics Aggregation ───────────────────────
   const metrics = useMemo(() => {
-    let liquidBalance = 0;
+    let liquidBalance = 0; // Solo cuentas de inversión / cajitas que generan rendimiento
+    let transactionalBalance = 0; // Cuentas transaccionales de nómina y billeteras (0% E.A.)
     let totalDailyIncome = 0;
     let weightedRateSum = 0;
 
     // 1. Accounts / Cajitas Líquidas (Calculated Balance + Current Rate)
     viewAccounts.forEach((acc) => {
+      const isZeroYield = acc.accountCategory === "digital_wallet" || acc.accountCategory === "payroll" || Number(acc.interestRateEA || 0) === 0 || acc.type === "wallet";
       const accTx = viewTransactions.filter((t) => (t.accountId ? t.accountId === acc.id : (t.description || "").toLowerCase().includes(acc.name.toLowerCase())));
       const yieldData = calculateAccountYield(acc, accTx, historicalRates, viewCDTs);
       const val = convertAmount(yieldData.liquidTotalBalance || acc.balance, acc.currency);
+
+      if (isZeroYield) {
+        transactionalBalance += val;
+        return; // No se computa en el capital invertido de Renta Fija ni distorsiona la tasa ponderada
+      }
+
       liquidBalance += val;
 
       const currentRateEA = Number(
-        historicalRates?.entities?.[acc.entityId]?.savings_rates?.slice(-1)[0]?.rateEA ||
-        acc.interestRateEA ||
-        9.30
+        acc.interestRateEA !== undefined && acc.interestRateEA !== null ? acc.interestRateEA :
+        (historicalRates?.entities?.[acc.entityId]?.savings_rates?.slice(-1)[0]?.rateEA || 9.30)
       );
 
       // Account's active CDT capital (congelado de esta cajita)
@@ -370,7 +377,7 @@ export default function FixedIncomeHub() {
       weightedRateSum += (cdt.interestRateEA || 11.0) * capitalVal;
     });
 
-    // Patrimonio total consolidado = Saldo Total de Cajitas + Capital de CDTs + Rendimientos Devengados de CDTs
+    // Patrimonio total consolidado en Renta Fija = Saldo de Cajitas de Inversión + Capital de CDTs + Rendimientos Devengados de CDTs
     const totalPatrimony = liquidBalance + cdtsCapitalTotal + cdtsExtraYield;
     const totalPortfolioBase = liquidBalance + cdtsCapitalTotal;
     const weightedEA = totalPortfolioBase > 0 ? weightedRateSum / totalPortfolioBase : (viewAccounts[0]?.interestRateEA || 9.30);
@@ -382,6 +389,7 @@ export default function FixedIncomeHub() {
 
     return {
       liquidBalance,
+      transactionalBalance,
       cdtsCapitalTotal,
       cdtsExtraYield,
       activeCdtsCount,
@@ -432,8 +440,13 @@ export default function FixedIncomeHub() {
     const endDate = new Date();
     endDate.setHours(0, 0, 0, 0);
 
-    // 1. Prepare individual account simulators
-    const accountSimulators = viewAccounts.map((acc) => {
+    // 1. Prepare individual account simulators (SOLO para cuentas de inversión en Renta Fija; excluye nómina y billeteras para evitar distorsión o picos artificiales)
+    const investmentAccounts = viewAccounts.filter((acc) => {
+      const isZeroYield = acc.accountCategory === "digital_wallet" || acc.accountCategory === "payroll" || Number(acc.interestRateEA || 0) === 0 || acc.type === "wallet";
+      return !isZeroYield;
+    });
+
+    const accountSimulators = investmentAccounts.map((acc) => {
       const accTx = viewTransactions.filter((t) =>
         t.accountId ? t.accountId === acc.id : (t.description || "").toLowerCase().includes(acc.name.toLowerCase())
       );
@@ -474,6 +487,10 @@ export default function FixedIncomeHub() {
         : [];
 
       const getRate = (dStr, balance = 0) => {
+        if (acc.accountCategory === "digital_wallet" || acc.accountCategory === "payroll" || Number(acc.interestRateEA || 0) === 0 || acc.type === "wallet") {
+          return 0.0;
+        }
+
         if (acc.type === "crypto") {
           return Number(acc.interestRateEA || 8.0);
         }
@@ -844,7 +861,7 @@ export default function FixedIncomeHub() {
             })}
           </div>
           <div style={{ fontSize: "0.68rem", color: "var(--accent-primary)", marginTop: 4, fontWeight: 600, display: "flex", gap: 6, flexWrap: "wrap" }}>
-            <span>💧 Cuentas de Ahorro: {currSymbol} {metrics.liquidBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <span>💧 Cajitas de Inversión: {currSymbol} {metrics.liquidBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             {metrics.cdtsCapitalTotal > 0 && (
               <>
                 <span>•</span>
@@ -855,6 +872,12 @@ export default function FixedIncomeHub() {
               <>
                 <span>•</span>
                 <span style={{ color: "var(--gain)" }}>📈 +{currSymbol} {metrics.cdtsExtraYield.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} rend.</span>
+              </>
+            )}
+            {metrics.transactionalBalance > 0 && (
+              <>
+                <span>•</span>
+                <span style={{ color: "var(--text-muted)" }}>💼 Nómina & Billeteras: {currSymbol} {metrics.transactionalBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </>
             )}
           </div>
@@ -1532,10 +1555,23 @@ export default function FixedIncomeHub() {
           const entityCurrency = entityAccounts[0]?.currency || entityCDTs[0]?.currency || "COP";
           const entCurrSymbol = entityCurrency === "USD" ? "USD $" : "COP $";
 
-          const accountsLiquidTotal = entityAccounts.reduce((sum, a) => {
+          const isAccountTransactional = (acc) =>
+            acc.accountCategory === "payroll" ||
+            acc.accountCategory === "digital_wallet" ||
+            acc.type === "wallet" ||
+            Number(acc.interestRateEA || 0) === 0;
+
+          const investedAccounts = entityAccounts.filter((a) => !isAccountTransactional(a));
+          const transactionalAccounts = entityAccounts.filter((a) => isAccountTransactional(a));
+
+          const accountsLiquidInvested = investedAccounts.reduce((sum, a) => {
             const accTx = transactions.filter(t => t.accountId ? t.accountId === a.id : (t.description || "").toLowerCase().includes(a.name.toLowerCase()));
             const yieldData = calculateAccountYield(a, accTx, historicalRates);
             return sum + (yieldData.totalCalculatedBalance || a.balance || 0);
+          }, 0);
+
+          const accountsTransactionalTotal = transactionalAccounts.reduce((sum, a) => {
+            return sum + (a.balance || 0);
           }, 0);
 
           // Rendimientos devengados de CDTs activos a la fecha de hoy (base bancaria 360)
@@ -1551,7 +1587,8 @@ export default function FixedIncomeHub() {
 
           const activeCDTsCapitalTotal = activeEntityCDTs.reduce((sum, c) => sum + (c.capital || 0), 0);
           const activeCDTsTotal = activeCDTsCapitalTotal + activeCDTsAccruedYield;
-          const entityTotal = accountsLiquidTotal + activeCDTsTotal;
+          const entityInvestedTotal = accountsLiquidInvested + activeCDTsTotal;
+          const entityGrandTotal = entityInvestedTotal + accountsTransactionalTotal;
 
           return (
             <div
@@ -1769,27 +1806,53 @@ export default function FixedIncomeHub() {
                     </button>
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", justifyContent: "flex-end", marginLeft: "auto" }}>
-                    {/* 1. Saldo Líquido en Cajitas (coincide con saldo en app) */}
-                    <div
-                      style={{
-                        textAlign: "right",
-                        background: isLight ? "rgba(16, 185, 129, 0.08)" : "rgba(16, 185, 129, 0.12)",
-                        padding: "6px 12px",
-                        borderRadius: 8,
-                        border: `1px solid ${isLight ? "rgba(16, 185, 129, 0.3)" : "rgba(16, 185, 129, 0.35)"}`,
-                      }}
-                      title="Saldo disponible líquido sumado de todas tus cuentas de ahorro en esta entidad"
-                    >
-                      <span style={{ fontSize: "0.68rem", color: isLight ? "#059669" : "#34d399", fontWeight: 700, display: "block", textTransform: "uppercase" }}>
-                        💰 Saldo Líquido Cuentas
-                      </span>
-                      <span className="mono" style={{ fontWeight: 800, color: isLight ? "#047857" : "#10b981", fontSize: "1.08rem" }}>
-                        {entCurrSymbol} {accountsLiquidTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                    </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-end", marginLeft: "auto" }}>
+                    {/* 1. Inversión Líquida en Cajitas / Bolsillos de Rendimiento */}
+                    {investedAccounts.length > 0 && (
+                      <div
+                        style={{
+                          textAlign: "right",
+                          background: isLight ? "rgba(16, 185, 129, 0.08)" : "rgba(16, 185, 129, 0.12)",
+                          padding: "6px 12px",
+                          borderRadius: 8,
+                          border: `1px solid ${isLight ? "rgba(16, 185, 129, 0.3)" : "rgba(16, 185, 129, 0.35)"}`,
+                        }}
+                        title="Capital líquido en cajitas / bolsillos que generan rendimientos diarios"
+                      >
+                        <span style={{ fontSize: "0.68rem", color: isLight ? "#059669" : "#34d399", fontWeight: 700, display: "block", textTransform: "uppercase" }}>
+                          📦 Inversión Cajitas
+                        </span>
+                        <span className="mono" style={{ fontWeight: 800, color: isLight ? "#047857" : "#10b981", fontSize: "1.08rem" }}>
+                          {entCurrSymbol} {accountsLiquidInvested.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    )}
 
-                    {/* 2. Inversión en CDTs Activos (Capital + Rendimiento a hoy) */}
+                    {/* 2. Saldo Transaccional / Nómina (0% E.A. - Sin Rendimiento) */}
+                    {accountsTransactionalTotal > 0 && (
+                      <div
+                        style={{
+                          textAlign: "right",
+                          background: isLight ? "rgba(59, 130, 246, 0.08)" : "rgba(59, 130, 246, 0.12)",
+                          padding: "6px 12px",
+                          borderRadius: 8,
+                          border: `1px solid ${isLight ? "rgba(59, 130, 246, 0.3)" : "rgba(59, 130, 246, 0.35)"}`,
+                        }}
+                        title="Saldo disponible transaccional (nómina o billetera a la vista) sin rendimiento (0% E.A.). No infla la curva de renta fija."
+                      >
+                        <span style={{ fontSize: "0.68rem", color: isLight ? "#1d4ed8" : "#93c5fd", fontWeight: 700, display: "block", textTransform: "uppercase" }}>
+                          💼 Nómina / Efectivo
+                        </span>
+                        <span className="mono" style={{ fontWeight: 800, color: isLight ? "#1e40af" : "#60a5fa", fontSize: "1.08rem" }}>
+                          {entCurrSymbol} {accountsTransactionalTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                        <div style={{ fontSize: "0.62rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                          (0% E.A. • Transaccional)
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 3. Inversión en CDTs Activos (Capital + Rendimiento a hoy) */}
                     {activeEntityCDTs.length > 0 && (
                       <div
                         style={{
@@ -1815,22 +1878,27 @@ export default function FixedIncomeHub() {
                       </div>
                     )}
 
-                    {/* 3. Total Consolidado en la Entidad (Líquido + CDTs) */}
-                    {activeEntityCDTs.length > 0 && (
+                    {/* 4. Total Invertido Consolidado en Renta Fija (Cajitas + CDTs) */}
+                    {(activeEntityCDTs.length > 0 || accountsTransactionalTotal > 0) && (
                       <div
                         style={{
                           textAlign: "right",
                           paddingLeft: 10,
                           borderLeft: `1px solid ${isLight ? "rgba(0, 0, 0, 0.1)" : "rgba(255, 255, 255, 0.1)"}`,
                         }}
-                        title="Patrimonio total en la entidad sumando efectivo líquido en cuentas de ahorro y CDTs con sus ganancias a hoy"
+                        title="Patrimonio total invertido en Renta Fija en esta entidad (Cajitas + CDTs con sus ganancias a hoy)"
                       >
                         <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", display: "block", fontWeight: 600, textTransform: "uppercase" }}>
-                          Total Entidad
+                          Total Invertido (RF)
                         </span>
                         <span className="mono" style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "1.05rem" }}>
-                          {entCurrSymbol} {entityTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {entCurrSymbol} {entityInvestedTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
+                        {accountsTransactionalTotal > 0 && (
+                          <div style={{ fontSize: "0.62rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                            Total Global: {entCurrSymbol} {entityGrandTotal.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1998,8 +2066,26 @@ export default function FixedIncomeHub() {
                                 {acc.syncType === "manual" ? "✍️ Manual" : "🤖 API"}
                               </span>
 
+                              {/* Account Category: Payroll */}
+                              {acc.accountCategory === "payroll" && (
+                                <span
+                                  style={{
+                                    fontSize: "0.68rem",
+                                    fontWeight: 700,
+                                    padding: "2px 6px",
+                                    borderRadius: 6,
+                                    background: isLight ? "rgba(59, 130, 246, 0.1)" : "rgba(59, 130, 246, 0.2)",
+                                    color: isLight ? "#1d4ed8" : "#93c5fd",
+                                    border: isLight ? "1px solid rgba(59, 130, 246, 0.3)" : "1px solid rgba(59, 130, 246, 0.3)",
+                                  }}
+                                  title="Cuenta de nómina transaccional sin rendimiento (solo las cajitas generan rendimiento)"
+                                >
+                                  💼 Nómina (Sin rendimiento)
+                                </span>
+                              )}
+
                               {/* Account Category: Digital Wallet */}
-                              {(acc.accountCategory === "digital_wallet" || acc.type === "wallet" || Number(acc.interestRateEA || 0) === 0) && (
+                              {(acc.accountCategory === "digital_wallet" || acc.type === "wallet" || (Number(acc.interestRateEA || 0) === 0 && acc.accountCategory !== "payroll")) && acc.accountCategory !== "payroll" && (
                                 <span
                                   style={{
                                     fontSize: "0.68rem",
@@ -2037,8 +2123,12 @@ export default function FixedIncomeHub() {
                             <div style={{ fontSize: "0.76rem", color: "var(--text-secondary)", marginTop: 3, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                               <span>
                                 {acc.type === "crypto" ? "Tasa Staking:" : "Tasa actual:"}{" "}
-                                {acc.accountCategory === "digital_wallet" || Number(acc.interestRateEA || 0) === 0 ? (
-                                  <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>0.00% E.A. (Bajo monto)</span>
+                                {acc.accountCategory === "payroll" ? (
+                                  <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>0.00% E.A. (Cuenta Nómina / Débito)</span>
+                                ) : acc.accountCategory === "digital_wallet" || Number(acc.interestRateEA || 0) === 0 ? (
+                                  <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>
+                                    0.00% E.A. {acc.entityId === "ent_1789616750396" ? "(Cuenta Principal)" : "(Billetera digital)"}
+                                  </span>
                                 ) : (
                                   <span style={{ color: "#10b981", fontWeight: 700, fontSize: "0.78rem" }}>
                                     {Number(
