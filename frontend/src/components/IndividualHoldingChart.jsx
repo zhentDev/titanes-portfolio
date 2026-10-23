@@ -511,7 +511,7 @@ export default function IndividualHoldingChart({
             width: "100%",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", minWidth: 260 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", minWidth: 0, maxWidth: "100%" }}>
             <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
               📈 Acción a inspeccionar:
             </span>

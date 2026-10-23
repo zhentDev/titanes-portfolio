@@ -13,6 +13,8 @@ export default function CashFlowSankey({
   needs = [],
   wants = [],
   wealth = [],
+  expensesLog = [],
+  activePeriod,
   currency = "COP",
   fxRate = 4150,
   customRatios = { needs: 50, wants: 30, savings: 20 },
@@ -202,28 +204,88 @@ export default function CashFlowSankey({
       };
     });
 
-    // ── Position Column 3 Nodes (Destinations) ──
-    const destTotalBlockH = destCount * nodeH + (destCount - 1) * nodeGap;
+    // ── Position Column 3 Nodes (Destinations with Living Status) ──
+    const destNodeH = 60;
+    const destTotalBlockH = destCount * destNodeH + (destCount - 1) * nodeGap;
     const destStartY = paddingY + (usableH - destTotalBlockH) / 2;
 
     const col3Nodes = validDestinations.map((item, idx) => {
-      const y = destStartY + idx * (nodeH + nodeGap);
-      const pct = totalInflow > 0 ? ((item.amount / totalInflow) * 100).toFixed(1) : 0;
+      const y = destStartY + idx * (destNodeH + nodeGap);
+      const budgeted = Number(item.amount) || 0;
+      const pct = totalInflow > 0 ? ((budgeted / totalInflow) * 100).toFixed(1) : 0;
+
+      // Real execution matching from expensesLog
+      const spent = (expensesLog || [])
+        .filter((tx) => {
+          if (tx.period && activePeriod && tx.period !== activePeriod) return false;
+          if (tx.type === "credit" || tx.budgetItemType === "income") return false;
+          if (tx.budgetItemId && tx.budgetItemId === item.id) return true;
+          const desc = (tx.description || "").toLowerCase();
+          const bName = (tx.budgetItemName || "").toLowerCase();
+          const itemName = item.name.toLowerCase();
+          if (bName && (bName.includes(itemName) || itemName.includes(bName))) return true;
+          if (itemName.includes("arriendo") && (desc.includes("arriendo") || bName.includes("arriendo"))) return true;
+          return false;
+        })
+        .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+
+      const progressPct = budgeted > 0 ? (spent / budgeted) * 100 : 0;
+      const remaining = Math.max(0, budgeted - spent);
+
+      let statusLabel = "⏳ Pendiente";
+      let statusColor = isLight ? "#94a3b8" : "#64748b";
+      let statusBg = "rgba(100, 116, 139, 0.14)";
+      let isPaid = false;
+      let isExceeded = false;
+      let isNearLimit = false;
+
+      if (spent > 0) {
+        if (spent >= budgeted && (spent - budgeted) <= Math.max(1000, budgeted * 0.05)) {
+          statusLabel = "✅ Pagado";
+          statusColor = "#10b981";
+          statusBg = "rgba(16, 185, 129, 0.2)";
+          isPaid = true;
+        } else if (spent > budgeted) {
+          statusLabel = `🚨 +${Math.round((spent / budgeted - 1) * 100)}%`;
+          statusColor = "#f43f5e";
+          statusBg = "rgba(244, 63, 94, 0.2)";
+          isExceeded = true;
+        } else if (progressPct >= 80) {
+          statusLabel = `⚠️ ${progressPct.toFixed(0)}%`;
+          statusColor = "#f59e0b";
+          statusBg = "rgba(245, 158, 11, 0.2)";
+          isNearLimit = true;
+        } else {
+          statusLabel = `🟢 ${progressPct.toFixed(0)}%`;
+          statusColor = "#38bdf8";
+          statusBg = "rgba(56, 189, 248, 0.2)";
+        }
+      }
+
       return {
         id: item.id,
         rawItem: item,
         pillarType: item.pillarType,
         name: item.name,
         icon: item.icon || "🎯",
-        amount: item.amount,
+        amount: budgeted,
+        spent,
+        remaining,
+        progressPct,
+        statusLabel,
+        statusColor,
+        statusBg,
+        isPaid,
+        isExceeded,
+        isNearLimit,
         pct,
         pillarId: item.pillarId,
         col: 3,
         x: colX[3],
         y,
-        width: nodeWidth,
-        height: nodeH,
-        color: item.color,
+        width: nodeWidth + 14,
+        height: destNodeH,
+        color: isPaid ? "#10b981" : isExceeded ? "#f43f5e" : item.color,
       };
     });
 
@@ -308,7 +370,7 @@ export default function CashFlowSankey({
       W,
       H,
     };
-  }, [inflows, needs, wants, wealth, totalInflow, totalNeeds, totalWants, totalWealth, freeCashFlow, isLight]);
+  }, [inflows, needs, wants, wealth, totalInflow, totalNeeds, totalWants, totalWealth, freeCashFlow, expensesLog, activePeriod, isLight]);
 
   return (
     <div className="cashflow-sankey-section">
@@ -561,13 +623,25 @@ export default function CashFlowSankey({
                               cursor: "pointer",
                             }}
                           >
-                            <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-secondary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                              {dest.icon} {dest.name}
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
+                              <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-secondary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                {dest.icon} {dest.name}
+                              </div>
+                              {dest.statusLabel && (
+                                <span style={{ fontSize: "0.66rem", fontWeight: 700, padding: "1px 5px", borderRadius: 4, color: dest.statusColor, background: dest.statusBg }}>
+                                  {dest.statusLabel}
+                                </span>
+                              )}
                             </div>
-                            <div style={{ fontSize: "0.85rem", fontWeight: 700, color: pillar.color, fontFamily: "var(--font-mono, monospace)", marginTop: 2 }}>
+                            <div style={{ fontSize: "0.85rem", fontWeight: 700, color: dest.isPaid ? "#10b981" : pillar.color, fontFamily: "var(--font-mono, monospace)", marginTop: 2 }}>
                               {formatAmount(dest.amount, currency)}{" "}
                               <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>({dest.pct}%)</span>
                             </div>
+                            {dest.spent !== undefined && (
+                              <div style={{ marginTop: 4, height: 3, borderRadius: 2, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+                                <div style={{ height: "100%", width: `${Math.min(100, dest.progressPct || 0)}%`, background: dest.statusColor || "#10b981" }} />
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -677,7 +751,7 @@ export default function CashFlowSankey({
                   onMouseEnter={() => setHoveredItem(node)}
                   onMouseLeave={() => setHoveredItem(null)}
                 >
-                  {/* Background Glass Card */}
+                  {/* Background Glass Card with Living Glow */}
                   <rect
                     width={node.width}
                     height={node.height}
@@ -685,10 +759,14 @@ export default function CashFlowSankey({
                     ry={12}
                     fill={isLight ? "#ffffff" : "rgba(17, 24, 41, 0.95)"}
                     stroke={node.color}
-                    strokeWidth={isHovered ? 2.5 : 1.3}
-                    strokeOpacity={isHovered ? 1.0 : isLight ? 0.9 : 0.8}
+                    strokeWidth={isHovered ? 2.5 : node.isPaid ? 2 : 1.3}
+                    strokeOpacity={isHovered ? 1.0 : node.isPaid ? 1.0 : isLight ? 0.9 : 0.8}
                     style={{
-                      filter: isHovered
+                      filter: node.isPaid
+                        ? "drop-shadow(0 0 10px rgba(16, 185, 129, 0.35))"
+                        : node.isExceeded
+                        ? "drop-shadow(0 0 10px rgba(244, 63, 94, 0.35))"
+                        : isHovered
                         ? isLight
                           ? "drop-shadow(0 4px 14px rgba(2, 132, 199, 0.25))"
                           : "drop-shadow(0 0 14px rgba(0, 229, 255, 0.45))"
@@ -711,29 +789,78 @@ export default function CashFlowSankey({
 
                   {/* Node Icon & Name */}
                   <text
-                    x={14}
-                    y={node.height === 54 ? 22 : 30}
+                    x={12}
+                    y={node.col === 3 ? 22 : node.height === 54 ? 22 : 30}
                     fill={isLight ? "#0f172a" : "#f8fafc"}
-                    fontSize={node.col === 1 ? 14 : 12.5}
+                    fontSize={node.col === 1 ? 14 : node.col === 3 ? 11.5 : 12.5}
                     fontWeight={600}
                     fontFamily="Inter, sans-serif"
                   >
                     {node.icon ? `${node.icon} ` : ""}
-                    {displayName}
+                    {node.col === 3 && node.name.length > 15 ? `${node.name.slice(0, 14)}…` : displayName}
                   </text>
+
+                  {/* Destination Status Badge (Col 3) */}
+                  {node.col === 3 && node.statusLabel && (
+                    <g transform={`translate(${node.width - 82}, 8)`}>
+                      <rect
+                        width={74}
+                        height={17}
+                        rx={5}
+                        fill={node.statusBg}
+                        stroke={node.statusColor}
+                        strokeWidth={0.8}
+                      />
+                      <text
+                        x={37}
+                        y={12.5}
+                        textAnchor="middle"
+                        fill={node.statusColor}
+                        fontSize={9.5}
+                        fontWeight={700}
+                        fontFamily="Inter, sans-serif"
+                      >
+                        {node.statusLabel}
+                      </text>
+                    </g>
+                  )}
 
                   {/* Node Amount & Percentage */}
                   <text
-                    x={14}
-                    y={node.height === 54 ? 40 : 54}
-                    fill={node.color}
-                    fontSize={node.col === 1 ? 14 : 12}
+                    x={12}
+                    y={node.col === 3 ? 40 : node.height === 54 ? 40 : 54}
+                    fill={node.col === 3 && node.isPaid ? "#10b981" : node.color}
+                    fontSize={node.col === 1 ? 14 : 11.5}
                     fontWeight={700}
                     fontFamily="JetBrains Mono, monospace"
                   >
                     {formatAmount(node.amount, currency)}
-                    {node.pct ? ` (${node.pct}%)` : ""}
+                    {node.pct && node.col !== 3 ? ` (${node.pct}%)` : ""}
                   </text>
+
+                  {/* Mini Progress Bar Track & Fill for Destination Nodes (Col 3) */}
+                  {node.col === 3 && (
+                    <g>
+                      {/* Track */}
+                      <rect
+                        x={12}
+                        y={48}
+                        width={node.width - 24}
+                        height={3.5}
+                        rx={1.75}
+                        fill={isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)"}
+                      />
+                      {/* Fill */}
+                      <rect
+                        x={12}
+                        y={48}
+                        width={Math.max(0, (node.width - 24) * (Math.min(100, node.progressPct || 0) / 100))}
+                        height={3.5}
+                        rx={1.75}
+                        fill={node.statusColor || "#10b981"}
+                      />
+                    </g>
+                  )}
 
                   {/* Node Port Anchor Dots */}
                   {node.col !== 0 && (
@@ -795,6 +922,19 @@ export default function CashFlowSankey({
               ({hoveredItem.pct || "0"}% del ingreso)
             </span>
           </div>
+          {hoveredItem.spent !== undefined && (
+            <div style={{ marginTop: 6, paddingTop: 6, borderTop: isLight ? "1px solid rgba(0,0,0,0.06)" : "1px solid rgba(255,255,255,0.06)" }}>
+              <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                Ejecutado / Pagado Real: <strong style={{ color: hoveredItem.statusColor || "#10b981" }}>{formatAmount(hoveredItem.spent, currency)}</strong> ({hoveredItem.progressPct?.toFixed(0)}%)
+              </div>
+              <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: 2 }}>
+                Disponible Restante: <strong style={{ color: hoveredItem.remaining > 0 ? "#10b981" : "#f43f5e" }}>{formatAmount(hoveredItem.remaining, currency)}</strong>
+              </div>
+              <div style={{ fontSize: "0.76rem", color: hoveredItem.statusColor || "#10b981", fontWeight: 700, marginTop: 4 }}>
+                Estado: {hoveredItem.statusLabel}
+              </div>
+            </div>
+          )}
         </div>
       )}
       </>

@@ -12,6 +12,7 @@ import HourglassRangeSlider from "../Common/HourglassRangeSlider";
 import AffiliateBanner from "../Common/AffiliateBanner";
 import { getReferralForEntity } from "../../utils/referralLinks";
 import { useTheme } from "../../context/ThemeContext";
+import "./FixedIncome.css";
 
 const PERIOD_UNLOCK_DAYS = {
   "1M": 7,
@@ -55,7 +56,8 @@ export default function FixedIncomeHub() {
   const [modalTab, setModalTab] = useState("account");
   const [importerOpen, setImporterOpen] = useState(false);
   const [showAllEntities, setShowAllEntities] = useState(false);
-  const [selectedEntityView, setSelectedEntityView] = useState("all"); // 'all' | entityId
+  const [selectedEntityView, setSelectedEntityView] = useState("all");
+  const [selectedDetailEntityId, setSelectedDetailEntityId] = useState("ent_nu"); // 'all' | entityId
   const [futureYears, setFutureYears] = useState(0); // 0 to 10 years future simulation
   const [showSimulator, setShowSimulator] = useState(false); // Collapsible simulator
   const [showFixedIncomeChart, setShowFixedIncomeChart] = useState(true); // Default OPEN as main visual
@@ -1467,9 +1469,6 @@ export default function FixedIncomeHub() {
         )}
       </div>
 
-      {/* ── Banner de Referidos de Renta Fija (Nu, Rappi, Plenti, ARQ) ── */}
-      <AffiliateBanner type="fixed_income" />
-
       {/* ── ENTITIES & ACCOUNTS SECTION (COLLAPSIBLE) ───────── */}
       <div
         style={{
@@ -1558,10 +1557,27 @@ export default function FixedIncomeHub() {
           <>
             {/* ── ENTITIES & ACCOUNTS CONTAINER (ADAPTIVE SMART MASONRY) ── */}
       {(() => {
-        const renderEntityCard = (entity) => {
+        const renderEntityCard = (entity, forceExpanded = false) => {
           if (!entity) return null;
-          const isEntityCollapsed = !expandedEntityIds.has(entity.id);
-          const entityAccounts = accounts.filter((a) => a.entityId === entity.id);
+          const isEntityCollapsed = forceExpanded ? false : !expandedEntityIds.has(entity.id);
+          const rawAccounts = accounts.filter((a) => a.entityId === entity.id);
+          // Sort accounts: Nómina & Débito Principal ALWAYS first at the top
+          const entityAccounts = [...rawAccounts].sort((a, b) => {
+            const isPayrollA =
+              a.accountCategory === "payroll" ||
+              a.isPayroll ||
+              a.type === "payroll" ||
+              /n[oó]mina|principal|d[eé]bito/i.test(a.name);
+            const isPayrollB =
+              b.accountCategory === "payroll" ||
+              b.isPayroll ||
+              b.type === "payroll" ||
+              /n[oó]mina|principal|d[eé]bito/i.test(b.name);
+
+            if (isPayrollA && !isPayrollB) return -1;
+            if (!isPayrollA && isPayrollB) return 1;
+            return (b.balance || 0) - (a.balance || 0);
+          });
           const entityCDTs = cdts.filter((c) => c.entityId === entity.id);
           const activeEntityCDTs = entityCDTs.filter((c) => c.status !== "matured");
 
@@ -3553,19 +3569,139 @@ export default function FixedIncomeHub() {
 
         return (
           <div
+            className="fixed-income-master-detail-grid"
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 460px), 1fr))",
-              gap: 20,
+              gridTemplateColumns: "minmax(260px, 310px) minmax(0, 1fr)",
+              gap: 18,
               alignItems: "start",
             }}
           >
-            {activeEntities.map((entity) => renderEntityCard(entity))}
+            {/* ── Left Column: Master List of Entities (30%) ── */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+                background: isLight ? "#ffffff" : "rgba(15, 23, 42, 0.4)",
+                border: isLight ? "1px solid rgba(0,0,0,0.08)" : "1px solid var(--border)",
+                borderRadius: 14,
+                padding: "12px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "0.74rem",
+                  fontWeight: 700,
+                  color: "var(--text-muted)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
+                  padding: "4px 8px 6px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <span>🏦 Entidades ({activeEntities.length})</span>
+                <span style={{ fontSize: "0.68rem", color: "#38bdf8" }}>Selecciona para ver</span>
+              </div>
+
+              {activeEntities.map((entity) => {
+                const currentSelectedId = selectedDetailEntityId || activeEntities[0]?.id;
+                const isSelected = currentSelectedId === entity.id;
+                const entAccounts = accounts.filter((a) => a.entityId === entity.id);
+                const entCdts = cdts.filter((c) => c.entityId === entity.id && c.status !== "matured");
+                const totalAccBal = entAccounts.reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
+                const totalCdtCap = entCdts.reduce((sum, c) => sum + (Number(c.capital) || 0), 0);
+                const totalEntityCap = totalAccBal + totalCdtCap;
+                const entCurr = entAccounts[0]?.currency || entCdts[0]?.currency || "COP";
+
+                return (
+                  <div
+                    key={entity.id}
+                    onClick={() => setSelectedDetailEntityId(entity.id)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "10px 14px",
+                      borderRadius: "10px",
+                      cursor: "pointer",
+                      border: isSelected ? "2px solid #38bdf8" : (isLight ? "1px solid rgba(0,0,0,0.06)" : "1px solid rgba(255,255,255,0.06)"),
+                      background: isSelected
+                        ? (isLight ? "rgba(56, 189, 248, 0.1)" : "rgba(56, 189, 248, 0.14)")
+                        : (isLight ? "#f8fafc" : "rgba(30, 41, 59, 0.5)"),
+                      boxShadow: isSelected ? (isLight ? "0 2px 10px rgba(56, 189, 248, 0.15)" : "0 2px 12px rgba(56, 189, 248, 0.25)") : "none",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                      <span
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 8,
+                          background: entity.color || "#6366f1",
+                          color: "#ffffff",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "0.78rem",
+                          fontWeight: 800,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {entity.name?.slice(0, 2).toUpperCase() || "🏦"}
+                      </span>
+                      <div style={{ minWidth: 0 }}>
+                        <strong
+                          style={{
+                            fontSize: "0.86rem",
+                            color: isSelected ? (isLight ? "#0284c7" : "#38bdf8") : "var(--text-primary)",
+                            display: "block",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {entity.name}
+                        </strong>
+                        <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                          {entAccounts.length} cta(s) {entCdts.length > 0 ? `• ${entCdts.length} CDT(s)` : ""}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 8 }}>
+                      <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.82rem", fontWeight: 700, color: isSelected ? "#10b981" : "var(--text-primary)" }}>
+                        {formatMoney(totalEntityCap, entCurr)}
+                      </div>
+                      <span style={{ fontSize: "0.68rem", color: isSelected ? "#38bdf8" : "var(--text-muted)", fontWeight: 600 }}>
+                        {isSelected ? "Activa ➔" : "Ver"}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* ── Right Column: Detail View of Selected Entity (70%) ── */}
+            <div style={{ minWidth: 0 }}>
+              {(() => {
+                const currentEntity = activeEntities.find((e) => e.id === (selectedDetailEntityId || activeEntities[0]?.id)) || activeEntities[0];
+                return renderEntityCard(currentEntity, true);
+              })()}
+            </div>
           </div>
         );
       })()}
           </>
         )}
+      </div>
+
+      {/* ── Banner de Referidos Financieros al Fondo (Promos Destacadas) ── */}
+      <div style={{ marginTop: 24 }}>
+        <AffiliateBanner type="fixed_income" />
       </div>
 
       {/* ── MODAL DE CREACIÓN / EDICIÓN ──────────────────── */}

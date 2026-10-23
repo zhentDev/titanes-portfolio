@@ -141,7 +141,7 @@ export default function CashFlowHub() {
   const [showPillars, setShowPillars] = useState(false);
   const [showExpenses, setShowExpenses] = useState(false);
   const [showCreditCards, setShowCreditCards] = useState(false);
-  const [showDebts, setShowDebts] = useState(true);
+  const [showDebts, setShowDebts] = useState(false);
   const [expandedCard, setExpandedCard] = useState(null); // 'invested' | 'yield' | 'closed' | null
 
   const areAllAccordionsExpanded =
@@ -2054,6 +2054,8 @@ export default function CashFlowHub() {
           needs={periodNeeds}
           wants={periodWants}
           wealth={periodWealth}
+          expensesLog={expensesLog}
+          activePeriod={activePeriod}
           currency={currency}
           fxRate={fxRate}
           customRatios={customRatios}

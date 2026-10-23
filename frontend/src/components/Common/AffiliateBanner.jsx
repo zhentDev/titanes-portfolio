@@ -26,12 +26,12 @@ export default function AffiliateBanner({ style = {}, type = "stock" }) {
           boxSizing: "border-box",
           maxWidth: "100%",
           background: isLight
-            ? "linear-gradient(135deg, rgba(130, 10, 209, 0.07) 0%, rgba(255, 68, 31, 0.07) 50%, rgba(16, 185, 129, 0.08) 100%)"
-            : "linear-gradient(135deg, rgba(130, 10, 209, 0.15) 0%, rgba(255, 68, 31, 0.12) 50%, rgba(16, 185, 129, 0.12) 100%)",
-          border: `1px solid ${isLight ? "rgba(130, 10, 209, 0.22)" : "rgba(130, 10, 209, 0.35)"}`,
+            ? "linear-gradient(135deg, rgba(130, 10, 209, 0.1) 0%, rgba(255, 68, 31, 0.1) 50%, rgba(16, 185, 129, 0.12) 100%)"
+            : "linear-gradient(135deg, rgba(130, 10, 209, 0.22) 0%, rgba(255, 68, 31, 0.18) 50%, rgba(16, 185, 129, 0.18) 100%)",
+          border: `1.5px solid ${isLight ? "rgba(130, 10, 209, 0.35)" : "rgba(130, 10, 209, 0.55)"}`,
           boxShadow: isLight
-            ? "0 4px 14px rgba(0, 0, 0, 0.04)"
-            : "0 4px 20px rgba(130, 10, 209, 0.08)",
+            ? "0 6px 20px rgba(130, 10, 209, 0.1)"
+            : "0 6px 26px rgba(130, 10, 209, 0.25), 0 0 16px rgba(16, 185, 129, 0.15)",
           ...style,
         }}
       >
