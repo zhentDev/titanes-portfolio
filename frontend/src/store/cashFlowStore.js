@@ -467,6 +467,101 @@ export const useCashFlowStore = create(
         toast.success(`¡Pago asignado a ${targetCard.name}! Cupo liberado exitosamente 🎉`, { icon: "💳" });
       },
 
+      // ── Universal Movement Reclassification / Imputation ──
+      reclassifyMovement: ({ movementId, destinationType, targetId, targetItem }) => {
+        const state = get();
+        const expense = (state.expensesLog || []).find((e) => e.id === movementId);
+        if (!expense) return;
+        const amount = Number(expense.amount) || 0;
+
+        // 1. Destination: Credit Card Payment
+        if (destinationType === "credit_card") {
+          get().convertExpenseToCardPayment(movementId, targetId);
+          return;
+        }
+
+        // 2. Destination: Personal Debt Payment
+        if (destinationType === "debt") {
+          const debt = (state.debts || []).find((d) => d.id === targetId);
+          if (!debt) return;
+
+          const currentRemaining = Number(debt.remainingAmount !== undefined ? debt.remainingAmount : debt.totalAmount || 0);
+          const newRemaining = Math.max(0, currentRemaining - amount);
+          const isSettled = newRemaining <= 0;
+
+          const paymentRecord = {
+            id: `pay_debt_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            amount: amount,
+            date: expense.date || new Date().toISOString().slice(0, 10),
+            paymentMethod: expense.paymentSource?.type === "payroll" ? "Nómina Nu Débito" : "Transferencia Débito",
+            paymentSourceId: expense.paymentSource?.targetId || null,
+            note: `Abono registrado desde movimiento: ${expense.description || "Gasto bancario"}`,
+            createdAt: new Date().toISOString(),
+          };
+
+          const updatedDebts = (state.debts || []).map((d) => {
+            if (d.id !== targetId) return d;
+            return {
+              ...d,
+              remainingAmount: newRemaining,
+              status: isSettled ? "paid" : "active",
+              paymentsLog: [paymentRecord, ...(d.paymentsLog || [])],
+            };
+          });
+
+          // Update expense description and tag it as debt payment
+          const updatedExpenses = (state.expensesLog || []).map((e) => {
+            if (e.id !== movementId) return e;
+            return {
+              ...e,
+              description: `Pago Deuda: ${debt.concept}`,
+              budgetItemId: null,
+              budgetItemName: `Abono Deuda (${debt.creditor || debt.concept})`,
+              budgetItemType: "needs",
+              isDebtPayment: true,
+              debtId: debt.id,
+            };
+          });
+
+          set({ debts: updatedDebts, expensesLog: updatedExpenses });
+          try {
+            localStorage.setItem("titanes_cash_flow_store_v2", JSON.stringify({ ...state, debts: updatedDebts, expensesLog: updatedExpenses }));
+          } catch {}
+          get().syncStateWithBackend();
+          toast.success(
+            `Abono a deuda "${debt.concept}" registrado. ${isSettled ? "¡Deuda 100% saldada! 🎊" : `Saldo restante: $${Math.round(newRemaining).toLocaleString("es-CO")}`}`,
+            { icon: "🤝" }
+          );
+          return;
+        }
+
+        // 3. Destination: Budget Envelope (Needs, Wants, Wealth)
+        if (destinationType === "budget_envelope") {
+          const envelope = targetItem;
+          if (!envelope) return;
+
+          const updatedExpenses = (state.expensesLog || []).map((e) => {
+            if (e.id !== movementId) return e;
+            return {
+              ...e,
+              budgetItemId: envelope.id,
+              budgetItemName: envelope.name,
+              budgetItemType: envelope.pillarType || "needs",
+              description: e.description && !e.description.toLowerCase().includes("tu app") ? e.description : envelope.name,
+              isDebtPayment: false,
+              debtId: null,
+            };
+          });
+
+          set({ expensesLog: updatedExpenses });
+          try {
+            localStorage.setItem("titanes_cash_flow_store_v2", JSON.stringify({ ...state, expensesLog: updatedExpenses }));
+          } catch {}
+          get().syncStateWithBackend();
+          toast.success(`Movimiento asignado exitosamente al rubro "${envelope.name}" 📁`, { icon: "✅" });
+        }
+      },
+
       // ── Debts & Liabilities CRUD ────────────────────────
       addDebt: (debt) => {
         const newDebt = {

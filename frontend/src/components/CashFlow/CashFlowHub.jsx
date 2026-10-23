@@ -85,6 +85,7 @@ export default function CashFlowHub() {
     settleLoanTransaction,
     toggleExpenseLoan,
     convertExpenseToCardPayment,
+    reclassifyMovement,
     addDebt,
     updateDebt,
     deleteDebt,
@@ -2854,6 +2855,8 @@ export default function CashFlowHub() {
               fxRate={fxRate}
               payrollAccount={payrollAccount}
               creditCards={creditCards}
+              debts={debts}
+              budgetItems={budgetEnvelopes}
               fixedIncomeAccounts={fixedAccounts}
               onOpenExpenseModal={() => {
                 setExpenseToEdit(null);
@@ -2869,6 +2872,7 @@ export default function CashFlowHub() {
               onConfirmSettlement={settleLoanTransaction}
               onToggleExpenseLoan={toggleExpenseLoan}
               onConvertExpenseToCardPayment={convertExpenseToCardPayment}
+              onReclassifyMovement={reclassifyMovement}
             />
           </div>
         )}
