@@ -355,14 +355,18 @@ export default function QuantumOrbitalLoader({
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const minW = compact ? 50 : 200;
       const minH = compact ? 50 : 200;
-      const safeW = Math.max(minW, Math.min(compact ? 240 : 450, Math.floor(w || containerRef.current?.clientWidth || 320)));
-      const safeH = Math.max(minH, Math.min(compact ? 200 : 520, Math.floor(h || containerRef.current?.clientHeight || 360)));
+      const safeW = Math.max(minW, Math.floor(w || containerRef.current?.clientWidth || (typeof width === 'number' ? width : 600)));
+      const safeH = Math.max(minH, Math.floor(h || containerRef.current?.clientHeight || (typeof height === 'number' ? height : 360)));
       canvasWidth = safeW;
       canvasHeight = safeH;
 
-      if (canvas.width !== safeW * dpr || canvas.height !== safeH * dpr) {
-        canvas.width = safeW * dpr;
-        canvas.height = safeH * dpr;
+      if (canvas) {
+        const targetW = Math.floor(safeW * dpr);
+        const targetH = Math.floor(safeH * dpr);
+        if (canvas.width !== targetW || canvas.height !== targetH) {
+          canvas.width = targetW;
+          canvas.height = targetH;
+        }
       }
     };
 
