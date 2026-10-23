@@ -111,10 +111,40 @@ export default function EmergencyFundCard({
               <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.95rem", fontWeight: 700, color: "#0284c7" }}>
                 {formatMoney(currentBalance, currency)}
               </div>
-              {emergencyItem?.sourceAccountName && (
-                <div style={{ fontSize: "0.65rem", color: "#10b981", fontWeight: 600, marginTop: 2 }} title="Cuenta específica de donde se toma el fondo de emergencia">
-                  📍 {emergencyItem.sourceAccountName}
+              {emergencyItem?.sourceAccountsBreakdown?.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 6 }}>
+                  {emergencyItem.sourceAccountsBreakdown.map((acc) => (
+                    <div
+                      key={acc.id}
+                      style={{
+                        fontSize: "0.66rem",
+                        color: "#10b981",
+                        fontWeight: 600,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 6,
+                        padding: "3px 6px",
+                        borderRadius: 6,
+                        background: "rgba(16, 185, 129, 0.08)",
+                        border: "1px solid rgba(16, 185, 129, 0.2)",
+                      }}
+                    >
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        📍 {acc.name} {acc.rateEA > 0 ? `(${acc.rateEA}% E.A.)` : ""}
+                      </span>
+                      <span style={{ fontFamily: "JetBrains Mono, monospace", fontWeight: 700, flexShrink: 0 }}>
+                        {formatMoney(acc.balance, acc.currency)}
+                      </span>
+                    </div>
+                  ))}
                 </div>
+              ) : (
+                emergencyItem?.sourceAccountName && (
+                  <div style={{ fontSize: "0.65rem", color: "#10b981", fontWeight: 600, marginTop: 2 }} title="Cuenta específica de donde se toma el fondo de emergencia">
+                    📍 {emergencyItem.sourceAccountName}
+                  </div>
+                )
               )}
             </div>
             <div>

@@ -113,21 +113,26 @@
     {
       "id": "acc_1786771927434",
       "entityId": "ent_1786771791285",
-      "name": "Flexi Digital +",
+      "name": "Bolsillo de Ahorro ? Fondo de Emergencia (FlexiDigital +)",
       "type": "pocket",
       "currency": "COP",
       "balance": 644145.92,
-      "interestRateEA": 10,
+      "interestRateEA": 10.5,
       "isTaxExemptGMF": false,
       "rateHistory": [
         {
           "date": "2024-01-01",
           "rateEA": 10
+        },
+        {
+          "date": "2026-08-01",
+          "rateEA": 10.5
         }
       ],
       "createdAt": "2026-08-15T05:32:07.434Z",
       "syncType": "api",
-      "accountCategory": "high_yield"
+      "accountCategory": "high_yield",
+      "fallbackAccountId": "acc_finandina_principal"
     },
     {
       "id": "acc_1786777955489",
@@ -172,7 +177,8 @@
         }
       ],
       "syncType": "api",
-      "accountCategory": "high_yield"
+      "accountCategory": "high_yield",
+      "fallbackAccountId": "acc_plenti_principal"
     },
     {
       "id": "acc_1789616855068",
@@ -283,6 +289,96 @@
         }
       ],
       "createdAt": "2026-10-23T00:00:00.000Z"
+    },
+    {
+      "id": "acc_plenti_principal",
+      "entityId": "ent_1786777900826",
+      "name": "Cuenta Plenti (Principal)",
+      "type": "savings",
+      "accountCategory": "digital_wallet",
+      "currency": "USD",
+      "balance": 0,
+      "interestRateEA": 0,
+      "isTaxExempt": false,
+      "createdAt": 1786777950000
+    },
+    {
+      "id": "acc_finandina_principal",
+      "entityId": "ent_1786771791285",
+      "name": "FlexiDigital + (Principal)",
+      "type": "savings",
+      "accountCategory": "digital_wallet",
+      "currency": "COP",
+      "balance": 0,
+      "interestRateEA": 0,
+      "isTaxExempt": false,
+      "createdAt": 1786771920000
+    },
+    {
+      "id": "acc_finandina_flexidigital",
+      "entityId": "ent_1786771791285",
+      "name": "Cuenta FlexiDigital",
+      "type": "savings",
+      "accountCategory": "high_yield",
+      "currency": "COP",
+      "balance": 913.64,
+      "interestRateEA": 0.15,
+      "isTaxExempt": false,
+      "rateHistory": [
+        {
+          "date": "2025-02-01",
+          "rateEA": 0.15
+        }
+      ],
+      "transactions": [
+        {
+          "id": "tx_finandina_flexidigital_init",
+          "date": "2025-02-01",
+          "type": "deposit",
+          "amount": 913.64,
+          "note": "Saldo en Cuenta FlexiDigital (Cl?sica)"
+        }
+      ],
+      "createdAt": 1786771928000
+    },
+    {
+      "id": "acc_finandina_ahorro_puro",
+      "entityId": "ent_1786771791285",
+      "name": "Cuenta Ahorro Puro",
+      "type": "savings",
+      "accountCategory": "high_yield",
+      "currency": "COP",
+      "balance": 114.38,
+      "interestRateEA": 0.15,
+      "isTaxExempt": false,
+      "rateHistory": [
+        {
+          "date": "2025-02-01",
+          "rateEA": 0.15
+        }
+      ],
+      "tieredRates": [
+        {
+          "maxBalance": 1000000,
+          "rateEA": 0.15,
+          "label": "Hasta $1,000,000 COP (0.15% E.A.)"
+        },
+        {
+          "maxBalance": 100000000,
+          "rateEA": 7.5,
+          "label": "$1.1M a $100M COP (IBR - 2% ? 7.5% E.A.)"
+        }
+      ],
+      "transactions": [
+        {
+          "id": "tx_finandina_ahorropuro_init",
+          "date": "2025-02-01",
+          "type": "deposit",
+          "amount": 114.38,
+          "note": "Saldo en Cuenta Ahorro Puro"
+        }
+      ],
+      "createdAt": 1786771929000
     }
   ],
   "cdts": [

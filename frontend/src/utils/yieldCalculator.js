@@ -254,7 +254,11 @@ export function calculateAccountYield(account, transactions = [], historicalRate
   const isMonthlyDisbursement = Boolean(
     account.payoutSchedule === "monthly_1st" ||
       (account.entityId && (account.entityId === "ent_1789616750396" || account.entityId.toLowerCase().includes("rappi"))) ||
-      (account.name && (account.name.toLowerCase().includes("rappi") || account.name.toLowerCase().includes("impresora") || account.name.toLowerCase().includes("fondo de emergencia"))) ||
+      (account.name &&
+        (account.name.toLowerCase().includes("rappi") ||
+          account.name.toLowerCase().includes("impresora") ||
+          (account.name.toLowerCase().includes("fondo de emergencia") &&
+            (account.entityId === "ent_1789616750396" || (account.entityId || "").toLowerCase().includes("rappi"))))) ||
       (account.type && account.type.toLowerCase().includes("rappi"))
   );
 
@@ -339,10 +343,26 @@ export function calculateAccountYield(account, transactions = [], historicalRate
       currBalance = Math.max(0, currBalance + maturedCdtByDate[dStr]);
     }
 
+    const rateEA = getRateForDateAndBalance(dStr, currBalance);
+    const periodKey = `rate_${rateEA}`;
+    if (!periodMap.has(periodKey)) {
+      periodMap.set(periodKey, {
+        rateEA,
+        startDate: dStr,
+        endDate: dStr,
+        days: 0,
+        interestEarned: 0,
+        startBalance: currBalance,
+        endBalance: currBalance,
+      });
+    }
+    const pInfo = periodMap.get(periodKey);
+    pInfo.days += 1;
+    pInfo.endDate = dStr;
+
     // If account has explicit recorded interest transactions (e.g. Finandina monthly payouts),
     // we do not synthesize daily compound interest on top of recorded payouts.
     if (explicitInterestTotal === 0) {
-      const rateEA = getRateForDateAndBalance(dStr, currBalance);
       // Colombian banking standard (SFC) for high-yield savings: base 360 days
       const dailyRate = Math.pow(1 + rateEA / 100, 1 / 360) - 1;
       const dailyInterest = currBalance * dailyRate;
@@ -359,24 +379,10 @@ export function calculateAccountYield(account, transactions = [], historicalRate
       }
 
       currBalance += dailyInterest;
-
-      // Track period
-      const periodKey = `rate_${rateEA}`;
-      if (!periodMap.has(periodKey)) {
-        periodMap.set(periodKey, {
-          rateEA,
-          startDate: dStr,
-          endDate: dStr,
-          days: 0,
-          interestEarned: 0,
-          startBalance: currBalance - dailyInterest,
-          endBalance: currBalance,
-        });
-      }
-      const pInfo = periodMap.get(periodKey);
-      pInfo.days += 1;
       pInfo.interestEarned += dailyInterest;
-      pInfo.endDate = dStr;
+      pInfo.endBalance = currBalance;
+    } else if (interestByDate[dStr]) {
+      pInfo.interestEarned += interestByDate[dStr];
       pInfo.endBalance = currBalance;
     }
   }

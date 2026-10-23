@@ -121,30 +121,27 @@ export const useFixedIncomeStore = create(
             }).catch((e) => console.warn("[FixedIncome] Background sync of merged tx failed:", e));
           }
 
-          // Normalize Plenti Bolsillo a la vista rate & tiers to 4.0% E.A. if still at legacy 3.0% / 2.0%
-          // Also ensure Daviplata Principal has its 2,200.03 COP balance if still at 0
-          let daviplataUpdated = false;
+          // Normalize Plenti Bolsillo a la vista, Finandina FlexiDigital+ pocket, and Daviplata Principal
+          const accountsToSync = [];
           finalAccounts = finalAccounts.map((acc) => {
             const isDaviplata =
               acc.id === "acc_daviplata_disp" ||
               acc.entityId === "ent_daviplata" ||
               (acc.name || "").toLowerCase().includes("daviplata");
             if (isDaviplata && Number(acc.balance || 0) === 0) {
-              daviplataUpdated = true;
-              return {
-                ...acc,
-                balance: 2200.03,
-              };
+              const updated = { ...acc, balance: 2200.03 };
+              accountsToSync.push(updated);
+              return updated;
             }
 
-            const isPlenti =
+            const isPlentiPocket =
               acc.id === "acc_1786777955489" ||
-              acc.entityId === "ent_1786777900826" ||
-              acc.entityId === "ent_plenti" ||
               (acc.currency === "USD" && (acc.name || "").toLowerCase().includes("bolsillo"));
-            if (isPlenti && Number(acc.interestRateEA || 0) < 4.0) {
-              return {
+            if (isPlentiPocket && (Number(acc.interestRateEA || 0) < 4.0 || acc.fallbackAccountId !== "acc_plenti_principal")) {
+              const updated = {
                 ...acc,
+                name: "Bolsillo a la vista",
+                fallbackAccountId: "acc_plenti_principal",
                 interestRateEA: 4.0,
                 rateHistory: [
                   { date: "2026-05-01", rateEA: 3.0 },
@@ -157,17 +154,128 @@ export const useFixedIncomeStore = create(
                   { maxBalance: 9999999, rateEA: 6.0, label: "Más de $5,000 USD (6.0% EA)" },
                 ],
               };
+              accountsToSync.push(updated);
+              return updated;
             }
+
+            // Finandina Bolsillo de Ahorro — Fondo de Emergencia (FlexiDigital +)
+            if (acc.id === "acc_1786771927434") {
+              const targetName = "Bolsillo de Ahorro — Fondo de Emergencia (FlexiDigital +)";
+              if (
+                acc.name !== targetName ||
+                Number(acc.interestRateEA || 0) !== 10.5 ||
+                acc.fallbackAccountId !== "acc_finandina_principal" ||
+                !Array.isArray(acc.rateHistory) ||
+                acc.rateHistory.length < 2
+              ) {
+                const updated = {
+                  ...acc,
+                  name: targetName,
+                  accountCategory: "high_yield",
+                  interestRateEA: 10.5,
+                  fallbackAccountId: "acc_finandina_principal",
+                  rateHistory: [
+                    { date: "2024-01-01", rateEA: 10.0 },
+                    { date: "2026-08-01", rateEA: 10.5 },
+                  ],
+                };
+                accountsToSync.push(updated);
+                return updated;
+              }
+            }
+
             return acc;
           });
 
-          if (daviplataUpdated) {
-            const daviAcc = finalAccounts.find(
-              (a) => a.id === "acc_daviplata_disp" || a.entityId === "ent_daviplata"
-            );
-            if (daviAcc) {
-              updateFixedIncomeAccountApi(daviAcc.id, daviAcc).catch(() => {});
+          // Ensure Plenti Principal (0%) and Finandina's 3 products exist
+          const requiredAccounts = [
+            {
+              id: "acc_plenti_principal",
+              entityId: "ent_1786777900826",
+              name: "Cuenta Plenti (Principal)",
+              type: "savings",
+              accountCategory: "digital_wallet",
+              currency: "USD",
+              balance: 0,
+              interestRateEA: 0,
+              isTaxExempt: false,
+              createdAt: 1786777950000,
+            },
+            {
+              id: "acc_finandina_principal",
+              entityId: "ent_1786771791285",
+              name: "FlexiDigital + (Principal)",
+              type: "savings",
+              accountCategory: "digital_wallet",
+              currency: "COP",
+              balance: 0,
+              interestRateEA: 0,
+              isTaxExempt: false,
+              createdAt: 1786771920000,
+            },
+            {
+              id: "acc_finandina_flexidigital",
+              entityId: "ent_1786771791285",
+              name: "Cuenta FlexiDigital",
+              type: "savings",
+              accountCategory: "high_yield",
+              currency: "COP",
+              balance: 913.64,
+              interestRateEA: 0.15,
+              isTaxExempt: false,
+              rateHistory: [{ date: "2025-02-01", rateEA: 0.15 }],
+              transactions: [
+                {
+                  id: "tx_finandina_flexidigital_init",
+                  date: "2025-02-01",
+                  type: "deposit",
+                  amount: 913.64,
+                  note: "Saldo en Cuenta FlexiDigital (Clásica)",
+                },
+              ],
+              createdAt: 1786771928000,
+            },
+            {
+              id: "acc_finandina_ahorro_puro",
+              entityId: "ent_1786771791285",
+              name: "Cuenta Ahorro Puro",
+              type: "savings",
+              accountCategory: "high_yield",
+              currency: "COP",
+              balance: 114.38,
+              interestRateEA: 0.15,
+              isTaxExempt: false,
+              rateHistory: [{ date: "2025-02-01", rateEA: 0.15 }],
+              tieredRates: [
+                { maxBalance: 1000000, rateEA: 0.15, label: "Hasta $1,000,000 COP (0.15% E.A.)" },
+                { maxBalance: 100000000, rateEA: 7.5, label: "$1.1M a $100M COP (IBR - 2% ≈ 7.5% E.A.)" },
+              ],
+              transactions: [
+                {
+                  id: "tx_finandina_ahorropuro_init",
+                  date: "2025-02-01",
+                  type: "deposit",
+                  amount: 114.38,
+                  note: "Saldo en Cuenta Ahorro Puro",
+                },
+              ],
+              createdAt: 1786771929000,
+            },
+          ];
+
+          const newAccountsToCreate = [];
+          for (const reqAcc of requiredAccounts) {
+            if (!finalAccounts.some((a) => a.id === reqAcc.id)) {
+              finalAccounts.push(reqAcc);
+              newAccountsToCreate.push(reqAcc);
             }
+          }
+
+          for (const upd of accountsToSync) {
+            updateFixedIncomeAccountApi(upd.id, upd).catch(() => {});
+          }
+          for (const nw of newAccountsToCreate) {
+            createFixedIncomeAccount(nw).catch(() => {});
           }
 
           set({

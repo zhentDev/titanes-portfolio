@@ -504,7 +504,17 @@ export function computeMissingMonthlyYieldTransactions(account, allAccountTransa
   }
 
   const getSavingsRate = (entityId, dStr) => {
-    const rates = historicalRates?.entities?.[entityId]?.savings_rates;
+    if (Array.isArray(account.rateHistory) && account.rateHistory.length > 0) {
+      const sortedRH = [...account.rateHistory].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+      let activeR = null;
+      for (const rh of sortedRH) {
+        if (rh.date && dStr >= rh.date) activeR = Number(rh.rateEA);
+      }
+      if (activeR !== null && activeR > 0) return activeR;
+    }
+    const rates =
+      historicalRates?.entities?.[entityId]?.savings_rates ||
+      (entityId === "ent_1786771791285" ? historicalRates?.entities?.ent_finandina?.savings_rates : null);
     if (rates && rates.length > 0) {
       for (const r of rates) {
         if (dStr >= r.from && dStr <= r.to) return Number(r.rateEA || account.interestRateEA || 9.30);

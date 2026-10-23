@@ -495,10 +495,18 @@ export default function CashFlowHub() {
         const mult = a.currency === "USD" ? fxRate : 1;
         return sum + bal * mult;
       }, 0);
+      const sourceAccountsBreakdown = matchingAccounts.map((a) => ({
+        id: a.id,
+        name: a.name,
+        balance: Number(a.balance) || 0,
+        currency: a.currency || "COP",
+        rateEA: Number(a.interestRateEA) || 0,
+      }));
       return {
         ...item,
-        currentBalance: Math.round(totalBalance),
-        sourceAccountName: matchingAccounts.map((a) => a.name).join(", "),
+        currentBalance: Math.round(totalBalance * 100) / 100,
+        sourceAccountName: matchingAccounts.map((a) => a.name).join(" + "),
+        sourceAccountsBreakdown,
       };
     }
     // Fallback: si aun no cargan fixedAccounts o si item trae la suma residual erronea (>3.5M), sanitizar a su saldo real

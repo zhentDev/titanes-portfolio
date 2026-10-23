@@ -6,9 +6,13 @@
       "savings_rates": [
         {
           "from": "2024-01-01",
+          "to": "2026-07-31",
+          "rateEA": 10
+        },
+        {
+          "from": "2026-08-01",
           "to": "2099-12-31",
-          "rateEA": 10.0,
-          "notes": "Cuenta FlexiDigital + (Bolsillo de Ahorro) 10.00% E.A."
+          "rateEA": 10.5
         }
       ],
       "cdt_term_rates": [
@@ -45,19 +49,19 @@
         {
           "from": "2023-06-01",
           "to": "2024-10-07",
-          "rateEA": 13.0,
+          "rateEA": 13,
           "notes": "Cajitas Nu 13% E.A. - Tasa de lanzamiento"
         },
         {
           "from": "2024-10-08",
           "to": "2024-12-09",
-          "rateEA": 12.0,
+          "rateEA": 12,
           "notes": "Primer recorte: 13% → 12% E.A. (8 oct 2024)"
         },
         {
           "from": "2024-12-10",
           "to": "2025-03-09",
-          "rateEA": 11.0,
+          "rateEA": 11,
           "notes": "Segundo recorte: 12% → 11% E.A. (10 dic 2024)"
         },
         {
@@ -100,7 +104,7 @@
             {
               "termDaysMin": 60,
               "termDaysMax": 90,
-              "rateEA": 13.0,
+              "rateEA": 13,
               "label": "60-90 Días"
             },
             {
@@ -131,7 +135,7 @@
             {
               "termDaysMin": 60,
               "termDaysMax": 90,
-              "rateEA": 12.0,
+              "rateEA": 12,
               "label": "60-90 Días"
             },
             {
@@ -223,7 +227,7 @@
             {
               "termDaysMin": 361,
               "termDaysMax": 720,
-              "rateEA": 12.0,
+              "rateEA": 12,
               "label": "2 Años"
             },
             {
@@ -272,7 +276,7 @@
             {
               "termDaysMin": 360,
               "termDaysMax": 539,
-              "rateEA": 11.0,
+              "rateEA": 11,
               "label": "1 Año (360d)"
             },
             {
@@ -290,7 +294,7 @@
             {
               "termDaysMin": 1080,
               "termDaysMax": 1080,
-              "rateEA": 11.0,
+              "rateEA": 11,
               "label": "3 Años (1080d)"
             }
           ]
@@ -330,7 +334,7 @@
         {
           "termDaysMin": 360,
           "termDaysMax": 539,
-          "rateEA": 11.0,
+          "rateEA": 11,
           "label": "1 Año (360d)"
         },
         {
@@ -348,7 +352,7 @@
         {
           "termDaysMin": 1080,
           "termDaysMax": 1080,
-          "rateEA": 11.0,
+          "rateEA": 11,
           "label": "3 Años (1080d)"
         }
       ]
@@ -360,13 +364,13 @@
         {
           "from": "2024-01-01",
           "to": "2024-06-30",
-          "rateEA": 13.0,
+          "rateEA": 13,
           "notes": "Bolsillos Lulo"
         },
         {
           "from": "2024-07-01",
           "to": "2099-12-31",
-          "rateEA": 13.0,
+          "rateEA": 13,
           "notes": "Bolsillos Lulo 13% E.A. vigentes"
         }
       ],
@@ -374,7 +378,7 @@
         {
           "termDaysMin": 1,
           "termDaysMax": 120,
-          "rateEA": 11.0,
+          "rateEA": 11,
           "label": "90 Días"
         },
         {
@@ -386,7 +390,7 @@
         {
           "termDaysMin": 221,
           "termDaysMax": 999,
-          "rateEA": 12.0,
+          "rateEA": 12,
           "label": "360 Días"
         }
       ]
@@ -398,7 +402,7 @@
         {
           "from": "2024-01-01",
           "to": "2099-12-31",
-          "rateEA": 12.0,
+          "rateEA": 12,
           "notes": "Cuenta Remunerada Pibank"
         }
       ],
@@ -406,7 +410,7 @@
         {
           "termDaysMin": 1,
           "termDaysMax": 120,
-          "rateEA": 11.0,
+          "rateEA": 11,
           "label": "90 Días"
         },
         {
@@ -430,7 +434,7 @@
         {
           "from": "2024-01-01",
           "to": "2099-12-31",
-          "rateEA": 14.0,
+          "rateEA": 14,
           "notes": "RappiCuenta Alta Rentabilidad 14% E.A."
         }
       ],
@@ -438,7 +442,7 @@
         {
           "termDaysMin": 1,
           "termDaysMax": 999,
-          "rateEA": 12.0,
+          "rateEA": 12,
           "label": "CDT RappiPay"
         }
       ]
@@ -450,7 +454,7 @@
         {
           "from": "2024-01-01",
           "to": "2099-12-31",
-          "rateEA": 13.0,
+          "rateEA": 13,
           "notes": "Rendimiento Ualá 13% E.A."
         }
       ],
@@ -495,7 +499,7 @@
         {
           "from": "2024-01-01",
           "to": "2099-12-31",
-          "rateEA": 9.0,
+          "rateEA": 9,
           "notes": "Cuenta Dabuenavida"
         }
       ],
@@ -503,7 +507,7 @@
         {
           "termDaysMin": 1,
           "termDaysMax": 120,
-          "rateEA": 10.0,
+          "rateEA": 10,
           "label": "90 Días Digital"
         },
         {
@@ -515,7 +519,7 @@
         {
           "termDaysMin": 221,
           "termDaysMax": 999,
-          "rateEA": 11.0,
+          "rateEA": 11,
           "label": "360 Días Digital"
         }
       ]
@@ -527,7 +531,7 @@
         {
           "from": "2024-01-01",
           "to": "2099-12-31",
-          "rateEA": 11.0,
+          "rateEA": 11,
           "notes": "Cuenta Rendimiento"
         }
       ],
@@ -608,7 +612,7 @@
         {
           "termDaysMin": 240,
           "termDaysMax": 320,
-          "rateEA": 12.0,
+          "rateEA": 12,
           "label": "270 Días (KOA)",
           "entity": "KOA"
         },
@@ -643,25 +647,25 @@
         {
           "from": "2024-01-01",
           "to": "2026-07-31",
-          "rateEA": 3.0,
+          "rateEA": 3,
           "notes": "Bolsillo a la vista USD (3.0% E.A.)"
         },
         {
           "from": "2026-08-01",
           "to": "2099-12-31",
-          "rateEA": 4.0,
+          "rateEA": 4,
           "notes": "Bolsillo a la vista USD (4.0% E.A. vigente)"
         }
       ],
       "tiered_savings_rates": [
         {
           "maxBalance": 500,
-          "rateEA": 4.0,
+          "rateEA": 4,
           "label": "Hasta $500 USD (4.0% EA)"
         },
         {
           "maxBalance": 1000,
-          "rateEA": 4.0,
+          "rateEA": 4,
           "label": "$500 a $1,000 USD (4.0% EA)"
         },
         {
@@ -671,7 +675,7 @@
         },
         {
           "maxBalance": 9999999,
-          "rateEA": 6.0,
+          "rateEA": 6,
           "label": "Más de $5,000 USD (6.0% EA)"
         }
       ],
@@ -685,7 +689,7 @@
         {
           "termDaysMin": 90,
           "termDaysMax": 365,
-          "rateEA": 8.0,
+          "rateEA": 8,
           "label": "90 Días Plenti Lock (8.00% E.A.)"
         }
       ]
@@ -698,25 +702,25 @@
         {
           "from": "2024-01-01",
           "to": "2026-07-31",
-          "rateEA": 3.0,
+          "rateEA": 3,
           "notes": "Bolsillo a la vista USD (3.0% E.A.)"
         },
         {
           "from": "2026-08-01",
           "to": "2099-12-31",
-          "rateEA": 4.0,
+          "rateEA": 4,
           "notes": "Bolsillo a la vista USD (4.0% E.A. vigente)"
         }
       ],
       "tiered_savings_rates": [
         {
           "maxBalance": 500,
-          "rateEA": 4.0,
+          "rateEA": 4,
           "label": "Hasta $500 USD (4.0% EA)"
         },
         {
           "maxBalance": 1000,
-          "rateEA": 4.0,
+          "rateEA": 4,
           "label": "$500 a $1,000 USD (4.0% EA)"
         },
         {
@@ -726,7 +730,7 @@
         },
         {
           "maxBalance": 9999999,
-          "rateEA": 6.0,
+          "rateEA": 6,
           "label": "Más de $5,000 USD (6.0% EA)"
         }
       ],
@@ -740,7 +744,7 @@
         {
           "termDaysMin": 90,
           "termDaysMax": 365,
-          "rateEA": 8.0,
+          "rateEA": 8,
           "label": "90 Días Plenti Lock (8.00% E.A.)"
         }
       ]
@@ -760,7 +764,7 @@
         {
           "termDaysMin": 1,
           "termDaysMax": 120,
-          "rateEA": 10.0,
+          "rateEA": 10,
           "label": "90 Días Tasa Fija"
         },
         {
@@ -784,7 +788,7 @@
         {
           "from": "2024-01-01",
           "to": "2099-12-31",
-          "rateEA": 9.0,
+          "rateEA": 9,
           "notes": "Cuenta Rentahorro y Libre Ahorro"
         }
       ],
@@ -836,7 +840,7 @@
         {
           "termDaysMin": 221,
           "termDaysMax": 999,
-          "rateEA": 11.0,
+          "rateEA": 11,
           "label": "360 Días Online"
         }
       ]
@@ -944,7 +948,7 @@
         {
           "from": "2024-01-01",
           "to": "2099-12-31",
-          "rateEA": 9.0,
+          "rateEA": 9,
           "notes": "Cuenta Diamante y Expreso"
         }
       ],
@@ -1008,7 +1012,7 @@
         {
           "from": "2024-01-01",
           "to": "2099-12-31",
-          "rateEA": 10.0,
+          "rateEA": 10,
           "notes": "Cuenta PAC Costo Cero y CMR Puntos"
         }
       ],
@@ -1040,7 +1044,7 @@
         {
           "from": "2024-01-01",
           "to": "2099-12-31",
-          "rateEA": 8.0,
+          "rateEA": 8,
           "notes": "Cuenta Tradicional Ahorro y RentaFácil"
         }
       ],
