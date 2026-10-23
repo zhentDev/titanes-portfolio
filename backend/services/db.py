@@ -748,6 +748,30 @@ def _migrate_data_to_postgres_if_empty(pg_conn, duck_con):
                         ON CONFLICT (id) DO NOTHING
                     """, list(r))
                 print(f"[POSTGRES] Migrated {len(rows)} purchase sales from DuckDB.")
+
+            # 7. user_cash_flow
+            cur.execute("SELECT COUNT(*) FROM user_cash_flow")
+            if cur.fetchone()[0] == 0:
+                rows = duck_con.execute("SELECT user_id, data FROM user_cash_flow").fetchall()
+                for r in rows:
+                    cur.execute("""
+                        INSERT INTO user_cash_flow (user_id, data, updated_at)
+                        VALUES (%s, %s, CURRENT_TIMESTAMP)
+                        ON CONFLICT (user_id) DO NOTHING
+                    """, [r[0], r[1] if isinstance(r[1], str) else json.dumps(r[1], ensure_ascii=False)])
+                print(f"[POSTGRES] Migrated {len(rows)} user cash flow records from DuckDB.")
+
+            # 8. user_fixed_income
+            cur.execute("SELECT COUNT(*) FROM user_fixed_income")
+            if cur.fetchone()[0] == 0:
+                rows = duck_con.execute("SELECT user_id, data FROM user_fixed_income").fetchall()
+                for r in rows:
+                    cur.execute("""
+                        INSERT INTO user_fixed_income (user_id, data, updated_at)
+                        VALUES (%s, %s, CURRENT_TIMESTAMP)
+                        ON CONFLICT (user_id) DO NOTHING
+                    """, [r[0], r[1] if isinstance(r[1], str) else json.dumps(r[1], ensure_ascii=False)])
+                print(f"[POSTGRES] Migrated {len(rows)} user fixed income records from DuckDB.")
     except Exception as e:
         print(f"[POSTGRES] _migrate_data_to_postgres_if_empty error: {e}")
 
@@ -903,7 +927,31 @@ def _sync_postgres_data_to_duckdb(duck_con):
                             cost_basis = EXCLUDED.cost_basis
                     """, [r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8], r[9], r[10], r[11], r[12], r[13]])
 
-            print(f"[POSTGRES->DUCKDB] Synchronized users, custom strategies, rebalances, and purchases from PostgreSQL to DuckDB.")
+                # 8. User Cash Flow
+                cur.execute("SELECT user_id, data FROM user_cash_flow")
+                pg_cf = cur.fetchall()
+                for r in pg_cf:
+                    duck_con.execute("""
+                        INSERT INTO user_cash_flow (user_id, data, updated_at)
+                        VALUES (?, ?, now())
+                        ON CONFLICT (user_id) DO UPDATE SET
+                            data = EXCLUDED.data,
+                            updated_at = now()
+                    """, [r[0], r[1] if isinstance(r[1], str) else json.dumps(r[1], ensure_ascii=False)])
+
+                # 9. User Fixed Income
+                cur.execute("SELECT user_id, data FROM user_fixed_income")
+                pg_fi = cur.fetchall()
+                for r in pg_fi:
+                    duck_con.execute("""
+                        INSERT INTO user_fixed_income (user_id, data, updated_at)
+                        VALUES (?, ?, now())
+                        ON CONFLICT (user_id) DO UPDATE SET
+                            data = EXCLUDED.data,
+                            updated_at = now()
+                    """, [r[0], r[1] if isinstance(r[1], str) else json.dumps(r[1], ensure_ascii=False)])
+
+            print(f"[POSTGRES->DUCKDB] Synchronized users, custom strategies, rebalances, purchases, cash flow, and fixed income from PostgreSQL to DuckDB.")
     except Exception as e:
         print(f"[POSTGRES->DUCKDB] Sync error: {e}")
 
