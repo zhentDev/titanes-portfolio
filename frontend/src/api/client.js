@@ -78,6 +78,15 @@ async function safeFetch(url, options = {}, retries = 3, delayMs = 1500) {
       clearTimeout(timer);
       if (externalSignal) externalSignal.removeEventListener("abort", onExternalAbort);
 
+      // Do not retry or log on intentional cancellation / abort
+      if (
+        err.name === "AbortError" ||
+        externalSignal?.aborted ||
+        (err.message && err.message.toLowerCase().includes("abort"))
+      ) {
+        throw err;
+      }
+
       if (i < retries) {
         const waitTime = delayMs * (i + 1);
         console.warn(`[API] Fallo de conexión (${err.message}). Reintentando en ${waitTime}ms (intento ${i + 1}/${retries})...`);
@@ -1004,6 +1013,22 @@ export async function deleteWealthItemApi(id) {
     method: "DELETE",
   });
   if (!res.ok) throw new Error("Error al eliminar asignación de ahorro/inversión");
+  return res.json();
+}
+
+export async function deleteExpenseApi(id) {
+  const res = await safeFetch(`${getBase()}/cash-flow/expense/${id}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Error al eliminar gasto");
+  return res.json();
+}
+
+export async function deleteDebtApi(id) {
+  const res = await safeFetch(`${getBase()}/cash-flow/debt/${id}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Error al eliminar deuda");
   return res.json();
 }
 

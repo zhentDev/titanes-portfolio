@@ -20,6 +20,8 @@ import {
   deleteNeedExpenseApi,
   deleteWantExpenseApi,
   deleteWealthItemApi,
+  deleteExpenseApi,
+  deleteDebtApi,
   fetchCashFlowData,
   syncCashFlowStateApi,
 } from "../api/client";
@@ -400,7 +402,7 @@ export const useCashFlowStore = create(
           };
         });
         get().syncStateWithBackend();
-        fetch(`/api/cash-flow/expense/${id}`, { method: "DELETE" }).catch(() => {});
+        deleteExpenseApi(id).catch(() => {});
         toast.success("Gasto real eliminado", { icon: "🗑️" });
       },
 
@@ -455,7 +457,7 @@ export const useCashFlowStore = create(
           return { debts: updatedDebts };
         });
         get().syncStateWithBackend();
-        fetch(`/api/cash-flow/debt/${id}`, { method: "DELETE" }).catch(() => {});
+        deleteDebtApi(id).catch(() => {});
         toast.success("Deuda eliminada", { icon: "🗑️" });
       },
 
