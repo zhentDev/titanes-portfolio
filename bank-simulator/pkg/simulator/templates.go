@@ -202,6 +202,60 @@ func GetDefaultPresets() []models.SimulatedPreset {
 			Description:   "STARBUCKS",
 			Category:      "Café y Salidas",
 		},
+
+		// === NEQUI COLOMBIA ===
+		{
+			ID:            "nequi-transfer-in",
+			Name:          "Nequi: Transferencia Recibida ($50.000)",
+			Bank:          "Nequi Colombia",
+			ActionType:    models.TypeCredit,
+			Title:         "Nequi",
+			Text:          "¡Te transfirieron $50.000! Tu nuevo saldo disponible es $58.047,40",
+			TargetAccount: "Disponible Nequi",
+			Amount:        50000,
+			Description:   "Transferencia recibida Nequi",
+			Category:      "Transferencias",
+		},
+		{
+			ID:            "nequi-debit-payment",
+			Name:          "Nequi: Pago Comercio / QR ($25.000)",
+			Bank:          "Nequi Colombia",
+			ActionType:    models.TypeDebit,
+			Title:         "Nequi",
+			Text:          "Pagaste $25.000 en TIENDA D1 con tu Nequi",
+			TargetAccount: "Disponible Nequi",
+			Amount:        25000,
+			Description:   "Compra TIENDA D1",
+			Category:      "Mercado",
+		},
+
+		// === DAVIPLATA ===
+		{
+			ID:            "daviplata-debit-payment",
+			Name:          "Daviplata: Compra en Comercio ($20.000)",
+			Bank:          "Davivienda / Daviplata",
+			ActionType:    models.TypeDebit,
+			Title:         "DaviPlata",
+			Text:          "DaviPlata: Pagaste $20.000 en PANADERIA LA 80",
+			TargetAccount: "Daviplata Principal",
+			Amount:        20000,
+			Description:   "Compra PANADERIA LA 80",
+			Category:      "Alimentación",
+		},
+
+		// === RAPPIPAY CASCADA SOBREGIRO ===
+		{
+			ID:            "rappi-cascada-impresora",
+			Name:          "RappiPay: Sobregiro Cascada Impresora ($300.000)",
+			Bank:          "RappiPay",
+			ActionType:    models.TypeDebit,
+			Title:         "RappiCuenta",
+			Text:          "Compraste por $300.000 en HP STORE COLOMBIA con cargo a Impresora",
+			TargetAccount: "Impresora",
+			Amount:        300000,
+			Description:   "Compra HP STORE COLOMBIA (Sobregiro Cascada)",
+			Category:      "Tecnología",
+		},
 	}
 }
 

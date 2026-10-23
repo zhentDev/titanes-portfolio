@@ -58,8 +58,32 @@ export const BANK_PRESETS = [
     icon: "🧡",
     payoutFrequency: "daily",
     defaultRateEA: 14.00,
-    suggestedProducts: ["Bóveda RappiCuenta", "RappiCuenta Ahorros"],
+    suggestedProducts: ["Cuenta RappiPay (Principal)", "Impresora (Bolsillo)", "Fondo de emergencia", "Bóveda RappiCuenta"],
     logoSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%"><rect width="100" height="100" rx="22" fill="#ff441f"/><path d="M28 35h24c8 0 14 5 14 13s-6 13-14 13H40v13H28V35zm12 18h11c3.5 0 6-2 6-5s-2.5-5-6-5H40v10z" fill="#ffffff"/></svg>`,
+  },
+  {
+    id: "nequi",
+    name: "Nequi",
+    country: "🇨🇴",
+    currency: "COP",
+    color: "#20002c",
+    icon: "🟣",
+    payoutFrequency: "monthly",
+    defaultRateEA: 0.0,
+    suggestedProducts: ["Disponible Nequi", "Colchón Nequi", "Bolsillo Nequi", "Metas Nequi"],
+    logoSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%"><rect width="100" height="100" rx="22" fill="#20002c"/><path d="M30 32h14v22l18-22h18L58 54l22 24H62L44 58v20H30V32z" fill="#ff0080"/></svg>`,
+  },
+  {
+    id: "daviplata",
+    name: "Daviplata",
+    country: "🇨🇴",
+    currency: "COP",
+    color: "#ed1c24",
+    icon: "📲",
+    payoutFrequency: "monthly",
+    defaultRateEA: 0.0,
+    suggestedProducts: ["Daviplata Principal", "Bolsillo Daviplata"],
+    logoSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%"><rect width="100" height="100" rx="22" fill="#ed1c24"/><circle cx="50" cy="50" r="28" fill="#ffffff"/><path d="M42 36h12c7 0 12 4 12 10s-5 10-12 10h-6v10H42V36zm6 14h6c3 0 5-1.5 5-4s-2-4-5-4h-6v8z" fill="#ed1c24"/></svg>`,
   },
   {
     id: "uala",
@@ -360,6 +384,12 @@ export function getBankPreset(nameOrId = "") {
   }
 
   // Exact or alias checks for specific banks
+  if (q.includes("nequi")) {
+    return BANK_PRESETS.find((p) => p.id === "nequi") || BANK_PRESETS[0];
+  }
+  if (q.includes("daviplata") || q.includes("davi plata")) {
+    return BANK_PRESETS.find((p) => p.id === "daviplata") || BANK_PRESETS[0];
+  }
   if (q.includes("cajasocial") || q.includes("bcs") || (q.includes("caja") && q.includes("social"))) {
     return BANK_PRESETS.find((p) => p.id === "cajasocial") || BANK_PRESETS[0];
   }

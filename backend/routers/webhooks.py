@@ -150,6 +150,7 @@ def resolve_entity(db: dict[str, Any], entity_query: str) -> dict[str, Any]:
         "tarjeta nu": "Nu Colombia",
         "rappi": "RappiPay",
         "rappipay": "RappiPay",
+        "rappicuenta": "RappiPay",
         "davivienda rappi": "RappiPay",
         "finandina": "Finandina",
         "banco finandina": "Finandina",
@@ -164,8 +165,12 @@ def resolve_entity(db: dict[str, Any], entity_query: str) -> dict[str, Any]:
         "billetera de google": "Google Wallet",
         "google pay": "Google Wallet",
         "gpay": "Google Wallet",
-        "nequi": "Nequi Colombia",
-        "nequi colombia": "Nequi Colombia",
+        "nequi": "Nequi",
+        "nequi colombia": "Nequi",
+        "bancolombia nequi": "Nequi",
+        "daviplata": "Daviplata",
+        "davi plata": "Daviplata",
+        "davivienda daviplata": "Daviplata",
     }
 
     resolved_name = alias_map.get(eq_norm, entity_query.strip())
@@ -185,12 +190,25 @@ def resolve_entity(db: dict[str, Any], entity_query: str) -> dict[str, Any]:
     # 3. Not found -> auto-create new entity so expense is never discarded
     clean_id_suffix = re.sub(r"[^a-z0-9]", "", resolved_norm)[:12] or "bank"
     new_entity_id = f"ent_{clean_id_suffix}_{uuid.uuid4().hex[:4]}"
+
+    # Preset entity visuals
+    entity_presets = {
+        "Nequi": {"color": "#20002c", "icon": "🟣"},
+        "Daviplata": {"color": "#ed1c24", "icon": "📲"},
+        "RappiPay": {"color": "#ff441f", "icon": "🧡"},
+        "Nu Colombia": {"color": "#820ad1", "icon": "💜"},
+        "Banco Caja Social": {"color": "#0055b8", "icon": "🏛️"},
+        "Finandina": {"color": "#d10a5a", "icon": "💜"},
+        "Plenti (Ahorros)": {"color": "#7c3aed", "icon": "🟣"},
+    }
+    preset = entity_presets.get(resolved_name, {"color": "#3b82f6", "icon": "🏦"})
+
     new_entity = {
         "id": new_entity_id,
         "name": resolved_name,
         "country": "🇨🇴",
-        "color": "#3b82f6",
-        "icon": "🏦",
+        "color": preset["color"],
+        "icon": preset["icon"],
         "createdAt": get_current_colombia_time().isoformat(),
     }
     entities.append(new_entity)
@@ -273,21 +291,36 @@ def resolve_account(db: dict[str, Any], entity: dict[str, Any], account_query: s
             return a
 
     # 6. Account not found -> Auto-create account under this entity
-    clean_name = "Cuenta Nómina / Principal" if is_main_account else cleaned_query
+    is_digital_wallet = any(w in normalize_text(entity.get("name", "")) for w in ["nequi", "daviplata"])
+    account_cat = "digital_wallet" if is_digital_wallet else ("payroll" if is_main_account else "high_yield")
+    acc_type = "wallet" if is_digital_wallet else ("savings" if is_main_account else "pocket")
+    default_rate = 0.0 if is_digital_wallet else 12.0
+
+    if "nequi" in normalize_text(entity.get("name", "")):
+        clean_name = "Disponible Nequi"
+    elif "daviplata" in normalize_text(entity.get("name", "")):
+        clean_name = "Daviplata Principal"
+    elif is_main_account:
+        clean_name = "Cuenta Nómina / Principal"
+    else:
+        clean_name = cleaned_query or "Bolsillo"
+
     new_acc_id = f"acc_{re.sub(r'[^a-z0-9]', '', aq_norm)[:10]}_{uuid.uuid4().hex[:4]}"
     new_account = {
         "id": new_acc_id,
         "entityId": entity_id,
-        "name": clean_name if clean_name else "Cuenta Principal",
-        "type": "savings" if is_main_account else "pocket",
+        "name": clean_name,
+        "type": acc_type,
+        "accountCategory": account_cat,
+        "syncType": "api",
         "currency": "COP",
         "balance": 0.0,
-        "interestRateEA": 12.0,
+        "interestRateEA": default_rate,
         "isTaxExemptGMF": True,
         "rateHistory": [
             {
                 "date": get_current_colombia_time().strftime("%Y-%m-%d"),
-                "rateEA": 12.0,
+                "rateEA": default_rate,
             }
         ],
         "createdAt": get_current_colombia_time().isoformat(),
@@ -344,6 +377,8 @@ def list_mobile_accounts(
                 "id": acc.get("id"),
                 "name": acc.get("name"),
                 "type": acc.get("type", "savings"),
+                "accountCategory": acc.get("accountCategory", "high_yield"),
+                "syncType": acc.get("syncType", "api"),
                 "balance": acc.get("balance", 0.0),
                 "currency": acc.get("currency", "COP"),
             }
@@ -411,7 +446,11 @@ def get_mobile_pockets(
         if "nu" in normalize_text(ent_clean_name):
             default_main_label = "Cuenta Nu Débito (Nómina)"
         elif "rappi" in normalize_text(ent_clean_name):
-            default_main_label = "Cuenta Rappi (Principal)"
+            default_main_label = "Cuenta RappiPay (Principal)"
+        elif "nequi" in normalize_text(ent_clean_name):
+            default_main_label = "Disponible Nequi"
+        elif "daviplata" in normalize_text(ent_clean_name):
+            default_main_label = "Daviplata Principal"
         elif "finandina" in normalize_text(ent_clean_name):
             default_main_label = "Cuenta Finandina (Principal)"
         else:
@@ -508,11 +547,17 @@ def register_mobile_transaction(
     norm_type = normalize_text(payload.type)
     search_context = f"{payload.description} {payload.raw_text or ''}".lower()
     credit_keywords = [
-        "recibiste", "te transfirieron", "abono", "consignacion",
+        "recibiste", "te transfirieron", "consignacion",
         "consignación", "nomina", "nómina", "devolucion", "devolución", "pago recibido"
     ]
 
-    if any(k in norm_type for k in ["credit", "ingreso", "abono", "entrada", "consignacion"]) or any(k in search_context for k in credit_keywords):
+    if any(k in norm_type for k in ["debit", "gasto", "compra", "salida", "retiro"]):
+        tx_type = "debit"
+        signed_amount = -amount_val
+    elif any(k in norm_type for k in ["credit", "ingreso", "abono", "entrada", "consignacion"]):
+        tx_type = "credit"
+        signed_amount = amount_val
+    elif any(k in search_context for k in credit_keywords):
         tx_type = "credit"
         signed_amount = amount_val
     else:
@@ -555,16 +600,57 @@ def register_mobile_transaction(
     else:
         tx_date = now_colombia.strftime("%Y-%m-%d")
 
-    # 5. Update Account Balance
+    # 5. Update Account Balance with Pocket Overdraft / Cascading Fallback
     previous_balance = float(account.get("balance", 0.0))
-    new_balance = round(previous_balance + signed_amount, 2)
-    account["balance"] = new_balance
+    is_pocket = account.get("type") == "pocket" or any(k in normalize_text(account.get("name")) for k in ["cajita", "bolsillo", "impresora"])
+    cascaded = False
+    covered_by_pocket = 0.0
+    shortfall = 0.0
+    principal_acc = None
+    prev_principal_bal = 0.0
+    new_principal_bal = 0.0
 
-    # Update account in db list
-    for idx, a in enumerate(db.get("accounts", [])):
-        if a.get("id") == account.get("id"):
-            db["accounts"][idx]["balance"] = new_balance
-            break
+    if tx_type == "debit" and is_pocket and amount_val > previous_balance:
+        # Movement exceeds what this pocket has!
+        # Fallback to the entity's Principal Account
+        cascaded = True
+        covered_by_pocket = max(0.0, previous_balance)
+        shortfall = round(amount_val - covered_by_pocket, 2)
+
+        # Look for entity's principal account
+        candidates = [
+            a for a in db.get("accounts", [])
+            if a.get("entityId") == entity.get("id")
+            and a.get("id") != account.get("id")
+            and any(k in normalize_text(a.get("name")) for k in ["principal", "nomina", "cuenta", "ahorros", "debito"])
+        ]
+        if candidates:
+            principal_acc = candidates[0]
+        else:
+            # Auto-create principal account if missing
+            principal_acc = resolve_account(db, entity, "Cuenta Principal")
+
+        # Pocket drops to 0
+        new_balance = 0.0
+        account["balance"] = 0.0
+
+        # Shortfall is deducted from Principal Account
+        prev_principal_bal = float(principal_acc.get("balance", 0.0))
+        new_principal_bal = round(prev_principal_bal - shortfall, 2)
+        principal_acc["balance"] = new_principal_bal
+
+        for idx, a in enumerate(db.get("accounts", [])):
+            if a.get("id") == account.get("id"):
+                db["accounts"][idx]["balance"] = 0.0
+            elif a.get("id") == principal_acc.get("id"):
+                db["accounts"][idx]["balance"] = new_principal_bal
+    else:
+        new_balance = round(previous_balance + signed_amount, 2)
+        account["balance"] = new_balance
+        for idx, a in enumerate(db.get("accounts", [])):
+            if a.get("id") == account.get("id"):
+                db["accounts"][idx]["balance"] = new_balance
+                break
 
     # 6. Create Transaction Object
     tx_id = f"tx_mb_{int(now_colombia.timestamp() * 1000)}_{uuid.uuid4().hex[:6]}"
@@ -579,6 +665,13 @@ def register_mobile_transaction(
         else:
             clean_desc = "Gasto bancario" if tx_type == "debit" else "Abono bancario"
 
+    if cascaded and principal_acc:
+        if covered_by_pocket > 0:
+            cascade_note = f" (Cascada: ${covered_by_pocket:,.0f} de {account['name']} + ${shortfall:,.0f} completados desde {principal_acc['name']})"
+        else:
+            cascade_note = f" (Cascada: 100% completado ${shortfall:,.0f} desde {principal_acc['name']} porque {account['name']} estaba en $0)"
+        clean_desc += cascade_note
+
     new_tx = {
         "id": tx_id,
         "accountId": account["id"],
@@ -591,6 +684,11 @@ def register_mobile_transaction(
         "category": payload.category or "Gasto Móvil",
         "source": "macrodroid_webhook",
         "rawText": payload.raw_text or "",
+        "cascaded": cascaded,
+        "coveredByPocket": covered_by_pocket if cascaded else None,
+        "shortfall": shortfall if cascaded else None,
+        "fallbackAccountId": principal_acc["id"] if cascaded and principal_acc else None,
+        "fallbackAccountName": principal_acc["name"] if cascaded and principal_acc else None,
         "createdAt": now_colombia.isoformat(),
     }
 
@@ -624,6 +722,9 @@ def register_mobile_transaction(
             "currency": account.get("currency", "COP"),
             "date": tx_date,
             "type": tx_type,
+            "cascaded": cascaded,
+            "shortfall": shortfall if cascaded else 0.0,
+            "fallbackAccountName": principal_acc["name"] if cascaded and principal_acc else None,
             "paymentSource": {
                 "type": "payroll" if is_payroll else "fixed_pocket",
                 "targetId": account.get("id"),
@@ -644,15 +745,25 @@ def register_mobile_transaction(
         f"Balance: {previous_balance:,.2f} -> {new_balance:,.2f} COP"
     )
 
-    action_label = "descontado" if tx_type == "debit" else "abonado"
-
-    return {
-        "success": True,
-        "message": (
+    if cascaded and principal_acc:
+        action_msg = (
+            f"Movimiento de ${amount_val:,.2f} COP procesado en cascada: "
+            f"${covered_by_pocket:,.2f} COP cubiertos por '{account['name']}' (saldo $0) "
+            f"y el faltante de ${shortfall:,.2f} COP completado desde '{principal_acc['name']}'."
+        )
+    else:
+        action_label = "descontado" if tx_type == "debit" else "abonado"
+        action_msg = (
             f"Se ha {action_label} exitosamente ${abs(signed_amount):,.2f} COP "
             f"en '{account['name']}' ({entity['name']})."
-        ),
+        )
+
+    res_data = {
+        "success": True,
+        "message": action_msg,
         "tx_id": tx_id,
+        "cascaded": cascaded,
+        "shortfall": shortfall if cascaded else 0.0,
         "entity": {
             "id": entity["id"],
             "name": entity["name"],
@@ -668,3 +779,11 @@ def register_mobile_transaction(
         "cash_flow_synced": cf_synced,
         "timestamp": now_colombia.isoformat(),
     }
+    if cascaded and principal_acc:
+        res_data["principal_account"] = {
+            "id": principal_acc["id"],
+            "name": principal_acc["name"],
+            "previous_balance": prev_principal_bal,
+            "new_balance": new_principal_bal,
+        }
+    return res_data

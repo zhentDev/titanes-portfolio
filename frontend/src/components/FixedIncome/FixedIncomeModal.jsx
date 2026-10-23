@@ -42,6 +42,8 @@ export default function FixedIncomeModal({
   const [selectedEntityId, setSelectedEntityId] = useState("");
   const [accountName, setAccountName] = useState("");
   const [accountType, setAccountType] = useState("pocket");
+  const [accountSyncType, setAccountSyncType] = useState("api");
+  const [accountCategory, setAccountCategory] = useState("high_yield");
   const [accountCurrency, setAccountCurrency] = useState("COP");
   const [accountBalance, setAccountBalance] = useState("");
   const [accountRateEA, setAccountRateEA] = useState("");
@@ -239,6 +241,8 @@ export default function FixedIncomeModal({
       } else if (initialTab === "account") {
         setAccountName("");
         setAccountType("pocket");
+        setAccountSyncType("api");
+        setAccountCategory("high_yield");
         setAccountCurrency("COP");
         setAccountBalance("");
         setAccountRateEA("");
@@ -279,6 +283,11 @@ export default function FixedIncomeModal({
       setSelectedEntityId(editItem.entityId || "");
       setAccountName(editItem.name || "");
       setAccountType(editItem.type || "pocket");
+      setAccountSyncType(editItem.syncType || "api");
+      setAccountCategory(
+        editItem.accountCategory ||
+        (editItem.type === "wallet" || Number(editItem.interestRateEA || 0) === 0 ? "digital_wallet" : "high_yield")
+      );
       setAccountCurrency(editItem.currency || "COP");
       setAccountBalance(String(editItem.balance || ""));
       setAccountRateEA(String(editItem.interestRateEA || ""));
@@ -486,13 +495,16 @@ export default function FixedIncomeModal({
       }
     }
 
+    const isWallet = accountCategory === "digital_wallet";
     const accountData = {
       entityId: finalEntityId,
       name: accountName,
-      type: accountType,
+      type: isWallet ? "wallet" : accountType,
+      syncType: accountSyncType,
+      accountCategory,
       currency: accountCurrency,
       balance: Number(accountBalance || 0),
-      interestRateEA: Number(accountRateEA || 0),
+      interestRateEA: isWallet ? 0 : Number(accountRateEA || 0),
       isTaxExemptGMF: accountTaxExempt,
       startDate: accountStartDate,
       createdAt: editItem?.createdAt || `${accountStartDate}T00:00:00.000Z`,
@@ -736,6 +748,47 @@ export default function FixedIncomeModal({
                 )}
               </div>
 
+              {/* Sync Mode & Financial Category */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div>
+                  <label className="fi-form-label">
+                    Modo de Registro
+                  </label>
+                  <select
+                    value={accountSyncType}
+                    onChange={(e) => setAccountSyncType(e.target.value)}
+                    className="fi-select"
+                  >
+                    <option value="api">🤖 Automático (API / Notificaciones Móvil)</option>
+                    <option value="manual">✍️ Manual (Movimientos a mano)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="fi-form-label">
+                    Categoría Financiera
+                  </label>
+                  <select
+                    value={accountCategory}
+                    onChange={(e) => {
+                      const cat = e.target.value;
+                      setAccountCategory(cat);
+                      if (cat === "digital_wallet") {
+                        setAccountRateEA("0");
+                        setAccountType("wallet");
+                      } else if (cat === "payroll") {
+                        setAccountType("savings");
+                      }
+                    }}
+                    className="fi-select"
+                  >
+                    <option value="high_yield">⚡ Ahorro Alto Rendimiento (Intereses E.A.)</option>
+                    <option value="digital_wallet">👛 Billetera Digital / Bajo Monto (Nequi, Daviplata - 0% E.A.)</option>
+                    <option value="payroll">💼 Nómina / Débito Principal</option>
+                    <option value="cash">💵 Efectivo / Caja Menor (Manual)</option>
+                  </select>
+                </div>
+              </div>
+
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
                   <label className="fi-form-label">
@@ -784,15 +837,30 @@ export default function FixedIncomeModal({
                   <label className="fi-form-label">
                     Tasa Efectiva Anual (E.A. %)
                   </label>
-                  <FloatingInput
-                    type="number"
-                    step="0.01"
-                    placeholder="ej. 12.0"
-                    suffix="% E.A."
-                    value={accountRateEA}
-                    onChange={(e) => setAccountRateEA(e.target.value)}
-                    required
-                  />
+                  {accountCategory === "digital_wallet" ? (
+                    <div
+                      style={{
+                        padding: "10px 12px",
+                        borderRadius: 8,
+                        background: isLight ? "rgba(168, 85, 247, 0.08)" : "rgba(168, 85, 247, 0.15)",
+                        border: "1px dashed rgba(168, 85, 247, 0.35)",
+                        fontSize: "0.78rem",
+                        color: "var(--text-secondary)",
+                      }}
+                    >
+                      <span>👛 <strong>0.00% E.A.</strong> — Billetera tradicional de bajo monto sin rendimiento. Solo para entradas y salidas cotidianas.</span>
+                    </div>
+                  ) : (
+                    <FloatingInput
+                      type="number"
+                      step="0.01"
+                      placeholder="ej. 12.0"
+                      suffix="% E.A."
+                      value={accountRateEA}
+                      onChange={(e) => setAccountRateEA(e.target.value)}
+                      required
+                    />
+                  )}
                 </div>
               </div>
 

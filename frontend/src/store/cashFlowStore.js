@@ -1285,9 +1285,15 @@ export const useCashFlowStore = create(
           return sum + bal * mult;
         }, 0);
 
-        // 2. Identify Non-emergency fixed income accounts
+        // 2. Identify Non-emergency high-yield savings accounts (exclude payroll and low-amount digital wallets)
         const nonEmergencyAccounts = accounts.filter(
-          (acc) => !emergencyAccounts.some((ea) => ea.id === acc.id)
+          (acc) =>
+            !emergencyAccounts.some((ea) => ea.id === acc.id) &&
+            acc.accountCategory !== "digital_wallet" &&
+            acc.accountCategory !== "payroll" &&
+            acc.type !== "wallet" &&
+            !acc.name?.toLowerCase().includes("nomina") &&
+            !acc.name?.toLowerCase().includes("nómina")
         );
         const nonEmergencyCashCOP = nonEmergencyAccounts.reduce((sum, acc) => {
           const bal = Number(acc.balance) || 0;

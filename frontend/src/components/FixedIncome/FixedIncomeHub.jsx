@@ -1968,19 +1968,86 @@ export default function FixedIncomeHub() {
                           </button>
 
                           <div style={{ minWidth: 0 }}>
-                            <div style={{ fontWeight: 700, color: "var(--text-primary)", fontSize: "1.02rem", letterSpacing: "0.2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                              {acc.name}
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                              <span style={{ fontWeight: 700, color: "var(--text-primary)", fontSize: "1.02rem", letterSpacing: "0.2px" }}>
+                                {acc.name}
+                              </span>
+
+                              {/* Sync Type Badge: API vs Manual */}
+                              <span
+                                style={{
+                                  fontSize: "0.68rem",
+                                  fontWeight: 700,
+                                  padding: "2px 6px",
+                                  borderRadius: 6,
+                                  background: acc.syncType === "manual"
+                                    ? (isLight ? "rgba(100, 116, 139, 0.12)" : "rgba(148, 163, 184, 0.15)")
+                                    : (isLight ? "rgba(16, 185, 129, 0.12)" : "rgba(16, 185, 129, 0.2)"),
+                                  color: acc.syncType === "manual"
+                                    ? (isLight ? "#475569" : "#94a3b8")
+                                    : (isLight ? "#059669" : "#34d399"),
+                                  border: acc.syncType === "manual"
+                                    ? (isLight ? "1px solid rgba(100, 116, 139, 0.25)" : "1px solid rgba(148, 163, 184, 0.25)")
+                                    : (isLight ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(16, 185, 129, 0.35)"),
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 4,
+                                }}
+                                title={acc.syncType === "manual" ? "Movimientos registrados manualmente" : "Sincronizado automáticamente por notificaciones/webhook"}
+                              >
+                                {acc.syncType === "manual" ? "✍️ Manual" : "🤖 API"}
+                              </span>
+
+                              {/* Account Category: Digital Wallet */}
+                              {(acc.accountCategory === "digital_wallet" || acc.type === "wallet" || Number(acc.interestRateEA || 0) === 0) && (
+                                <span
+                                  style={{
+                                    fontSize: "0.68rem",
+                                    fontWeight: 700,
+                                    padding: "2px 6px",
+                                    borderRadius: 6,
+                                    background: isLight ? "rgba(168, 85, 247, 0.12)" : "rgba(168, 85, 247, 0.2)",
+                                    color: isLight ? "#7e22ce" : "#c084fc",
+                                    border: isLight ? "1px solid rgba(168, 85, 247, 0.3)" : "1px solid rgba(168, 85, 247, 0.3)",
+                                  }}
+                                  title="Billetera tradicional de bajo monto sin rendimiento (entradas y salidas)"
+                                >
+                                  👛 Billetera (Sin rendimiento)
+                                </span>
+                              )}
+
+                              {/* Cascading Overdraft Fallback Pill */}
+                              {(acc.fallbackAccountId || (acc.type === "pocket" && (acc.entityId === "ent_nu" || acc.entityId === "ent_1789616750396"))) && (
+                                <span
+                                  style={{
+                                    fontSize: "0.68rem",
+                                    fontWeight: 700,
+                                    padding: "2px 6px",
+                                    borderRadius: 6,
+                                    background: isLight ? "rgba(245, 158, 11, 0.12)" : "rgba(245, 158, 11, 0.2)",
+                                    color: isLight ? "#d97706" : "#fbbf24",
+                                    border: isLight ? "1px solid rgba(245, 158, 11, 0.3)" : "1px solid rgba(245, 158, 11, 0.3)",
+                                  }}
+                                  title="Si un gasto supera el saldo de este bolsillo, el excedente se completa automáticamente desde la Cuenta Principal"
+                                >
+                                  🛡️ Respaldo Cascada
+                                </span>
+                              )}
                             </div>
                             <div style={{ fontSize: "0.76rem", color: "var(--text-secondary)", marginTop: 3, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                               <span>
                                 {acc.type === "crypto" ? "Tasa Staking:" : "Tasa actual:"}{" "}
-                                <span style={{ color: "#10b981", fontWeight: 700, fontSize: "0.78rem" }}>
-                                  {Number(
-                                    acc.type === "crypto"
-                                      ? (acc.interestRateEA || 8.00)
-                                      : (historicalRates?.entities?.[acc.entityId]?.savings_rates?.slice(-1)[0]?.rateEA || acc.interestRateEA || 9.30)
-                                  ).toFixed(2)}% E.A.
-                                </span>
+                                {acc.accountCategory === "digital_wallet" || Number(acc.interestRateEA || 0) === 0 ? (
+                                  <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>0.00% E.A. (Bajo monto)</span>
+                                ) : (
+                                  <span style={{ color: "#10b981", fontWeight: 700, fontSize: "0.78rem" }}>
+                                    {Number(
+                                      acc.type === "crypto"
+                                        ? (acc.interestRateEA || 8.00)
+                                        : (historicalRates?.entities?.[acc.entityId]?.savings_rates?.slice(-1)[0]?.rateEA || acc.interestRateEA || 9.30)
+                                    ).toFixed(2)}% E.A.
+                                  </span>
+                                )}
                               </span>
                               {acc.type === "crypto" && (
                                 <span style={{ color: isLight ? "#92400e" : "#f59e0b", fontSize: "0.68rem", fontWeight: 700, background: isLight ? "rgba(245, 158, 11, 0.12)" : "rgba(245, 158, 11, 0.15)", padding: "2px 6px", borderRadius: 4, border: `1px solid ${isLight ? "rgba(217, 119, 6, 0.4)" : "rgba(245, 158, 11, 0.3)"}` }}>

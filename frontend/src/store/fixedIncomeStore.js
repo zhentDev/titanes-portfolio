@@ -227,10 +227,13 @@ export const useFixedIncomeStore = create(
       addAccount: async (accountData) => {
         const rate = Number(accountData.interestRateEA || 0);
         const newAccount = {
-          id: `acc_${Date.now()}`,
+          id: accountData.id || `acc_${Date.now()}`,
           entityId: accountData.entityId,
           name: accountData.name.trim(),
           type: accountData.type || "savings",
+          syncType: accountData.syncType || "api",
+          accountCategory: accountData.accountCategory || (accountData.type === "wallet" || rate === 0 ? "digital_wallet" : "high_yield"),
+          fallbackAccountId: accountData.fallbackAccountId || null,
           currency: accountData.currency || "COP",
           balance: Number(accountData.balance || 0),
           interestRateEA: rate,

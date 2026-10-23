@@ -216,6 +216,30 @@ func (e *Engine) ExtractDescription(n models.RawNotification, bank string, txTyp
 			return "Rendimiento Diario Plenti"
 		}
 		return "Movimiento Plenti"
+
+	case "Nequi Colombia":
+		if strings.Contains(strings.ToLower(text), "pagaste") {
+			re := regexp.MustCompile(`(?i)pagaste\s+\$?[\d\.,]+\s+en\s+([^.]+?)(?:\s+con|\.|$)`)
+			if m := re.FindStringSubmatch(text); len(m) > 1 {
+				return "Compra " + strings.TrimSpace(m[1])
+			}
+		}
+		if strings.Contains(strings.ToLower(text), "transfirieron") || strings.Contains(strings.ToLower(text), "recibiste") {
+			return "Transferencia recibida Nequi"
+		}
+		return "Movimiento Nequi"
+
+	case "Davivienda / Daviplata":
+		if strings.Contains(strings.ToLower(text), "pagaste") {
+			re := regexp.MustCompile(`(?i)pagaste\s+\$?[\d\.,]+\s+en\s+([^.]+?)(?:\s+con|\.|$)`)
+			if m := re.FindStringSubmatch(text); len(m) > 1 {
+				return "Compra " + strings.TrimSpace(m[1])
+			}
+		}
+		if strings.Contains(strings.ToLower(text), "recibiste") || strings.Contains(strings.ToLower(text), "pasaron") {
+			return "Transferencia recibida Daviplata"
+		}
+		return "Movimiento Daviplata"
 	}
 
 	// Generic purchase / merchant matching
@@ -281,6 +305,10 @@ func (e *Engine) DetectAccount(n models.RawNotification, bank string) string {
 		return "Cuenta Rappi (Principal)"
 	case "Finandina":
 		return "Cuenta Finandina (Principal)"
+	case "Nequi Colombia":
+		return "Disponible Nequi"
+	case "Davivienda / Daviplata":
+		return "Daviplata Principal"
 	default:
 		return "Cuenta Nómina / Principal"
 	}

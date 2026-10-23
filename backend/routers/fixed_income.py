@@ -196,6 +196,9 @@ class AccountModel(BaseModel):
     entityId: str
     name: str
     type: str = "savings"  # 'savings' | 'pocket' | 'wallet' | 'crypto'
+    syncType: str | None = "api"  # 'api' | 'manual'
+    accountCategory: str | None = "high_yield"  # 'high_yield' | 'digital_wallet' | 'payroll' | 'cash'
+    fallbackAccountId: str | None = None
     currency: str = "COP"  # 'COP' | 'USD' | 'EUR' | 'USDC'
     balance: float = 0.0
     interestRateEA: float = 0.0
@@ -307,6 +310,9 @@ def create_account(account: AccountModel, request: Request):
         "entityId": account.entityId,
         "name": account.name,
         "type": account.type,
+        "syncType": account.syncType or "api",
+        "accountCategory": account.accountCategory or ("digital_wallet" if account.type == "wallet" or account.interestRateEA == 0 else "high_yield"),
+        "fallbackAccountId": account.fallbackAccountId,
         "currency": account.currency,
         "balance": float(account.balance),
         "interestRateEA": float(account.interestRateEA),
@@ -330,6 +336,9 @@ def update_account(account_id: str, account: AccountModel, request: Request):
                 **a,
                 "name": account.name,
                 "type": account.type,
+                "syncType": account.syncType or a.get("syncType", "api"),
+                "accountCategory": account.accountCategory or a.get("accountCategory", "high_yield"),
+                "fallbackAccountId": account.fallbackAccountId if account.fallbackAccountId is not None else a.get("fallbackAccountId"),
                 "currency": account.currency,
                 "balance": float(account.balance),
                 "interestRateEA": float(account.interestRateEA),

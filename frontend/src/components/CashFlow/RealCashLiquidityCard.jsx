@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { formatCashFlowMoney } from "../../utils/cashFlowFormatters";
+import { useTheme } from "../../context/ThemeContext";
 import "./CashFlow.css";
 
 export default function RealCashLiquidityCard({
@@ -21,6 +22,8 @@ export default function RealCashLiquidityCard({
   onOpenExpenseModal,
   onOpenPaymentModal,
 }) {
+  const { theme } = useTheme();
+  const isLight = theme === "light";
   const formatMoney = (val, cur = currency) => formatCashFlowMoney(val, cur, fxRate);
   const [viewMode, setViewMode] = useState("real_today"); // 'real_today' | 'projected_month'
 
@@ -150,11 +153,19 @@ export default function RealCashLiquidityCard({
   const effectiveInflowForProjection = realPayrollCredits > 0 ? realCashInPayroll : (netSalaryAmount - totalExecutedPayrollOutflow);
   const projectedSurplus = effectiveInflowForProjection - totalPendingPayrollCommitments;
 
-  // 5. Total Balance in High-Yield Savings Accounts (Cajitas Nu, Plenti, CDTs, etc.) in base COP
-  const totalPocketsBalance = fixedIncomeAccounts.reduce((acc, a) => {
-    const mult = a.currency === "USD" ? Number(fxRate) || 4150 : 1;
-    return acc + (Number(a.balance) || 0) * mult;
-  }, 0);
+  // 5. Total Balance in High-Yield Savings Accounts (Cajitas Nu, Plenti, CDTs, etc.) and Digital Wallets in base COP
+  const totalHighYieldBalance = fixedIncomeAccounts
+    .filter((a) => a.id !== matchedPayrollAccount?.id && a.accountCategory !== "digital_wallet")
+    .reduce((acc, a) => {
+      const mult = a.currency === "USD" ? Number(fxRate) || 4150 : 1;
+      return acc + (Number(a.balance) || 0) * mult;
+    }, 0);
+
+  const totalWalletsBalance = fixedIncomeAccounts
+    .filter((a) => a.accountCategory === "digital_wallet")
+    .reduce((acc, a) => acc + (Number(a.balance) || 0), 0);
+
+  const totalLiquidSavings = totalHighYieldBalance + totalWalletsBalance;
 
   // 6. Total Real Credit Limits and Debt (Cupo Usado vs Cupo Libre)
   let totalCreditLimit = 0;
@@ -533,7 +544,7 @@ export default function RealCashLiquidityCard({
                 color: "#0284c7",
               }}
             >
-              {formatMoney(totalPocketsBalance, currency)}
+              {formatMoney(totalLiquidSavings, currency)}
             </div>
           </div>
 
@@ -550,13 +561,27 @@ export default function RealCashLiquidityCard({
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span>Cuentas con Rendimiento:</span>
+              <strong style={{ color: "var(--text-primary)" }}>
+                {formatMoney(totalHighYieldBalance, currency)}
+              </strong>
+            </div>
+            {totalWalletsBalance > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span>👛 Billeteras (Nequi/Daviplata):</span>
+                <strong style={{ color: isLight ? "#7e22ce" : "#c084fc" }}>
+                  {formatMoney(totalWalletsBalance, currency)}
+                </strong>
+              </div>
+            )}
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span>Rendimientos mes:</span>
               <strong style={{ color: "#10b981" }}>
                 +{formatMoney(inflows.find((i) => i.category === "passive_fixed")?.amount || 16706, currency)}
               </strong>
             </div>
             <div style={{ color: "var(--text-muted)" }}>
-              Total disponible en Cuentas de Ahorro / Bolsillos / CDTs
+              Ahorros líquidos en Rendimiento & Billeteras Digitales
             </div>
           </div>
         </div>
