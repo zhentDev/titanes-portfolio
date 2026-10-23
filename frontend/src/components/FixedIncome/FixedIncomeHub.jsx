@@ -271,7 +271,11 @@ export default function FixedIncomeHub() {
     if (currency === "USD" || currency === "USDC") {
       return `USD $${val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
-    return `$${Math.round(val).toLocaleString("en-US")}`;
+    const hasDecimals = Math.abs(val - Math.round(val)) >= 0.005;
+    return `$${val.toLocaleString("en-US", {
+      minimumFractionDigits: hasDecimals ? 2 : 0,
+      maximumFractionDigits: 2,
+    })}`;
   };
 
   // ── Auto-generate Monthly Yield Transactions Handler ──────────
@@ -306,8 +310,8 @@ export default function FixedIncomeHub() {
     }
   };
 
-  // ── Active Entities Filter (Exclude pure 0% wallets like Nequi / Daviplata) ──
-  const activeEntities = useMemo(() => {
+  // ── 1. Entities for Yield Chart & Top Filter (ONLY entities that generate >0% E.A. or have CDTs; excludes 0% wallets like Nequi / Daviplata from chart) ──
+  const chartEntities = useMemo(() => {
     return entities.filter((entity) => {
       const entNameLower = (entity.name || "").toLowerCase();
       if (entNameLower.includes("nequi") || entNameLower.includes("daviplata")) return false;
@@ -320,9 +324,17 @@ export default function FixedIncomeHub() {
           a.type !== "wallet"
       );
       const hasCdt = cdts.some((c) => c.entityId === entity.id);
-
-      if (showAllEntities) return hasYieldAcc || hasCdt || !accounts.some((a) => a.entityId === entity.id);
       return hasYieldAcc || hasCdt;
+    });
+  }, [entities, accounts, cdts]);
+
+  // ── 2. Active Entities for Master-Detail Account List (Includes Yield Entities + Nequi & Daviplata so balances are always visible) ──
+  const activeEntities = useMemo(() => {
+    if (showAllEntities) return entities;
+    return entities.filter((entity) => {
+      const hasAcc = accounts.some((a) => a.entityId === entity.id);
+      const hasCdt = cdts.some((c) => c.entityId === entity.id);
+      return hasAcc || hasCdt;
     });
   }, [entities, accounts, cdts, showAllEntities]);
 
@@ -814,10 +826,10 @@ export default function FixedIncomeHub() {
             whiteSpace: "nowrap",
           }}
         >
-          <span>🌐 Consolidado Global ({activeEntities.length})</span>
+          <span>🌐 Consolidado Global ({chartEntities.length})</span>
         </button>
 
-        {activeEntities.map((ent) => {
+        {chartEntities.map((ent) => {
           const isSelected = selectedEntityView === ent.id;
           return (
             <button
@@ -1885,26 +1897,26 @@ export default function FixedIncomeHub() {
                       </div>
                     )}
 
-                    {/* 2. Saldo Transaccional / Nómina (0% E.A. - Sin Rendimiento) */}
+                    {/* 2. Saldo Transaccional / Nómina / Billetera (0% E.A. - Sin Rendimiento) */}
                     {accountsTransactionalTotal > 0 && (
                       <div
                         style={{
                           textAlign: "right",
-                          background: isLight ? "rgba(59, 130, 246, 0.08)" : "rgba(59, 130, 246, 0.12)",
+                          background: isLight ? "rgba(59, 130, 246, 0.08)" : "rgba(59, 130, 246, 0.14)",
                           padding: "6px 12px",
                           borderRadius: 8,
-                          border: `1px solid ${isLight ? "rgba(59, 130, 246, 0.3)" : "rgba(59, 130, 246, 0.35)"}`,
+                          border: `1px solid ${isLight ? "rgba(59, 130, 246, 0.3)" : "rgba(59, 130, 246, 0.4)"}`,
                         }}
-                        title="Saldo disponible transaccional (nómina o billetera a la vista) sin rendimiento (0% E.A.). No infla la curva de renta fija."
+                        title="Saldo disponible transaccional (nómina o billetera a la vista) sin rendimiento (0% E.A.). No se grafica en la curva de renta fija."
                       >
                         <span style={{ fontSize: "0.68rem", color: isLight ? "#1d4ed8" : "#93c5fd", fontWeight: 700, display: "block", textTransform: "uppercase" }}>
-                          💼 Nómina / Efectivo
+                          {investedAccounts.length === 0 && activeEntityCDTs.length === 0 ? "👛 Saldo en Billetera" : "💼 Nómina / Efectivo"}
                         </span>
                         <span className="mono" style={{ fontWeight: 800, color: isLight ? "#1e40af" : "#60a5fa", fontSize: "1.08rem" }}>
                           {entCurrSymbol} {accountsTransactionalTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                         <div style={{ fontSize: "0.62rem", color: "var(--text-muted)", fontWeight: 600 }}>
-                          (0% E.A. • Transaccional)
+                          (0% E.A. • No graficado)
                         </div>
                       </div>
                     )}
@@ -1935,8 +1947,8 @@ export default function FixedIncomeHub() {
                       </div>
                     )}
 
-                    {/* 4. Total Invertido Consolidado en Renta Fija (Cajitas + CDTs) */}
-                    {(activeEntityCDTs.length > 0 || accountsTransactionalTotal > 0) && (
+                    {/* 4. Total Invertido Consolidado en Renta Fija (Solo cuando hay inversión real > 0) */}
+                    {entityInvestedTotal > 0 && (activeEntityCDTs.length > 0 || accountsTransactionalTotal > 0) && (
                       <div
                         style={{
                           textAlign: "right",
@@ -2697,19 +2709,19 @@ export default function FixedIncomeHub() {
                               );
                             })()}
 
-                            {/* Desglose por Períodos de Tasa Histórica (Acordeón Desplegable) */}
+                            {/* Desglose por Períodos de Tasa Histórica (Acordeón Desplegable Espacioso y de Alto Contraste) */}
                             {yieldData.periodBreakdown.length > 0 && (() => {
                               const isRatesExpanded = expandedAccountRates.has(acc.id);
 
                               return (
                                 <div
                                   style={{
-                                    background: isLight ? "#ffffff" : "var(--bg-card)",
-                                    borderRadius: 8,
-                                    padding: "10px 14px",
-                                    marginBottom: 12,
-                                    border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.1)" : "var(--border-accent)"}`,
-                                    boxShadow: isLight ? "0 2px 6px rgba(0, 0, 0, 0.03)" : "none",
+                                    background: isLight ? "#ffffff" : "rgba(15, 23, 42, 0.85)",
+                                    borderRadius: 12,
+                                    padding: "14px 18px",
+                                    marginBottom: 14,
+                                    border: `1px solid ${isLight ? "rgba(2, 132, 199, 0.22)" : "rgba(56, 189, 248, 0.3)"}`,
+                                    boxShadow: isLight ? "0 4px 12px rgba(0, 0, 0, 0.04)" : "0 4px 16px rgba(0, 0, 0, 0.25)",
                                     transition: "all 0.2s ease",
                                   }}
                                 >
@@ -2720,30 +2732,31 @@ export default function FixedIncomeHub() {
                                       justifyContent: "space-between",
                                       alignItems: "center",
                                       flexWrap: "wrap",
-                                      gap: 8,
+                                      gap: 12,
                                       cursor: "pointer",
                                       userSelect: "none",
                                     }}
                                     title={isRatesExpanded ? "Click para ocultar períodos" : "Click para desplegar períodos"}
                                   >
-                                    <span style={{ fontSize: "0.8rem", fontWeight: 700, color: isLight ? "#0284c7" : "var(--accent-primary)", display: "flex", alignItems: "center", gap: 6 }}>
+                                    <span style={{ fontSize: "0.86rem", fontWeight: 800, color: isLight ? "#0284c7" : "#38bdf8", display: "flex", alignItems: "center", gap: 8 }}>
                                       <span>📊 Rentabilidad Compuesta en Cuenta de Ahorros por Períodos de Tasa:</span>
                                       <span
                                         style={{
-                                          fontSize: "0.68rem",
-                                          background: isLight ? "rgba(2, 132, 199, 0.12)" : "rgba(0, 229, 255, 0.14)",
-                                          color: isLight ? "#0284c7" : "var(--accent-primary)",
-                                          padding: "1px 6px",
-                                          borderRadius: 4,
+                                          fontSize: "0.72rem",
+                                          background: isLight ? "rgba(2, 132, 199, 0.14)" : "rgba(56, 189, 248, 0.2)",
+                                          color: isLight ? "#0369a1" : "#7dd3fc",
+                                          padding: "2px 8px",
+                                          borderRadius: 6,
                                           fontWeight: 800,
+                                          border: `1px solid ${isLight ? "rgba(2, 132, 199, 0.25)" : "rgba(56, 189, 248, 0.35)"}`,
                                         }}
                                       >
                                         {yieldData.periodBreakdown.length}
                                       </span>
                                     </span>
 
-                                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                                      <span style={{ fontSize: "0.78rem", color: isLight ? "#059669" : "var(--gain)", fontWeight: 700 }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                                      <span style={{ fontSize: "0.82rem", color: isLight ? "#047857" : "#34d399", fontWeight: 800 }}>
                                         Total Ganado en Cuenta: +${yieldData.liquidEarnedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })} {acc.currency || "COP"}
                                       </span>
 
@@ -2755,18 +2768,18 @@ export default function FixedIncomeHub() {
                                         }}
                                         style={{
                                           background: isRatesExpanded
-                                            ? (isLight ? "rgba(2, 132, 199, 0.15)" : "rgba(0, 229, 255, 0.18)")
-                                            : (isLight ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.05)"),
-                                          border: `1px solid ${isRatesExpanded ? (isLight ? "rgba(2, 132, 199, 0.4)" : "rgba(0, 229, 255, 0.4)") : (isLight ? "rgba(0, 0, 0, 0.1)" : "rgba(255, 255, 255, 0.1)")}`,
-                                          borderRadius: 6,
-                                          color: isRatesExpanded ? (isLight ? "#0284c7" : "var(--accent-primary)") : "var(--text-secondary)",
-                                          padding: "3px 8px",
-                                          fontSize: "0.7rem",
+                                            ? (isLight ? "rgba(2, 132, 199, 0.14)" : "rgba(56, 189, 248, 0.2)")
+                                            : (isLight ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.08)"),
+                                          border: `1px solid ${isRatesExpanded ? (isLight ? "rgba(2, 132, 199, 0.4)" : "rgba(56, 189, 248, 0.45)") : (isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.16)")}`,
+                                          borderRadius: 8,
+                                          color: isRatesExpanded ? (isLight ? "#0369a1" : "#7dd3fc") : (isLight ? "#334155" : "#e2e8f0"),
+                                          padding: "4px 10px",
+                                          fontSize: "0.73rem",
                                           fontWeight: 700,
                                           cursor: "pointer",
                                           display: "inline-flex",
                                           alignItems: "center",
-                                          gap: 4,
+                                          gap: 5,
                                           whiteSpace: "nowrap",
                                         }}
                                       >
@@ -2776,25 +2789,85 @@ export default function FixedIncomeHub() {
                                   </div>
 
                                   {isRatesExpanded && (
-                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 8, marginTop: 10 }}>
+                                    <div
+                                      style={{
+                                        display: "grid",
+                                        gridTemplateColumns: "repeat(auto-fit, minmax(265px, 1fr))",
+                                        gap: 12,
+                                        marginTop: 14,
+                                      }}
+                                    >
                                       {yieldData.periodBreakdown.map((p, pIdx) => (
                                         <div
                                           key={pIdx}
                                           style={{
-                                            background: isLight ? "rgba(0, 0, 0, 0.03)" : "var(--bg-card-hover)",
-                                            padding: "8px 10px",
-                                            borderRadius: 6,
-                                            border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "var(--border)"}`,
+                                            background: isLight ? "#f8fafc" : "rgba(30, 41, 59, 0.85)",
+                                            padding: "12px 16px",
+                                            borderRadius: 10,
+                                            border: `1px solid ${isLight ? "rgba(15, 23, 42, 0.12)" : "rgba(56, 189, 248, 0.25)"}`,
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            gap: 8,
+                                            boxShadow: isLight ? "0 1px 4px rgba(0, 0, 0, 0.03)" : "0 2px 8px rgba(0, 0, 0, 0.2)",
                                           }}
                                         >
-                                          <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-secondary)", fontSize: "0.72rem" }}>
-                                            <span>{p.startDate} al {p.endDate}</span>
-                                            <span style={{ color: isLight ? "#0284c7" : "var(--accent-primary)", fontWeight: 700 }}>{p.rateEA}% E.A.</span>
+                                          <div
+                                            style={{
+                                              display: "flex",
+                                              justifyContent: "space-between",
+                                              alignItems: "center",
+                                              gap: 12,
+                                            }}
+                                          >
+                                            <span
+                                              style={{
+                                                color: isLight ? "#0f172a" : "#f8fafc",
+                                                fontSize: "0.78rem",
+                                                fontWeight: 700,
+                                                whiteSpace: "nowrap",
+                                              }}
+                                            >
+                                              📅 {p.startDate} <span style={{ color: isLight ? "#64748b" : "#94a3b8", fontWeight: 500 }}>al</span> {p.endDate}
+                                            </span>
+                                            <span
+                                              style={{
+                                                color: isLight ? "#0369a1" : "#38bdf8",
+                                                background: isLight ? "rgba(2, 132, 199, 0.12)" : "rgba(56, 189, 248, 0.18)",
+                                                border: `1px solid ${isLight ? "rgba(2, 132, 199, 0.28)" : "rgba(56, 189, 248, 0.4)"}`,
+                                                padding: "2px 8px",
+                                                borderRadius: 6,
+                                                fontSize: "0.75rem",
+                                                fontWeight: 800,
+                                                whiteSpace: "nowrap",
+                                              }}
+                                            >
+                                              {p.rateEA}% E.A.
+                                            </span>
                                           </div>
-                                          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: "0.75rem" }}>
-                                            <span style={{ color: "var(--text-muted)" }}>{p.days} días activos</span>
-                                            <span style={{ color: isLight ? "#059669" : "var(--gain)", fontWeight: 700, fontFamily: "JetBrains Mono" }}>
-                                              +${p.interestEarned.toLocaleString("en-US", { maximumFractionDigits: 2 })} {acc.currency || "COP"}
+                                          <div
+                                            style={{
+                                              display: "flex",
+                                              justifyContent: "space-between",
+                                              alignItems: "center",
+                                              gap: 12,
+                                              paddingTop: 6,
+                                              borderTop: isLight ? "1px dashed rgba(0, 0, 0, 0.08)" : "1px dashed rgba(255, 255, 255, 0.1)",
+                                              fontSize: "0.78rem",
+                                            }}
+                                          >
+                                            <span style={{ color: isLight ? "#475569" : "#cbd5e1", fontWeight: 600 }}>
+                                              ⏱️ {p.days} días activos
+                                            </span>
+                                            <span
+                                              style={{
+                                                color: isLight ? "#047857" : "#34d399",
+                                                fontWeight: 800,
+                                                fontSize: "0.86rem",
+                                                fontFamily: "JetBrains Mono, monospace",
+                                                whiteSpace: "nowrap",
+                                              }}
+                                            >
+                                              +${p.interestEarned.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {acc.currency || "COP"}
                                             </span>
                                           </div>
                                         </div>
@@ -3805,17 +3878,30 @@ export default function FixedIncomeHub() {
                     </div>
 
                     <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 8 }}>
-                      <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.84rem", fontWeight: 800, color: isSelected ? "#10b981" : "var(--text-primary)" }}>
-                        {formatMoney(totalEntityInvested, entCurr)}
-                      </div>
-                      {transactionalBal > 0 ? (
-                        <span style={{ fontSize: "0.64rem", color: "#60a5fa", display: "block", fontWeight: 600 }}>
-                          +{formatMoney(transactionalBal, entCurr)} Nómina
-                        </span>
+                      {totalEntityInvested > 0 ? (
+                        <>
+                          <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.84rem", fontWeight: 800, color: isSelected ? "#10b981" : "var(--text-primary)" }}>
+                            {formatMoney(totalEntityInvested, entCurr)}
+                          </div>
+                          {transactionalBal > 0 ? (
+                            <span style={{ fontSize: "0.64rem", color: "#60a5fa", display: "block", fontWeight: 600 }}>
+                              +{formatMoney(transactionalBal, entCurr)} Nómina
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: "0.68rem", color: isSelected ? "#38bdf8" : "var(--text-muted)", fontWeight: 600 }}>
+                              {isSelected ? "Activa ➔" : "Ver"}
+                            </span>
+                          )}
+                        </>
                       ) : (
-                        <span style={{ fontSize: "0.68rem", color: isSelected ? "#38bdf8" : "var(--text-muted)", fontWeight: 600 }}>
-                          {isSelected ? "Activa ➔" : "Ver"}
-                        </span>
+                        <>
+                          <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.84rem", fontWeight: 800, color: isSelected ? "#38bdf8" : "var(--text-primary)" }}>
+                            {formatMoney(transactionalBal, entCurr)}
+                          </div>
+                          <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", display: "block", fontWeight: 600 }}>
+                            0% E.A. • Disponible
+                          </span>
+                        </>
                       )}
                     </div>
                   </div>

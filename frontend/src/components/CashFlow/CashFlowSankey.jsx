@@ -186,25 +186,7 @@ export default function CashFlowSankey({
       color: isLight ? "#0284c7" : "#00e5ff",
     };
 
-    // ── Position Column 2 Nodes (Pillars) ──
-    const pillarTotalBlockH = col2Count * (nodeH + 6) + (col2Count - 1) * 18;
-    const pillarStartY = paddingY + (usableH - pillarTotalBlockH) / 2;
-
-    const col2Nodes = pillars.map((p, idx) => {
-      const y = pillarStartY + idx * (nodeH + 6 + 18);
-      const pct = totalInflow > 0 ? ((p.amount / totalInflow) * 100).toFixed(1) : 0;
-      return {
-        ...p,
-        pct,
-        col: 2,
-        x: colX[2],
-        y,
-        width: nodeWidth + 10,
-        height: nodeH + 6,
-      };
-    });
-
-    // ── Position Column 3 Nodes (Destinations with Living Status) ──
+    // ── Position Column 3 Nodes (Destinations with Living Dynamic Tone & Glow) ──
     const destNodeH = 60;
     const destTotalBlockH = destCount * destNodeH + (destCount - 1) * nodeGap;
     const destStartY = paddingY + (usableH - destTotalBlockH) / 2;
@@ -238,32 +220,50 @@ export default function CashFlowSankey({
       let isPaid = false;
       let isExceeded = false;
       let isNearLimit = false;
+      let isActive = false;
+      let liquidColorStart = item.color;
+      let liquidColorEnd = item.color;
+      let dynamicNodeColor = item.color;
 
       if (spent > 0) {
+        isActive = true;
         if (spent >= budgeted && (spent - budgeted) <= Math.max(1000, budgeted * 0.05)) {
           statusLabel = "✅ Pagado";
-          statusColor = "#10b981";
-          statusBg = "rgba(16, 185, 129, 0.2)";
+          statusColor = isLight ? "#059669" : "#00f5a0";
+          statusBg = isLight ? "rgba(16, 185, 129, 0.18)" : "rgba(0, 245, 160, 0.2)";
           isPaid = true;
+          dynamicNodeColor = isLight ? "#059669" : "#00f5a0";
+          liquidColorStart = isLight ? "rgba(16, 185, 129, 0.26)" : "rgba(16, 185, 129, 0.42)";
+          liquidColorEnd = isLight ? "rgba(5, 150, 105, 0.14)" : "rgba(0, 245, 160, 0.22)";
         } else if (spent > budgeted) {
           statusLabel = `🚨 +${Math.round((spent / budgeted - 1) * 100)}%`;
-          statusColor = "#f43f5e";
-          statusBg = "rgba(244, 63, 94, 0.2)";
+          statusColor = "#ff2a5f";
+          statusBg = "rgba(255, 42, 95, 0.22)";
           isExceeded = true;
+          dynamicNodeColor = "#ff2a5f";
+          liquidColorStart = isLight ? "rgba(244, 63, 94, 0.26)" : "rgba(255, 42, 95, 0.44)";
+          liquidColorEnd = isLight ? "rgba(225, 29, 72, 0.14)" : "rgba(244, 63, 94, 0.22)";
         } else if (progressPct >= 80) {
           statusLabel = `⚠️ ${progressPct.toFixed(0)}%`;
-          statusColor = "#f59e0b";
-          statusBg = "rgba(245, 158, 11, 0.2)";
+          statusColor = "#fbbf24";
+          statusBg = "rgba(245, 158, 11, 0.22)";
           isNearLimit = true;
+          dynamicNodeColor = "#f59e0b";
+          liquidColorStart = isLight ? "rgba(245, 158, 11, 0.26)" : "rgba(245, 158, 11, 0.42)";
+          liquidColorEnd = isLight ? "rgba(251, 191, 36, 0.14)" : "rgba(251, 191, 36, 0.22)";
         } else {
-          statusLabel = `🟢 ${progressPct.toFixed(0)}%`;
-          statusColor = "#38bdf8";
-          statusBg = "rgba(56, 189, 248, 0.2)";
+          statusLabel = `⚡ ${progressPct.toFixed(0)}%`;
+          statusColor = isLight ? "#0284c7" : "#00e5ff";
+          statusBg = "rgba(0, 229, 255, 0.18)";
+          dynamicNodeColor = isLight ? "#0284c7" : "#00e5ff";
+          liquidColorStart = isLight ? "rgba(2, 132, 199, 0.22)" : "rgba(0, 229, 255, 0.36)";
+          liquidColorEnd = isLight ? "rgba(56, 189, 248, 0.12)" : "rgba(56, 189, 248, 0.18)";
         }
       }
 
       return {
         id: item.id,
+        fillGradId: `node_fill_${String(item.id).replace(/[^a-zA-Z0-9]/g, "_")}`,
         rawItem: item,
         pillarType: item.pillarType,
         name: item.name,
@@ -278,6 +278,9 @@ export default function CashFlowSankey({
         isPaid,
         isExceeded,
         isNearLimit,
+        isActive,
+        liquidColorStart,
+        liquidColorEnd,
         pct,
         pillarId: item.pillarId,
         col: 3,
@@ -285,7 +288,34 @@ export default function CashFlowSankey({
         y,
         width: nodeWidth + 14,
         height: destNodeH,
-        color: isPaid ? "#10b981" : isExceeded ? "#f43f5e" : item.color,
+        baseColor: item.color,
+        color: dynamicNodeColor,
+      };
+    });
+
+    // ── Position Column 2 Nodes (Pillars with Aggregate Real Execution) ──
+    const pillarTotalBlockH = col2Count * (nodeH + 6) + (col2Count - 1) * 18;
+    const pillarStartY = paddingY + (usableH - pillarTotalBlockH) / 2;
+
+    const col2Nodes = pillars.map((p, idx) => {
+      const y = pillarStartY + idx * (nodeH + 6 + 18);
+      const pct = totalInflow > 0 ? ((p.amount / totalInflow) * 100).toFixed(1) : 0;
+      const children = col3Nodes.filter((d) => d.pillarId === p.id);
+      const pillarSpent = children.reduce((acc, c) => acc + (c.spent || 0), 0);
+      const pillarProgressPct = p.amount > 0 ? Math.min(100, (pillarSpent / p.amount) * 100) : 0;
+
+      return {
+        ...p,
+        fillGradId: `pillar_fill_${String(p.id).replace(/[^a-zA-Z0-9]/g, "_")}`,
+        pct,
+        spent: pillarSpent,
+        progressPct: pillarProgressPct,
+        isActive: pillarSpent > 0,
+        col: 2,
+        x: colX[2],
+        y,
+        width: nodeWidth + 10,
+        height: nodeH + 6,
       };
     });
 
@@ -313,6 +343,8 @@ export default function CashFlowSankey({
         amount: src.amount,
         name: `${src.name} ➔ Ingreso Neto`,
         strokeWidth: strokeW,
+        isActive: true,
+        streamColor: isLight ? "#0284c7" : "#67e8f9",
       });
     });
 
@@ -336,6 +368,8 @@ export default function CashFlowSankey({
         amount: tgt.amount,
         name: `Ingreso Neto ➔ ${tgt.name}`,
         strokeWidth: strokeW,
+        isActive: tgt.isActive,
+        streamColor: tgt.color,
       });
     });
 
@@ -351,11 +385,23 @@ export default function CashFlowSankey({
           targetId: dest.id,
           source: { x: srcPillar.x + srcPillar.width, y: srcPillar.y + srcPillar.height / 2 },
           target: { x: dest.x, y: dest.y + dest.height / 2 },
-          colorStart: srcPillar.color,
+          colorStart: dest.isPaid ? "#10b981" : dest.isExceeded ? "#f43f5e" : dest.isNearLimit ? "#f59e0b" : srcPillar.color,
           colorEnd: dest.color,
           amount: dest.amount,
           name: `${srcPillar.name} ➔ ${dest.name}`,
           strokeWidth: strokeW,
+          isActive: dest.isActive,
+          isPaid: dest.isPaid,
+          isExceeded: dest.isExceeded,
+          isNearLimit: dest.isNearLimit,
+          isDormant: !dest.isActive,
+          streamColor: dest.isPaid
+            ? "#6ee7b7"
+            : dest.isExceeded
+            ? "#fda4af"
+            : dest.isNearLimit
+            ? "#fde68a"
+            : "#7dd3fc",
         });
       }
     });
@@ -611,39 +657,76 @@ export default function CashFlowSankey({
                     {/* Subcategorías o bolsillos dentro de este pilar */}
                     {destinationsOfPillar.length > 0 ? (
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 6 }}>
-                        {destinationsOfPillar.map((dest) => (
-                          <div
-                            key={dest.id}
-                            onClick={() => onEditNode && onEditNode(dest.rawItem, dest.pillarType)}
-                            style={{
-                              background: isLight ? "#f1f5f9" : "rgba(255, 255, 255, 0.03)",
-                              border: "1px solid rgba(255, 255, 255, 0.08)",
-                              borderRadius: "8px",
-                              padding: "6px 10px",
-                              cursor: "pointer",
-                            }}
-                          >
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
-                              <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-secondary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                {dest.icon} {dest.name}
+                        {destinationsOfPillar.map((dest) => {
+                          const clampedPct = Math.min(100, Math.max(0, dest.progressPct || 0));
+                          const baseBg = isLight ? "#f8fafc" : "rgba(15, 23, 42, 0.72)";
+                          const dynamicBg = dest.isPaid
+                            ? isLight
+                              ? "linear-gradient(135deg, rgba(16, 185, 129, 0.22) 0%, rgba(5, 150, 105, 0.08) 100%)"
+                              : "linear-gradient(135deg, rgba(16, 185, 129, 0.36) 0%, rgba(0, 245, 160, 0.14) 100%)"
+                            : dest.isExceeded
+                            ? isLight
+                              ? "linear-gradient(135deg, rgba(244, 63, 94, 0.22) 0%, rgba(225, 29, 72, 0.08) 100%)"
+                              : "linear-gradient(135deg, rgba(255, 42, 95, 0.38) 0%, rgba(244, 63, 94, 0.14) 100%)"
+                            : dest.isActive
+                            ? `linear-gradient(90deg, ${dest.liquidColorStart} 0%, ${dest.liquidColorEnd} ${clampedPct}%, ${baseBg} ${Math.min(100, clampedPct + 4)}%)`
+                            : baseBg;
+
+                          return (
+                            <div
+                              key={dest.id}
+                              onClick={() => onEditNode && onEditNode(dest.rawItem, dest.pillarType)}
+                              style={{
+                                background: dynamicBg,
+                                border: dest.isPaid
+                                  ? `1.5px solid ${isLight ? "#059669" : "#00f5a0"}`
+                                  : dest.isExceeded
+                                  ? "1.5px solid #ff2a5f"
+                                  : dest.isNearLimit
+                                  ? "1.5px solid #f59e0b"
+                                  : dest.isActive
+                                  ? `1.5px solid ${dest.color}`
+                                  : isLight
+                                  ? "1px solid rgba(0,0,0,0.08)"
+                                  : "1px solid rgba(255, 255, 255, 0.08)",
+                                borderRadius: "10px",
+                                padding: "8px 10px",
+                                cursor: "pointer",
+                                opacity: dest.isActive ? 1 : 0.65,
+                                boxShadow: dest.isPaid
+                                  ? "0 0 14px rgba(16, 185, 129, 0.3)"
+                                  : dest.isExceeded
+                                  ? "0 0 14px rgba(244, 63, 94, 0.32)"
+                                  : dest.isNearLimit
+                                  ? "0 0 12px rgba(245, 158, 11, 0.25)"
+                                  : dest.isActive
+                                  ? "0 0 10px rgba(0, 229, 255, 0.18)"
+                                  : "none",
+                                transition: "all 0.25s ease",
+                              }}
+                            >
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
+                                <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                  {dest.icon} {dest.name}
+                                </div>
+                                {dest.statusLabel && (
+                                  <span style={{ fontSize: "0.66rem", fontWeight: 700, padding: "1px 5px", borderRadius: 4, color: dest.statusColor, background: dest.statusBg }}>
+                                    {dest.statusLabel}
+                                  </span>
+                                )}
                               </div>
-                              {dest.statusLabel && (
-                                <span style={{ fontSize: "0.66rem", fontWeight: 700, padding: "1px 5px", borderRadius: 4, color: dest.statusColor, background: dest.statusBg }}>
-                                  {dest.statusLabel}
-                                </span>
+                              <div style={{ fontSize: "0.85rem", fontWeight: 800, color: dest.isPaid ? (isLight ? "#059669" : "#00f5a0") : dest.color, fontFamily: "var(--font-mono, monospace)", marginTop: 2 }}>
+                                {formatAmount(dest.amount, currency)}{" "}
+                                <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>({dest.pct}%)</span>
+                              </div>
+                              {dest.spent > 0 && (
+                                <div style={{ fontSize: "0.68rem", color: dest.statusColor, fontWeight: 700, marginTop: 2 }}>
+                                  Ejecutado: {formatAmount(dest.spent, currency)}
+                                </div>
                               )}
                             </div>
-                            <div style={{ fontSize: "0.85rem", fontWeight: 700, color: dest.isPaid ? "#10b981" : pillar.color, fontFamily: "var(--font-mono, monospace)", marginTop: 2 }}>
-                              {formatAmount(dest.amount, currency)}{" "}
-                              <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>({dest.pct}%)</span>
-                            </div>
-                            {dest.spent !== undefined && (
-                              <div style={{ marginTop: 4, height: 3, borderRadius: 2, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
-                                <div style={{ height: "100%", width: `${Math.min(100, dest.progressPct || 0)}%`, background: dest.statusColor || "#10b981" }} />
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
                       <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontStyle: "italic" }}>
@@ -673,19 +756,67 @@ export default function CashFlowSankey({
                   x2="100%"
                   y2="0%"
                 >
-                  <stop offset="0%" stopColor={link.colorStart} stopOpacity={isLight ? "0.65" : "0.85"} />
-                  <stop offset="100%" stopColor={link.colorEnd} stopOpacity={isLight ? "0.65" : "0.85"} />
+                  <stop offset="0%" stopColor={link.colorStart} stopOpacity={link.isDormant ? (isLight ? "0.28" : "0.25") : (isLight ? "0.75" : "0.92")} />
+                  <stop offset="100%" stopColor={link.colorEnd} stopOpacity={link.isDormant ? (isLight ? "0.28" : "0.25") : (isLight ? "0.82" : "0.96")} />
                 </linearGradient>
               ))}
 
-            {/* Glowing Drop Shadows */}
-            <filter id="glow-cyan" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="4" result="blur" />
-              <feComposite in="SourceGraphic" in2="blur" operator="over" />
-            </filter>
-          </defs>
+              {/* Dynamic Liquid Fill Gradients for Col 3 Destination Nodes */}
+              {layout.col3Nodes.map((node) => {
+                const baseCardBg = isLight ? "#ffffff" : "#111829";
+                const dormantCardBg = isLight ? "#f8fafc" : "#0d1322";
+                const clampedPct = Math.min(100, Math.max(0, node.progressPct || 0));
 
-          {/* Render Flow Links (Bézier Curves) */}
+                if (!node.isActive) {
+                  return (
+                    <linearGradient key={node.fillGradId} id={node.fillGradId} x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor={dormantCardBg} stopOpacity="0.92" />
+                      <stop offset="100%" stopColor={dormantCardBg} stopOpacity="0.92" />
+                    </linearGradient>
+                  );
+                }
+
+                if (node.isPaid || node.isExceeded) {
+                  return (
+                    <linearGradient key={node.fillGradId} id={node.fillGradId} x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor={node.liquidColorStart} />
+                      <stop offset="100%" stopColor={node.liquidColorEnd} />
+                    </linearGradient>
+                  );
+                }
+
+                return (
+                  <linearGradient key={node.fillGradId} id={node.fillGradId} x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor={node.liquidColorStart} />
+                    <stop offset={`${clampedPct}%`} stopColor={node.liquidColorEnd} />
+                    <stop offset={`${Math.min(100, clampedPct + 3)}%`} stopColor={baseCardBg} stopOpacity="0.96" />
+                    <stop offset="100%" stopColor={baseCardBg} stopOpacity="0.96" />
+                  </linearGradient>
+                );
+              })}
+
+              {/* Dynamic Liquid Fill Gradients for Col 2 Pillar Nodes */}
+              {layout.col2Nodes.map((p) => {
+                const baseCardBg = isLight ? "#ffffff" : "#111829";
+                const clampedPct = Math.min(100, Math.max(0, p.progressPct || 0));
+                return (
+                  <linearGradient key={p.fillGradId} id={p.fillGradId} x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor={p.color} stopOpacity={p.isActive ? (isLight ? "0.2" : "0.28") : "0.05"} />
+                    <stop offset={`${clampedPct}%`} stopColor={p.color} stopOpacity={p.isActive ? (isLight ? "0.12" : "0.16") : "0.03"} />
+                    <stop offset={`${Math.min(100, clampedPct + 3)}%`} stopColor={baseCardBg} stopOpacity="0.95" />
+                    <stop offset="100%" stopColor={baseCardBg} stopOpacity="0.95" />
+                  </linearGradient>
+                );
+              })}
+
+              {/* Glowing Drop Shadows */}
+              <filter id="glow-cyan" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="4" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+            </defs>
+
+          {/* Render Flow Links (Bézier Curves + Animated Energy Streams) */}
           <g className="sankey-links-layer">
             {layout.links.map((link) => {
               const dx = (link.target.x - link.source.x) * 0.5;
@@ -696,15 +827,33 @@ export default function CashFlowSankey({
                   hoveredItem.id === link.sourceId ||
                   hoveredItem.id === link.targetId);
 
+              const baseStrokeOpacity = isHovered
+                ? 1.0
+                : link.isDormant
+                ? isLight ? 0.3 : 0.24
+                : link.isPaid || link.isExceeded
+                ? 0.95
+                : isLight
+                ? 0.85
+                : 0.78;
+
               return (
                 <g key={link.id}>
-                  {/* Glowing halo track */}
+                  {/* Ambient Glowing Halo Track */}
                   <path
                     d={pathD}
                     fill="none"
-                    stroke={link.colorStart}
-                    strokeWidth={link.strokeWidth + 4}
-                    strokeOpacity={isHovered ? 0.35 : 0.08}
+                    stroke={link.colorEnd || link.colorStart}
+                    strokeWidth={link.strokeWidth + (link.isPaid || link.isExceeded ? 8 : 4)}
+                    strokeOpacity={
+                      isHovered
+                        ? 0.42
+                        : link.isPaid || link.isExceeded
+                        ? 0.25
+                        : link.isActive
+                        ? 0.14
+                        : 0.04
+                    }
                   />
                   {/* Main Gradient Ribbon */}
                   <path
@@ -712,7 +861,7 @@ export default function CashFlowSankey({
                     fill="none"
                     stroke={`url(#${link.gradId})`}
                     strokeWidth={isHovered ? link.strokeWidth * 1.3 + 2 : link.strokeWidth}
-                    strokeOpacity={isHovered ? 1.0 : isLight ? 0.85 : 0.75}
+                    strokeOpacity={baseStrokeOpacity}
                     style={{
                       transition: "all 0.25s ease",
                       cursor: "pointer",
@@ -727,6 +876,18 @@ export default function CashFlowSankey({
                     }
                     onMouseLeave={() => setHoveredItem(null)}
                   />
+                  {/* Animated Living Energy Stream for Active / Paid / Exceeded Flows */}
+                  {link.isActive && (
+                    <path
+                      d={pathD}
+                      fill="none"
+                      stroke={link.streamColor || "#67e8f9"}
+                      strokeWidth={Math.max(2, Math.min(6, link.strokeWidth * 0.45))}
+                      strokeLinecap="round"
+                      strokeOpacity={isHovered ? 1.0 : link.isPaid || link.isExceeded ? 0.92 : 0.75}
+                      className={`sankey-energy-stream ${link.isPaid || link.isExceeded ? "fast" : ""}`}
+                    />
+                  )}
                 </g>
               );
             })}
@@ -737,12 +898,30 @@ export default function CashFlowSankey({
             {layout.nodes.map((node) => {
               const isHovered = hoveredItem && hoveredItem.id === node.id;
               const displayName = node.name.length > 22 ? `${node.name.slice(0, 20)}...` : node.name;
+              const isDormantDest = node.col === 3 && !node.isActive;
+              const nodeOpacity = isHovered ? 1.0 : isDormantDest ? 0.58 : 1.0;
+
+              const nodePulseClass =
+                node.col === 3
+                  ? node.isPaid
+                    ? "sankey-node-paid"
+                    : node.isExceeded
+                    ? "sankey-node-exceeded"
+                    : node.isNearLimit
+                    ? "sankey-node-near-limit"
+                    : ""
+                  : "";
 
               return (
                 <g
                   key={node.id}
                   transform={`translate(${node.x}, ${node.y})`}
-                  style={{ cursor: node.rawItem && onEditNode ? "pointer" : "default" }}
+                  className={nodePulseClass}
+                  style={{
+                    cursor: node.rawItem && onEditNode ? "pointer" : "default",
+                    opacity: nodeOpacity,
+                    transition: "opacity 0.25s ease, filter 0.25s ease",
+                  }}
                   onClick={() => {
                     if (node.rawItem && onEditNode) {
                       onEditNode(node.rawItem, node.pillarType);
@@ -751,65 +930,116 @@ export default function CashFlowSankey({
                   onMouseEnter={() => setHoveredItem(node)}
                   onMouseLeave={() => setHoveredItem(null)}
                 >
-                  {/* Background Glass Card with Living Glow */}
+                  {/* Solid Base Backdrop so SVG links behind the node don't bleed through */}
                   <rect
                     width={node.width}
                     height={node.height}
                     rx={12}
                     ry={12}
-                    fill={isLight ? "#ffffff" : "rgba(17, 24, 41, 0.95)"}
-                    stroke={node.color}
-                    strokeWidth={isHovered ? 2.5 : node.isPaid ? 2 : 1.3}
-                    strokeOpacity={isHovered ? 1.0 : node.isPaid ? 1.0 : isLight ? 0.9 : 0.8}
-                    style={{
-                      filter: node.isPaid
-                        ? "drop-shadow(0 0 10px rgba(16, 185, 129, 0.35))"
-                        : node.isExceeded
-                        ? "drop-shadow(0 0 10px rgba(244, 63, 94, 0.35))"
-                        : isHovered
+                    fill={isLight ? "#ffffff" : "#0f172a"}
+                  />
+
+                  {/* Dynamic Liquid Color Wash & Living Glow Card */}
+                  <rect
+                    width={node.width}
+                    height={node.height}
+                    rx={12}
+                    ry={12}
+                    fill={
+                      node.fillGradId
+                        ? `url(#${node.fillGradId})`
+                        : node.col === 1
                         ? isLight
-                          ? "drop-shadow(0 4px 14px rgba(2, 132, 199, 0.25))"
-                          : "drop-shadow(0 0 14px rgba(0, 229, 255, 0.45))"
+                          ? "rgba(2, 132, 199, 0.1)"
+                          : "rgba(0, 229, 255, 0.14)"
+                        : isLight
+                        ? "#ffffff"
+                        : "rgba(17, 24, 41, 0.95)"
+                    }
+                    stroke={node.color}
+                    strokeWidth={
+                      isHovered
+                        ? 2.6
+                        : node.isPaid || node.isExceeded
+                        ? 2.2
+                        : node.isNearLimit || node.isActive
+                        ? 1.8
+                        : 1.2
+                    }
+                    strokeOpacity={
+                      isHovered
+                        ? 1.0
+                        : node.isPaid || node.isExceeded || node.isNearLimit
+                        ? 1.0
+                        : isDormantDest
+                        ? 0.45
+                        : isLight
+                        ? 0.9
+                        : 0.85
+                    }
+                    style={{
+                      filter: isHovered
+                        ? isLight
+                          ? "drop-shadow(0 4px 16px rgba(2, 132, 199, 0.35))"
+                          : `drop-shadow(0 0 18px ${node.color})`
+                        : node.col === 1
+                        ? "drop-shadow(0 0 14px rgba(0, 229, 255, 0.32))"
+                        : node.isActive && !node.isPaid && !node.isExceeded && !node.isNearLimit
+                        ? "drop-shadow(0 0 10px rgba(0, 229, 255, 0.28))"
                         : isLight
                         ? "drop-shadow(0 2px 8px rgba(0, 0, 0, 0.06))"
                         : "none",
-                      transition: "all 0.2s ease",
+                      transition: "all 0.25s ease",
                     }}
                   />
+
+                  {/* Glowing Liquid Frontier Line for Partial Execution (1% - 99%) */}
+                  {node.col === 3 && node.isActive && !node.isPaid && !node.isExceeded && node.progressPct > 2 && node.progressPct < 99 && (
+                    <line
+                      x1={(node.width * Math.min(98, node.progressPct)) / 100}
+                      y1={2}
+                      x2={(node.width * Math.min(98, node.progressPct)) / 100}
+                      y2={node.height - 2}
+                      stroke={node.statusColor}
+                      strokeWidth={1.6}
+                      strokeOpacity={0.75}
+                      strokeDasharray="3 2"
+                    />
+                  )}
 
                   {/* Left Color Accent Bar */}
                   <rect
                     x={0}
                     y={0}
-                    width={5}
+                    width={6}
                     height={node.height}
-                    rx={2}
+                    rx={3}
                     fill={node.color}
                   />
 
                   {/* Node Icon & Name */}
                   <text
-                    x={12}
-                    y={node.col === 3 ? 22 : node.height === 54 ? 22 : 30}
+                    x={13}
+                    y={node.col === 3 ? 23 : node.height === 54 ? 22 : 30}
                     fill={isLight ? "#0f172a" : "#f8fafc"}
                     fontSize={node.col === 1 ? 14 : node.col === 3 ? 11.5 : 12.5}
-                    fontWeight={600}
+                    fontWeight={700}
                     fontFamily="Inter, sans-serif"
                   >
                     {node.icon ? `${node.icon} ` : ""}
                     {node.col === 3 && node.name.length > 15 ? `${node.name.slice(0, 14)}…` : displayName}
                   </text>
 
-                  {/* Destination Status Badge (Col 3) */}
+                  {/* Destination Status Pill (Col 3) */}
                   {node.col === 3 && node.statusLabel && (
                     <g transform={`translate(${node.width - 82}, 8)`}>
                       <rect
                         width={74}
-                        height={17}
-                        rx={5}
+                        height={18}
+                        rx={6}
                         fill={node.statusBg}
                         stroke={node.statusColor}
-                        strokeWidth={0.8}
+                        strokeWidth={node.isActive ? 1.1 : 0.7}
                       />
                       <text
                         x={37}
@@ -817,7 +1047,7 @@ export default function CashFlowSankey({
                         textAnchor="middle"
                         fill={node.statusColor}
                         fontSize={9.5}
-                        fontWeight={700}
+                        fontWeight={800}
                         fontFamily="Inter, sans-serif"
                       >
                         {node.statusLabel}
@@ -825,49 +1055,35 @@ export default function CashFlowSankey({
                     </g>
                   )}
 
-                  {/* Node Amount & Percentage */}
+                  {/* Node Amount & Executed Sub-label */}
                   <text
-                    x={12}
-                    y={node.col === 3 ? 40 : node.height === 54 ? 40 : 54}
-                    fill={node.col === 3 && node.isPaid ? "#10b981" : node.color}
+                    x={13}
+                    y={node.col === 3 ? 44 : node.height === 54 ? 40 : 54}
+                    fill={
+                      node.col === 3 && node.isPaid
+                        ? isLight ? "#047857" : "#00f5a0"
+                        : node.col === 3 && node.isExceeded
+                        ? "#ff2a5f"
+                        : node.col === 3 && node.isNearLimit
+                        ? isLight ? "#d97706" : "#fbbf24"
+                        : node.color
+                    }
                     fontSize={node.col === 1 ? 14 : 11.5}
-                    fontWeight={700}
+                    fontWeight={800}
                     fontFamily="JetBrains Mono, monospace"
                   >
-                    {formatAmount(node.amount, currency)}
+                    {node.col === 3 && node.isActive && !node.isPaid
+                      ? `${formatAmount(node.spent, currency)} / ${formatAmount(node.amount, currency)}`
+                      : formatAmount(node.amount, currency)}
                     {node.pct && node.col !== 3 ? ` (${node.pct}%)` : ""}
                   </text>
-
-                  {/* Mini Progress Bar Track & Fill for Destination Nodes (Col 3) */}
-                  {node.col === 3 && (
-                    <g>
-                      {/* Track */}
-                      <rect
-                        x={12}
-                        y={48}
-                        width={node.width - 24}
-                        height={3.5}
-                        rx={1.75}
-                        fill={isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)"}
-                      />
-                      {/* Fill */}
-                      <rect
-                        x={12}
-                        y={48}
-                        width={Math.max(0, (node.width - 24) * (Math.min(100, node.progressPct || 0) / 100))}
-                        height={3.5}
-                        rx={1.75}
-                        fill={node.statusColor || "#10b981"}
-                      />
-                    </g>
-                  )}
 
                   {/* Node Port Anchor Dots */}
                   {node.col !== 0 && (
                     <circle
                       cx={0}
                       cy={node.height / 2}
-                      r={3.5}
+                      r={node.isActive ? 4.2 : 3.2}
                       fill={node.color}
                     />
                   )}
@@ -875,7 +1091,7 @@ export default function CashFlowSankey({
                     <circle
                       cx={node.width}
                       cy={node.height / 2}
-                      r={3.5}
+                      r={4}
                       fill={node.color}
                     />
                   )}

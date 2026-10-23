@@ -2872,6 +2872,7 @@ export default function CashFlowHub() {
                 setExpenseModalOpen(true);
               }}
               onOpenPaymentModal={() => setPaymentModalOpen(true)}
+              onSaveTransaction={addExpenseTransaction}
               onDeleteTransaction={deleteExpenseTransaction}
               onDeletePayment={deleteCreditCardPayment}
               onConfirmSettlement={settleLoanTransaction}

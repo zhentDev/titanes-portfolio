@@ -468,7 +468,7 @@ export const useCashFlowStore = create(
       },
 
       // ── Universal Movement Reclassification / Imputation ──
-      reclassifyMovement: ({ movementId, destinationType, targetId, targetItem }) => {
+      reclassifyMovement: ({ movementId, destinationType, targetId, targetItem, subItem }) => {
         const state = get();
         const expense = (state.expensesLog || []).find((e) => e.id === movementId);
         if (!expense) return;
@@ -540,14 +540,57 @@ export const useCashFlowStore = create(
           const envelope = targetItem;
           if (!envelope) return;
 
-          const updatedExpenses = (state.expensesLog || []).map((e) => {
+          // Auto-match subItem if not explicitly passed but amount or description matches a subItem
+          let matchedSub = subItem || null;
+          if (!matchedSub && Array.isArray(envelope.subItems) && envelope.subItems.length > 0) {
+            const expDesc = (expense.description || "").toLowerCase();
+            matchedSub =
+              envelope.subItems.find(
+                (s) => s.name && expDesc.includes(s.name.toLowerCase())
+              ) ||
+              (envelope.subItems.filter((s) => Number(s.amount) === amount).length === 1
+                ? envelope.subItems.find((s) => Number(s.amount) === amount)
+                : null);
+          }
+
+          const resolvedSubId = matchedSub ? matchedSub.id || matchedSub.subKey || null : null;
+          const resolvedSubName = matchedSub ? matchedSub.name || null : null;
+
+          // Filter out any duplicate manual check (isAutoSubItemCheck) for the same subItem in the same period
+          const filteredLog = (state.expensesLog || []).filter((e) => {
+            if (e.id === movementId) return true;
+            if (!matchedSub || !e.isAutoSubItemCheck) return true;
+            if (e.period && expense.period && e.period !== expense.period) return true;
+            if (e.budgetItemId === envelope.id) {
+              if (resolvedSubId && e.subItemId === resolvedSubId) return false;
+              if (
+                resolvedSubName &&
+                e.subItemName &&
+                e.subItemName.toLowerCase() === resolvedSubName.toLowerCase()
+              ) {
+                return false;
+              }
+            }
+            return true;
+          });
+
+          const updatedExpenses = filteredLog.map((e) => {
             if (e.id !== movementId) return e;
+            const cleanDesc =
+              matchedSub && resolvedSubName
+                ? `${envelope.name}: ${resolvedSubName}`
+                : e.description && !e.description.toLowerCase().includes("tu app")
+                ? e.description
+                : envelope.name;
+
             return {
               ...e,
               budgetItemId: envelope.id,
               budgetItemName: envelope.name,
               budgetItemType: envelope.pillarType || "needs",
-              description: e.description && !e.description.toLowerCase().includes("tu app") ? e.description : envelope.name,
+              subItemId: resolvedSubId || e.subItemId || null,
+              subItemName: resolvedSubName || e.subItemName || null,
+              description: cleanDesc,
               isDebtPayment: false,
               debtId: null,
             };
@@ -555,10 +598,18 @@ export const useCashFlowStore = create(
 
           set({ expensesLog: updatedExpenses });
           try {
-            localStorage.setItem("titanes_cash_flow_store_v2", JSON.stringify({ ...state, expensesLog: updatedExpenses }));
+            localStorage.setItem(
+              "titanes_cash_flow_store_v2",
+              JSON.stringify({ ...state, expensesLog: updatedExpenses })
+            );
           } catch {}
           get().syncStateWithBackend();
-          toast.success(`Movimiento asignado exitosamente al rubro "${envelope.name}" 📁`, { icon: "✅" });
+          toast.success(
+            matchedSub
+              ? `Movimiento asignado a "${envelope.name} ➔ ${resolvedSubName}" y tachado automáticamente ✅`
+              : `Movimiento asignado exitosamente al rubro "${envelope.name}" 📁`,
+            { icon: "✅" }
+          );
         }
       },
 

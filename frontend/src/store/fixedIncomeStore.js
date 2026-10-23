@@ -122,7 +122,21 @@ export const useFixedIncomeStore = create(
           }
 
           // Normalize Plenti Bolsillo a la vista rate & tiers to 4.0% E.A. if still at legacy 3.0% / 2.0%
+          // Also ensure Daviplata Principal has its 2,200.03 COP balance if still at 0
+          let daviplataUpdated = false;
           finalAccounts = finalAccounts.map((acc) => {
+            const isDaviplata =
+              acc.id === "acc_daviplata_disp" ||
+              acc.entityId === "ent_daviplata" ||
+              (acc.name || "").toLowerCase().includes("daviplata");
+            if (isDaviplata && Number(acc.balance || 0) === 0) {
+              daviplataUpdated = true;
+              return {
+                ...acc,
+                balance: 2200.03,
+              };
+            }
+
             const isPlenti =
               acc.id === "acc_1786777955489" ||
               acc.entityId === "ent_1786777900826" ||
@@ -146,6 +160,15 @@ export const useFixedIncomeStore = create(
             }
             return acc;
           });
+
+          if (daviplataUpdated) {
+            const daviAcc = finalAccounts.find(
+              (a) => a.id === "acc_daviplata_disp" || a.entityId === "ent_daviplata"
+            );
+            if (daviAcc) {
+              updateFixedIncomeAccountApi(daviAcc.id, daviAcc).catch(() => {});
+            }
+          }
 
           set({
             entities: finalEntities,

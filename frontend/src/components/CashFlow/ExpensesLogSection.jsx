@@ -19,6 +19,7 @@ export default function ExpensesLogSection({
   onOpenExpenseModal,
   onEditTransaction,
   onOpenPaymentModal,
+  onSaveTransaction,
   onDeleteTransaction,
   onDeletePayment,
   onConfirmSettlement,
@@ -743,6 +744,10 @@ export default function ExpensesLogSection({
           creditCards={creditCards}
           debts={debts}
           budgetItems={budgetItems}
+          expensesLog={periodExpenses}
+          activePeriod={activePeriod}
+          onSaveTransaction={onSaveTransaction}
+          onDeleteTransaction={onDeleteTransaction}
           onReclassify={(payload) => {
             if (onReclassifyMovement) {
               onReclassifyMovement(payload);

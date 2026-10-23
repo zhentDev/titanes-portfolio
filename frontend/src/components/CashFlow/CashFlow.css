@@ -394,6 +394,66 @@
   }
 }
 
+/* ── Living Sankey Energy Streams & Dynamic Glows ────────────────────── */
+@keyframes sankeyFlowStream {
+  0% {
+    stroke-dashoffset: 72;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes sankeyPulseEmerald {
+  0%, 100% {
+    filter: drop-shadow(0 0 12px rgba(16, 185, 129, 0.45));
+  }
+  50% {
+    filter: drop-shadow(0 0 22px rgba(0, 245, 160, 0.75));
+  }
+}
+
+@keyframes sankeyPulseCrimson {
+  0%, 100% {
+    filter: drop-shadow(0 0 12px rgba(244, 63, 94, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 24px rgba(255, 42, 95, 0.85));
+  }
+}
+
+@keyframes sankeyPulseAmber {
+  0%, 100% {
+    filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 18px rgba(251, 191, 36, 0.7));
+  }
+}
+
+.sankey-energy-stream {
+  stroke-dasharray: 18 54;
+  animation: sankeyFlowStream 2.1s linear infinite;
+  pointer-events: none;
+}
+
+.sankey-energy-stream.fast {
+  stroke-dasharray: 22 50;
+  animation: sankeyFlowStream 1.35s linear infinite;
+}
+
+.sankey-node-paid {
+  animation: sankeyPulseEmerald 3.2s ease-in-out infinite;
+}
+
+.sankey-node-exceeded {
+  animation: sankeyPulseCrimson 2.2s ease-in-out infinite;
+}
+
+.sankey-node-near-limit {
+  animation: sankeyPulseAmber 2.8s ease-in-out infinite;
+}
+
 /* ── Rule & Strategy Selector ────────────────────────────────────────── */
 .cashflow-rule-card {
   background: rgba(17, 24, 41, 0.8);
