@@ -27,6 +27,46 @@ export function calculateAccountYield(account, transactions = [], historicalRate
       consolidatedNetCapital: 0,
       consolidatedTotalYield: 0,
       periodBreakdown: [],
+      isMonthlyDisbursement: false,
+      creditedYield: 0,
+      pendingMonthlyYield: 0,
+    };
+  }
+
+  // 0. Zero-yield safeguard for transactional checking/payroll and digital wallets (0.0% E.A.)
+  const isZeroYield =
+    account.accountCategory === "digital_wallet" ||
+    account.accountCategory === "payroll" ||
+    account.type === "wallet" ||
+    Number(account.interestRateEA || 0) === 0;
+
+  if (isZeroYield) {
+    const bal = Number(account.balance || 0);
+    return {
+      netCapital: bal,
+      liquidNetCapital: bal,
+      liquidEarnedInterest: 0,
+      liquidTotalBalance: bal,
+      liquidAvailableBalance: bal,
+      totalDeposits: 0,
+      totalWithdrawals: 0,
+      totalEarnedInterest: 0,
+      totalCalculatedBalance: bal,
+      activeCDTsCount: 0,
+      activeCDTsCapital: 0,
+      activeCDTsAccruedInterest: 0,
+      activeCDTsList: [],
+      maturedCDTsCount: 0,
+      maturedCDTsTotalCapital: 0,
+      maturedCDTsTotalProfit: 0,
+      maturedCDTsList: [],
+      consolidatedTotal: bal,
+      consolidatedNetCapital: bal,
+      consolidatedTotalYield: 0,
+      periodBreakdown: [],
+      isMonthlyDisbursement: false,
+      creditedYield: 0,
+      pendingMonthlyYield: 0,
     };
   }
 

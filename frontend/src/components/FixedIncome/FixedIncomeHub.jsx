@@ -1988,6 +1988,12 @@ export default function FixedIncomeHub() {
 
                   const hasDiscrepancy = accTx.length > 0 && Math.abs(acc.balance - netTxBalance) > 0.01;
 
+                  const isAccZeroYield =
+                    acc.accountCategory === "payroll" ||
+                    acc.accountCategory === "digital_wallet" ||
+                    acc.type === "wallet" ||
+                    Number(acc.interestRateEA || 0) === 0;
+
                   const yieldData = calculateAccountYield(acc, accTx, historicalRates, cdts);
 
                   return (
@@ -2154,7 +2160,7 @@ export default function FixedIncomeHub() {
                                   • ⏳ {yieldData.activeCDTsCount} CDT(s)
                                 </span>
                               )}
-                              {yieldData.isMonthlyDisbursement && (
+                              {!isAccZeroYield && yieldData.isMonthlyDisbursement && (
                                 <span
                                   style={{
                                     color: isLight ? "#92400e" : "#fbbf24",
@@ -2179,100 +2185,114 @@ export default function FixedIncomeHub() {
 
                         {/* Right: Metric Badges + Actions */}
                         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-end", flex: "1 1 auto", minWidth: 0 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--bg-surface)", padding: "6px 12px", borderRadius: 10, border: "1px solid var(--border)", flexWrap: "wrap", justifyContent: "flex-end", maxWidth: "100%" }}>
-                            {/* 1. Ingresado Neto Líquido */}
-                            <div style={{ textAlign: "right" }} title="Capital neto depositado líquido en la cuenta">
-                              <span style={{ color: "var(--text-muted)", fontSize: "0.68rem", display: "block" }}>📥 Aportado Neto</span>
-                              <span className="mono" style={{ color: "var(--text-secondary)", fontWeight: 700, fontSize: "0.85rem" }}>
-                                ${yieldData.liquidNetCapital.toLocaleString("en-US", { maximumFractionDigits: 2 })}
-                              </span>
-                            </div>
-
-                            {/* 2. Rendimientos Líquidos */}
-                            <div style={{ textAlign: "right", paddingLeft: 8, borderLeft: "1px solid var(--border)" }} title={yieldData.isMonthlyDisbursement ? `Total devengado: +$${yieldData.liquidEarnedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })} (+$${yieldData.creditedYield.toLocaleString("en-US", { maximumFractionDigits: 2 })} ya abonado en caja + $${yieldData.pendingMonthlyYield.toLocaleString("en-US", { maximumFractionDigits: 2 })} en curso por abonar el ${yieldData.nextPayoutDateLabel})` : "Rendimientos diarios ganados en la cuenta"}>
-                              <span style={{ color: "var(--text-muted)", fontSize: "0.68rem", display: "block" }}>📈 Rentabilidad</span>
-                              <span className="mono" style={{ color: "#10b981", fontWeight: 700, fontSize: "0.85rem" }}>
-                                +${yieldData.liquidEarnedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })}
-                              </span>
-                              {yieldData.isMonthlyDisbursement && yieldData.pendingMonthlyYield > 0 && (
-                                <span style={{ color: isLight ? "#b45309" : "#fbbf24", fontSize: "0.63rem", display: "block", fontWeight: 600 }}>
-                                  ⏳ (+${yieldData.pendingMonthlyYield.toLocaleString("en-US", { maximumFractionDigits: 0 })} el {yieldData.nextPayoutDateLabel})
+                          {isAccZeroYield ? (
+                            <div style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--bg-surface)", padding: "6px 14px", borderRadius: 10, border: "1px solid var(--border)", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                              <div style={{ textAlign: "right" }} title="Saldo disponible para transacciones cotidianas y pagos">
+                                <span style={{ color: "var(--text-muted)", fontSize: "0.68rem", display: "block", fontWeight: 700, textTransform: "uppercase" }}>
+                                  {acc.accountCategory === "payroll" ? "💼 Saldo Nómina" : "👛 Saldo Disponible"}
                                 </span>
-                              )}
-                            </div>
-
-                            {/* 3. Saldo Total Líquido */}
-                            {yieldData.isMonthlyDisbursement ? (
-                              <>
-                                <div style={{ textAlign: "right", paddingLeft: 10, borderLeft: "1px solid var(--border)" }} title="Saldo efectivamente disponible en caja hoy (con rendimientos de meses anteriores ya abonados)">
-                                  <span style={{ color: "#0284c7", fontSize: "0.68rem", display: "block", fontWeight: 700 }}>💵 Disp. en Caja</span>
-                                  <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 800, fontSize: "1.02rem" }}>
-                                    ${yieldData.liquidAvailableBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })}{" "}
-                                    <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>{acc.currency}</span>
-                                  </span>
-                                </div>
-                                <div style={{ textAlign: "right", paddingLeft: 8, borderLeft: "1px solid var(--border)" }} title="Saldo acumulado total sumando rendimientos devengados en curso que se abonarán el 1º">
-                                  <span style={{ color: isLight ? "#047857" : "#34d399", fontSize: "0.68rem", display: "block", fontWeight: 700 }}>✨ Total + Devengado</span>
-                                  <span className="mono" style={{ color: isLight ? "#065f46" : "#6ee7b7", fontWeight: 700, fontSize: "0.88rem" }}>
-                                    ${yieldData.liquidTotalBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })}
-                                  </span>
-                                </div>
-                              </>
-                            ) : (
-                              <div style={{ textAlign: "right", paddingLeft: 10, borderLeft: "1px solid var(--border)" }} title="Saldo líquido disponible actualmente en la cuenta">
-                                <span style={{ color: "#0284c7", fontSize: "0.68rem", display: "block", fontWeight: 700 }}>💰 Saldo Líquido</span>
-                                <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 800, fontSize: "1.05rem" }}>
-                                  ${yieldData.liquidTotalBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })}{" "}
+                                <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 800, fontSize: "1.08rem" }}>
+                                  ${Number(acc.balance || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
                                   <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{acc.currency}</span>
                                 </span>
                               </div>
-                            )}
-
-                            {/* 4. CDTs Activos vinculados a esta cuenta */}
-                            {yieldData.activeCDTsList.length > 0 && (
-                              <div
-                                style={{
-                                  textAlign: "right",
-                                  paddingLeft: 10,
-                                  borderLeft: "1px solid var(--border)",
-                                }}
-                                title="Capital activo en CDT(s) vinculados a esta cuenta más rendimientos devengados a hoy"
-                              >
-                                <span style={{ color: isLight ? "#92400e" : "#f59e0b", fontSize: "0.68rem", display: "block", fontWeight: 700 }}>
-                                  ⏳ En {yieldData.activeCDTsList.length} CDT(s)
-                                </span>
-                                <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: "0.92rem" }}>
-                                  ${(yieldData.activeCDTsCapital + yieldData.activeCDTsAccruedInterest).toLocaleString("en-US", { maximumFractionDigits: 2 })}
-                                </span>
-                                <span style={{ color: "#10b981", fontSize: "0.68rem", display: "block", fontWeight: 600 }}>
-                                  (+${yieldData.activeCDTsAccruedInterest.toLocaleString("en-US", { maximumFractionDigits: 0 })} rend.)
+                            </div>
+                          ) : (
+                            <div style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--bg-surface)", padding: "6px 12px", borderRadius: 10, border: "1px solid var(--border)", flexWrap: "wrap", justifyContent: "flex-end", maxWidth: "100%" }}>
+                              {/* 1. Ingresado Neto Líquido */}
+                              <div style={{ textAlign: "right" }} title="Capital neto depositado líquido en la cuenta">
+                                <span style={{ color: "var(--text-muted)", fontSize: "0.68rem", display: "block" }}>📥 Aportado Neto</span>
+                                <span className="mono" style={{ color: "var(--text-secondary)", fontWeight: 700, fontSize: "0.85rem" }}>
+                                  ${yieldData.liquidNetCapital.toLocaleString("en-US", { maximumFractionDigits: 2 })}
                                 </span>
                               </div>
-                            )}
 
-                            {/* 5. Total Consolidado Cuenta (Líquido + CDTs) */}
-                            {yieldData.activeCDTsList.length > 0 && (
-                              <div
-                                style={{
-                                  textAlign: "right",
-                                  paddingLeft: 10,
-                                  borderLeft: "1px solid var(--border)",
-                                }}
-                                title="Total consolidado de esta cuenta (Saldo Líquido disponible + CDTs activos)"
-                              >
-                                <span style={{ color: "var(--text-secondary)", fontSize: "0.68rem", display: "block", fontWeight: 700 }}>
-                                  💼 Total Cuenta
+                              {/* 2. Rendimientos Líquidos */}
+                              <div style={{ textAlign: "right", paddingLeft: 8, borderLeft: "1px solid var(--border)" }} title={yieldData.isMonthlyDisbursement ? `Total devengado: +$${yieldData.liquidEarnedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })} (+$${yieldData.creditedYield.toLocaleString("en-US", { maximumFractionDigits: 2 })} ya abonado en caja + $${yieldData.pendingMonthlyYield.toLocaleString("en-US", { maximumFractionDigits: 2 })} en curso por abonar el ${yieldData.nextPayoutDateLabel})` : "Rendimientos diarios ganados en la cuenta"}>
+                                <span style={{ color: "var(--text-muted)", fontSize: "0.68rem", display: "block" }}>📈 Rentabilidad</span>
+                                <span className="mono" style={{ color: "#10b981", fontWeight: 700, fontSize: "0.85rem" }}>
+                                  +${yieldData.liquidEarnedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })}
                                 </span>
-                                <span className="mono" style={{ color: "#10b981", fontWeight: 800, fontSize: "1.05rem" }}>
-                                  ${(yieldData.liquidTotalBalance + yieldData.activeCDTsCapital + yieldData.activeCDTsAccruedInterest).toLocaleString("en-US", { maximumFractionDigits: 2 })}
-                                </span>
+                                {yieldData.isMonthlyDisbursement && yieldData.pendingMonthlyYield > 0 && (
+                                  <span style={{ color: isLight ? "#b45309" : "#fbbf24", fontSize: "0.63rem", display: "block", fontWeight: 600 }}>
+                                    ⏳ (+${yieldData.pendingMonthlyYield.toLocaleString("en-US", { maximumFractionDigits: 0 })} el {yieldData.nextPayoutDateLabel})
+                                  </span>
+                                )}
                               </div>
-                            )}
-                          </div>
+
+                              {/* 3. Saldo Total Líquido */}
+                              {yieldData.isMonthlyDisbursement ? (
+                                <>
+                                  <div style={{ textAlign: "right", paddingLeft: 10, borderLeft: "1px solid var(--border)" }} title="Saldo efectivamente disponible en caja hoy (con rendimientos de meses anteriores ya abonados)">
+                                    <span style={{ color: "#0284c7", fontSize: "0.68rem", display: "block", fontWeight: 700 }}>💵 Disp. en Caja</span>
+                                    <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 800, fontSize: "1.02rem" }}>
+                                      ${yieldData.liquidAvailableBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })}{" "}
+                                      <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>{acc.currency}</span>
+                                    </span>
+                                  </div>
+                                  <div style={{ textAlign: "right", paddingLeft: 8, borderLeft: "1px solid var(--border)" }} title="Saldo acumulado total sumando rendimientos devengados en curso que se abonarán el 1º">
+                                    <span style={{ color: isLight ? "#047857" : "#34d399", fontSize: "0.68rem", display: "block", fontWeight: 700 }}>✨ Total + Devengado</span>
+                                    <span className="mono" style={{ color: isLight ? "#065f46" : "#6ee7b7", fontWeight: 700, fontSize: "0.88rem" }}>
+                                      ${yieldData.liquidTotalBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })}
+                                    </span>
+                                  </div>
+                                </>
+                              ) : (
+                                <div style={{ textAlign: "right", paddingLeft: 10, borderLeft: "1px solid var(--border)" }} title="Saldo líquido disponible actualmente en la cuenta">
+                                  <span style={{ color: "#0284c7", fontSize: "0.68rem", display: "block", fontWeight: 700 }}>💰 Saldo Líquido</span>
+                                  <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 800, fontSize: "1.05rem" }}>
+                                    ${yieldData.liquidTotalBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })}{" "}
+                                    <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{acc.currency}</span>
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* 4. CDTs Activos vinculados a esta cuenta */}
+                              {yieldData.activeCDTsList.length > 0 && (
+                                <div
+                                  style={{
+                                    textAlign: "right",
+                                    paddingLeft: 10,
+                                    borderLeft: "1px solid var(--border)",
+                                  }}
+                                  title="Capital activo en CDT(s) vinculados a esta cuenta más rendimientos devengados a hoy"
+                                >
+                                  <span style={{ color: isLight ? "#92400e" : "#f59e0b", fontSize: "0.68rem", display: "block", fontWeight: 700 }}>
+                                    ⏳ En {yieldData.activeCDTsList.length} CDT(s)
+                                  </span>
+                                  <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: "0.92rem" }}>
+                                    ${(yieldData.activeCDTsCapital + yieldData.activeCDTsAccruedInterest).toLocaleString("en-US", { maximumFractionDigits: 2 })}
+                                  </span>
+                                  <span style={{ color: "#10b981", fontSize: "0.68rem", display: "block", fontWeight: 600 }}>
+                                    (+${yieldData.activeCDTsAccruedInterest.toLocaleString("en-US", { maximumFractionDigits: 0 })} rend.)
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* 5. Total Consolidado Cuenta (Líquido + CDTs) */}
+                              {yieldData.activeCDTsList.length > 0 && (
+                                <div
+                                  style={{
+                                    textAlign: "right",
+                                    paddingLeft: 10,
+                                    borderLeft: "1px solid var(--border)",
+                                  }}
+                                  title="Total consolidado de esta cuenta (Saldo Líquido disponible + CDTs activos)"
+                                >
+                                  <span style={{ color: "var(--text-secondary)", fontSize: "0.68rem", display: "block", fontWeight: 700 }}>
+                                    💼 Total Cuenta
+                                  </span>
+                                  <span className="mono" style={{ color: "#10b981", fontWeight: 800, fontSize: "1.05rem" }}>
+                                    ${(yieldData.liquidTotalBalance + yieldData.activeCDTsCapital + yieldData.activeCDTsAccruedInterest).toLocaleString("en-US", { maximumFractionDigits: 2 })}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          )}
 
                           {/* Action Buttons */}
                           <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                            {(() => {
+                            {!isAccZeroYield && (() => {
                               const targetBalance = yieldData.isMonthlyDisbursement ? yieldData.liquidAvailableBalance : yieldData.liquidTotalBalance;
                               if (Math.abs(acc.balance - targetBalance) <= 1) return null;
                               return (
@@ -2302,7 +2322,7 @@ export default function FixedIncomeHub() {
                               );
                             })()}
 
-                            {accTx.length > 0 && (
+                            {!isAccZeroYield && accTx.length > 0 && (
                               <button
                                 onClick={() => handleGenerateMonthlyYields(acc)}
                                 style={{

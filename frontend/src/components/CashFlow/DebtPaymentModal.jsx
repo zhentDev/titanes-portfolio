@@ -1,0 +1,302 @@
+import React, { useState } from "react";
+import { useTheme } from "../../context/ThemeContext";
+import { formatCashFlowMoney } from "../../utils/cashFlowFormatters";
+import "./CashFlow.css";
+
+export default function DebtPaymentModal({
+  isOpen,
+  onClose,
+  debt,
+  onRecordPayment,
+  fixedIncomeAccounts = [],
+  currency = "COP",
+  fxRate = 4150,
+}) {
+  const { theme } = useTheme();
+  const isLight = theme === "light";
+
+  const [amount, setAmount] = useState("");
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [paymentMethod, setPaymentMethod] = useState(() => debt?.paymentMethod || "Nómina / Débito directa");
+  const [paymentSourceId, setPaymentSourceId] = useState(() => debt?.paymentSourceId || "");
+  const [note, setNote] = useState("");
+
+  if (!isOpen || !debt) return null;
+
+  const remaining = Number(debt.remainingAmount !== undefined ? debt.remainingAmount : debt.totalAmount || 0);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const pAmt = Number(amount) || 0;
+    if (pAmt <= 0) {
+      alert("Ingresa un monto válido para el abono.");
+      return;
+    }
+
+    onRecordPayment(debt.id, {
+      amount: pAmt,
+      date,
+      paymentMethod,
+      paymentSourceId: paymentSourceId || null,
+      note: note.trim(),
+    });
+
+    onClose();
+  };
+
+  const handlePayFull = () => {
+    setAmount(String(remaining));
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        backgroundColor: "rgba(0, 0, 0, 0.72)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 9999,
+        padding: "16px",
+        backdropFilter: "blur(6px)",
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: "var(--bg-card)",
+          borderRadius: "18px",
+          width: "100%",
+          maxWidth: "460px",
+          border: isLight ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(16, 185, 129, 0.4)",
+          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.7)",
+          padding: "24px",
+          color: "var(--text-primary)",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: "1.4rem" }}>💰</span>
+            <div>
+              <h2 style={{ fontSize: "1.1rem", fontWeight: 800, margin: 0 }}>
+                Abonar a Deuda
+              </h2>
+              <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", margin: "2px 0 0" }}>
+                {debt.concept} ({debt.creditor})
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "var(--text-muted)",
+              fontSize: "1.2rem",
+              cursor: "pointer",
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Info Box */}
+        <div
+          style={{
+            background: isLight ? "rgba(244, 63, 94, 0.08)" : "rgba(244, 63, 94, 0.12)",
+            border: "1px solid rgba(244, 63, 94, 0.25)",
+            borderRadius: 10,
+            padding: "10px 14px",
+            marginBottom: 16,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <div>
+            <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "block" }}>Saldo Pendiente</span>
+            <span className="mono" style={{ fontSize: "1.15rem", fontWeight: 800, color: "#f43f5e" }}>
+              ${remaining.toLocaleString("en-US", { maximumFractionDigits: 2 })} {currency}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={handlePayFull}
+            style={{
+              background: "rgba(16, 185, 129, 0.18)",
+              border: "1px solid rgba(16, 185, 129, 0.45)",
+              color: "#10b981",
+              borderRadius: 6,
+              padding: "5px 10px",
+              fontSize: "0.74rem",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            Pagar Total
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div>
+            <label style={{ fontSize: "0.76rem", fontWeight: 700, display: "block", marginBottom: 4 }}>
+              Monto del Abono ({currency}) *
+            </label>
+            <input
+              type="number"
+              step="any"
+              required
+              placeholder="ej. 50000"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              style={{
+                width: "100%",
+                background: "var(--bg-surface)",
+                border: "1.5px solid var(--border)",
+                borderRadius: 8,
+                padding: "8px 12px",
+                color: "#10b981",
+                fontSize: "1.05rem",
+                fontWeight: 800,
+                fontFamily: "JetBrains Mono, monospace",
+              }}
+            />
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div>
+              <label style={{ fontSize: "0.75rem", fontWeight: 700, display: "block", marginBottom: 4 }}>
+                Fecha del Pago
+              </label>
+              <input
+                type="date"
+                required
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                style={{
+                  width: "100%",
+                  background: "var(--bg-surface)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                  padding: "7px 10px",
+                  color: "var(--text-primary)",
+                  fontSize: "0.8rem",
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ fontSize: "0.75rem", fontWeight: 700, display: "block", marginBottom: 4 }}>
+                Medio de Pago
+              </label>
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                style={{
+                  width: "100%",
+                  background: "var(--bg-surface)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                  padding: "7px 10px",
+                  color: "var(--text-primary)",
+                  fontSize: "0.8rem",
+                }}
+              >
+                <option value="Transferencia desde Cajita / Cuenta">Cajita específica</option>
+                <option value="Nómina / Débito directa">Nómina / Débito</option>
+                <option value="Transferencia Bancaria">Transferencia</option>
+                <option value="Efectivo">Efectivo</option>
+                <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label style={{ fontSize: "0.75rem", fontWeight: 700, display: "block", marginBottom: 4 }}>
+              Cuenta / Cajita Origen (Opcional)
+            </label>
+            <select
+              value={paymentSourceId}
+              onChange={(e) => setPaymentSourceId(e.target.value)}
+              style={{
+                width: "100%",
+                background: "var(--bg-surface)",
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+                padding: "8px 10px",
+                color: "var(--text-primary)",
+                fontSize: "0.8rem",
+              }}
+            >
+              <option value="">-- Seleccionar Cuenta / Cajita (Opcional) --</option>
+              {fixedIncomeAccounts.map((acc) => (
+                <option key={acc.id} value={acc.id}>
+                  {acc.name} (${Number(acc.balance || 0).toLocaleString()} {acc.currency})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={{ fontSize: "0.75rem", fontWeight: 600, display: "block", marginBottom: 4, color: "var(--text-muted)" }}>
+              Nota / Comprobante (Opcional)
+            </label>
+            <input
+              type="text"
+              placeholder="ej. Transferencia #12345, comprobante Nequi..."
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              style={{
+                width: "100%",
+                background: "var(--bg-surface)",
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+                padding: "7px 10px",
+                color: "var(--text-primary)",
+                fontSize: "0.8rem",
+              }}
+            />
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10 }}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                background: "var(--bg-surface)",
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+                padding: "8px 16px",
+                color: "var(--text-secondary)",
+                fontSize: "0.8rem",
+                cursor: "pointer",
+                fontWeight: 600,
+              }}
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              style={{
+                background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                border: "none",
+                borderRadius: 8,
+                padding: "8px 20px",
+                color: "#ffffff",
+                fontSize: "0.82rem",
+                cursor: "pointer",
+                fontWeight: 700,
+                boxShadow: "0 4px 14px rgba(16, 185, 129, 0.3)",
+              }}
+            >
+              Confirmar Abono
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

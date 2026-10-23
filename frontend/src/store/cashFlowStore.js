@@ -100,6 +100,7 @@ export const useCashFlowStore = create(
     creditPurchases: DEFAULT_CREDIT_PURCHASES,
     creditCardPayments: [],
     expensesLog: [],
+    debts: [],
     inflows: DEFAULT_INFLOWS,
     needs: DEFAULT_NEEDS,
     wants: DEFAULT_WANTS,
@@ -163,12 +164,12 @@ export const useCashFlowStore = create(
           }
         });
 
-        // Exact user items — no forced dummy templates or reset logic
-        const rawCreditCards = unionById(source?.creditCards, cachedLocal?.creditCards);
-        const mergedCreditCards = rawCreditCards;
-        const mergedCreditPurchases = unionById(source?.creditPurchases, cachedLocal?.creditPurchases);
-        const mergedCreditCardPayments = unionById(source?.creditCardPayments, cachedLocal?.creditCardPayments);
-        const mergedExpensesLog = unionById(source?.expensesLog, cachedLocal?.expensesLog);
+        // Exact user items — server SSOT is prioritized for transactional & debt logs so deletions stick permanently
+        const mergedCreditCards = Array.isArray(source?.creditCards) ? source.creditCards : (cachedLocal?.creditCards || []);
+        const mergedCreditPurchases = Array.isArray(source?.creditPurchases) ? source.creditPurchases : (cachedLocal?.creditPurchases || []);
+        const mergedCreditCardPayments = Array.isArray(source?.creditCardPayments) ? source.creditCardPayments : (cachedLocal?.creditCardPayments || []);
+        const mergedExpensesLog = Array.isArray(source?.expensesLog) ? source.expensesLog : (cachedLocal?.expensesLog || []);
+        const mergedDebts = Array.isArray(source?.debts) ? source.debts : (cachedLocal?.debts || []);
         const mergedInflows = unionById(source?.inflows, cachedLocal?.inflows);
         const mergedNeeds = unionById(source?.needs, cachedLocal?.needs);
         const mergedWants = unionById(source?.wants, cachedLocal?.wants);
@@ -191,6 +192,7 @@ export const useCashFlowStore = create(
           creditPurchases: mergedCreditPurchases,
           creditCardPayments: mergedCreditCardPayments,
           expensesLog: mergedExpensesLog,
+          debts: mergedDebts,
           inflows: mergedInflows,
           needs: mergedNeeds,
           wants: mergedWants,
@@ -247,6 +249,7 @@ export const useCashFlowStore = create(
               creditPurchases: currentState.creditPurchases,
               creditCardPayments: currentState.creditCardPayments,
               expensesLog: currentState.expensesLog,
+              debts: currentState.debts || [],
               inflows: currentState.inflows,
               needs: currentState.needs,
               wants: currentState.wants,
@@ -386,13 +389,114 @@ export const useCashFlowStore = create(
             });
           }
 
+          const filteredExpenses = (state.expensesLog || []).filter((tx) => tx.id !== id);
+          try {
+            localStorage.setItem("titanes_cash_flow_store_v2", JSON.stringify({ ...state, expensesLog: filteredExpenses, creditCards: updatedCards }));
+          } catch {}
+
           return {
-            expensesLog: (state.expensesLog || []).filter((tx) => tx.id !== id),
+            expensesLog: filteredExpenses,
             creditCards: updatedCards,
           };
         });
         get().syncStateWithBackend();
+        fetch(`/api/cash-flow/expense/${id}`, { method: "DELETE" }).catch(() => {});
         toast.success("Gasto real eliminado", { icon: "🗑️" });
+      },
+
+      // ── Debts & Liabilities CRUD ────────────────────────
+      addDebt: (debt) => {
+        const newDebt = {
+          id: debt.id || `debt_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          concept: (debt.concept || "").trim(),
+          creditor: (debt.creditor || "").trim(),
+          totalAmount: Number(debt.totalAmount || 0),
+          remainingAmount: Number(debt.remainingAmount !== undefined ? debt.remainingAmount : debt.totalAmount || 0),
+          paymentMethod: debt.paymentMethod || "Nómina / Débito",
+          paymentSourceId: debt.paymentSourceId || null,
+          paymentFrequency: debt.paymentFrequency || "monthly",
+          installmentAmount: Number(debt.installmentAmount || 0),
+          dueDate: debt.dueDate || null,
+          nextPaymentDate: debt.nextPaymentDate || null,
+          status: debt.status || "active",
+          notes: debt.notes || "",
+          paymentsLog: Array.isArray(debt.paymentsLog) ? debt.paymentsLog : [],
+          createdAt: debt.createdAt || new Date().toISOString(),
+        };
+        set((state) => {
+          const updatedDebts = [newDebt, ...(state.debts || [])];
+          try {
+            localStorage.setItem("titanes_cash_flow_store_v2", JSON.stringify({ ...state, debts: updatedDebts }));
+          } catch {}
+          return { debts: updatedDebts };
+        });
+        get().syncStateWithBackend();
+        toast.success(`Deuda "${newDebt.concept}" registrada`, { icon: "💳" });
+      },
+
+      updateDebt: (id, updates) => {
+        set((state) => {
+          const updatedDebts = (state.debts || []).map((d) => (d.id === id ? { ...d, ...updates } : d));
+          try {
+            localStorage.setItem("titanes_cash_flow_store_v2", JSON.stringify({ ...state, debts: updatedDebts }));
+          } catch {}
+          return { debts: updatedDebts };
+        });
+        get().syncStateWithBackend();
+        toast.success("Deuda actualizada", { icon: "✏️" });
+      },
+
+      deleteDebt: (id) => {
+        set((state) => {
+          const updatedDebts = (state.debts || []).filter((d) => d.id !== id);
+          try {
+            localStorage.setItem("titanes_cash_flow_store_v2", JSON.stringify({ ...state, debts: updatedDebts }));
+          } catch {}
+          return { debts: updatedDebts };
+        });
+        get().syncStateWithBackend();
+        fetch(`/api/cash-flow/debt/${id}`, { method: "DELETE" }).catch(() => {});
+        toast.success("Deuda eliminada", { icon: "🗑️" });
+      },
+
+      recordDebtPayment: (debtId, payment) => {
+        set((state) => {
+          const currentDebts = state.debts || [];
+          const debt = currentDebts.find((d) => d.id === debtId);
+          if (!debt) return state;
+
+          const pAmt = Number(payment.amount || 0);
+          const newRemaining = Math.max(0, Number(debt.remainingAmount || 0) - pAmt);
+          const isSettled = newRemaining <= 0;
+
+          const paymentRecord = {
+            id: `pay_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            amount: pAmt,
+            date: payment.date || new Date().toISOString().slice(0, 10),
+            paymentMethod: payment.paymentMethod || debt.paymentMethod,
+            paymentSourceId: payment.paymentSourceId || debt.paymentSourceId,
+            note: payment.note || "",
+            createdAt: new Date().toISOString(),
+          };
+
+          const updatedDebts = currentDebts.map((d) => {
+            if (d.id !== debtId) return d;
+            return {
+              ...d,
+              remainingAmount: newRemaining,
+              status: isSettled ? "paid" : "active",
+              paymentsLog: [paymentRecord, ...(d.paymentsLog || [])],
+            };
+          });
+
+          try {
+            localStorage.setItem("titanes_cash_flow_store_v2", JSON.stringify({ ...state, debts: updatedDebts }));
+          } catch {}
+
+          return { debts: updatedDebts };
+        });
+        get().syncStateWithBackend();
+        toast.success("Abono a deuda registrado", { icon: "💰" });
       },
 
       // ── Loan Settlement & Reimbursement (Full or Partial) ──────────────

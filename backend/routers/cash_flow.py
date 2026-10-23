@@ -41,6 +41,7 @@ DEFAULT_CASH_FLOW_DATA = {
     "expensesLog": [],
     "creditCards": [],
     "creditCardPayments": [],
+    "debts": [],
     "periodsData": {}
 }
 
@@ -215,6 +216,7 @@ class CashFlowSyncPayload(BaseModel):
     creditPurchases: list[dict] | None = None
     expensesLog: list[dict] | None = None
     creditCardPayments: list[dict] | None = None
+    debts: list[dict] | None = None
     periodsData: dict | None = None
 
 
@@ -274,23 +276,25 @@ def sync_cash_flow_state(payload: CashFlowSyncPayload, request: Request):
     if payload.emergencyFundTargetMonths is not None:
         db["emergencyFundTargetMonths"] = payload.emergencyFundTargetMonths
     if payload.inflows is not None:
-        db["inflows"] = merge_lists_by_id(db.get("inflows"), payload.inflows)
+        db["inflows"] = [dump_val(x) for x in payload.inflows]
     if payload.needs is not None:
-        db["needs"] = merge_lists_by_id(db.get("needs"), payload.needs)
+        db["needs"] = [dump_val(x) for x in payload.needs]
     if payload.wants is not None:
-        db["wants"] = merge_lists_by_id(db.get("wants"), payload.wants)
+        db["wants"] = [dump_val(x) for x in payload.wants]
     if payload.wealth is not None:
-        db["wealth"] = merge_lists_by_id(db.get("wealth"), payload.wealth)
+        db["wealth"] = [dump_val(x) for x in payload.wealth]
     if payload.payrollAccount is not None:
         db["payrollAccount"] = dump_val(payload.payrollAccount)
     if payload.creditCards is not None:
-        db["creditCards"] = merge_lists_by_id(db.get("creditCards"), payload.creditCards)
+        db["creditCards"] = [dump_val(x) for x in payload.creditCards]
     if payload.creditPurchases is not None:
-        db["creditPurchases"] = merge_lists_by_id(db.get("creditPurchases"), payload.creditPurchases)
+        db["creditPurchases"] = [dump_val(x) for x in payload.creditPurchases]
     if payload.expensesLog is not None:
-        db["expensesLog"] = merge_lists_by_id(db.get("expensesLog"), payload.expensesLog)
+        db["expensesLog"] = [dump_val(x) for x in payload.expensesLog]
     if payload.creditCardPayments is not None:
-        db["creditCardPayments"] = merge_lists_by_id(db.get("creditCardPayments"), payload.creditCardPayments)
+        db["creditCardPayments"] = [dump_val(x) for x in payload.creditCardPayments]
+    if payload.debts is not None:
+        db["debts"] = [dump_val(x) for x in payload.debts]
     if payload.periodsData is not None:
         existing_periods = db.get("periodsData") or {}
         incoming_periods = dump_val(payload.periodsData) or {}
@@ -298,6 +302,52 @@ def sync_cash_flow_state(payload: CashFlowSyncPayload, request: Request):
 
     save_cash_flow_db(db, user_id)
     return {"status": "ok", "message": "Cash flow synchronized successfully", "data": db}
+
+
+@router.delete("/cash-flow/expense/{expense_id}")
+def delete_expense_item(expense_id: str, request: Request):
+    """Directly delete an expense log entry from database."""
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    db = load_cash_flow_db(user_id)
+    db["expensesLog"] = [x for x in db.get("expensesLog", []) if x.get("id") != expense_id]
+    save_cash_flow_db(db, user_id)
+    return {"status": "ok", "deletedId": expense_id}
+
+
+@router.post("/cash-flow/debt")
+def create_or_update_debt(item: dict, request: Request):
+    """Create or update a personal debt or liability."""
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    db = load_cash_flow_db(user_id)
+    if not item.get("id"):
+        item["id"] = f"debt_{uuid.uuid4().hex[:8]}"
+    if not item.get("createdAt"):
+        item["createdAt"] = datetime.utcnow().isoformat() + "Z"
+    existing_debts = db.get("debts", [])
+    found = False
+    for idx, d in enumerate(existing_debts):
+        if d.get("id") == item["id"]:
+            existing_debts[idx] = item
+            found = True
+            break
+    if not found:
+        existing_debts.append(item)
+    db["debts"] = existing_debts
+    save_cash_flow_db(db, user_id)
+    return item
+
+
+@router.delete("/cash-flow/debt/{debt_id}")
+def delete_debt(debt_id: str, request: Request):
+    """Delete a personal debt."""
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    db = load_cash_flow_db(user_id)
+    db["debts"] = [x for x in db.get("debts", []) if x.get("id") != debt_id]
+    save_cash_flow_db(db, user_id)
+    return {"status": "ok", "deletedId": debt_id}
 
 
 @router.post("/cash-flow/inflow")

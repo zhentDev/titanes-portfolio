@@ -21,6 +21,9 @@ import LoanSettlementModal from "./LoanSettlementModal";
 import PayrollEntityModal from "./PayrollEntityModal";
 import PillarBreakdownCard from "./PillarBreakdownCard";
 import RealCashLiquidityCard from "./RealCashLiquidityCard";
+import DebtsSection from "./DebtsSection";
+import DebtModal from "./DebtModal";
+import DebtPaymentModal from "./DebtPaymentModal";
 import AffiliateBanner from "../Common/AffiliateBanner";
 import QuantumOrbitalLoader from "../QuantumOrbitalLoader";
 import { useTheme } from "../../context/ThemeContext";
@@ -41,6 +44,7 @@ export default function CashFlowHub() {
     creditPurchases,
     creditCardPayments,
     expensesLog,
+    debts,
     inflows,
     needs,
     wants,
@@ -80,6 +84,10 @@ export default function CashFlowHub() {
     recordSalaryAdjustment,
     settleLoanTransaction,
     toggleExpenseLoan,
+    addDebt,
+    updateDebt,
+    deleteDebt,
+    recordDebtPayment,
     syncFromFixedIncome,
     syncFromPortfolio,
   } = useCashFlowStore();
@@ -120,6 +128,10 @@ export default function CashFlowHub() {
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentInitialCardId, setPaymentInitialCardId] = useState(null);
   const [paymentInitialAmount, setPaymentInitialAmount] = useState(null);
+  const [debtModalOpen, setDebtModalOpen] = useState(false);
+  const [debtToEdit, setDebtToEdit] = useState(null);
+  const [debtPaymentModalOpen, setDebtPaymentModalOpen] = useState(false);
+  const [selectedDebtForPayment, setSelectedDebtForPayment] = useState(null);
   const [showSankey, setShowSankey] = useState(true);
   const [showLiquidity, setShowLiquidity] = useState(false);
   const [showRules, setShowRules] = useState(false);
@@ -127,10 +139,11 @@ export default function CashFlowHub() {
   const [showPillars, setShowPillars] = useState(false);
   const [showExpenses, setShowExpenses] = useState(false);
   const [showCreditCards, setShowCreditCards] = useState(false);
+  const [showDebts, setShowDebts] = useState(true);
   const [expandedCard, setExpandedCard] = useState(null); // 'invested' | 'yield' | 'closed' | null
 
   const areAllAccordionsExpanded =
-    showLiquidity && showRules && showEmergency && showPillars && showExpenses && showCreditCards;
+    showLiquidity && showRules && showEmergency && showPillars && showExpenses && showCreditCards && showDebts;
   const toggleAllAccordions = () => {
     const nextState = !areAllAccordionsExpanded;
     setShowLiquidity(nextState);
@@ -139,6 +152,7 @@ export default function CashFlowHub() {
     setShowPillars(nextState);
     setShowExpenses(nextState);
     setShowCreditCards(nextState);
+    setShowDebts(nextState);
   };
 
   // Ensure fixed income accounts are fetched from backend SSOT on mount
@@ -2929,6 +2943,128 @@ export default function CashFlowHub() {
           </div>
         )}
       </div>
+
+      {/* ── 11. Mis Deudas Personales & Pasivos (Compromisos) ──────── */}
+      <div
+        style={{
+          background: showDebts
+            ? (isLight ? "rgba(244, 63, 94, 0.025)" : "rgba(244, 63, 94, 0.035)")
+            : "var(--bg-card)",
+          border: showDebts
+            ? (isLight ? "1px solid rgba(244, 63, 94, 0.28)" : "1px solid rgba(244, 63, 94, 0.32)")
+            : "1px solid var(--border)",
+          borderLeft: `4px solid ${isLight ? "#f43f5e" : "#fb7185"}`,
+          borderRadius: 14,
+          padding: showDebts ? "16px" : "12px 18px",
+          transition: "all 0.2s ease",
+          boxShadow: showDebts
+            ? (isLight ? "0 4px 18px rgba(244, 63, 94, 0.08)" : "0 4px 20px rgba(0, 0, 0, 0.28)")
+            : "var(--shadow-card)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            cursor: "pointer",
+            flexWrap: "wrap",
+            gap: 10,
+            paddingBottom: showDebts ? 12 : 0,
+            marginBottom: showDebts ? 14 : 0,
+            borderBottom: showDebts
+              ? (isLight ? "1px solid rgba(244, 63, 94, 0.15)" : "1px solid rgba(244, 63, 94, 0.15)")
+              : "none",
+          }}
+          onClick={() => setShowDebts(!showDebts)}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                background: isLight ? "rgba(244, 63, 94, 0.12)" : "rgba(244, 63, 94, 0.18)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "1.1rem",
+              }}
+            >
+              💳
+            </div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ fontWeight: 800, fontSize: "0.95rem", color: "var(--text-primary)" }}>
+                  Mis Deudas Personales & Pasivos
+                </span>
+                <span
+                  style={{
+                    fontSize: "0.68rem",
+                    fontWeight: 700,
+                    padding: "2px 8px",
+                    borderRadius: 8,
+                    background: isLight ? "rgba(244, 63, 94, 0.12)" : "rgba(244, 63, 94, 0.2)",
+                    color: isLight ? "#be123c" : "#fb7185",
+                    border: `1px solid ${isLight ? "rgba(244, 63, 94, 0.25)" : "rgba(244, 63, 94, 0.3)"}`,
+                  }}
+                >
+                  {(debts || []).filter(d => (d.remainingAmount || 0) > 0).length} activa(s)
+                </span>
+              </div>
+              <p style={{ margin: "2px 0 0", fontSize: "0.74rem", color: "var(--text-muted)" }}>
+                Gestión de compromisos con concepto obligatorio y seguimiento de cómo se pagan
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowDebts(!showDebts);
+            }}
+            style={{
+              background: showDebts
+                ? (isLight ? "rgba(244, 63, 94, 0.12)" : "rgba(244, 63, 94, 0.18)")
+                : "var(--bg-surface)",
+              border: showDebts
+                ? `1px solid ${isLight ? "#f43f5e" : "#fb7185"}`
+                : "1px solid var(--border)",
+              borderRadius: 6,
+              padding: "4px 10px",
+              color: showDebts
+                ? (isLight ? "#be123c" : "#fb7185")
+                : "var(--text-muted)",
+              fontWeight: showDebts ? 600 : 500,
+              fontSize: "0.74rem",
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+            }}
+          >
+            {showDebts ? "▲ Ocultar Deudas" : "▼ Desplegar Deudas"}
+          </button>
+        </div>
+
+        {showDebts && (
+          <div style={{ marginTop: 14 }}>
+            <DebtsSection
+              debts={debts || []}
+              onOpenDebtModal={(debt = null) => {
+                setDebtToEdit(debt);
+                setDebtModalOpen(true);
+              }}
+              onOpenPaymentModal={(debt) => {
+                setSelectedDebtForPayment(debt);
+                setDebtPaymentModalOpen(true);
+              }}
+              onDeleteDebt={deleteDebt}
+              fixedIncomeAccounts={fixedAccounts}
+              currency={currency}
+              fxRate={fxRate}
+            />
+          </div>
+        )}
+      </div>
       </div>
 
       {/* ── Banner de Referidos Financieros (Nu, Rappi, Plenti, ARQ) ── */}
@@ -3050,6 +3186,46 @@ export default function CashFlowHub() {
           creditCards={creditCards}
           fixedIncomeAccounts={fixedAccounts}
           onConfirmSettlement={settleLoanTransaction}
+        />
+      )}
+
+      {/* ── 19. Debt Modal (Create / Edit) ────────────────────────── */}
+      {debtModalOpen && (
+        <DebtModal
+          isOpen={debtModalOpen}
+          onClose={() => {
+            setDebtModalOpen(false);
+            setDebtToEdit(null);
+          }}
+          debtToEdit={debtToEdit}
+          onSaveDebt={(debtData) => {
+            if (debtToEdit?.id) {
+              updateDebt(debtToEdit.id, debtData);
+            } else {
+              addDebt(debtData);
+            }
+          }}
+          fixedIncomeAccounts={fixedAccounts}
+          currency={currency}
+          fxRate={fxRate}
+        />
+      )}
+
+      {/* ── 20. Debt Payment Modal (Register Abono / Settlement) ────── */}
+      {debtPaymentModalOpen && selectedDebtForPayment && (
+        <DebtPaymentModal
+          isOpen={debtPaymentModalOpen}
+          onClose={() => {
+            setDebtPaymentModalOpen(false);
+            setSelectedDebtForPayment(null);
+          }}
+          debt={selectedDebtForPayment}
+          onRecordPayment={(debtId, paymentData) => {
+            recordDebtPayment(debtId, paymentData);
+          }}
+          fixedIncomeAccounts={fixedAccounts}
+          currency={currency}
+          fxRate={fxRate}
         />
       )}
     </div>

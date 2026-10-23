@@ -153,16 +153,27 @@ export default function RealCashLiquidityCard({
   const effectiveInflowForProjection = realPayrollCredits > 0 ? realCashInPayroll : (netSalaryAmount - totalExecutedPayrollOutflow);
   const projectedSurplus = effectiveInflowForProjection - totalPendingPayrollCommitments;
 
-  // 5. Total Balance in High-Yield Savings Accounts (Cajitas Nu, Plenti, CDTs, etc.) and Digital Wallets in base COP
+  // 5. Total Balance in High-Yield Savings Accounts (Cajitas Nu, Plenti, etc.) and Digital Wallets in base COP
   const totalHighYieldBalance = fixedIncomeAccounts
-    .filter((a) => a.id !== matchedPayrollAccount?.id && a.accountCategory !== "digital_wallet")
+    .filter(
+      (a) =>
+        a.id !== matchedPayrollAccount?.id &&
+        a.accountCategory !== "payroll" &&
+        a.accountCategory !== "digital_wallet" &&
+        a.type !== "wallet" &&
+        Number(a.interestRateEA || 0) > 0
+    )
     .reduce((acc, a) => {
       const mult = a.currency === "USD" ? Number(fxRate) || 4150 : 1;
       return acc + (Number(a.balance) || 0) * mult;
     }, 0);
 
   const totalWalletsBalance = fixedIncomeAccounts
-    .filter((a) => a.accountCategory === "digital_wallet")
+    .filter(
+      (a) =>
+        a.id !== matchedPayrollAccount?.id &&
+        (a.accountCategory === "digital_wallet" || (Number(a.interestRateEA || 0) === 0 && a.accountCategory !== "payroll"))
+    )
     .reduce((acc, a) => acc + (Number(a.balance) || 0), 0);
 
   const totalLiquidSavings = totalHighYieldBalance + totalWalletsBalance;
