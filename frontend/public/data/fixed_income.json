@@ -41,6 +41,24 @@
       "color": "#c3c520",
       "icon": "🧡",
       "createdAt": "2026-09-17T03:45:50.396Z"
+    },
+    {
+      "id": "ent_nequi",
+      "name": "Nequi",
+      "country": "🇨🇴",
+      "color": "#20002c",
+      "icon": "🟣",
+      "createdAt": "2026-10-23T00:00:00.000Z",
+      "logoUrl": ""
+    },
+    {
+      "id": "ent_daviplata",
+      "name": "Daviplata",
+      "country": "🇨🇴",
+      "color": "#ed1c24",
+      "icon": "📲",
+      "createdAt": "2026-10-23T00:00:00.000Z",
+      "logoUrl": ""
     }
   ],
   "accounts": [
@@ -50,12 +68,15 @@
       "name": "Cajita Viaje",
       "type": "pocket",
       "currency": "COP",
-      "balance": 119256.5,
+      "balance": 120046.5,
       "interestRateEA": 9.35,
       "isTaxExemptGMF": true,
       "startDate": "2023-06-01",
       "createdAt": "2023-06-01T00:00:00.000Z",
-      "rateHistory": []
+      "rateHistory": [],
+      "syncType": "api",
+      "accountCategory": "high_yield",
+      "fallbackAccountId": "acc_nu_debito"
     },
     {
       "id": "acc_estudios",
@@ -68,7 +89,10 @@
       "isTaxExemptGMF": true,
       "startDate": "2023-06-01",
       "createdAt": "2023-06-01T00:00:00.000Z",
-      "rateHistory": []
+      "rateHistory": [],
+      "syncType": "api",
+      "accountCategory": "high_yield",
+      "fallbackAccountId": "acc_nu_debito"
     },
     {
       "id": "acc_deuda_mom",
@@ -81,7 +105,10 @@
       "isTaxExemptGMF": true,
       "startDate": "2023-06-01",
       "createdAt": "2023-06-01T00:00:00.000Z",
-      "rateHistory": []
+      "rateHistory": [],
+      "syncType": "api",
+      "accountCategory": "high_yield",
+      "fallbackAccountId": "acc_nu_debito"
     },
     {
       "id": "acc_1786771927434",
@@ -98,7 +125,9 @@
           "rateEA": 10
         }
       ],
-      "createdAt": "2026-08-15T05:32:07.434Z"
+      "createdAt": "2026-08-15T05:32:07.434Z",
+      "syncType": "api",
+      "accountCategory": "high_yield"
     },
     {
       "id": "acc_1786777955489",
@@ -141,7 +170,9 @@
           "rateEA": 6,
           "label": "Más de ,000 USD (6.0% EA)"
         }
-      ]
+      ],
+      "syncType": "api",
+      "accountCategory": "high_yield"
     },
     {
       "id": "acc_1789616855068",
@@ -149,8 +180,8 @@
       "name": "Impresora",
       "type": "pocket",
       "currency": "COP",
-      "balance": 226483.88,
-      "interestRateEA": 9.0,
+      "balance": 227483.88,
+      "interestRateEA": 9,
       "isTaxExemptGMF": true,
       "rateHistory": [
         {
@@ -158,7 +189,10 @@
           "rateEA": 9
         }
       ],
-      "createdAt": "2026-09-17T03:47:35.068Z"
+      "createdAt": "2026-09-17T03:47:35.068Z",
+      "syncType": "api",
+      "accountCategory": "high_yield",
+      "fallbackAccountId": "acc_rappi_principal"
     },
     {
       "id": "acc_1789760692910",
@@ -175,7 +209,80 @@
           "rateEA": 9
         }
       ],
-      "createdAt": "2026-09-18T19:44:52.910Z"
+      "createdAt": "2026-09-18T19:44:52.910Z",
+      "syncType": "api",
+      "accountCategory": "high_yield"
+    },
+    {
+      "id": "acc_nu_debito",
+      "entityId": "ent_nu",
+      "name": "Cuenta Nu Débito (Nómina)",
+      "type": "savings",
+      "accountCategory": "payroll",
+      "syncType": "api",
+      "currency": "COP",
+      "balance": 3483000.0,
+      "interestRateEA": 0,
+      "isTaxExemptGMF": true,
+      "rateHistory": [],
+      "createdAt": "2026-10-23T00:00:00.000Z"
+    },
+    {
+      "id": "acc_rappi_principal",
+      "entityId": "ent_1789616750396",
+      "name": "Cuenta RappiPay (Principal)",
+      "type": "savings",
+      "accountCategory": "digital_wallet",
+      "syncType": "api",
+      "currency": "COP",
+      "balance": 8400.16,
+      "interestRateEA": 0,
+      "isTaxExemptGMF": true,
+      "rateHistory": [
+        {
+          "date": "2026-10-23",
+          "rateEA": 0
+        }
+      ],
+      "createdAt": "2026-10-23T00:00:00.000Z"
+    },
+    {
+      "id": "acc_nequi_disp",
+      "entityId": "ent_nequi",
+      "name": "Disponible Nequi",
+      "type": "wallet",
+      "accountCategory": "digital_wallet",
+      "syncType": "api",
+      "currency": "COP",
+      "balance": 8047.4,
+      "interestRateEA": 0,
+      "isTaxExemptGMF": true,
+      "rateHistory": [
+        {
+          "date": "2026-10-23",
+          "rateEA": 0
+        }
+      ],
+      "createdAt": "2026-10-23T00:00:00.000Z"
+    },
+    {
+      "id": "acc_daviplata_disp",
+      "entityId": "ent_daviplata",
+      "name": "Daviplata Principal",
+      "type": "wallet",
+      "accountCategory": "digital_wallet",
+      "syncType": "api",
+      "currency": "COP",
+      "balance": 0,
+      "interestRateEA": 0,
+      "isTaxExemptGMF": true,
+      "rateHistory": [
+        {
+          "date": "2026-10-23",
+          "rateEA": 0
+        }
+      ],
+      "createdAt": "2026-10-23T00:00:00.000Z"
     }
   ],
   "cdts": [
@@ -445,11 +552,245 @@
   ],
   "transactions": [
     {
+      "id": "tx_mb_1792788686385_8823d4",
+      "accountId": "acc_nu_debito",
+      "entityId": "ent_nu",
+      "date": "2026-10-23",
+      "description": "Gasto Nu Débito",
+      "amount": -13000.0,
+      "currency": "COP",
+      "type": "debit",
+      "category": "Gasto Móvil",
+      "source": "macrodroid_webhook",
+      "rawText": "Compra con tarjeta débito Nu por $13.000",
+      "cascaded": false,
+      "coveredByPocket": null,
+      "shortfall": null,
+      "fallbackAccountId": null,
+      "fallbackAccountName": null,
+      "createdAt": "2026-10-23T15:51:26.385167-05:00"
+    },
+    {
+      "id": "tx_1792788592783_9ax7dq",
+      "accountId": "acc_viaje",
+      "date": "2026-10-23",
+      "description": "Aporte a Cajita Viaje",
+      "amount": 790,
+      "currency": "COP",
+      "type": "credit",
+      "createdAt": "2026-10-23T20:49:52.783Z"
+    },
+    {
+      "id": "tx_mb_1792787751137_5892d6",
+      "accountId": "acc_ignorarcan_daf8",
+      "entityId": "ent_nu",
+      "date": "2026-10-23",
+      "description": "Consignación Citibank",
+      "amount": 3496000,
+      "currency": "COP",
+      "type": "credit",
+      "category": "Gasto Móvil",
+      "source": "macrodroid_webhook",
+      "rawText": "Nu - Banco Citibank te envió 3.496.000,00.",
+      "cascaded": false,
+      "coveredByPocket": null,
+      "shortfall": null,
+      "fallbackAccountId": null,
+      "fallbackAccountName": null,
+      "createdAt": "2026-10-23T15:35:51.137145-05:00"
+    },
+    {
+      "id": "tx_mb_1792779338792_e2baf9",
+      "accountId": "acc_nu_debito",
+      "entityId": "ent_nu",
+      "date": "2026-10-23",
+      "description": "Consignación Nómina / Banco Citibank",
+      "amount": 3496000,
+      "currency": "COP",
+      "type": "credit",
+      "category": "Nómina",
+      "source": "macrodroid_webhook",
+      "rawText": "Nu - Banco Citibank te envió 3.496.000,00.",
+      "cascaded": false,
+      "createdAt": "2026-10-23T13:15:38.792630-05:00"
+    },
+    {
+      "id": "tx_mb_1792779105825_b126cb",
+      "accountId": "acc_rappi_principal",
+      "entityId": "ent_1789616750396",
+      "date": "2026-10-23",
+      "description": "Reversión Test Sobregiro Principal",
+      "amount": 2000,
+      "currency": "COP",
+      "type": "credit",
+      "category": "Gasto Móvil",
+      "source": "macrodroid_webhook",
+      "rawText": "",
+      "cascaded": false,
+      "coveredByPocket": null,
+      "shortfall": null,
+      "fallbackAccountId": null,
+      "fallbackAccountName": null,
+      "createdAt": "2026-10-23T13:11:45.825877-05:00"
+    },
+    {
+      "id": "tx_mb_1792779105705_02d984",
+      "accountId": "acc_1789616855068",
+      "entityId": "ent_1789616750396",
+      "date": "2026-10-23",
+      "description": "Compra Equipos Papelería (Cascada: 100% completado $2,000 desde Cuenta RappiPay (Principal) porque Impresora estaba en $0)",
+      "amount": -2000,
+      "currency": "COP",
+      "type": "debit",
+      "category": "Gasto Móvil",
+      "source": "macrodroid_webhook",
+      "rawText": "",
+      "cascaded": true,
+      "coveredByPocket": 0,
+      "shortfall": 2000,
+      "fallbackAccountId": "acc_rappi_principal",
+      "fallbackAccountName": "Cuenta RappiPay (Principal)",
+      "createdAt": "2026-10-23T13:11:45.705149-05:00"
+    },
+    {
+      "id": "tx_mb_1792779105584_9c8939",
+      "accountId": "acc_nequi_disp",
+      "entityId": "ent_nequi",
+      "date": "2026-10-23",
+      "description": "Reversión Test Abono Nequi",
+      "amount": -5000,
+      "currency": "COP",
+      "type": "debit",
+      "category": "Gasto Móvil",
+      "source": "macrodroid_webhook",
+      "rawText": "",
+      "cascaded": false,
+      "coveredByPocket": null,
+      "shortfall": null,
+      "fallbackAccountId": null,
+      "fallbackAccountName": null,
+      "createdAt": "2026-10-23T13:11:45.584888-05:00"
+    },
+    {
+      "id": "tx_mb_1792779105486_13e341",
+      "accountId": "acc_nequi_disp",
+      "entityId": "ent_nequi",
+      "date": "2026-10-23",
+      "description": "Test Abono Nequi",
+      "amount": 5000,
+      "currency": "COP",
+      "type": "credit",
+      "category": "Gasto Móvil",
+      "source": "macrodroid_webhook",
+      "rawText": "",
+      "cascaded": false,
+      "coveredByPocket": null,
+      "shortfall": null,
+      "fallbackAccountId": null,
+      "fallbackAccountName": null,
+      "createdAt": "2026-10-23T13:11:45.486365-05:00"
+    },
+    {
+      "id": "tx_mb_1792779066231_fe0b80",
+      "accountId": "acc_1789616855068",
+      "entityId": "ent_1789616750396",
+      "date": "2026-10-23",
+      "description": "Compra Equipos Papelería (Cascada: $227,484 de Impresora + $2,000 completados desde Cuenta RappiPay (Principal))",
+      "amount": -229483.88,
+      "currency": "COP",
+      "type": "debit",
+      "category": "Gasto Móvil",
+      "source": "macrodroid_webhook",
+      "rawText": "",
+      "cascaded": true,
+      "coveredByPocket": 227483.88,
+      "shortfall": 2000,
+      "fallbackAccountId": "acc_rappi_principal",
+      "fallbackAccountName": "Cuenta RappiPay (Principal)",
+      "createdAt": "2026-10-23T13:11:06.231583-05:00"
+    },
+    {
+      "id": "tx_mb_1792779066108_8b1857",
+      "accountId": "acc_nequi_disp",
+      "entityId": "ent_nequi",
+      "date": "2026-10-23",
+      "description": "Reversión Test Abono Nequi",
+      "amount": -5000,
+      "currency": "COP",
+      "type": "debit",
+      "category": "Gasto Móvil",
+      "source": "macrodroid_webhook",
+      "rawText": "",
+      "cascaded": false,
+      "coveredByPocket": null,
+      "shortfall": null,
+      "fallbackAccountId": null,
+      "fallbackAccountName": null,
+      "createdAt": "2026-10-23T13:11:06.108015-05:00"
+    },
+    {
+      "id": "tx_mb_1792779066008_235589",
+      "accountId": "acc_nequi_disp",
+      "entityId": "ent_nequi",
+      "date": "2026-10-23",
+      "description": "Test Abono Nequi",
+      "amount": 5000,
+      "currency": "COP",
+      "type": "credit",
+      "category": "Gasto Móvil",
+      "source": "macrodroid_webhook",
+      "rawText": "",
+      "cascaded": false,
+      "coveredByPocket": null,
+      "shortfall": null,
+      "fallbackAccountId": null,
+      "fallbackAccountName": null,
+      "createdAt": "2026-10-23T13:11:06.008377-05:00"
+    },
+    {
+      "id": "tx_mb_1792778966456_3dfb3e",
+      "accountId": "acc_nequi_disp",
+      "entityId": "ent_nequi",
+      "date": "2026-10-23",
+      "description": "Reversión Test Abono Nequi",
+      "amount": 5000,
+      "currency": "COP",
+      "type": "credit",
+      "category": "Gasto Móvil",
+      "source": "macrodroid_webhook",
+      "rawText": "",
+      "cascaded": false,
+      "coveredByPocket": null,
+      "shortfall": null,
+      "fallbackAccountId": null,
+      "fallbackAccountName": null,
+      "createdAt": "2026-10-23T13:09:26.456314-05:00"
+    },
+    {
+      "id": "tx_mb_1792778966351_d93090",
+      "accountId": "acc_nequi_disp",
+      "entityId": "ent_nequi",
+      "date": "2026-10-23",
+      "description": "Test Abono Nequi",
+      "amount": 5000,
+      "currency": "COP",
+      "type": "credit",
+      "category": "Gasto Móvil",
+      "source": "macrodroid_webhook",
+      "rawText": "",
+      "cascaded": false,
+      "coveredByPocket": null,
+      "shortfall": null,
+      "fallbackAccountId": null,
+      "fallbackAccountName": null,
+      "createdAt": "2026-10-23T13:09:26.351956-05:00"
+    },
+    {
       "id": "tx_1792675265328_f4xpcj",
       "accountId": "acc_1789616855068",
       "date": "2026-10-22",
       "description": "Retiro de Impresora",
-      "amount": -10000,
+      "amount": -9000,
       "currency": "COP",
       "type": "debit",
       "createdAt": "2026-10-22T13:21:05.328Z"

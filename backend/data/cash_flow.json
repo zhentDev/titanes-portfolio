@@ -29,7 +29,7 @@
       "id": "in_fixed_yield",
       "name": "Ingreso por Renta Fija",
       "category": "passive_fixed",
-      "amount": 23901,
+      "amount": 23891,
       "currency": "COP",
       "isPassive": true,
       "isAutoSynced": true,
@@ -46,7 +46,7 @@
       "id": "in_stock_div",
       "name": "Ingreso por Renta Variable",
       "category": "passive_equity",
-      "amount": 41055,
+      "amount": 40955,
       "currency": "COP",
       "isPassive": true,
       "isAutoSynced": true,
@@ -220,7 +220,7 @@
       "category": "equity_investment",
       "targetAmount": 30000000,
       "monthlyContribution": 500000,
-      "currentBalance": 24632705,
+      "currentBalance": 24572769,
       "currency": "COP",
       "linkedModule": "variable_income",
       "paymentSource": {
@@ -236,7 +236,7 @@
       "category": "fixed_savings",
       "targetAmount": 15000000,
       "monthlyContribution": 300000,
-      "currentBalance": 8323683,
+      "currentBalance": 8320715,
       "currency": "COP",
       "linkedModule": "fixed_income",
       "paymentSource": {
@@ -264,6 +264,27 @@
     }
   ],
   "expensesLog": [
+    {
+      "id": "cf_tx_mb_1792788686385_8823d4",
+      "period": "2026-11",
+      "budgetItemId": null,
+      "budgetItemName": "Gasto Nu Débito",
+      "budgetItemType": "needs",
+      "description": "Gasto Nu Débito",
+      "amount": 13000.0,
+      "currency": "COP",
+      "date": "2026-10-23",
+      "type": "debit",
+      "cascaded": false,
+      "shortfall": 0.0,
+      "fallbackAccountName": null,
+      "paymentSource": {
+        "type": "payroll",
+        "targetId": "acc_nu_debito",
+        "targetName": "Cuenta Nu Débito (Nómina)"
+      },
+      "createdAt": "2026-10-23T15:51:26.385167-05:00"
+    },
     {
       "id": "cf_tx_mb_1792779338792_e2baf9",
       "period": "2026-11",
