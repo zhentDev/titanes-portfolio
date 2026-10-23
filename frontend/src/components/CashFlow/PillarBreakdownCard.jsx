@@ -183,8 +183,8 @@ export default function PillarBreakdownCard({
       {/* Progress Track vs Income & Strategy Quota */}
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", marginBottom: 6 }}>
-          <span style={{ color: "#94a3b8" }}>
-            {type === "inflow" ? "Ingresos Activos + Pasivos" : `Asignado del Ingreso`}
+          <span style={{ color: isLight ? "#64748b" : "#94a3b8" }}>
+            {type === "inflow" ? "Ingresos Esperados (Base Presupuestal)" : `Asignado del Ingreso`}
           </span>
           <span style={{ fontWeight: 700, color: type === "inflow" ? "#10b981" : color }}>
             {actualPctOfIncome}% {targetRatio > 0 && `(Meta: ${targetRatio}%)`}
@@ -254,9 +254,20 @@ export default function PillarBreakdownCard({
             );
 
             // Filter real transactions belonging to this budget envelope
-            const itemTransactions = (expensesLog || []).filter(
-              (tx) => tx.budgetItemId === item.id || tx.budgetItemName === item.name
-            );
+            const itemTransactions = (expensesLog || []).filter((tx) => {
+              if (tx.budgetItemId && tx.budgetItemId === item.id) return true;
+              if (tx.budgetItemName && tx.budgetItemName.toLowerCase() === (item.name || "").toLowerCase()) return true;
+              if (type === "inflow") {
+                const isCredit = tx.type === "credit" || tx.budgetItemType === "income";
+                if (!isCredit) return false;
+                const isSalaryItem = item.category === "salary" || (item.name || "").toLowerCase().includes("salario") || (item.name || "").toLowerCase().includes("nómina");
+                if (isSalaryItem) {
+                  const isPayrollTx = tx.paymentSource?.type === "payroll" || (tx.description || "").toLowerCase().includes("nomina") || (tx.description || "").toLowerCase().includes("salario");
+                  return isPayrollTx;
+                }
+              }
+              return false;
+            });
             const totalGrossAmount = itemTransactions.reduce((acc, tx) => acc + (Number(tx.amount) || 0), 0);
             const totalLentAmount = itemTransactions.reduce((acc, tx) => {
               if (tx.isLoan) {
@@ -306,6 +317,24 @@ export default function PillarBreakdownCard({
                         <span className="cashflow-item-name">
                           {item.name}
                         </span>
+                        {type === "inflow" && (item.category === "salary" || item.name?.toLowerCase().includes("salario") || item.name?.toLowerCase().includes("nómina")) && (
+                          <span
+                            style={{
+                              background: itemTransactions.length > 0 ? "rgba(16, 185, 129, 0.15)" : (isLight ? "rgba(245, 158, 11, 0.12)" : "rgba(245, 158, 11, 0.2)"),
+                              border: itemTransactions.length > 0 ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(245, 158, 11, 0.35)",
+                              color: itemTransactions.length > 0 ? "#10b981" : (isLight ? "#d97706" : "#fbbf24"),
+                              fontSize: "0.72rem",
+                              fontWeight: 700,
+                              padding: "2px 8px",
+                              borderRadius: "8px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            {itemTransactions.length > 0 ? "✅ Consignado" : "⏳ Esperando Consignación"}
+                          </span>
+                        )}
                         {isOverBudget && (
                           <span
                             style={{
@@ -382,7 +411,13 @@ export default function PillarBreakdownCard({
                         {formatMoney(itemAmt, currency)}
                       </div>
                       <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                        {isZero ? "($0 / Inactivo)" : `${itemPctOfPillar}% del pilar`}
+                        {type === "inflow" && (item.category === "salary" || item.name?.toLowerCase().includes("salario") || item.name?.toLowerCase().includes("nómina"))
+                          ? itemTransactions.length > 0
+                            ? `Real: ${formatMoney(totalGrossAmount, currency)}`
+                            : "Esperado hoy"
+                          : isZero
+                          ? "($0 / Inactivo)"
+                          : `${itemPctOfPillar}% del pilar`}
                       </div>
                     </div>
 

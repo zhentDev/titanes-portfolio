@@ -339,6 +339,40 @@ export default function CashFlowHub() {
     return periodInflows.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
   }, [periodInflows]);
 
+  // Real Income / Credits received this period (from mobile webhook, bank sync, or manual transactions)
+  const realIncomeTransactions = useMemo(() => {
+    return (periodExpenses || []).filter(
+      (tx) => tx.type === "credit" || tx.budgetItemType === "income" || Number(tx.amount) < 0
+    );
+  }, [periodExpenses]);
+
+  const realTotalInflow = useMemo(() => {
+    return realIncomeTransactions.reduce((acc, tx) => acc + Math.abs(Number(tx.amount) || 0), 0);
+  }, [realIncomeTransactions]);
+
+  const realPayrollInflow = useMemo(() => {
+    return realIncomeTransactions
+      .filter((tx) => {
+        const srcType = tx.paymentSource?.type;
+        const targetName = (tx.paymentSource?.targetName || "").toLowerCase();
+        const desc = (tx.description || tx.budgetItemName || "").toLowerCase();
+        return (
+          srcType === "payroll" ||
+          targetName.includes("nu") ||
+          targetName.includes("nomina") ||
+          targetName.includes("nómina") ||
+          desc.includes("nomina") ||
+          desc.includes("nómina") ||
+          desc.includes("salario")
+        );
+      })
+      .reduce((acc, tx) => acc + Math.abs(Number(tx.amount) || 0), 0);
+  }, [realIncomeTransactions]);
+
+  const inflowProgressPct = useMemo(() => {
+    return totalInflow > 0 ? Math.min(100, Math.round((realTotalInflow / totalInflow) * 100)) : 0;
+  }, [realTotalInflow, totalInflow]);
+
   const salaryInflows = useMemo(() => {
     return periodInflows.filter(
       (i) =>
@@ -944,17 +978,112 @@ export default function CashFlowHub() {
 
       {/* ── 3. Top KPI Summary Cards Grid (with Real TRM Conversion & Explanatory Comments) ── */}
       <div className="cashflow-kpi-grid">
-        {/* KPI 1: Total Inflow */}
+        {/* KPI 1: Total Inflow (Esperado vs Real Recibido en Nómina) */}
         <div className="cashflow-kpi-card emerald">
           <div className="cashflow-kpi-header">
             <span className="cashflow-kpi-label">
-              <span>💼</span> Ingreso Total ({formatPeriodName(activePeriod)})
+              <span>💼</span> Ingreso ({formatPeriodName(activePeriod)})
             </span>
-            <span className="cashflow-kpi-badge success">Inflow</span>
+            <span
+              className={`cashflow-kpi-badge ${
+                realTotalInflow > 0 ? "success" : "warning"
+              }`}
+              style={
+                realTotalInflow === 0
+                  ? {
+                      background: isLight ? "rgba(245, 158, 11, 0.12)" : "rgba(245, 158, 11, 0.2)",
+                      color: isLight ? "#d97706" : "#fbbf24",
+                      border: "1px solid rgba(245, 158, 11, 0.35)",
+                    }
+                  : undefined
+              }
+            >
+              {realTotalInflow > 0 ? "✅ Nómina Ingresada" : "⏳ Esperando Nómina"}
+            </span>
           </div>
-          <div className="cashflow-kpi-value">{formatMoney(totalInflow, currency)}</div>
+
+          {/* Dual Metrics: Real Recibido vs Meta Esperada */}
+          <div style={{ marginTop: 6, marginBottom: 8 }}>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+              <div>
+                <span
+                  style={{
+                    fontSize: "0.72rem",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.5px",
+                    fontWeight: 700,
+                    color: realTotalInflow > 0 ? (isLight ? "#059669" : "#34d399") : (isLight ? "#d97706" : "#fbbf24"),
+                    display: "block",
+                  }}
+                >
+                  Real en Nómina
+                </span>
+                <div
+                  className="cashflow-kpi-value"
+                  style={{
+                    fontSize: "1.75rem",
+                    margin: "2px 0 0 0",
+                    color: realTotalInflow > 0 ? (isLight ? "#059669" : "#34d399") : (isLight ? "#0f172a" : "#f8fafc"),
+                  }}
+                >
+                  {formatMoney(realTotalInflow, currency)}
+                </div>
+              </div>
+
+              <div style={{ textAlign: "right" }}>
+                <span style={{ fontSize: "0.72rem", color: isLight ? "#64748b" : "#94a3b8", display: "block" }}>
+                  Esperado / Presupuesto
+                </span>
+                <span
+                  style={{
+                    fontSize: "1.05rem",
+                    fontWeight: 700,
+                    color: isLight ? "#334155" : "#cbd5e1",
+                    fontFamily: "JetBrains Mono, monospace",
+                  }}
+                >
+                  {formatMoney(totalInflow, currency)}
+                </span>
+              </div>
+            </div>
+
+            {/* Inflow Progress Bar */}
+            <div style={{ marginTop: 10 }}>
+              <div
+                style={{
+                  height: 6,
+                  borderRadius: 4,
+                  background: isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.08)",
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    height: "100%",
+                    width: `${inflowProgressPct}%`,
+                    background: realTotalInflow > 0 ? "linear-gradient(90deg, #10b981 0%, #00e5ff 100%)" : "#f59e0b",
+                    borderRadius: 4,
+                    transition: "width 0.4s ease",
+                  }}
+                />
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: "0.71rem",
+                  color: isLight ? "#64748b" : "#94a3b8",
+                  marginTop: 4,
+                }}
+              >
+                <span>{inflowProgressPct}% ingresado</span>
+                <span>{realTotalInflow === 0 ? "Cuenta Nu en $0 COP hoy" : "Nómina consignada"}</span>
+              </div>
+            </div>
+          </div>
+
           <div className="cashflow-kpi-footer">
-            <span>Pasivo: {formatMoney(totalPassiveInflow, currency)}</span>
+            <span>Pasivo Esperado: {formatMoney(totalPassiveInflow, currency)}</span>
             <span style={{ color: "#00e5ff", fontWeight: 600 }}>{passivePctOfInflow}% del total</span>
           </div>
           <div
@@ -967,7 +1096,7 @@ export default function CashFlowHub() {
               color: isLight ? "#475569" : "#94a3b8",
             }}
           >
-            💡 <strong>¿Qué significa?</strong> Es el total de dinero que entra en este ciclo mensual (tu salario neto del 23 + rendimientos pasivos de cuentas/inversiones). El <strong>% Pasivo</strong> mide cuánto de tu ingreso ya trabaja sin tu tiempo.
+            💡 <strong>Esperado ({formatMoney(totalInflow, currency)}):</strong> Presupuesto proyectado del mes (salario neto + rendimientos pasivos). <strong>Real ({formatMoney(realTotalInflow, currency)}):</strong> Dinero efectivamente consignado en tu nómina hoy vía notificación de MacroDroid.
           </div>
         </div>
 

@@ -64,8 +64,44 @@ export default function RealCashLiquidityCard({
   const totalExecutedPayrollOutflow =
     executedExpensesFromPayroll + executedCardPaymentsFromPayroll;
 
-  // Real Cash in Payroll Account Right Now (Dinero Líquido Real en Banco Hoy)
-  const realCashInPayroll = netSalaryAmount - totalExecutedPayrollOutflow;
+  // Match Payroll Account in Fixed Income SSOT
+  const matchedPayrollAccount = (fixedIncomeAccounts || []).find((a) => {
+    if (payrollAccount?.id && a.id === payrollAccount.id) return true;
+    const nameNorm = (a.name || "").toLowerCase();
+    return (
+      nameNorm.includes("nomina") ||
+      nameNorm.includes("nómina") ||
+      (nameNorm.includes("debito") && nameNorm.includes("nu")) ||
+      (nameNorm.includes("cuenta nu") && !nameNorm.includes("cajita"))
+    );
+  });
+
+  // Real credits/income received in Payroll Account for this cycle
+  const realPayrollCredits = (expensesLog || [])
+    .filter((tx) => {
+      const isCredit = tx.type === "credit" || tx.budgetItemType === "income";
+      const srcType = tx.paymentSource?.type;
+      const targetName = (tx.paymentSource?.targetName || "").toLowerCase();
+      const desc = (tx.description || tx.budgetItemName || "").toLowerCase();
+      return (
+        isCredit &&
+        (srcType === "payroll" ||
+          targetName.includes("nu") ||
+          targetName.includes("nomina") ||
+          targetName.includes("nómina") ||
+          desc.includes("nomina") ||
+          desc.includes("nómina") ||
+          desc.includes("salario"))
+      );
+    })
+    .reduce((acc, tx) => acc + Math.abs(Number(tx.amount) || 0), 0);
+
+  // Real Cash in Payroll Account Right Now (Dinero Líquido Real en Banco Hoy):
+  // If matched payroll account exists in fixed income, its actual balance is the SSOT (e.g. $0 COP before salary arrives).
+  // Otherwise, fallback to realPayrollCredits - totalExecutedPayrollOutflow.
+  const realCashInPayroll = matchedPayrollAccount
+    ? Number(matchedPayrollAccount.balance) || 0
+    : Math.max(0, realPayrollCredits - totalExecutedPayrollOutflow);
 
   // 3. Pending Commitments for the Rest of the Month (Gastos y Aportes planeados que aún NO han salido)
   let pendingExpensesFromPayroll = 0;
@@ -109,8 +145,10 @@ export default function RealCashLiquidityCard({
   const totalPendingPayrollCommitments =
     pendingExpensesFromPayroll + pendingSavingsFromPayroll;
 
-  // 4. Projected Surplus / Remaining Buffer at month end
-  const projectedSurplus = realCashInPayroll - totalPendingPayrollCommitments;
+  // 4. Projected Surplus / Remaining Buffer at month end:
+  // Assumes expected salary is received if not yet credited
+  const effectiveInflowForProjection = realPayrollCredits > 0 ? realCashInPayroll : (netSalaryAmount - totalExecutedPayrollOutflow);
+  const projectedSurplus = effectiveInflowForProjection - totalPendingPayrollCommitments;
 
   // 5. Total Balance in High-Yield Savings Accounts (Cajitas Nu, Plenti, CDTs, etc.) in base COP
   const totalPocketsBalance = fixedIncomeAccounts.reduce((acc, a) => {
@@ -396,9 +434,10 @@ export default function RealCashLiquidityCard({
             {viewMode === "real_today" ? (
               <>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span>Ingresos Nómina:</span>
-                  <strong style={{ color: "var(--text-primary)" }}>
-                    +{formatMoney(netSalaryAmount, currency)}
+                  <span>Nómina Real Recibida:</span>
+                  <strong style={{ color: realPayrollCredits > 0 ? "var(--text-primary)" : "#f59e0b" }}>
+                    +{formatMoney(realPayrollCredits, currency)}
+                    {realPayrollCredits === 0 && " (Esperando hoy)"}
                   </strong>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -408,16 +447,16 @@ export default function RealCashLiquidityCard({
                   </span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)", marginTop: 2 }}>
-                  <span>Compromisos por salir:</span>
-                  <span>-{formatMoney(totalPendingPayrollCommitments, currency)}</span>
+                  <span>Salario Esperado Presupuestado:</span>
+                  <span>{formatMoney(netSalaryAmount, currency)}</span>
                 </div>
               </>
             ) : (
               <>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span>Saldo en Banco Hoy:</span>
+                  <span>Base Salarial (Esperada):</span>
                   <strong style={{ color: "#10b981" }}>
-                    {formatMoney(realCashInPayroll, currency)}
+                    {formatMoney(netSalaryAmount, currency)}
                   </strong>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
