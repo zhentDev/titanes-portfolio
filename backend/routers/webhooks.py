@@ -546,18 +546,29 @@ def register_mobile_transaction(
     # 2. Determine transaction type (debit vs credit) with smart keyword detection
     norm_type = normalize_text(payload.type)
     search_context = f"{payload.description} {payload.raw_text or ''}".lower()
-    credit_keywords = [
-        "recibiste", "te transfirieron", "consignacion",
-        "consignación", "nomina", "nómina", "devolucion", "devolución", "pago recibido"
+
+    # Phrases that unmistakably indicate incoming money (Credit / Consignación)
+    unmistakable_credit_phrases = [
+        "te envio", "te envió", "te enviaron", "te transfirio", "te transfirió",
+        "te transfirieron", "recibiste", "consignacion", "consignación",
+        "abono de", "pasaplata", "te pasaron", "pago recibido"
     ]
 
-    if any(k in norm_type for k in ["debit", "gasto", "compra", "salida", "retiro"]):
+    # Phrases that unmistakably indicate outgoing money (Debit / Gasto)
+    unmistakable_debit_phrases = [
+        "enviaste", "le enviaste", "pagaste", "compraste", "compra en", "retiro en"
+    ]
+
+    if any(k in search_context for k in unmistakable_credit_phrases):
+        tx_type = "credit"
+        signed_amount = amount_val
+    elif any(k in search_context for k in unmistakable_debit_phrases):
+        tx_type = "debit"
+        signed_amount = -amount_val
+    elif any(k in norm_type for k in ["debit", "gasto", "compra", "salida", "retiro"]):
         tx_type = "debit"
         signed_amount = -amount_val
     elif any(k in norm_type for k in ["credit", "ingreso", "abono", "entrada", "consignacion"]):
-        tx_type = "credit"
-        signed_amount = amount_val
-    elif any(k in search_context for k in credit_keywords):
         tx_type = "credit"
         signed_amount = amount_val
     else:
@@ -656,10 +667,13 @@ def register_mobile_transaction(
     tx_id = f"tx_mb_{int(now_colombia.timestamp() * 1000)}_{uuid.uuid4().hex[:6]}"
     clean_desc = payload.description.strip()
     generic_phrases = ["en tus movimientos el detalle", "fue exitoso", "revisa en tus movimientos", "movimientos el detalle"]
-    if any(p in clean_desc.lower() for p in generic_phrases) or not clean_desc:
+    if any(p in clean_desc.lower() for p in generic_phrases) or not clean_desc or clean_desc.lower() in ("gasto", "gasto bancario", "movimiento"):
         m_via = re.search(r"a través de\s+([A-Za-z0-9\-\s]+?)(?:fue exitoso|\.|\.\.\.|$)", payload.raw_text or "", re.IGNORECASE)
+        m_sender = re.search(r'(?:Nu\s*-\s*)?(?:Banco\s+)?([A-Za-z0-9\s]+?)\s+te\s+envi[oó]', payload.raw_text or "", re.IGNORECASE)
         if m_via:
             clean_desc = f"Envío {m_via.group(1).strip()}"
+        elif m_sender and m_sender.group(1).strip():
+            clean_desc = f"Consignación {m_sender.group(1).strip()}"
         elif "rappicuenta" in search_context:
             clean_desc = "Transferencia RappiCuenta"
         else:
