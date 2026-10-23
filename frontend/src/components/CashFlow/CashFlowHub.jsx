@@ -2814,7 +2814,10 @@ export default function CashFlowHub() {
                 border: `1px solid ${isLight ? "rgba(147, 51, 234, 0.25)" : "rgba(192, 132, 252, 0.3)"}`,
               }}
             >
-              {(expensesLog || []).filter(tx => !tx.period || tx.period === activePeriod).length} movimientos
+              {[
+                ...(expensesLog || []).filter((tx) => !tx.period || tx.period === activePeriod),
+                ...(creditCardPayments || []).filter((p) => !p.period || p.period === activePeriod),
+              ].length} movimientos
             </span>
           </div>
           <button

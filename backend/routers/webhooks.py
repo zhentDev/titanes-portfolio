@@ -130,6 +130,7 @@ class MobileTransactionPayload(BaseModel):
     type: str = Field("debit", description="Transaction type: 'debit' (gasto/compra) or 'credit' (ingreso/abono)")
     date: str | None = Field(None, description="Date in YYYY-MM-DD or ISO format. Defaults to current date in Colombia")
     category: str | None = Field(None, description="Optional category (e.g. 'Alimentación', 'Transporte')")
+    time: str | None = Field(None, description="Transaction time in HH:MM or HH:MM:SS format")
     raw_text: str | None = Field(None, description="Raw notification body from Android for logging/audit")
     user_id: str | None = Field(None, description="Target user ID (defaults to OWNER_ID)")
 
@@ -603,13 +604,15 @@ def register_mobile_transaction(
     entity = resolve_entity(db, payload.entity)
     account = resolve_account(db, entity, payload.account)
 
-    # 4. Resolve date (America/Bogota timezone)
+    # 4. Resolve date and time (America/Bogota timezone)
     now_colombia = get_current_colombia_time()
     if payload.date:
         # Extract YYYY-MM-DD
         tx_date = payload.date.split("T")[0]
     else:
         tx_date = now_colombia.strftime("%Y-%m-%d")
+
+    tx_time = payload.time.strip() if payload.time else now_colombia.strftime("%H:%M:%S")
 
     # 5. Update Account Balance with Pocket Overdraft / Cascading Fallback
     previous_balance = float(account.get("balance", 0.0))
@@ -728,6 +731,7 @@ def register_mobile_transaction(
         "accountId": account["id"],
         "entityId": entity["id"],
         "date": tx_date,
+        "time": tx_time,
         "description": clean_desc,
         "amount": signed_amount,
         "currency": account.get("currency", "COP"),
@@ -789,6 +793,7 @@ def register_mobile_transaction(
                 "amount": amount_val,
                 "currency": account.get("currency", "COP"),
                 "date": tx_date,
+                "time": tx_time,
                 "description": f"Pago {matched_card['name'] if matched_card else 'Tarjeta'}",
                 "sourceType": "payroll" if is_payroll else "fixed_pocket",
                 "sourceAccountId": account.get("id"),
@@ -815,6 +820,7 @@ def register_mobile_transaction(
                 "amount": amount_val,
                 "currency": account.get("currency", "COP"),
                 "date": tx_date,
+                "time": tx_time,
                 "type": tx_type,
                 "cascaded": cascaded,
                 "shortfall": shortfall if cascaded else 0.0,

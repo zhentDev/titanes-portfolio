@@ -31,13 +31,44 @@ export default function ExpensesLogSection({
   const [settlingTransaction, setSettlingTransaction] = useState(null);
   const [assignModalItem, setAssignModalItem] = useState(null);
 
+  const formatMovementDateTime = (item) => {
+    const d = item.date || item.createdAt?.slice(0, 10) || "";
+    let timeStr = item.time || "";
+
+    if (!timeStr && item.createdAt) {
+      try {
+        const dt = new Date(item.createdAt);
+        if (!isNaN(dt.getTime())) {
+          timeStr = dt.toLocaleTimeString("es-CO", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+          });
+        }
+      } catch {}
+    } else if (timeStr && timeStr.includes(":")) {
+      const parts = timeStr.split(":");
+      let h = parseInt(parts[0], 10);
+      const m = parts[1]?.slice(0, 2) || "00";
+      const ampm = h >= 12 ? "PM" : "AM";
+      h = h % 12 || 12;
+      timeStr = `${h}:${m} ${ampm}`;
+    }
+
+    return { date: d, time: timeStr };
+  };
+
   const periodExpenses = useMemo(() => {
     return (expensesLog || [])
       .filter((tx) => !tx.period || tx.period === activePeriod)
-      .map((tx) => ({
-        ...tx,
-        itemType: tx.budgetItemType === "wealth" || tx.budgetItemId?.startsWith("wealth_") ? "wealth_saving" : "expense",
-      }));
+      .map((tx) => {
+        const isIncome = tx.type === "credit" || tx.budgetItemType === "income";
+        const isWealth = tx.budgetItemType === "wealth" || tx.budgetItemId?.startsWith("wealth_");
+        return {
+          ...tx,
+          itemType: isWealth ? "wealth_saving" : isIncome ? "income" : "expense",
+        };
+      });
   }, [expensesLog, activePeriod]);
 
   const periodPayments = useMemo(() => {
@@ -49,10 +80,26 @@ export default function ExpensesLogSection({
       }));
   }, [creditCardPayments, activePeriod]);
 
-  // Combined sorted activity feed
+  // Combined sorted activity feed by precise timestamp (createdAt / date + time) descending
   const combinedActivities = useMemo(() => {
     const combined = [...periodExpenses, ...periodPayments];
     return combined.sort((a, b) => {
+      const getTimestamp = (item) => {
+        if (item.createdAt) {
+          const t = new Date(item.createdAt).getTime();
+          if (!isNaN(t)) return t;
+        }
+        if (item.date) {
+          const timePart = item.time ? (item.time.length === 5 ? `${item.time}:00` : item.time) : "00:00:00";
+          const t = new Date(`${item.date}T${timePart}`).getTime();
+          if (!isNaN(t)) return t;
+        }
+        return 0;
+      };
+
+      const diff = getTimestamp(b) - getTimestamp(a);
+      if (diff !== 0) return diff;
+
       const dateA = a.date || a.createdAt || "";
       const dateB = b.date || b.createdAt || "";
       return dateB.localeCompare(dateA);
@@ -71,6 +118,7 @@ export default function ExpensesLogSection({
     if (filterSource === "all") return combinedActivities;
     if (filterSource === "only_loans") return combinedActivities.filter((i) => i.isLoan);
     if (filterSource === "only_expenses") return combinedActivities.filter((i) => i.itemType === "expense" && !i.isLoan);
+    if (filterSource === "only_incomes") return combinedActivities.filter((i) => i.itemType === "income");
     if (filterSource === "only_wealth") return combinedActivities.filter((i) => i.itemType === "wealth_saving");
     if (filterSource === "only_payments") return combinedActivities.filter((i) => i.itemType === "card_payment");
     if (filterSource === "payroll") {
@@ -100,6 +148,10 @@ export default function ExpensesLogSection({
     .filter((tx) => tx.itemType === "expense")
     .reduce((acc, tx) => acc + (Number(tx.amount) || 0), 0);
 
+  const totalIncomeInPeriod = periodExpenses
+    .filter((tx) => tx.itemType === "income")
+    .reduce((acc, tx) => acc + (Number(tx.amount) || 0), 0);
+
   const totalSavedInPeriod = periodExpenses
     .filter((tx) => tx.itemType === "wealth_saving")
     .reduce((acc, tx) => acc + (Number(tx.amount) || 0), 0);
@@ -120,11 +172,20 @@ export default function ExpensesLogSection({
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
-          <div style={{ display: "flex", gap: 16 }}>
+          <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+            {totalIncomeInPeriod > 0 && (
+              <div style={{ textAlign: "right" }}>
+                <span style={{ fontSize: "0.72rem", color: "#10b981", display: "block" }}>📥 Total Ingresos</span>
+                <strong style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.15rem", color: "#10b981" }}>
+                  +{formatMoney(totalIncomeInPeriod, currency)}
+                </strong>
+              </div>
+            )}
+
             <div style={{ textAlign: "right" }}>
               <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block" }}>Total Gastado Real</span>
               <strong style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.15rem", color: "#f43f5e" }}>
-                {formatMoney(totalSpentInPeriod, currency)}
+                -{formatMoney(totalSpentInPeriod, currency)}
               </strong>
             </div>
 
@@ -191,11 +252,12 @@ export default function ExpensesLogSection({
       {/* Filter Pills */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
         {[
-          { id: "all", label: "Todos los Movimientos" },
+          { id: "all", label: `Todos los Movimientos (${combinedActivities.length})` },
+          { id: "only_expenses", label: `💸 Gastos Reales (${periodExpenses.filter(i => i.itemType === "expense" && !i.isLoan).length})` },
+          { id: "only_incomes", label: `📥 Ingresos (${periodExpenses.filter(i => i.itemType === "income").length})` },
+          { id: "only_payments", label: `💵 Abonos a Tarjetas (${periodPayments.length})` },
           { id: "only_loans", label: `🤝 Préstamos por Cobrar ${pendingLoans.length > 0 ? `(${pendingLoans.length})` : ""}` },
-          { id: "only_expenses", label: "💸 Gastos Reales" },
           { id: "only_wealth", label: "💎 Aportes CDTs/Ahorro" },
-          { id: "only_payments", label: "💵 Abonos a Tarjetas" },
           { id: "payroll", label: "🏦 Nómina" },
           { id: "credit_card", label: "💳 Tarjeta de Crédito" },
           { id: "fixed_pocket", label: "📦 Cuentas de Ahorro / Renta Fija" },
@@ -270,7 +332,13 @@ export default function ExpensesLogSection({
                     </div>
 
                     <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: 3, display: "flex", alignItems: "center", gap: 6 }}>
-                      <span>{item.date || "Fecha no especificada"}</span>
+                      <span>📅 {formatMovementDateTime(item).date || "Fecha no especificada"}</span>
+                      {formatMovementDateTime(item).time && (
+                        <>
+                          <span>•</span>
+                          <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>🕒 {formatMovementDateTime(item).time}</span>
+                        </>
+                      )}
                       <span>•</span>
                       <span style={{ color: "#38bdf8", fontWeight: 600 }}>
                         Pagado desde: {item.sourceAccount || "Nómina Nu"}
@@ -341,7 +409,13 @@ export default function ExpensesLogSection({
                     </div>
 
                     <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: 3, display: "flex", alignItems: "center", gap: 6 }}>
-                      <span>{item.date || "Fecha no especificada"}</span>
+                      <span>📅 {formatMovementDateTime(item).date || "Fecha no especificada"}</span>
+                      {formatMovementDateTime(item).time && (
+                        <>
+                          <span>•</span>
+                          <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>🕒 {formatMovementDateTime(item).time}</span>
+                        </>
+                      )}
                       <span>•</span>
                       <span style={{ color: "#c084fc", fontWeight: 600 }}>
                         Descontado de: {item.paymentSource?.targetName || "Nómina Nu"}
@@ -386,6 +460,8 @@ export default function ExpensesLogSection({
 
             const isLoan = Boolean(item.isLoan);
             const isSettled = item.loanStatus === "settled";
+            const isIncome = item.itemType === "income";
+            const { date: itemDate, time: itemTime } = formatMovementDateTime(item);
 
             return (
               <div
@@ -398,11 +474,15 @@ export default function ExpensesLogSection({
                     ? isSettled
                       ? "rgba(16, 185, 129, 0.06)"
                       : "rgba(245, 158, 11, 0.08)"
+                    : isIncome
+                    ? "rgba(16, 185, 129, 0.05)"
                     : "var(--bg-card)",
                   border: isLoan
                     ? isSettled
                       ? "1px solid rgba(16, 185, 129, 0.35)"
                       : "1px solid rgba(245, 158, 11, 0.4)"
+                    : isIncome
+                    ? "1px solid rgba(16, 185, 129, 0.25)"
                     : "1px solid var(--border)",
                   borderRadius: "12px",
                   padding: "12px 16px",
@@ -415,17 +495,35 @@ export default function ExpensesLogSection({
                       {item.description}
                     </strong>
 
-                    <span
-                      style={{
-                        background: "rgba(128, 128, 128, 0.1)",
-                        padding: "2px 8px",
-                        borderRadius: "6px",
-                        fontSize: "0.72rem",
-                        color: "var(--text-muted)",
-                      }}
-                    >
-                      {item.budgetItemName}
-                    </span>
+                    {isIncome ? (
+                      <span
+                        style={{
+                          background: "rgba(16, 185, 129, 0.2)",
+                          border: "1px solid #10b981",
+                          padding: "2px 8px",
+                          borderRadius: "6px",
+                          fontSize: "0.72rem",
+                          color: "#10b981",
+                          fontWeight: 700,
+                        }}
+                      >
+                        📥 Ingreso / Consignación
+                      </span>
+                    ) : (
+                      item.budgetItemName && (
+                        <span
+                          style={{
+                            background: "rgba(128, 128, 128, 0.1)",
+                            padding: "2px 8px",
+                            borderRadius: "6px",
+                            fontSize: "0.72rem",
+                            color: "var(--text-muted)",
+                          }}
+                        >
+                          {item.budgetItemName}
+                        </span>
+                      )
+                    )}
 
                     {/* Loan Badges */}
                     {isLoan && !isSettled && (
@@ -468,7 +566,13 @@ export default function ExpensesLogSection({
                   </div>
 
                   <div style={{ fontSize: "0.74rem", color: "#64748b", marginTop: 4, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <span>{item.date || "Fecha no especificada"}</span>
+                    <span>📅 {itemDate || "Fecha no especificada"}</span>
+                    {itemTime && (
+                      <>
+                        <span>•</span>
+                        <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>🕒 {itemTime}</span>
+                      </>
+                    )}
                     <span>•</span>
                     <span style={{ color: sourceColor, fontWeight: 600 }}>
                       {source.targetName || "Nómina"}
@@ -556,8 +660,19 @@ export default function ExpensesLogSection({
                     </button>
                   )}
 
-                  <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.05rem", fontWeight: 800, color: isLoan && !isSettled ? "#f59e0b" : "var(--text-primary)" }}>
-                    {formatMoney(item.amount, currency)}
+                  <span
+                    style={{
+                      fontFamily: "JetBrains Mono, monospace",
+                      fontSize: "1.05rem",
+                      fontWeight: 800,
+                      color: isLoan && !isSettled
+                        ? "#f59e0b"
+                        : isIncome
+                        ? "#10b981"
+                        : "#f43f5e",
+                    }}
+                  >
+                    {isIncome ? `+${formatMoney(item.amount, currency)}` : `-${formatMoney(item.amount, currency)}`}
                   </span>
 
                   {onEditTransaction && (
