@@ -99,15 +99,27 @@ export default function CashFlowHub() {
     cdts: fixedCdts,
     initFetchFixedIncome,
     creditAccountFromCashFlow,
+    revertAccountCredit,
   } = useFixedIncomeStore();
 
   // Reclasifica el movimiento y, si se eligió una cuenta destino (p.ej. Principal de
   // Finandina o RappiPay para el Fondo de Emergencia), abona el dinero en esa cuenta.
   const handleReclassifyMovement = (payload) => {
+    const mv = (expensesLog || []).find((e) => e.id === payload.movementId);
     reclassifyMovement(payload);
-    if (payload?.destinationAccount?.id && typeof creditAccountFromCashFlow === "function") {
-      const mv = (expensesLog || []).find((e) => e.id === payload.movementId);
-      if (mv) {
+    if (mv) {
+      // Si antes tenía una cuenta destino y ahora cambió o se quitó, revertir el abono anterior
+      if (mv.destinationAccountId && mv.destinationAccountId !== payload?.destinationAccount?.id) {
+        if (typeof revertAccountCredit === "function") {
+          revertAccountCredit({
+            accountId: mv.destinationAccountId,
+            amount: mv.amount,
+            movementId: mv.id,
+          });
+        }
+      }
+      // Si ahora tiene cuenta destino asignada, acreditarla
+      if (payload?.destinationAccount?.id && typeof creditAccountFromCashFlow === "function") {
         creditAccountFromCashFlow({
           accountId: payload.destinationAccount.id,
           amount: mv.amount,

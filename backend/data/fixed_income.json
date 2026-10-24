@@ -309,7 +309,7 @@
       "type": "savings",
       "accountCategory": "digital_wallet",
       "currency": "COP",
-      "balance": 0,
+      "balance": 350000,
       "interestRateEA": 0,
       "isTaxExempt": false,
       "createdAt": 1786771920000
@@ -647,6 +647,19 @@
     }
   ],
   "transactions": [
+    {
+      "id": "tx_cf_finandina_bre_b_350k",
+      "accountId": "acc_finandina_principal",
+      "entityId": "ent_1786771791285",
+      "date": "2026-10-23",
+      "description": "Consignaci?n Bre-B FA1010128290B / N?mina Nu D?bito",
+      "amount": 350000,
+      "currency": "COP",
+      "type": "credit",
+      "category": "Transferencia desde Flujo de Caja",
+      "source": "cashflow_assignment",
+      "createdAt": "2026-10-23T18:45:33.000Z"
+    },
     {
       "id": "tx_mb_1792789337918_65be26",
       "accountId": "acc_nu_debito",

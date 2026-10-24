@@ -409,7 +409,7 @@ export default function ExpensesLogSection({
                       </span>
                     </div>
 
-                    <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: 3, display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: 3, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                       <span>📅 {formatMovementDateTime(item).date || "Fecha no especificada"}</span>
                       {formatMovementDateTime(item).time && (
                         <>
@@ -421,6 +421,39 @@ export default function ExpensesLogSection({
                       <span style={{ color: "#c084fc", fontWeight: 600 }}>
                         Descontado de: {item.paymentSource?.targetName || "Nómina Nu"}
                       </span>
+                      {item.destinationAccountName && (
+                        <>
+                          <span>•</span>
+                          <span style={{ color: "#10b981", fontWeight: 600 }}>
+                            📍 Cuenta destino: {item.destinationAccountName}
+                          </span>
+                        </>
+                      )}
+                      {onReclassifyMovement && (
+                        <>
+                          <span>•</span>
+                          <button
+                            type="button"
+                            onClick={() => setAssignModalItem(item)}
+                            style={{
+                              background: "transparent",
+                              border: "none",
+                              color: "#0ea5e9",
+                              fontSize: "0.72rem",
+                              cursor: "pointer",
+                              padding: 0,
+                              textDecoration: "underline",
+                              fontWeight: 600,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 3,
+                            }}
+                            title="Cambiar rubro o reasignar cuenta de destino"
+                          >
+                            <span>🏷️</span> Cambiar Asignación / Cuenta
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
 

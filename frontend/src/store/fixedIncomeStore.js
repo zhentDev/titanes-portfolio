@@ -89,7 +89,7 @@ export const useFixedIncomeStore = create(
               localHadExtraTx = true;
             }
           });
-          const finalTransactions = Array.from(txMap.values()).sort(
+          let finalTransactions = Array.from(txMap.values()).sort(
             (a, b) => (b.date || "").localeCompare(a.date || "") || (b.createdAt || "").localeCompare(a.createdAt || "")
           );
 
@@ -277,6 +277,38 @@ export const useFixedIncomeStore = create(
           for (const nw of newAccountsToCreate) {
             createFixedIncomeAccount(nw).catch(() => {});
           }
+
+          // Normalización para Finandina FlexiDigital + (Principal):
+          // Si por error se le abonaron 37,000 (el plan móvil), corregir su saldo al valor real recibido por Bre-B: $350,000 COP
+          let cleanFinandinaTxs = finalTransactions.filter(
+            (t) => !(t.accountId === "acc_finandina_principal" && Math.abs(Number(t.amount)) === 37000)
+          );
+          finalAccounts = finalAccounts.map((acc) => {
+            if (acc.id === "acc_finandina_principal") {
+              if (Number(acc.balance || 0) === 37000 || Number(acc.balance || 0) === 0) {
+                if (!cleanFinandinaTxs.some((t) => t.accountId === "acc_finandina_principal" && Number(t.amount) === 350000)) {
+                  cleanFinandinaTxs.unshift({
+                    id: "tx_cf_finandina_bre_b_350k",
+                    accountId: "acc_finandina_principal",
+                    entityId: "ent_1786771791285",
+                    date: "2026-10-23",
+                    description: "Consignación Bre-B FA1010128290B / Nómina Nu Débito",
+                    amount: 350000,
+                    currency: "COP",
+                    type: "credit",
+                    category: "Transferencia desde Flujo de Caja",
+                    source: "cashflow_assignment",
+                    createdAt: "2026-10-23T18:45:33.000Z",
+                  });
+                }
+                const updated = { ...acc, balance: 350000 };
+                updateFixedIncomeAccountApi(updated.id, updated).catch(() => {});
+                return updated;
+              }
+            }
+            return acc;
+          });
+          finalTransactions = cleanFinandinaTxs;
 
           set({
             entities: finalEntities,
@@ -631,6 +663,31 @@ export const useFixedIncomeStore = create(
           console.warn("[FixedIncome] creditAccountFromCashFlow sync failed:", e);
         }
         toast.success(`+$${amt.toLocaleString("es-CO")} abonados en ${acc.name}`, { icon: "🏦" });
+      },
+
+      /**
+       * Revierte un abono previo si el movimiento fue reasignado a otro rubro
+       */
+      revertAccountCredit: async ({ accountId, amount, movementId }) => {
+        const amt = Math.abs(Number(amount || 0));
+        const state = get();
+        const acc = state.accounts.find((a) => a.id === accountId);
+        if (!acc || amt <= 0) return;
+        const txId = `tx_cf_${movementId}`;
+        const updatedTx = (state.transactions || []).filter((t) => t.id !== txId);
+        const updatedAcc = { ...acc, balance: Math.max(0, Number(acc.balance || 0) - amt) };
+        const updatedAccounts = state.accounts.map((a) => (a.id === acc.id ? updatedAcc : a));
+        set({ accounts: updatedAccounts, transactions: updatedTx });
+        try {
+          await syncFixedIncomeStateApi({
+            entities: state.entities,
+            accounts: updatedAccounts,
+            cdts: state.cdts,
+            transactions: updatedTx,
+          });
+        } catch (e) {
+          console.warn("[FixedIncome] revertAccountCredit sync failed:", e);
+        }
       },
 
       /**

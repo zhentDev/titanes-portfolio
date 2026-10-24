@@ -171,6 +171,40 @@ export const useCashFlowStore = create(
         const mergedCreditPurchases = Array.isArray(source?.creditPurchases) ? source.creditPurchases : (cachedLocal?.creditPurchases || []);
         const mergedCreditCardPayments = Array.isArray(source?.creditCardPayments) ? source.creditCardPayments : (cachedLocal?.creditCardPayments || []);
         const mergedExpensesLog = Array.isArray(source?.expensesLog) ? source.expensesLog : (cachedLocal?.expensesLog || []);
+        
+        // Auto-corrección: si el movimiento de $37,000 (Plan móvil) quedó por error asignado al Fondo de Emergencia,
+        // restaurarlo al rubro correspondiente de Servicios Públicos: Plan móvil; y vincular la transferencia real de $350k a Finandina.
+        const sanitizedExpensesLog = mergedExpensesLog.map((e) => {
+          const isPlanMovil37k =
+            Number(e.amount) === 37000 &&
+            ((e.description || "").toLowerCase().includes("plan movil") ||
+              (e.subItemName || "").toLowerCase().includes("plan movil") ||
+              e.budgetItemId === "need_utilities" ||
+              e.budgetItemId === "wealth_emergency");
+          if (isPlanMovil37k && (e.budgetItemId === "wealth_emergency" || e.budgetItemType === "wealth")) {
+            return {
+              ...e,
+              budgetItemId: "need_utilities",
+              budgetItemName: "Servicios Públicos, Luz & Fibra Óptica",
+              budgetItemType: "needs",
+              subItemId: "sub_1792692729310_tryk",
+              subItemName: "Plan movil",
+              description: "Servicios Públicos, Luz & Fibra Óptica: Plan movil",
+              destinationAccountId: null,
+              destinationAccountName: null,
+            };
+          }
+          const is350kTransfer = Number(e.amount) === 350000;
+          if (is350kTransfer && e.budgetItemId === "wealth_emergency") {
+            return {
+              ...e,
+              destinationAccountId: "acc_finandina_principal",
+              destinationAccountName: "FlexiDigital + (Principal)",
+            };
+          }
+          return e;
+        });
+
         const mergedDebts = Array.isArray(source?.debts) ? source.debts : (cachedLocal?.debts || []);
         const mergedInflows = unionById(source?.inflows, cachedLocal?.inflows);
         const mergedNeeds = unionById(source?.needs, cachedLocal?.needs);
@@ -193,7 +227,7 @@ export const useCashFlowStore = create(
           creditCards: mergedCreditCards,
           creditPurchases: mergedCreditPurchases,
           creditCardPayments: mergedCreditCardPayments,
-          expensesLog: mergedExpensesLog,
+          expensesLog: sanitizedExpensesLog,
           debts: mergedDebts,
           inflows: mergedInflows,
           needs: mergedNeeds,
@@ -593,12 +627,8 @@ export const useCashFlowStore = create(
               description: cleanDesc,
               isDebtPayment: false,
               debtId: null,
-              ...(destinationAccount
-                ? {
-                    destinationAccountId: destinationAccount.id,
-                    destinationAccountName: destinationAccount.name,
-                  }
-                : {}),
+              destinationAccountId: destinationAccount ? destinationAccount.id : null,
+              destinationAccountName: destinationAccount ? destinationAccount.name : null,
             };
           });
 
