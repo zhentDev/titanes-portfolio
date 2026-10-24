@@ -248,7 +248,7 @@
 @media (max-width: 768px) {
   .app-main {
     padding: 12px;
-    padding-bottom: 84px; /* Space for Bottom Navigation Bar */
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 16px)); /* Space for Bottom Navigation Bar */
     gap: 16px;
   }
 
@@ -951,7 +951,7 @@
 @media (max-width: 640px) {
   /* Reducir márgenes laterales y padding general solo en pantallas pequeñas */
   .app-main {
-    padding: 8px 6px 84px 6px !important;
+    padding: 8px 6px calc(100px + env(safe-area-inset-bottom, 16px)) 6px !important;
     gap: 12px !important;
   }
 

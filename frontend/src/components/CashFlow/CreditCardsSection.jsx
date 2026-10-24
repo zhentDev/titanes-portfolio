@@ -1,5 +1,6 @@
 import React from "react";
 import { formatCashFlowMoney } from "../../utils/cashFlowFormatters";
+import { useTheme } from "../../context/ThemeContext";
 import "./CashFlow.css";
 
 // Calculate active installment index for a given period
@@ -41,6 +42,8 @@ export default function CreditCardsSection({
   onDeleteCard,
   onDeletePayment,
 }) {
+  const { theme } = useTheme();
+  const isLight = theme === "light";
   const formatMoney = (val, cur = currency) => formatCashFlowMoney(val, cur, fxRate);
 
   // Aggregate card usage and monthly bill for activePeriod
@@ -162,22 +165,26 @@ export default function CreditCardsSection({
       <div
         style={{
           background: isOverSafeLimit
-            ? "linear-gradient(135deg, rgba(244, 63, 94, 0.12) 0%, var(--bg-surface) 100%)"
-            : "linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, var(--bg-surface) 100%)",
-          border: isOverSafeLimit ? "1px solid rgba(244, 63, 94, 0.35)" : "1px solid rgba(16, 185, 129, 0.3)",
+            ? (isLight ? "linear-gradient(135deg, rgba(244, 63, 94, 0.08) 0%, #ffffff 100%)" : "linear-gradient(135deg, rgba(244, 63, 94, 0.12) 0%, var(--bg-surface) 100%)")
+            : (isLight ? "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, #ffffff 100%)" : "linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, var(--bg-surface) 100%)"),
+          border: isOverSafeLimit
+            ? (isLight ? "1px solid rgba(244, 63, 94, 0.3)" : "1px solid rgba(244, 63, 94, 0.35)")
+            : (isLight ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(16, 185, 129, 0.3)"),
           borderRadius: "18px",
-          padding: "18px 24px",
-          marginBottom: 22,
+          padding: "16px 18px",
+          marginBottom: 20,
           backdropFilter: "blur(14px)",
-          boxShadow: isOverSafeLimit ? "0 8px 24px rgba(244, 63, 94, 0.15)" : "0 8px 24px rgba(16, 185, 129, 0.1)",
+          boxShadow: isLight
+            ? "0 4px 16px rgba(0, 0, 0, 0.04)"
+            : (isOverSafeLimit ? "0 8px 24px rgba(244, 63, 94, 0.15)" : "0 8px 24px rgba(16, 185, 129, 0.1)"),
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 14, marginBottom: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: "1.5rem" }}>{isOverSafeLimit ? "⚠️" : "🛡️"}</span>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: "1 1 240px" }}>
+            <span style={{ fontSize: "1.4rem" }}>{isOverSafeLimit ? "⚠️" : "🛡️"}</span>
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontWeight: 700, fontSize: "0.98rem", color: "var(--text-primary)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--text-primary)" }}>
                   Regla de Seguridad Crediticia: Máximo 50% del Salario Neto
                 </span>
                 <span
@@ -186,23 +193,25 @@ export default function CreditCardsSection({
                     fontWeight: 700,
                     padding: "2px 8px",
                     borderRadius: "8px",
-                    background: isOverSafeLimit ? "rgba(244, 63, 94, 0.2)" : "rgba(16, 185, 129, 0.2)",
-                    color: isOverSafeLimit ? "#f43f5e" : "#10b981",
+                    background: isOverSafeLimit
+                      ? (isLight ? "rgba(244, 63, 94, 0.14)" : "rgba(244, 63, 94, 0.2)")
+                      : (isLight ? "rgba(16, 185, 129, 0.14)" : "rgba(16, 185, 129, 0.2)"),
+                    color: isOverSafeLimit ? (isLight ? "#e11d48" : "#f43f5e") : (isLight ? "#047857" : "#10b981"),
                   }}
                 >
                   {isOverSafeLimit ? `Exposición Alta: ${exposurePct}%` : `Exposición Segura: ${exposurePct}%`}
                 </span>
               </div>
               <p style={{ margin: "3px 0 0 0", fontSize: "0.78rem", color: "var(--text-muted)" }}>
-                Salario Neto Base: <strong style={{ color: "var(--text-primary)" }}>{formatMoney(baseSalaryNet)}</strong> • Cupo Máximo Prudente (50%): <strong style={{ color: "#00e5ff" }}>{formatMoney(maxSafeCreditLimit)}</strong>
+                Salario Neto Base: <strong style={{ color: "var(--text-primary)" }}>{formatMoney(baseSalaryNet)}</strong> • Cupo Máximo Prudente (50%): <strong style={{ color: isLight ? "#0284c7" : "#38bdf8" }}>{formatMoney(maxSafeCreditLimit)}</strong>
               </p>
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 18, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 16, alignItems: "center", marginLeft: "auto" }}>
             <div style={{ textAlign: "right" }}>
               <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Cupo Total en Tarjetas</div>
-              <div style={{ fontFamily: "JetBrains Mono, monospace", fontWeight: 800, fontSize: "1.15rem", color: isOverSafeLimit ? "#f43f5e" : "#10b981" }}>
+              <div style={{ fontFamily: "JetBrains Mono, monospace", fontWeight: 800, fontSize: "1.15rem", color: isOverSafeLimit ? "#f43f5e" : (isLight ? "#047857" : "#10b981") }}>
                 {formatMoney(totalCreditLimit)}
               </div>
             </div>
@@ -210,7 +219,7 @@ export default function CreditCardsSection({
         </div>
 
         {/* Visual Range Thermometer Bar */}
-        <div style={{ position: "relative", width: "100%", height: "10px", background: "rgba(255, 255, 255, 0.08)", borderRadius: "6px", overflow: "hidden", marginBottom: 10 }}>
+        <div style={{ position: "relative", width: "100%", height: "10px", background: isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.08)", borderRadius: "6px", overflow: "hidden", marginBottom: 10 }}>
           <div
             style={{
               width: `${Math.min(100, (totalCreditLimit / (maxSafeCreditLimit * 1.5 || 1)) * 100)}%`,
@@ -225,8 +234,8 @@ export default function CreditCardsSection({
         </div>
 
         {/* Guidance and Action Recommendation */}
-        <div style={{ fontSize: "0.78rem", color: isOverSafeLimit ? "#fca5a5" : "#a7f3d0", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-          <div>
+        <div style={{ fontSize: "0.78rem", color: isLight ? (isOverSafeLimit ? "#991b1b" : "#065f46") : (isOverSafeLimit ? "#fca5a5" : "#a7f3d0"), display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+          <div style={{ flex: "1 1 260px" }}>
             {isOverSafeLimit ? (
               <span>
                 🚨 <strong>Sobrepasas el límite prudente por {formatMoney(excessAmount)}</strong>. Para tener control total y evitar compras impulsivas, edita tus tarjetas o pide a tus bancos bajar los cupos hasta sumar máximo <strong>{formatMoney(maxSafeCreditLimit)}</strong>.
@@ -238,13 +247,13 @@ export default function CreditCardsSection({
             )}
           </div>
           <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-            Deuda Actual Usada: <strong style={{ color: totalCreditUsed > 0 ? "#f43f5e" : "#10b981" }}>{formatMoney(totalCreditUsed)}</strong> ({totalCreditLimit > 0 ? ((totalCreditUsed / totalCreditLimit) * 100).toFixed(0) : 0}% del cupo)
+            Deuda Actual Usada: <strong style={{ color: totalCreditUsed > 0 ? "#f43f5e" : (isLight ? "#047857" : "#10b981") }}>{formatMoney(totalCreditUsed)}</strong> ({totalCreditLimit > 0 ? ((totalCreditUsed / totalCreditLimit) * 100).toFixed(0) : 0}% del cupo)
           </div>
         </div>
       </div>
 
       {/* Credit Cards Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))", gap: 16 }}>
         {cardMetrics.map((card) => {
           const isHighUsage = Number(card.usagePct) > 70;
           return (
@@ -254,12 +263,12 @@ export default function CreditCardsSection({
                 background: "var(--bg-surface)",
                 border: `1px solid var(--border)`,
                 borderTop: `4px solid ${card.color || "#820ad1"}`,
-                borderRadius: "20px",
-                padding: "22px 24px",
+                borderRadius: "18px",
+                padding: "18px 18px",
                 backdropFilter: "blur(16px)",
                 display: "flex",
                 flexDirection: "column",
-                gap: 16,
+                gap: 14,
                 position: "relative",
                 boxShadow: "var(--shadow-card)",
               }}
@@ -363,7 +372,7 @@ export default function CreditCardsSection({
                       💵 Pagar a $0 ({formatMoney(card.usedLimit, currency)})
                     </button>
                   )}
-                  <span style={{ color: "#38bdf8", fontWeight: 600 }}>Tasa: {card.rateEA || 24.5}% E.A. (SFC)</span>
+                  <span style={{ color: isLight ? "#0284c7" : "#38bdf8", fontWeight: 700 }}>Tasa: {card.rateEA || 24.5}% E.A. (SFC)</span>
                 </div>
               </div>
             </div>
@@ -372,18 +381,18 @@ export default function CreditCardsSection({
       </div>
 
       {/* Active Installment Purchases in this Month */}
-      <div style={{ marginTop: 24, background: "var(--bg-surface)", borderRadius: "18px", border: "1px solid var(--border)", padding: "20px 24px", boxShadow: "var(--shadow-card)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+      <div style={{ marginTop: 20, background: "var(--bg-surface)", borderRadius: "18px", border: "1px solid var(--border)", padding: "16px 18px", boxShadow: "var(--shadow-card)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
           <h4 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 700, color: "var(--text-primary)" }}>
             🛍️ Compras a Cuotas Activas en este Período ({activePeriod})
           </h4>
-          <span style={{ fontSize: "0.82rem", color: "#00e5ff", fontWeight: 700, fontFamily: "JetBrains Mono, monospace" }}>
+          <span style={{ fontSize: "0.82rem", color: isLight ? "#0284c7" : "#38bdf8", fontWeight: 700, fontFamily: "JetBrains Mono, monospace" }}>
             Total Cuotas del Mes: {formatMoney(totalMonthlyCreditBill, currency)}
           </span>
         </div>
 
         {creditPurchases.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "20px 0", color: "var(--text-muted)", fontSize: "0.84rem" }}>
+          <div style={{ textAlign: "center", padding: "18px 0", color: "var(--text-muted)", fontSize: "0.84rem" }}>
             No tienes compras a cuotas o diferidos registrados en este período.
           </div>
         ) : (
@@ -399,10 +408,12 @@ export default function CreditCardsSection({
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 10,
                     background: "var(--bg-card)",
                     border: "1px solid var(--border)",
                     borderRadius: "12px",
-                    padding: "12px 16px",
+                    padding: "12px 14px",
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -411,11 +422,11 @@ export default function CreditCardsSection({
                       <div style={{ fontSize: "0.88rem", fontWeight: 600, color: "var(--text-primary)" }}>
                         {purchase.description}
                       </div>
-                      <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 8, marginTop: 3 }}>
-                        <span style={{ color: card?.color || "#38bdf8", fontWeight: 700 }}>{card?.name}</span>
+                      <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 8, marginTop: 3, flexWrap: "wrap" }}>
+                        <span style={{ color: card?.color || (isLight ? "#0284c7" : "#38bdf8"), fontWeight: 700 }}>{card?.name}</span>
                         <span>•</span>
                         {purchase.interestType === "zero_interest" ? (
-                          <span style={{ color: "#00e5ff", fontWeight: 700 }}>⚡ 0% Interés (MSI)</span>
+                          <span style={{ color: isLight ? "#0284c7" : "#38bdf8", fontWeight: 700 }}>⚡ 0% Interés (MSI)</span>
                         ) : (
                           <span style={{ color: "#f43f5e" }}>📈 Interés Corriente</span>
                         )}
