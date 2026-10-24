@@ -508,37 +508,43 @@ export const useCashFlowStore = create(
       splitExpenseMovement: ({ movementId, cardId, distributions }) => {
         const state = get();
         const expense = (state.expensesLog || []).find((e) => e.id === movementId);
-        if (!expense) return;
+        const cardPayment = !expense ? (state.creditCardPayments || []).find((p) => p.id === movementId) : null;
+        const sourceItem = expense || cardPayment;
+        if (!sourceItem) return;
 
-        const isCard = Boolean(cardId);
-        const card = isCard ? (state.creditCards || []).find((c) => c.id === cardId) : null;
+        const effectiveCardId = cardId || sourceItem.cardId || null;
+        const isCard = Boolean(effectiveCardId);
+        const card = isCard ? (state.creditCards || []).find((c) => c.id === effectiveCardId) : null;
         const totalAmount = distributions.reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
 
         let updatedCards = state.creditCards || [];
-        let updatedPayments = state.creditCardPayments || [];
+        let updatedPayments = (state.creditCardPayments || []).filter((p) => p.id !== movementId);
 
-        if (card) {
+        // Only liberate quota if it was not already converted/registered as a card payment
+        if (card && expense) {
           const currentUsed = Number(card.usedLimit) || 0;
           updatedCards = updatedCards.map((c) => {
-            if (c.id === cardId) {
+            if (c.id === effectiveCardId) {
               return { ...c, usedLimit: Math.max(0, currentUsed - totalAmount) };
             }
             return c;
           });
+        }
 
+        if (card) {
           const paymentRecord = {
             id: `pay_split_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-            period: expense.period || state.activePeriod,
+            period: sourceItem.period || state.activePeriod,
             cardId: card.id,
             cardName: card.name,
             amount: totalAmount,
-            currency: expense.currency || state.currency,
-            date: expense.date || new Date().toISOString().split("T")[0],
+            currency: sourceItem.currency || state.currency,
+            date: sourceItem.date || new Date().toISOString().split("T")[0],
             description: `Pago ${card.name} (Distribuido en ${distributions.length} rubros)`,
-            sourceType: expense.paymentSource?.type || "payroll",
-            sourceAccountId: expense.paymentSource?.targetId || null,
-            sourceAccount: expense.paymentSource?.targetName || state.payrollAccount?.name || "Nómina",
-            notes: `Distribuido desde: ${expense.description || "Pago de Tarjeta"}`,
+            sourceType: sourceItem.sourceType || sourceItem.paymentSource?.type || "payroll",
+            sourceAccountId: sourceItem.sourceAccountId || sourceItem.paymentSource?.targetId || null,
+            sourceAccount: sourceItem.sourceAccount || sourceItem.paymentSource?.targetName || state.payrollAccount?.name || "Nómina",
+            notes: `Distribuido desde: ${sourceItem.description || sourceItem.cardName || "Pago de Tarjeta"}`,
             budgetDeductions: distributions.map((d) => ({
               budgetItemId: d.budgetItemId,
               budgetItemName: d.budgetItemName,
@@ -556,11 +562,11 @@ export const useCashFlowStore = create(
           .filter((d) => Number(d.amount) > 0)
           .map((d, idx) => ({
             id: `${movementId}_split_${idx}_${Date.now()}`,
-            period: expense.period || state.activePeriod,
-            date: expense.date || new Date().toISOString().split("T")[0],
-            time: expense.time || null,
+            period: sourceItem.period || state.activePeriod,
+            date: sourceItem.date || new Date().toISOString().split("T")[0],
+            time: sourceItem.time || null,
             amount: Number(d.amount),
-            currency: expense.currency || state.currency,
+            currency: sourceItem.currency || state.currency,
             type: "debit",
             budgetItemId: d.budgetItemId,
             budgetItemName: d.budgetItemName,
@@ -569,8 +575,8 @@ export const useCashFlowStore = create(
             subItemName: d.subItemName || null,
             description: card
               ? `💳 Pago ${card.name} (Descontado de ${d.budgetItemName})`
-              : `${expense.description || "Movimiento"} (${d.budgetItemName})`,
-            paymentSource: expense.paymentSource || {
+              : `${sourceItem.description || "Movimiento"} (${d.budgetItemName})`,
+            paymentSource: sourceItem.paymentSource || {
               type: "payroll",
               targetName: state.payrollAccount?.name || "Cuenta Nu Débito",
             },
@@ -611,13 +617,81 @@ export const useCashFlowStore = create(
         );
       },
 
+      moveSubItemBetweenEnvelopes: ({ fromEnvelopeId, toEnvelopeId, subItemId }) => {
+        set((state) => {
+          let movedSub = null;
+          const pillars = ["needs", "wants", "wealth"];
+          const updatedState = { ...state };
+
+          pillars.forEach((p) => {
+            updatedState[p] = (state[p] || []).map((env) => {
+              if (env.id === fromEnvelopeId && Array.isArray(env.subItems)) {
+                const sub = env.subItems.find((s) => s.id === subItemId);
+                if (sub) {
+                  movedSub = sub;
+                  return {
+                    ...env,
+                    subItems: env.subItems.filter((s) => s.id !== subItemId),
+                  };
+                }
+              }
+              return env;
+            });
+          });
+
+          if (!movedSub) return state;
+
+          pillars.forEach((p) => {
+            updatedState[p] = (updatedState[p] || []).map((env) => {
+              if (env.id === toEnvelopeId) {
+                const existing = env.subItems || [];
+                return {
+                  ...env,
+                  subItems: [...existing, movedSub],
+                };
+              }
+              return env;
+            });
+          });
+
+          const toEnvelope = [...(updatedState.needs || []), ...(updatedState.wants || []), ...(updatedState.wealth || [])].find((e) => e.id === toEnvelopeId);
+          if (toEnvelope) {
+            updatedState.expensesLog = (state.expensesLog || []).map((tx) => {
+              if (tx.subItemId === subItemId) {
+                return {
+                  ...tx,
+                  budgetItemId: toEnvelope.id,
+                  budgetItemName: toEnvelope.name,
+                  budgetItemType: toEnvelope.pillarType || "needs",
+                };
+              }
+              return tx;
+            });
+          }
+
+          try {
+            localStorage.setItem("titanes_cash_flow_store_v2", JSON.stringify(updatedState));
+          } catch {}
+
+          return updatedState;
+        });
+
+        get().syncStateWithBackend();
+        toast.success("Concepto reasignado exitosamente al nuevo rubro ✅");
+      },
+
       reclassifyMovement: ({ movementId, destinationType, targetId, targetItem, subItem, destinationAccount, cardId, distributions }) => {
         const state = get();
+
+        // 0. Destination: Multi-Rubro Distribution (Split Movement / Distributed Card Payment)
+        if (destinationType === "split_distribution") {
+          get().splitExpenseMovement({ movementId, cardId, distributions });
+          return;
+        }
+
         const expense = (state.expensesLog || []).find((e) => e.id === movementId);
         if (!expense) return;
         const amount = Number(expense.amount) || 0;
-
-        // 0. Destination: Multi-Rubro Distribution (Split Movement / Distributed Card Payment)
         if (destinationType === "split_distribution") {
           get().splitExpenseMovement({ movementId, cardId, distributions });
           return;

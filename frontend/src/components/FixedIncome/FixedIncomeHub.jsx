@@ -105,6 +105,19 @@ export default function FixedIncomeHub() {
     }
   };
 
+  const handleFlashRateTest = async () => {
+    setIsCheckingRates(true);
+    try {
+      const data = await fetchRateTrackerAlerts(true);
+      setRateTrackerAlerts(data?.alerts || []);
+      toast.success("¡Prueba Flash ejecutada! Alerta de mercado generada en vivo ⚡", { icon: "🧪" });
+    } catch {
+      toast.error("Error al ejecutar prueba flash");
+    } finally {
+      setIsCheckingRates(false);
+    }
+  };
+
   const handleApplyRateUpdate = async (alert) => {
     try {
       await applyUpdatedAccountRate({
@@ -877,23 +890,44 @@ export default function FixedIncomeHub() {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={handleCheckRatesNow}
-              disabled={isCheckingRates}
-              style={{
-                background: "rgba(14, 165, 233, 0.2)",
-                border: "1px solid #0ea5e9",
-                color: "#0ea5e9",
-                borderRadius: "8px",
-                padding: "6px 12px",
-                fontSize: "0.76rem",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              {isCheckingRates ? "Verificando..." : "🔄 Re-verificar Ahora"}
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={handleFlashRateTest}
+                disabled={isCheckingRates}
+                style={{
+                  background: "rgba(16, 185, 129, 0.15)",
+                  border: "1px solid #10b981",
+                  color: "#10b981",
+                  borderRadius: "8px",
+                  padding: "6px 12px",
+                  fontSize: "0.76rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+                title="Genera una alerta de prueba en vivo para verificar el flujo de actualización"
+              >
+                ⚡ Prueba Flash en Vivo
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCheckRatesNow}
+                disabled={isCheckingRates}
+                style={{
+                  background: "rgba(14, 165, 233, 0.2)",
+                  border: "1px solid #0ea5e9",
+                  color: "#0ea5e9",
+                  borderRadius: "8px",
+                  padding: "6px 12px",
+                  fontSize: "0.76rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                {isCheckingRates ? "Verificando..." : "🔄 Re-verificar Ahora"}
+              </button>
+            </div>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>

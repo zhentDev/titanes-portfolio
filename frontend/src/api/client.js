@@ -928,8 +928,9 @@ export async function confirmStatementImportApi(
   return res.json();
 }
 
-export async function fetchRateTrackerAlerts() {
-  const res = await safeFetch(`${BASE}/fixed-income/rates/tracker`);
+export async function fetchRateTrackerAlerts(simulate = false) {
+  const query = simulate ? "?simulate=true" : "";
+  const res = await safeFetch(`${BASE}/fixed-income/rates/tracker${query}`);
   if (!res.ok) throw new Error("Error al obtener seguimiento de tasas");
   return res.json();
 }

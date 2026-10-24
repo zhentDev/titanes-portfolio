@@ -120,9 +120,9 @@
     },
     {
       "id": "need_health_transport",
-      "name": "Salud, EPS & Transporte",
+      "name": "Salud, EPS, Gym & Transporte",
       "category": "health_transport",
-      "amount": 150000,
+      "amount": 233000,
       "currency": "COP",
       "dueDate": null,
       "paymentSource": {
@@ -133,7 +133,13 @@
       "createdAt": "2026-09-19T16:57:44.254Z",
       "isOneTime": false,
       "targetPeriod": null,
-      "subItems": []
+      "subItems": [
+        {
+          "id": "sub_1792692847730_r6mr",
+          "name": "GYM",
+          "amount": 83000
+        }
+      ]
     }
   ],
   "wants": [
@@ -152,9 +158,9 @@
     },
     {
       "id": "want_subs",
-      "name": "Suscripciones (Netflix, Spotify, Gym)",
+      "name": "Suscripciones (Netflix, Spotify, Streaming)",
       "category": "subscriptions",
-      "amount": 150000,
+      "amount": 67000,
       "currency": "COP",
       "paymentSource": {
         "type": "payroll",
@@ -165,11 +171,6 @@
       "isOneTime": false,
       "targetPeriod": null,
       "subItems": [
-        {
-          "id": "sub_1792692847730_r6mr",
-          "name": "GYM",
-          "amount": 83000
-        },
         {
           "id": "sub_1792692859280_9ohl",
           "name": "Gemini + YT Primium",
@@ -592,9 +593,9 @@
         },
         {
           "id": "need_health_transport",
-          "name": "Salud, EPS & Transporte",
+          "name": "Salud, EPS, Gym & Transporte",
           "category": "health_transport",
-          "amount": 150000,
+          "amount": 233000,
           "currency": "COP",
           "dueDate": null,
           "paymentSource": {
@@ -605,7 +606,13 @@
           "createdAt": "2026-09-19T16:57:44.254Z",
           "isOneTime": false,
           "targetPeriod": null,
-          "subItems": []
+          "subItems": [
+            {
+              "id": "sub_1792692847730_r6mr",
+              "name": "GYM",
+              "amount": 83000
+            }
+          ]
         }
       ],
       "wants": [
@@ -624,9 +631,9 @@
         },
         {
           "id": "want_subs",
-          "name": "Suscripciones (Netflix, Spotify, Gym)",
+          "name": "Suscripciones (Netflix, Spotify, Streaming)",
           "category": "subscriptions",
-          "amount": 150000,
+          "amount": 67000,
           "currency": "COP",
           "paymentSource": {
             "type": "payroll",
@@ -637,11 +644,6 @@
           "isOneTime": false,
           "targetPeriod": null,
           "subItems": [
-            {
-              "id": "sub_1792692847730_r6mr",
-              "name": "GYM",
-              "amount": 83000
-            },
             {
               "id": "sub_1792692859280_9ohl",
               "name": "Gemini + YT Primium",
@@ -768,9 +770,9 @@
         },
         {
           "id": "need_health_transport",
-          "name": "Salud, EPS & Transporte",
+          "name": "Salud, EPS, Gym & Transporte",
           "category": "health_transport",
-          "amount": 320000,
+          "amount": 233000,
           "currency": "COP",
           "dueDate": null,
           "paymentSource": {
@@ -778,7 +780,14 @@
             "targetName": "Cuenta Nu Débito"
           },
           "icon": "🏥",
-          "createdAt": "2026-09-19T16:57:44.254Z"
+          "createdAt": "2026-09-19T16:57:44.254Z",
+          "subItems": [
+            {
+              "id": "sub_1792692847730_r6mr",
+              "name": "GYM",
+              "amount": 83000
+            }
+          ]
         }
       ],
       "wants": [
@@ -797,9 +806,9 @@
         },
         {
           "id": "want_subs",
-          "name": "Suscripciones (Netflix, Spotify, Gym)",
+          "name": "Suscripciones (Netflix, Spotify, Streaming)",
           "category": "subscriptions",
-          "amount": 150000,
+          "amount": 67000,
           "currency": "COP",
           "paymentSource": {
             "type": "credit_card",
@@ -808,7 +817,8 @@
             "installments": 1
           },
           "icon": "🍿",
-          "createdAt": "2026-09-19T16:57:44.254Z"
+          "createdAt": "2026-09-19T16:57:44.254Z",
+          "subItems": []
         },
         {
           "id": "want_leisure",

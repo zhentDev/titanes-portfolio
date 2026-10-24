@@ -189,7 +189,7 @@ def get_market_rates_summary() -> List[Dict[str, Any]]:
     return list(KNOWN_MARKET_ENTITIES.values())
 
 
-def evaluate_user_rates(user_accounts: List[Dict[str, Any]], user_entities: List[Dict[str, Any]]) -> Dict[str, Any]:
+def evaluate_user_rates(user_accounts: List[Dict[str, Any]], user_entities: List[Dict[str, Any]], simulate: bool = False) -> Dict[str, Any]:
     """Compares the user's active accounts with official market rates and generates weekly alerts.
 
     Human-in-the-loop: Never changes historical numbers automatically. Returns pending
@@ -238,6 +238,32 @@ def evaluate_user_rates(user_accounts: List[Dict[str, Any]], user_entities: List
                 "productName": matched_preset["productName"],
                 "sourceUrl": matched_preset["sourceUrl"],
                 "suggestedEffectiveDate": now.strftime("%Y-%m-%d"),
+                "message": f"Tasa de {matched_preset['name']} actualizada en mercado a {market_rate:.2f}% E.A. (tu cuenta tiene {rate_val:.2f}% E.A.)."
+            })
+
+    if simulate:
+        # Generate an instant live flash test alert for the user's active account
+        target_acc = next((a for a in (user_accounts or []) if "nu" in a.get("entityId", "").lower() or "nu" in a.get("name", "").lower()), (user_accounts[0] if user_accounts else None))
+        if target_acc:
+            curr_rate = float(target_acc.get("interestRateEA") or 9.35)
+            sim_rate = 10.25 if curr_rate < 10.0 else 9.35
+            diff = round(sim_rate - curr_rate, 2)
+            alerts.insert(0, {
+                "accountId": target_acc.get("id"),
+                "accountName": target_acc.get("name", "Cajita Nu"),
+                "entityId": target_acc.get("entityId", "ent_nu"),
+                "entityName": "Nu Colombia",
+                "currency": target_acc.get("currency", "COP"),
+                "currentRateEA": curr_rate,
+                "marketRateEA": sim_rate,
+                "diff": diff,
+                "direction": "up" if diff > 0 else "down",
+                "productName": "Cajitas Nu (Cuenta de Ahorros)",
+                "sourceUrl": "https://nu.com.co/cf/cuenta/",
+                "suggestedEffectiveDate": now.strftime("%Y-%m-%d"),
+                "isSimulated": True,
+                "message": f"🧪 [Prueba Flash] Nu Colombia reportó ajuste de rentabilidad a {sim_rate:.2f}% E.A. (tu cuenta tiene {curr_rate:.2f}% E.A.)."
+            })
                 "message": f"Tasa de {matched_preset['name']} actualizada en mercado a {market_rate:.2f}% E.A. (tu cuenta tiene {rate_val:.2f}% E.A.)."
             })
 

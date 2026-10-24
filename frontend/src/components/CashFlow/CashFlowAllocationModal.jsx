@@ -4,6 +4,7 @@ import CustomSelectDropdown from "../Common/CustomSelectDropdown";
 import DynamicDatePicker from "../Common/DynamicDatePicker";
 import GlassModalWrapper from "../Common/GlassModalWrapper";
 import { generateRollingMonthOptions, getCurrentPeriod } from "../../utils/periodUtils";
+import { useCashFlowStore } from "../../store/cashFlowStore";
 import "./CashFlow.css";
 
 const CATEGORY_OPTIONS = {
@@ -130,6 +131,32 @@ export default function CashFlowAllocationModal({
 
   const handleDeleteSubItem = (index) => {
     setSubItems((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const { needs, wants, wealth, moveSubItemBetweenEnvelopes } = useCashFlowStore();
+  const [movingSubIndex, setMovingSubIndex] = useState(null);
+  const [targetMoveEnvelopeId, setTargetMoveEnvelopeId] = useState("");
+
+  const allAvailableEnvelopes = useMemo(() => {
+    return [
+      ...(needs || []).map((e) => ({ ...e, pillarLabel: "Necesidades" })),
+      ...(wants || []).map((e) => ({ ...e, pillarLabel: "Deseos/Gustos" })),
+      ...(wealth || []).map((e) => ({ ...e, pillarLabel: "Ahorro/Patrimonio" })),
+    ].filter((e) => e.id !== editItem?.id);
+  }, [needs, wants, wealth, editItem]);
+
+  const handleExecuteMoveSubItem = (sub, idx) => {
+    if (!targetMoveEnvelopeId || !editItem?.id) return;
+    if (typeof moveSubItemBetweenEnvelopes === "function") {
+      moveSubItemBetweenEnvelopes({
+        fromEnvelopeId: editItem.id,
+        toEnvelopeId: targetMoveEnvelopeId,
+        subItemId: sub.id,
+      });
+      setSubItems((prev) => prev.filter((_, i) => i !== idx));
+      setMovingSubIndex(null);
+      setTargetMoveEnvelopeId("");
+    }
   };
 
   const handleAutoParseNameConcepts = () => {
@@ -1060,57 +1087,157 @@ export default function CashFlowAllocationModal({
               {subItems.length > 0 && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 6 }}>
                   {subItems.map((sub, idx) => (
-                    <div
-                      key={sub.id || idx}
-                      style={{
-                        display: "flex",
-                        gap: 8,
-                        alignItems: "center",
-                        background: "var(--bg-surface)",
-                        padding: "6px 10px",
-                        borderRadius: "8px",
-                        border: "1px solid var(--border)",
-                      }}
-                    >
-                      <input
-                        type="text"
-                        placeholder="Nombre (ej. Netflix, SmartFit, Luz)"
-                        value={sub.name}
-                        onChange={(e) => handleUpdateSubItem(idx, "name", e.target.value)}
+                    <div key={sub.id || idx} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <div
                         style={{
-                          flex: 2,
-                          padding: "6px 8px",
-                          borderRadius: "6px",
+                          display: "flex",
+                          gap: 8,
+                          alignItems: "center",
+                          background: "var(--bg-surface)",
+                          padding: "6px 10px",
+                          borderRadius: "8px",
                           border: "1px solid var(--border)",
-                          background: "var(--bg-card)",
-                          color: "var(--text-primary)",
-                          fontSize: "0.82rem",
                         }}
-                      />
-                      <div style={{ flex: 1.5 }}>
-                        <CurrencyInput
-                          value={sub.amount}
-                          onChange={(val) => handleUpdateSubItem(idx, "amount", val)}
-                          currency={currency}
-                          placeholder="0"
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteSubItem(idx)}
-                        style={{
-                          background: "transparent",
-                          border: "none",
-                          color: "#f43f5e",
-                          cursor: "pointer",
-                          padding: "4px 6px",
-                          fontSize: "0.85rem",
-                          fontWeight: 700,
-                        }}
-                        title="Eliminar este concepto"
                       >
-                        ✕
-                      </button>
+                        <input
+                          type="text"
+                          placeholder="Nombre (ej. Netflix, SmartFit, Luz)"
+                          value={sub.name}
+                          onChange={(e) => handleUpdateSubItem(idx, "name", e.target.value)}
+                          style={{
+                            flex: 2,
+                            padding: "6px 8px",
+                            borderRadius: "6px",
+                            border: "1px solid var(--border)",
+                            background: "var(--bg-card)",
+                            color: "var(--text-primary)",
+                            fontSize: "0.82rem",
+                          }}
+                        />
+                        <div style={{ flex: 1.5 }}>
+                          <CurrencyInput
+                            value={sub.amount}
+                            onChange={(val) => handleUpdateSubItem(idx, "amount", val)}
+                            currency={currency}
+                            placeholder="0"
+                          />
+                        </div>
+
+                        {isEditing && (
+                          <button
+                            type="button"
+                            onClick={() => setMovingSubIndex(movingSubIndex === idx ? null : idx)}
+                            style={{
+                              background: "rgba(14, 165, 233, 0.12)",
+                              border: "1px solid rgba(14, 165, 233, 0.3)",
+                              color: "#0ea5e9",
+                              borderRadius: "6px",
+                              padding: "4px 8px",
+                              fontSize: "0.72rem",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              whiteSpace: "nowrap",
+                            }}
+                            title="Mover este concepto a otro rubro (ej. Salud, EPS)"
+                          >
+                            ⇄ Mover
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteSubItem(idx)}
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            color: "#f43f5e",
+                            cursor: "pointer",
+                            padding: "4px 6px",
+                            fontSize: "0.85rem",
+                            fontWeight: 700,
+                          }}
+                          title="Eliminar este concepto"
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      {/* Inline Envelope Mover Dropdown */}
+                      {movingSubIndex === idx && (
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            padding: "8px 12px",
+                            background: "rgba(14, 165, 233, 0.08)",
+                            borderRadius: 8,
+                            border: "1px dashed #0ea5e9",
+                            width: "100%",
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <span style={{ fontSize: "0.74rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                            Reasignar "{sub.name || "Concepto"}" hacia:
+                          </span>
+                          <select
+                            value={targetMoveEnvelopeId}
+                            onChange={(e) => setTargetMoveEnvelopeId(e.target.value)}
+                            style={{
+                              flex: 1,
+                              minWidth: "170px",
+                              padding: "5px 8px",
+                              borderRadius: 6,
+                              fontSize: "0.78rem",
+                              background: "var(--bg-surface)",
+                              color: "var(--text-primary)",
+                              border: "1px solid var(--border)",
+                            }}
+                          >
+                            <option value="">-- Seleccionar rubro destino --</option>
+                            {allAvailableEnvelopes.map((env) => (
+                              <option key={env.id} value={env.id}>
+                                [{env.pillarLabel}] {env.name}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            disabled={!targetMoveEnvelopeId}
+                            onClick={() => handleExecuteMoveSubItem(sub, idx)}
+                            style={{
+                              background: targetMoveEnvelopeId ? "#0ea5e9" : "var(--border)",
+                              color: "#fff",
+                              border: "none",
+                              borderRadius: 6,
+                              padding: "5px 10px",
+                              fontSize: "0.74rem",
+                              fontWeight: 700,
+                              cursor: targetMoveEnvelopeId ? "pointer" : "not-allowed",
+                            }}
+                          >
+                            Confirmar Traslado
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMovingSubIndex(null);
+                              setTargetMoveEnvelopeId("");
+                            }}
+                            style={{
+                              background: "transparent",
+                              border: "1px solid var(--border)",
+                              color: "var(--text-muted)",
+                              borderRadius: 6,
+                              padding: "4px 8px",
+                              fontSize: "0.74rem",
+                              cursor: "pointer",
+                            }}
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
 

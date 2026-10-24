@@ -191,6 +191,27 @@ export default function ExpensesLogSection({
 
         <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", justifyContent: "space-between", width: "100%", maxWidth: "100%" }}>
           <div style={{ display: "flex", gap: "10px 18px", alignItems: "center", flexWrap: "wrap" }}>
+            {/* Saldo Actual Disponible en Nómina */}
+            <div
+              style={{
+                minWidth: "135px",
+                textAlign: "left",
+                background: "rgba(16, 185, 129, 0.08)",
+                border: "1px solid rgba(16, 185, 129, 0.35)",
+                borderRadius: "10px",
+                padding: "4px 10px",
+              }}
+            >
+              <span style={{ fontSize: "0.72rem", color: "#10b981", display: "flex", alignItems: "center", gap: 4, fontWeight: 700 }}>
+                <span>🏦</span> Saldo en Nómina
+              </span>
+              <strong style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.15rem", color: (totalIncomeInPeriod - totalSpentInPeriod - totalSavedInPeriod - totalPaidToCards) >= 0 ? "#10b981" : "#f43f5e" }}>
+                {(totalIncomeInPeriod - totalSpentInPeriod - totalSavedInPeriod - totalPaidToCards) >= 0
+                  ? `+${formatMoney(totalIncomeInPeriod - totalSpentInPeriod - totalSavedInPeriod - totalPaidToCards, currency)}`
+                  : `-${formatMoney(Math.abs(totalIncomeInPeriod - totalSpentInPeriod - totalSavedInPeriod - totalPaidToCards), currency)}`}
+              </strong>
+            </div>
+
             {totalIncomeInPeriod > 0 && (
               <div style={{ minWidth: "105px", textAlign: "left" }}>
                 <span style={{ fontSize: "0.72rem", color: "#10b981", display: "block" }}>📥 Total Ingresos</span>
@@ -374,6 +395,31 @@ export default function ExpensesLogSection({
                       <span style={{ color: "#38bdf8", fontWeight: 600 }}>
                         Pagado desde: {item.sourceAccount || "Nómina Nu"}
                       </span>
+                      {onReclassifyMovement && (
+                        <>
+                          <span>•</span>
+                          <button
+                            type="button"
+                            onClick={() => setAssignModalItem(item)}
+                            style={{
+                              background: "transparent",
+                              border: "none",
+                              color: "#0ea5e9",
+                              fontSize: "0.72rem",
+                              cursor: "pointer",
+                              padding: 0,
+                              textDecoration: "underline",
+                              fontWeight: 600,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 3,
+                            }}
+                            title="Distribuir este abono en varios rubros del mes o cambiar asignación"
+                          >
+                            <span>🏷️</span> Distribuir en Rubros / Reasignar
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -381,6 +427,23 @@ export default function ExpensesLogSection({
                     <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.05rem", fontWeight: 800, color: "#10b981" }}>
                       -{formatMoney(item.amount, currency)}
                     </span>
+                    {onEditTransaction && (
+                      <button
+                        type="button"
+                        onClick={() => onEditTransaction(item)}
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          color: "#38bdf8",
+                          cursor: "pointer",
+                          padding: "4px",
+                          fontSize: "0.85rem",
+                        }}
+                        title="Editar este pago de tarjeta"
+                      >
+                        ✏️
+                      </button>
+                    )}
                     {onDeletePayment && (
                       <button
                         type="button"
