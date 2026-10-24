@@ -403,10 +403,24 @@ export default function AssignMovementModal({
     (activeTab === "multi_envelope" && (splitRemaining !== 0 || totalSplitAssigned <= 0));
 
   return (
-    <GlassModalWrapper isOpen={isOpen} onClose={onClose} maxWidth={560}>
-      <div style={{ padding: "24px 26px" }}>
-        {/* Modal Header */}
-        <div className="cashflow-modal-header" style={{ paddingBottom: 14 }}>
+    <GlassModalWrapper isOpen={isOpen} onClose={onClose} maxWidth={640}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          maxHeight: "88vh",
+          width: "100%",
+        }}
+      >
+        {/* Modal Header - Fixed at Top */}
+        <div
+          className="cashflow-modal-header"
+          style={{
+            padding: "18px 24px 14px",
+            flexShrink: 0,
+            borderBottom: isLight ? "1px solid rgba(0,0,0,0.08)" : "1px solid var(--border)",
+          }}
+        >
           <h3 className="cashflow-modal-title">
             <span>🏷️</span> Asignar o Imputar Movimiento
           </h3>
@@ -419,17 +433,26 @@ export default function AssignMovementModal({
           </button>
         </div>
 
-        {/* Movement Summary Card */}
+        {/* Modal Scrollable Body */}
         <div
           style={{
-            background: isLight ? "#f8fafc" : "var(--bg-surface)",
-            border: isLight ? "1px solid rgba(0,0,0,0.08)" : "1px solid var(--border)",
-            borderRadius: "14px",
-            padding: "14px 18px",
-            marginBottom: 18,
-            boxShadow: isLight ? "0 2px 8px rgba(0,0,0,0.03)" : "none",
+            flex: 1,
+            overflowY: "auto",
+            padding: "18px 24px",
+            minHeight: 0,
           }}
         >
+          {/* Movement Summary Card */}
+          <div
+            style={{
+              background: isLight ? "#f8fafc" : "var(--bg-surface)",
+              border: isLight ? "1px solid rgba(0,0,0,0.08)" : "1px solid var(--border)",
+              borderRadius: "14px",
+              padding: "14px 18px",
+              marginBottom: 18,
+              boxShadow: isLight ? "0 2px 8px rgba(0,0,0,0.03)" : "none",
+            }}
+          >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <span style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--text-primary)" }}>
               {movement.description || movement.budgetItemName || "Movimiento sin concepto"}
@@ -701,8 +724,48 @@ export default function AssignMovementModal({
               </div>
             </div>
 
+            {/* Quick Collapse/Expand All & Strategy Title */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, marginTop: 4 }}>
+              <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-secondary)", letterSpacing: "0.03em" }}>
+                🏛️ PILARES DE LA ESTRATEGIA (50 / 30 / 20)
+              </span>
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <button
+                  type="button"
+                  onClick={() => setCollapsedPillars({})}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: isLight ? "#0284c7" : "#38bdf8",
+                    fontSize: "0.72rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    padding: "2px 4px",
+                  }}
+                >
+                  Desplegar todos
+                </button>
+                <span style={{ color: "var(--text-muted)", fontSize: "0.7rem" }}>•</span>
+                <button
+                  type="button"
+                  onClick={() => setCollapsedPillars({ needs: true, wants: true, wealth: true })}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: "var(--text-muted)",
+                    fontSize: "0.72rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    padding: "2px 4px",
+                  }}
+                >
+                  Ocultar todos
+                </button>
+              </div>
+            </div>
+
             {/* Envelopes list for multi-allocation grouped by Strategy Pillars */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: "350px", overflowY: "auto", paddingRight: 4 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {strategyPillars.map((pillar) => {
                 const pillarEnvelopes = (filteredBudgetItems || []).filter((item) => item.pillarType === pillar.id);
                 if (selectedPillarFilter !== "all" && selectedPillarFilter !== pillar.id) return null;
@@ -716,9 +779,13 @@ export default function AssignMovementModal({
                   <div
                     key={pillar.id}
                     style={{
-                      borderRadius: 12,
-                      background: isLight ? "#ffffff" : "rgba(15, 23, 42, 0.45)",
-                      border: `1.5px solid ${pillar.borderColor}`,
+                      borderRadius: "14px",
+                      background: isLight
+                        ? isPillarCollapsed ? "#f8fafc" : "#ffffff"
+                        : isPillarCollapsed ? "rgba(15, 23, 42, 0.45)" : "rgba(15, 23, 42, 0.75)",
+                      border: `1.5px solid ${isPillarCollapsed ? (isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)") : pillar.borderColor}`,
+                      boxShadow: isPillarCollapsed ? "none" : (isLight ? "0 4px 14px rgba(0,0,0,0.04)" : "0 4px 18px rgba(0,0,0,0.25)"),
+                      transition: "all 0.2s ease",
                       overflow: "hidden",
                     }}
                   >
@@ -729,42 +796,88 @@ export default function AssignMovementModal({
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
-                        padding: "8px 12px",
-                        background: pillar.bgColor,
+                        padding: "10px 14px",
+                        background: isPillarCollapsed
+                          ? (isLight ? "#f1f5f9" : "rgba(30, 41, 59, 0.35)")
+                          : pillar.bgColor,
                         cursor: "pointer",
-                        borderBottom: isPillarCollapsed ? "none" : `1px solid ${pillar.borderColor}`,
+                        borderBottom: isPillarCollapsed ? "none" : `1px solid ${pillar.borderColor}40`,
+                        userSelect: "none",
+                        transition: "background 0.2s ease",
                       }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontSize: "1.1rem" }}>{pillar.icon}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span style={{ fontSize: "1.2rem" }}>{pillar.icon}</span>
                         <div>
                           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <strong style={{ fontSize: "0.85rem", color: "var(--text-primary)" }}>{pillar.name}</strong>
-                            <span style={{ fontSize: "0.68rem", fontWeight: 800, color: pillar.color, background: `${pillar.color}20`, padding: "1px 6px", borderRadius: 4 }}>
+                            <strong style={{ fontSize: "0.88rem", color: "var(--text-primary)" }}>{pillar.name}</strong>
+                            <span
+                              style={{
+                                fontSize: "0.68rem",
+                                fontWeight: 800,
+                                color: pillar.color,
+                                background: `${pillar.color}20`,
+                                padding: "2px 7px",
+                                borderRadius: "5px",
+                                letterSpacing: "0.02em",
+                              }}
+                            >
                               {pillar.ratio}
                             </span>
                           </div>
-                          <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
-                            {pillarEnvelopes.length} rubro(s) • Presupuesto: {formatMoney(pillarBudgetTotal, currency)}
+                          <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                            {pillarEnvelopes.length} rubro(s) • Presupuesto: <strong>{formatMoney(pillarBudgetTotal, currency)}</strong>
                           </span>
                         </div>
                       </div>
 
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         {pillarAssignedTotal > 0 && (
-                          <span style={{ fontSize: "0.76rem", fontWeight: 800, color: pillar.color, fontFamily: "JetBrains Mono, monospace" }}>
+                          <span
+                            style={{
+                              fontSize: "0.76rem",
+                              fontWeight: 800,
+                              color: "#10b981",
+                              background: "rgba(16, 185, 129, 0.12)",
+                              border: "1px solid rgba(16, 185, 129, 0.3)",
+                              padding: "2px 8px",
+                              borderRadius: "6px",
+                              fontFamily: "JetBrains Mono, monospace",
+                            }}
+                          >
                             +{formatMoney(pillarAssignedTotal, currency)}
                           </span>
                         )}
-                        <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 600 }}>
-                          {isPillarCollapsed ? `▼ Ver (${pillarEnvelopes.length})` : "▲ Ocultar"}
+                        <span
+                          style={{
+                            fontSize: "0.72rem",
+                            color: isPillarCollapsed ? "var(--text-muted)" : pillar.color,
+                            fontWeight: 700,
+                            background: isPillarCollapsed ? (isLight ? "#e2e8f0" : "rgba(255,255,255,0.06)") : `${pillar.color}20`,
+                            border: `1px solid ${isPillarCollapsed ? "transparent" : `${pillar.color}35`}`,
+                            padding: "3px 9px",
+                            borderRadius: "6px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
+                        >
+                          {isPillarCollapsed ? `▼ Ver rubros (${pillarEnvelopes.length})` : "▲ Ocultar"}
                         </span>
                       </div>
                     </div>
 
                     {/* Pillar Envelopes List */}
                     {!isPillarCollapsed && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "8px" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 10,
+                          padding: "12px",
+                          background: isLight ? "rgba(248, 250, 252, 0.5)" : "rgba(10, 16, 30, 0.25)",
+                        }}
+                      >
                         {pillarEnvelopes.map((env) => {
                           const metrics = calculateEnvelopeMetrics(env);
                           const {
@@ -1215,17 +1328,7 @@ export default function AssignMovementModal({
             </div>
 
             {/* List of Envelopes grouped by Strategy Pillars */}
-            <div
-              style={{
-                maxHeight: 340,
-                overflowY: "auto",
-                display: "flex",
-                flexDirection: "column",
-                gap: 10,
-                marginBottom: 20,
-                paddingRight: 4,
-              }}
-            >
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
               {filteredBudgetItems.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "24px 0", color: "var(--text-muted)", fontSize: "0.82rem" }}>
                   No se encontraron rubros con ese filtro.
@@ -1243,9 +1346,13 @@ export default function AssignMovementModal({
                     <div
                       key={pillar.id}
                       style={{
-                        borderRadius: 12,
-                        background: isLight ? "#ffffff" : "rgba(15, 23, 42, 0.45)",
-                        border: `1.5px solid ${pillar.borderColor}`,
+                        borderRadius: "14px",
+                        background: isLight
+                          ? isPillarCollapsed ? "#f8fafc" : "#ffffff"
+                          : isPillarCollapsed ? "rgba(15, 23, 42, 0.45)" : "rgba(15, 23, 42, 0.75)",
+                        border: `1.5px solid ${isPillarCollapsed ? (isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)") : pillar.borderColor}`,
+                        boxShadow: isPillarCollapsed ? "none" : (isLight ? "0 4px 14px rgba(0,0,0,0.04)" : "0 4px 18px rgba(0,0,0,0.25)"),
+                        transition: "all 0.2s ease",
                         overflow: "hidden",
                       }}
                     >
@@ -1256,35 +1363,70 @@ export default function AssignMovementModal({
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "space-between",
-                          padding: "8px 12px",
-                          background: pillar.bgColor,
+                          padding: "10px 14px",
+                          background: isPillarCollapsed
+                            ? (isLight ? "#f1f5f9" : "rgba(30, 41, 59, 0.35)")
+                            : pillar.bgColor,
                           cursor: "pointer",
-                          borderBottom: isPillarCollapsed ? "none" : `1px solid ${pillar.borderColor}`,
+                          borderBottom: isPillarCollapsed ? "none" : `1px solid ${pillar.borderColor}40`,
+                          userSelect: "none",
+                          transition: "background 0.2s ease",
                         }}
                       >
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <span style={{ fontSize: "1.1rem" }}>{pillar.icon}</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <span style={{ fontSize: "1.2rem" }}>{pillar.icon}</span>
                           <div>
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <strong style={{ fontSize: "0.85rem", color: "var(--text-primary)" }}>{pillar.name}</strong>
-                              <span style={{ fontSize: "0.68rem", fontWeight: 800, color: pillar.color, background: `${pillar.color}20`, padding: "1px 6px", borderRadius: 4 }}>
+                              <strong style={{ fontSize: "0.88rem", color: "var(--text-primary)" }}>{pillar.name}</strong>
+                              <span
+                                style={{
+                                  fontSize: "0.68rem",
+                                  fontWeight: 800,
+                                  color: pillar.color,
+                                  background: `${pillar.color}20`,
+                                  padding: "2px 7px",
+                                  borderRadius: "5px",
+                                  letterSpacing: "0.02em",
+                                }}
+                              >
                                 {pillar.ratio}
                               </span>
                             </div>
-                            <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
-                              {pillarItems.length} rubro(s) • Total: {formatMoney(pillarBudgetTotal, currency)}
+                            <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                              {pillarItems.length} rubro(s) • Total: <strong>{formatMoney(pillarBudgetTotal, currency)}</strong>
                             </span>
                           </div>
                         </div>
 
-                        <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 600 }}>
-                          {isPillarCollapsed ? `▼ Ver (${pillarItems.length})` : "▲ Ocultar"}
+                        <span
+                          style={{
+                            fontSize: "0.72rem",
+                            color: isPillarCollapsed ? "var(--text-muted)" : pillar.color,
+                            fontWeight: 700,
+                            background: isPillarCollapsed ? (isLight ? "#e2e8f0" : "rgba(255,255,255,0.06)") : `${pillar.color}20`,
+                            border: `1px solid ${isPillarCollapsed ? "transparent" : `${pillar.color}35`}`,
+                            padding: "3px 9px",
+                            borderRadius: "6px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
+                        >
+                          {isPillarCollapsed ? `▼ Ver rubros (${pillarItems.length})` : "▲ Ocultar"}
                         </span>
                       </div>
 
                       {/* Envelopes of Pillar */}
                       {!isPillarCollapsed && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "8px" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 10,
+                            padding: "12px",
+                            background: isLight ? "rgba(248, 250, 252, 0.5)" : "rgba(10, 16, 30, 0.25)",
+                          }}
+                        >
                           {pillarItems.map((item) => {
                             const isSelected = selectedEnvelopeId === item.id;
                             const pillarColor = pillar.color;
@@ -1851,9 +1993,20 @@ export default function AssignMovementModal({
             </div>
           </div>
         )}
+        </div>
 
-        {/* Modal Actions */}
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 8 }}>
+        {/* Modal Actions - Fixed at Bottom */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: 12,
+            padding: "14px 24px",
+            flexShrink: 0,
+            borderTop: isLight ? "1px solid rgba(0,0,0,0.08)" : "1px solid var(--border)",
+            background: isLight ? "rgba(248, 250, 252, 0.95)" : "rgba(15, 23, 42, 0.95)",
+          }}
+        >
           <button
             type="button"
             className="cashflow-btn secondary"
