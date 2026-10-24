@@ -135,6 +135,31 @@ export default function FixedIncomeModal({
   }, [selectedEntityId, entities]);
 
   const suggestedProducts = currentSelectedPreset?.suggestedProducts || [];
+
+  // Default active interest rate for the chosen entity / preset
+  const entityDefaultRate = useMemo(() => {
+    if (!selectedEntityId) return "10.0";
+    if (selectedEntityId.startsWith("preset_")) {
+      const pId = selectedEntityId.replace("preset_", "");
+      const preset = getBankPreset(pId);
+      return preset?.defaultRateEA !== undefined ? String(preset.defaultRateEA) : "10.0";
+    }
+    const found = entities.find((e) => e.id === selectedEntityId);
+    if (found) {
+      // Check if user already has an active account with a rate in this entity
+      const existingRateAcc = accounts.find(
+        (a) => a.entityId === selectedEntityId && Number(a.interestRateEA || 0) > 0
+      );
+      if (existingRateAcc) {
+        return String(existingRateAcc.interestRateEA);
+      }
+      const preset = getBankPreset(found.name);
+      if (preset?.defaultRateEA !== undefined) {
+        return String(preset.defaultRateEA);
+      }
+    }
+    return "10.0";
+  }, [selectedEntityId, entities, accounts]);
   const suggestedCdtProducts = useMemo(() => {
     const filtered = suggestedProducts.filter((p) =>
       p.toLowerCase().includes("cdt") ||
@@ -245,7 +270,7 @@ export default function FixedIncomeModal({
         setAccountCategory("high_yield");
         setAccountCurrency("COP");
         setAccountBalance("");
-        setAccountRateEA("");
+        setAccountRateEA(entityDefaultRate || "10.0");
         setAccountTaxExempt(true);
         setAccountStartDate("2023-06-01");
       } else if (initialTab === "cdt") {
@@ -406,21 +431,28 @@ export default function FixedIncomeModal({
         }
       });
     } else if (activeTab === "account") {
-      suggestFixedIncomeRate(
-        selectedEntityId,
-        accountType,
-        null,
-        new Date().toISOString().slice(0, 10),
-      ).then((res) => {
-        if (res?.rateEA && !accountRateEA) {
-          setAccountRateEA(String(res.rateEA));
+      if (accountCategory === "payroll" || accountCategory === "digital_wallet") {
+        setAccountRateEA("0");
+      } else {
+        if (!accountRateEA || accountRateEA === "0") {
+          setAccountRateEA(entityDefaultRate);
         }
-        if (res?.label) {
-          setSuggestedRateLabel(res.label);
-        }
-      });
+        suggestFixedIncomeRate(
+          selectedEntityId,
+          accountType,
+          null,
+          new Date().toISOString().slice(0, 10),
+        ).then((res) => {
+          if (res?.rateEA) {
+            setAccountRateEA(String(res.rateEA));
+          }
+          if (res?.label) {
+            setSuggestedRateLabel(res.label);
+          }
+        }).catch(() => {});
+      }
     }
-  }, [selectedEntityId, activeTab, cdtTermDays, cdtStartDate, accountType]);
+  }, [selectedEntityId, activeTab, cdtTermDays, cdtStartDate, accountType, accountCategory, entityDefaultRate]);
 
   // Auto-calculate maturity date when term or start date changes
   useEffect(() => {
@@ -737,7 +769,12 @@ export default function FixedIncomeModal({
                       <button
                         key={pName}
                         type="button"
-                        onClick={() => setAccountName(pName)}
+                        onClick={() => {
+                          setAccountName(pName);
+                          if ((!accountRateEA || accountRateEA === "0") && accountCategory === "high_yield") {
+                            setAccountRateEA(entityDefaultRate);
+                          }
+                        }}
                         className={`fi-tier-chip ${accountName === pName ? "selected" : ""}`}
                         style={{ fontSize: "0.72rem", padding: "2px 8px" }}
                       >

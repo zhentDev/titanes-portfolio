@@ -19,6 +19,7 @@ export default function DebtModal({
   const [creditor, setCreditor] = useState("");
   const [totalAmount, setTotalAmount] = useState("");
   const [remainingAmount, setRemainingAmount] = useState("");
+  const [isRemainingManual, setIsRemainingManual] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("Transferencia desde Cajita / Cuenta");
   const [paymentSourceId, setPaymentSourceId] = useState("");
   const [paymentFrequency, setPaymentFrequency] = useState("monthly");
@@ -45,6 +46,7 @@ export default function DebtModal({
       setCreditor("");
       setTotalAmount("");
       setRemainingAmount("");
+      setIsRemainingManual(false);
       setPaymentMethod("Transferencia desde Cajita / Cuenta");
       setPaymentSourceId("");
       setPaymentFrequency("monthly");
@@ -228,9 +230,10 @@ export default function DebtModal({
                 placeholder="ej. 500000"
                 value={totalAmount}
                 onChange={(e) => {
-                  setTotalAmount(e.target.value);
-                  if (!debtToEdit && remainingAmount === "") {
-                    setRemainingAmount(e.target.value);
+                  const val = e.target.value;
+                  setTotalAmount(val);
+                  if (!debtToEdit && !isRemainingManual) {
+                    setRemainingAmount(val);
                   }
                 }}
                 style={{
@@ -256,7 +259,10 @@ export default function DebtModal({
                 required
                 placeholder="ej. 450000"
                 value={remainingAmount}
-                onChange={(e) => setRemainingAmount(e.target.value)}
+                onChange={(e) => {
+                  setIsRemainingManual(true);
+                  setRemainingAmount(e.target.value);
+                }}
                 style={{
                   width: "100%",
                   background: "var(--bg-surface)",

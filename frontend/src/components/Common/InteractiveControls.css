@@ -64,17 +64,20 @@ input[type="number"] {
   white-space: nowrap;
 }
 
-.currency-native-input {
+.currency-native-input,
+input.currency-native-input,
+input.currency-native-input:focus {
   flex: 1;
   min-width: 0;
-  background: transparent;
-  border: none;
-  outline: none;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
   color: #f8fafc;
   font-family: "JetBrains Mono", "SF Mono", monospace;
   font-size: 0.95rem;
   font-weight: 600;
-  padding: 9px 12px;
+  padding: 9px 12px !important;
   text-align: left;
 }
 
@@ -131,18 +134,21 @@ input[type="number"] {
   box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4), 0 0 16px rgba(56, 189, 248, 0.2);
 }
 
-.dynamic-datepicker-field {
+.dynamic-datepicker-field,
+input.dynamic-datepicker-field,
+input.dynamic-datepicker-field:focus {
   flex: 1;
   min-width: 0;
   width: 100%;
-  background: transparent;
-  border: none;
-  outline: none;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
   color: #f8fafc;
   font-family: "JetBrains Mono", "SF Mono", monospace;
   font-size: 0.84rem;
   font-weight: 600;
-  padding: 8px 6px 8px 11px;
+  padding: 8px 6px 8px 11px !important;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -407,6 +413,11 @@ input[type="time"]:focus {
   min-height: 52px;
 }
 
+.floating-input-container.no-label {
+  min-height: 40px;
+  height: 40px;
+}
+
 .floating-input-container:hover {
   border-color: rgba(255, 255, 255, 0.2);
 }
@@ -416,21 +427,26 @@ input[type="time"]:focus {
   box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4), 0 0 16px rgba(56, 189, 248, 0.2);
 }
 
-.floating-input-field {
+.floating-input-field,
+input.floating-input-field,
+input.floating-input-field:focus {
   flex: 1;
   width: 100%;
-  background: transparent;
-  border: none;
-  outline: none;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
   color: #f8fafc;
   font-size: 0.92rem;
-  padding: 20px 0 6px 0;
+  padding: 20px 0 6px 0 !important;
   font-family: inherit;
   line-height: 1.25;
 }
 
-.floating-input-container.no-label .floating-input-field {
-  padding: 12px 0;
+.floating-input-container.no-label .floating-input-field,
+.floating-input-container.no-label input.floating-input-field,
+.floating-input-container.no-label input.floating-input-field:focus {
+  padding: 8px 0 !important;
 }
 
 .floating-input-field::placeholder {

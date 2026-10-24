@@ -115,7 +115,7 @@
   color: #94a3b8 !important;
 }
 
-[data-theme="light"] input:focus,
+[data-theme="light"] input:not(.floating-input-field):not(.currency-native-input):not(.dynamic-datepicker-field):not(.select-search-input):focus,
 [data-theme="light"] select:focus,
 [data-theme="light"] textarea:focus {
   box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
@@ -652,8 +652,8 @@ h3 {
 }
 
 /* ── Input ──────────────────────────────────── */
-input[type="text"],
-input[type="number"] {
+input[type="text"]:not(.floating-input-field):not(.currency-native-input):not(.dynamic-datepicker-field):not(.select-search-input),
+input[type="number"]:not(.floating-input-field):not(.currency-native-input) {
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -665,12 +665,12 @@ input[type="number"] {
   transition: border-color var(--duration) var(--ease);
   width: 100%;
 }
-input[type="text"]:focus,
-input[type="number"]:focus {
+input[type="text"]:not(.floating-input-field):not(.currency-native-input):not(.dynamic-datepicker-field):not(.select-search-input):focus,
+input[type="number"]:not(.floating-input-field):not(.currency-native-input):focus {
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.1);
 }
-input[type="number"] {
+input[type="number"]:not(.floating-input-field):not(.currency-native-input) {
   font-family: "JetBrains Mono", monospace;
 }
 
