@@ -531,9 +531,11 @@ export const useCashFlowStore = create(
           });
         }
 
+        let paymentRecord = null;
         if (card) {
-          const paymentRecord = {
-            id: `pay_split_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          const paymentId = `pay_split_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+          paymentRecord = {
+            id: paymentId,
             period: sourceItem.period || state.activePeriod,
             cardId: card.id,
             cardName: card.name,
@@ -550,6 +552,9 @@ export const useCashFlowStore = create(
               budgetItemName: d.budgetItemName,
               budgetItemType: d.budgetItemType,
               amount: Number(d.amount),
+              subItemId: d.subItemId || null,
+              subItemName: d.subItemName || null,
+              isEmergencySavingsDeduction: d.budgetItemType === "wealth",
             })),
             createdAt: new Date().toISOString(),
           };
@@ -580,8 +585,9 @@ export const useCashFlowStore = create(
               type: "payroll",
               targetName: state.payrollAccount?.name || "Cuenta Nu Débito",
             },
-            creditCardPaymentId: card ? `ccpay_split_${Date.now()}` : null,
+            creditCardPaymentId: paymentRecord ? paymentRecord.id : null,
             isCreditCardPayoff: Boolean(card),
+            isEmergencySavingsDeduction: d.budgetItemType === "wealth" && Boolean(card),
             itemType: d.budgetItemType === "wealth" ? "wealth_saving" : "expense",
             destinationAccountId: d.destinationAccountId || null,
             destinationAccountName: d.destinationAccountName || null,
