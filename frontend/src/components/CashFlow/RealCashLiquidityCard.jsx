@@ -47,7 +47,15 @@ export default function RealCashLiquidityCard({
   // 2. Real Outflows executed from Payroll (Debit) Account (Dinero que YA salió de la cuenta)
   const executedExpensesFromPayroll = (expensesLog || [])
     .filter((tx) => {
-      if (tx.isCreditCardPayoff) return false; // Evita doble conteo porque ya suma en executedCardPaymentsFromPayroll
+      // Evita doble conteo porque ya suma en executedCardPaymentsFromPayroll
+      if (
+        tx.isCreditCardPayoff ||
+        Boolean(tx.creditCardPaymentId) ||
+        (tx.id && String(tx.id).includes("_split_")) ||
+        (tx.description && String(tx.description).toLowerCase().includes("descontado de"))
+      ) {
+        return false;
+      }
       const srcType = tx.paymentSource?.type;
       return (
         srcType === "payroll" ||

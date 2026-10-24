@@ -4,6 +4,7 @@ import GlassModalWrapper from "../Common/GlassModalWrapper";
 import LoanSettlementModal from "./LoanSettlementModal";
 import AssignMovementModal from "./AssignMovementModal";
 import { toastConfirm } from "../../utils/toastAlerts";
+import { useTheme } from "../../context/ThemeContext";
 import "./CashFlow.css";
 
 export default function ExpensesLogSection({
@@ -28,6 +29,8 @@ export default function ExpensesLogSection({
   onConvertExpenseToCardPayment,
   onReclassifyMovement,
 }) {
+  const { theme } = useTheme();
+  const isLight = theme === "light";
   const formatMoney = (val, cur = currency) => formatCashFlowMoney(val, cur, fxRate);
   const [filterSource, setFilterSource] = useState("all");
   const [settlingTransaction, setSettlingTransaction] = useState(null);
@@ -91,6 +94,19 @@ export default function ExpensesLogSection({
       });
   }, [expensesLog, activePeriod]);
 
+  // Sub-items resulting from credit card multi-rubro split distribution are deductions,
+  // NOT standalone movements. The only true primary movement is the credit card payment.
+  const isSplitDeductionChild = (tx) => Boolean(
+    tx.isCreditCardPayoff ||
+    tx.creditCardPaymentId ||
+    (tx.id && String(tx.id).includes("_split_")) ||
+    (tx.description && String(tx.description).toLowerCase().includes("descontado de"))
+  );
+
+  const standaloneExpenses = useMemo(() => {
+    return periodExpenses.filter((tx) => !isSplitDeductionChild(tx));
+  }, [periodExpenses]);
+
   const periodPayments = useMemo(() => {
     return (creditCardPayments || [])
       .filter((p) => !p.period || p.period === activePeriod)
@@ -104,8 +120,8 @@ export default function ExpensesLogSection({
           const matchingChildren = (expensesLog || []).filter(
             (e) =>
               (e.creditCardPaymentId === p.id ||
-                e.id?.includes("_split_") ||
-                (e.description && e.description.toLowerCase().includes("descontado de"))) &&
+                (e.id && String(e.id).includes("_split_")) ||
+                (e.description && String(e.description).toLowerCase().includes("descontado de"))) &&
               (!e.period || e.period === activePeriod)
           );
           if (matchingChildren.length > 0) {
@@ -127,27 +143,9 @@ export default function ExpensesLogSection({
       });
   }, [creditCardPayments, expensesLog, activePeriod]);
 
-  // Combined sorted activity feed by precise timestamp (createdAt / date + time) descending
+  // Combined sorted activity feed: Standalone movements + Card Payments (no duplicate split children)
   const combinedActivities = useMemo(() => {
-    const distributedPayments = (periodPayments || []).filter(
-      (p) => Array.isArray(p.budgetDeductions) && p.budgetDeductions.length > 0
-    );
-
-    // Filter out split child expenses if their parent distributed payment already represents them as a sub-list
-    const visibleExpenses = (periodExpenses || []).filter((tx) => {
-      const isSplitChild =
-        tx.isCreditCardPayoff ||
-        Boolean(tx.creditCardPaymentId) ||
-        (tx.id && tx.id.includes("_split_")) ||
-        (tx.description && tx.description.toLowerCase().includes("descontado de"));
-
-      if (isSplitChild && distributedPayments.length > 0) {
-        return false;
-      }
-      return true;
-    });
-
-    const combined = [...visibleExpenses, ...periodPayments];
+    const combined = [...standaloneExpenses, ...periodPayments];
     return combined.sort((a, b) => {
       const getTimestamp = (item) => {
         if (item.createdAt) {
@@ -169,11 +167,11 @@ export default function ExpensesLogSection({
       const dateB = b.date || b.createdAt || "";
       return dateB.localeCompare(dateA);
     });
-  }, [periodExpenses, periodPayments]);
+  }, [standaloneExpenses, periodPayments]);
 
   const pendingLoans = useMemo(() => {
-    return periodExpenses.filter((tx) => tx.isLoan && tx.loanStatus !== "settled");
-  }, [periodExpenses]);
+    return standaloneExpenses.filter((tx) => tx.isLoan && tx.loanStatus !== "settled");
+  }, [standaloneExpenses]);
 
   const totalPendingLoansAmt = useMemo(() => {
     return pendingLoans.reduce((acc, tx) => acc + (Number(tx.loanAmount) || Number(tx.amount) || 0), 0);
@@ -209,15 +207,15 @@ export default function ExpensesLogSection({
     return combinedActivities;
   }, [combinedActivities, filterSource]);
 
-  const totalSpentInPeriod = periodExpenses
+  const totalSpentInPeriod = standaloneExpenses
     .filter((tx) => tx.itemType === "expense")
     .reduce((acc, tx) => acc + (Number(tx.amount) || 0), 0);
 
-  const totalIncomeInPeriod = periodExpenses
+  const totalIncomeInPeriod = standaloneExpenses
     .filter((tx) => tx.itemType === "income")
     .reduce((acc, tx) => acc + (Number(tx.amount) || 0), 0);
 
-  const totalSavedInPeriod = periodExpenses
+  const totalSavedInPeriod = standaloneExpenses
     .filter((tx) => tx.itemType === "wealth_saving")
     .reduce((acc, tx) => acc + (Number(tx.amount) || 0), 0);
 
@@ -339,11 +337,11 @@ export default function ExpensesLogSection({
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
         {[
           { id: "all", label: `Todos los Movimientos (${combinedActivities.length})` },
-          { id: "only_expenses", label: `💸 Gastos Reales (${periodExpenses.filter(i => i.itemType === "expense" && !i.isLoan).length})` },
-          { id: "only_incomes", label: `📥 Ingresos (${periodExpenses.filter(i => i.itemType === "income").length})` },
+          { id: "only_expenses", label: `💸 Gastos Reales (${standaloneExpenses.filter(i => i.itemType === "expense" && !i.isLoan).length})` },
+          { id: "only_incomes", label: `📥 Ingresos (${standaloneExpenses.filter(i => i.itemType === "income").length})` },
           { id: "only_payments", label: `💵 Abonos a Tarjetas (${periodPayments.length})` },
           { id: "only_loans", label: `🤝 Préstamos por Cobrar ${pendingLoans.length > 0 ? `(${pendingLoans.length})` : ""}` },
-          { id: "only_wealth", label: "💎 Aportes CDTs/Ahorro" },
+          { id: "only_wealth", label: `💎 Aportes CDTs/Ahorro (${standaloneExpenses.filter(i => i.itemType === "wealth_saving").length})` },
           { id: "payroll", label: "🏦 Nómina" },
           { id: "credit_card", label: "💳 Tarjeta de Crédito" },
           { id: "fixed_pocket", label: "📦 Cuentas de Ahorro / Renta Fija" },
