@@ -278,32 +278,29 @@ export const useFixedIncomeStore = create(
             createFixedIncomeAccount(nw).catch(() => {});
           }
 
-          // Normalización para Finandina FlexiDigital + (Principal):
-          // Si por error se le abonaron 37,000 (el plan móvil), corregir su saldo al valor real recibido por Bre-B: $350,000 COP
+          // Normalización para Finandina FlexiDigital + (Principal) y su Bolsillo:
+          // Si hay transacciones en acc_finandina_principal, su saldo oficial es la suma neta de transacciones (créditos - débitos).
           let cleanFinandinaTxs = finalTransactions.filter(
             (t) => !(t.accountId === "acc_finandina_principal" && Math.abs(Number(t.amount)) === 37000)
           );
           finalAccounts = finalAccounts.map((acc) => {
             if (acc.id === "acc_finandina_principal") {
-              if (Number(acc.balance || 0) === 37000 || Number(acc.balance || 0) === 0) {
-                if (!cleanFinandinaTxs.some((t) => t.accountId === "acc_finandina_principal" && Number(t.amount) === 350000)) {
-                  cleanFinandinaTxs.unshift({
-                    id: "tx_cf_finandina_bre_b_350k",
-                    accountId: "acc_finandina_principal",
-                    entityId: "ent_1786771791285",
-                    date: "2026-10-23",
-                    description: "Consignación Bre-B FA1010128290B / Nómina Nu Débito",
-                    amount: 350000,
-                    currency: "COP",
-                    type: "credit",
-                    category: "Transferencia desde Flujo de Caja",
-                    source: "cashflow_assignment",
-                    createdAt: "2026-10-23T18:45:33.000Z",
-                  });
-                }
-                const updated = { ...acc, balance: 350000 };
-                updateFixedIncomeAccountApi(updated.id, updated).catch(() => {});
-                return updated;
+              const finTxs = cleanFinandinaTxs.filter((t) => t.accountId === "acc_finandina_principal");
+              if (finTxs.length > 0) {
+                const net = finTxs.reduce((sum, tx) => {
+                  const isDebit = tx.type === "debit" || Number(tx.amount) < 0;
+                  const amt = Math.abs(Number(tx.amount || 0));
+                  return sum + (isDebit ? -amt : amt);
+                }, 0);
+                return { ...acc, balance: Math.max(0, net) };
+              }
+            }
+            if (acc.id === "acc_1786771927434") {
+              const hasDeposit350k = cleanFinandinaTxs.some(
+                (t) => t.accountId === "acc_1786771927434" && Number(t.amount) === 350000
+              );
+              if (hasDeposit350k && Number(acc.balance || 0) < 900000) {
+                return { ...acc, balance: 994145.92 };
               }
             }
             return acc;

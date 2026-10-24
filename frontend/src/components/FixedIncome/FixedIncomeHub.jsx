@@ -1644,6 +1644,16 @@ export default function FixedIncomeHub() {
           }, 0);
 
           const accountsTransactionalTotal = transactionalAccounts.reduce((sum, a) => {
+            const accTx = transactions.filter(t => t.accountId ? t.accountId === a.id : (t.description || "").toLowerCase().includes(a.name.toLowerCase()));
+            if (accTx.length > 0) {
+              const netTx = accTx.reduce((s, tx) => {
+                const descLower = (tx.description || "").toLowerCase();
+                const isDebit = tx.type === "debit" || descLower.includes("retiraste") || descLower.includes("retiro") || descLower.includes("invertiste") || Number(tx.amount) < 0;
+                const amt = Math.abs(Number(tx.amount || 0));
+                return s + (isDebit ? -amt : amt);
+              }, 0);
+              return sum + Math.max(0, netTx);
+            }
             return sum + (a.balance || 0);
           }, 0);
 
@@ -2362,7 +2372,8 @@ export default function FixedIncomeHub() {
                               const be = (b.name || "").toLowerCase().includes("emergencia") ? 0 : 1;
                               return ae - be || Number(b.balance || 0) - Number(a.balance || 0);
                             });
-                          const canMove = siblingPockets.length > 0 && Number(acc.balance || 0) > 0;
+                          const displayBalance = accTx.length > 0 ? netTxBalance : Number(acc.balance || 0);
+                          const canMove = siblingPockets.length > 0 && displayBalance > 0;
                           const isMoving = internalTransfer?.fromId === acc.id;
                           return (
                           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -2384,7 +2395,7 @@ export default function FixedIncomeHub() {
                             </span>
                             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                               <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 800, fontSize: "1.12rem" }}>
-                                ${Number(acc.balance || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
+                                ${displayBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
                                 <span style={{ fontSize: "0.74rem", color: "var(--text-muted)", fontWeight: 600 }}>{acc.currency}</span>
                               </span>
                               {canMove && (

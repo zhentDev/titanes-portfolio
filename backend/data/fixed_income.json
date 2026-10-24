@@ -116,7 +116,7 @@
       "name": "Bolsillo de Ahorro ? Fondo de Emergencia (FlexiDigital +)",
       "type": "pocket",
       "currency": "COP",
-      "balance": 644145.92,
+      "balance": 994145.92,
       "interestRateEA": 10.5,
       "isTaxExemptGMF": false,
       "rateHistory": [
@@ -309,7 +309,7 @@
       "type": "savings",
       "accountCategory": "digital_wallet",
       "currency": "COP",
-      "balance": 350000,
+      "balance": 0,
       "interestRateEA": 0,
       "isTaxExempt": false,
       "createdAt": 1786771920000
@@ -647,6 +647,34 @@
     }
   ],
   "transactions": [
+    {
+      "id": "tx_int_finandina_in_350k",
+      "accountId": "acc_1786771927434",
+      "entityId": "ent_1786771791285",
+      "date": "2026-10-24",
+      "description": "Dep?sito desde FlexiDigital + (Principal)",
+      "amount": 350000,
+      "currency": "COP",
+      "type": "credit",
+      "category": "Movimiento Interno",
+      "source": "internal_transfer",
+      "linkedTxId": "tx_int_finandina_out_350k",
+      "createdAt": "2026-10-23T19:18:00.000Z"
+    },
+    {
+      "id": "tx_int_finandina_out_350k",
+      "accountId": "acc_finandina_principal",
+      "entityId": "ent_1786771791285",
+      "date": "2026-10-24",
+      "description": "Movimiento interno ? Bolsillo de Ahorro ? Fondo de Emergencia (FlexiDigital +)",
+      "amount": -350000,
+      "currency": "COP",
+      "type": "debit",
+      "category": "Movimiento Interno",
+      "source": "internal_transfer",
+      "linkedTxId": "tx_int_finandina_in_350k",
+      "createdAt": "2026-10-23T19:18:00.000Z"
+    },
     {
       "id": "tx_cf_finandina_bre_b_350k",
       "accountId": "acc_finandina_principal",
