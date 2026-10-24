@@ -90,6 +90,113 @@ export default function AssignMovementModal({
 
   const splitRemaining = movementAmount - totalSplitAssigned;
 
+  const strategyPillars = [
+    {
+      id: "needs",
+      name: "Gastos Fijos",
+      ratio: "50%",
+      icon: "🏠",
+      color: "#38bdf8",
+      bgColor: isLight ? "rgba(2, 132, 199, 0.05)" : "rgba(56, 189, 248, 0.08)",
+      borderColor: isLight ? "rgba(2, 132, 199, 0.2)" : "rgba(56, 189, 248, 0.25)",
+      description: "Compromisos fijos y supervivencia (arriendo, servicios, alimentación, salud)",
+    },
+    {
+      id: "wants",
+      name: "Estilo de Vida",
+      ratio: "30%",
+      icon: "🍿",
+      color: "#c084fc",
+      bgColor: isLight ? "rgba(192, 132, 252, 0.06)" : "rgba(192, 132, 252, 0.1)",
+      borderColor: isLight ? "rgba(192, 132, 252, 0.2)" : "rgba(192, 132, 252, 0.25)",
+      description: "Ocio, suscripciones, salidas, hobbies y compras personales",
+    },
+    {
+      id: "wealth",
+      name: "Ahorro & Inversión",
+      ratio: "20%",
+      icon: "💎",
+      color: "#10b981",
+      bgColor: isLight ? "rgba(16, 185, 129, 0.05)" : "rgba(16, 185, 129, 0.08)",
+      borderColor: isLight ? "rgba(16, 185, 129, 0.2)" : "rgba(16, 185, 129, 0.25)",
+      description: "Fondo de emergencia, portafolio e inversión para la libertad financiera",
+    },
+  ];
+
+  const [collapsedPillars, setCollapsedPillars] = useState({});
+  const toggleCollapsePillar = (pillarId, e) => {
+    if (e) e.stopPropagation();
+    setCollapsedPillars((prev) => ({
+      ...prev,
+      [pillarId]: !prev[pillarId],
+    }));
+  };
+
+  const calculateEnvelopeMetrics = (env) => {
+    const budgetedAmt = Number(env.amount || env.monthlyContribution) || 0;
+    const currentVal = Number(splitAmounts[env.id]) || 0;
+
+    // Prior cycle expenses in this envelope
+    const envExpenses = (expensesLog || []).filter((tx) => {
+      if (tx.type === "credit" || tx.budgetItemType === "income") return false;
+      if (tx.budgetItemId && tx.budgetItemId === env.id) return true;
+      const bName = (tx.budgetItemName || "").toLowerCase();
+      return bName && bName === env.name.toLowerCase();
+    });
+    const alreadySpent = envExpenses.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+    const subItemsList = Array.isArray(env.subItems) ? env.subItems : [];
+
+    // Identify pending concepts that have NOT been paid and are NOT selected in this card split:
+    const pendingReservedConcepts = subItemsList.filter((sub, idx) => {
+      const subKey = sub.id || `${env.id}_sub_${idx}`;
+      const isAlreadyPaid = Boolean(
+        envExpenses.find(
+          (tx) =>
+            (sub.id && tx.subItemId === sub.id) ||
+            tx.subItemId === subKey ||
+            (sub.name && tx.subItemName?.toLowerCase() === sub.name.toLowerCase()) ||
+            (sub.name && tx.description?.toLowerCase().includes(sub.name.toLowerCase()))
+        )
+      );
+      const isIncludedInSplit = Boolean(splitSubItems[subKey]);
+      return !isAlreadyPaid && !isIncludedInSplit;
+    });
+
+    const pendingReservedAmt = pendingReservedConcepts.reduce(
+      (sum, sub) => sum + (Number(sub.amount) || 0),
+      0
+    );
+
+    // Reserved concepts reduce the available discretionary budget!
+    // e.g. Suscripciones $150.000 with $31.000 Gemini pending -> discretionary is $119.000
+    const discretionaryBudget = Math.max(0, budgetedAmt - pendingReservedAmt);
+    const availableCupo = Math.max(0, discretionaryBudget - alreadySpent);
+
+    const newTotal = alreadySpent + currentVal;
+    const isExhausted = currentVal > 0 && newTotal >= budgetedAmt && budgetedAmt > 0;
+    const remainingCupo = Math.max(0, budgetedAmt - newTotal);
+
+    // Can we fill remaining discretionary cupo?
+    const canFillCupo = availableCupo > 0 && splitRemaining > 0 && currentVal < availableCupo;
+    const toFill = canFillCupo ? Math.min(availableCupo - currentVal, splitRemaining) : 0;
+
+    return {
+      budgetedAmt,
+      alreadySpent,
+      subItemsList,
+      pendingReservedConcepts,
+      pendingReservedAmt,
+      discretionaryBudget,
+      availableCupo,
+      currentVal,
+      newTotal,
+      isExhausted,
+      remainingCupo,
+      canFillCupo,
+      toFill,
+    };
+  };
+
   const handleAutoDistribute = () => {
     let remaining = movementAmount;
     const nextMap = {};
@@ -594,341 +701,421 @@ export default function AssignMovementModal({
               </div>
             </div>
 
-            {/* Envelopes list for multi-allocation */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: "340px", overflowY: "auto", paddingRight: 4 }}>
-              {(budgetItems || []).map((env) => {
-                const currentVal = Number(splitAmounts[env.id]) || 0;
-                const pillarColor =
-                  env.pillarType === "wealth" ? "#38bdf8" : env.pillarType === "wants" ? "#c084fc" : "#10b981";
-                const budgetedAmt = Number(env.amount || env.monthlyContribution) || 0;
+            {/* Envelopes list for multi-allocation grouped by Strategy Pillars */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: "350px", overflowY: "auto", paddingRight: 4 }}>
+              {strategyPillars.map((pillar) => {
+                const pillarEnvelopes = (filteredBudgetItems || []).filter((item) => item.pillarType === pillar.id);
+                if (selectedPillarFilter !== "all" && selectedPillarFilter !== pillar.id) return null;
+                if (pillarEnvelopes.length === 0) return null;
 
-                // Prior cycle expenses in this envelope
-                const envExpenses = (expensesLog || []).filter((tx) => {
-                  if (tx.type === "credit" || tx.budgetItemType === "income") return false;
-                  if (tx.budgetItemId && tx.budgetItemId === env.id) return true;
-                  const bName = (tx.budgetItemName || "").toLowerCase();
-                  return bName && bName === env.name.toLowerCase();
-                });
-                const alreadySpent = envExpenses.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
-                const availableCupo = Math.max(0, budgetedAmt - alreadySpent);
-                const newTotal = alreadySpent + currentVal;
-                const isExhausted = currentVal > 0 && newTotal >= budgetedAmt && budgetedAmt > 0;
-                const remainingCupo = Math.max(0, budgetedAmt - newTotal);
-                const subItemsList = Array.isArray(env.subItems) ? env.subItems : [];
-                const isExpanded = Boolean(expandedEnvelopes[env.id]);
-
-                // Can we fill remaining cupo?
-                const canFillCupo = availableCupo > 0 && splitRemaining > 0 && currentVal < availableCupo;
-                const toFill = canFillCupo ? Math.min(availableCupo - currentVal, splitRemaining) : 0;
+                const isPillarCollapsed = Boolean(collapsedPillars[pillar.id]);
+                const pillarBudgetTotal = pillarEnvelopes.reduce((acc, e) => acc + (Number(e.amount || e.monthlyContribution) || 0), 0);
+                const pillarAssignedTotal = pillarEnvelopes.reduce((acc, e) => acc + (Number(splitAmounts[e.id]) || 0), 0);
 
                 return (
                   <div
-                    key={env.id}
+                    key={pillar.id}
                     style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      padding: "10px 14px",
                       borderRadius: 12,
-                      background: currentVal > 0
-                        ? (isLight ? "rgba(2, 132, 199, 0.05)" : "rgba(2, 132, 199, 0.12)")
-                        : (isLight ? "#ffffff" : "var(--bg-surface)"),
-                      border: currentVal > 0 ? "1.5px solid #0ea5e9" : (isLight ? "1px solid rgba(0,0,0,0.06)" : "1px solid var(--border)"),
-                      gap: 8,
+                      background: isLight ? "#ffffff" : "rgba(15, 23, 42, 0.45)",
+                      border: `1.5px solid ${pillar.borderColor}`,
+                      overflow: "hidden",
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                          <span style={{ fontSize: "1rem" }}>{env.icon || "📦"}</span>
-                          <strong style={{ fontSize: "0.85rem", color: "var(--text-primary)" }}>{env.name}</strong>
-                          <span style={{ fontSize: "0.66rem", color: pillarColor, background: `${pillarColor}15`, padding: "1px 5px", borderRadius: 4, fontWeight: 700 }}>
-                            {env.pillarType === "wealth" ? "Ahorro" : env.pillarType === "wants" ? "Gusto" : "Fijo"}
-                          </span>
-                        </div>
-                        <div style={{ display: "flex", gap: 8, fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 2, flexWrap: "wrap" }}>
-                          <span>Presupuesto: <strong>{formatMoney(budgetedAmt, currency)}</strong></span>
-                          <span>•</span>
-                          <span>Gastado: {formatMoney(alreadySpent, currency)}</span>
-                          <span>•</span>
-                          <span style={{ color: availableCupo > 0 ? "#10b981" : "var(--text-muted)", fontWeight: 600 }}>
-                            Cupo libre: {formatMoney(availableCupo, currency)}
+                    {/* Pillar Section Header */}
+                    <div
+                      onClick={(e) => toggleCollapsePillar(pillar.id, e)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "8px 12px",
+                        background: pillar.bgColor,
+                        cursor: "pointer",
+                        borderBottom: isPillarCollapsed ? "none" : `1px solid ${pillar.borderColor}`,
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: "1.1rem" }}>{pillar.icon}</span>
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <strong style={{ fontSize: "0.85rem", color: "var(--text-primary)" }}>{pillar.name}</strong>
+                            <span style={{ fontSize: "0.68rem", fontWeight: 800, color: pillar.color, background: `${pillar.color}20`, padding: "1px 6px", borderRadius: 4 }}>
+                              {pillar.ratio}
+                            </span>
+                          </div>
+                          <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                            {pillarEnvelopes.length} rubro(s) • Presupuesto: {formatMoney(pillarBudgetTotal, currency)}
                           </span>
                         </div>
                       </div>
 
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                        {canFillCupo && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSplitAmounts((prev) => ({
-                                ...prev,
-                                [env.id]: currentVal + toFill,
-                              }));
-                            }}
-                            style={{
-                              background: "rgba(16, 185, 129, 0.15)",
-                              border: "1px solid #10b981",
-                              borderRadius: 6,
-                              padding: "4px 8px",
-                              fontSize: "0.72rem",
-                              color: "#10b981",
-                              fontWeight: 700,
-                              cursor: "pointer",
-                            }}
-                            title={`Llenar el cupo restante de este rubro (+${formatMoney(toFill)})`}
-                          >
-                            ⚡ Llenar cupo (+{formatMoney(toFill)})
-                          </button>
-                        )}
-
-                        {splitRemaining > 0 && !canFillCupo && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSplitAmounts((prev) => ({
-                                ...prev,
-                                [env.id]: currentVal + splitRemaining,
-                              }));
-                            }}
-                            style={{
-                              background: "transparent",
-                              border: "1px dashed var(--border)",
-                              borderRadius: 6,
-                              padding: "4px 7px",
-                              fontSize: "0.7rem",
-                              color: "var(--text-muted)",
-                              cursor: "pointer",
-                            }}
-                            title="Asignar el saldo restante del movimiento a este rubro"
-                          >
-                            + Faltante
-                          </button>
-                        )}
-
-                        <div style={{ position: "relative", width: "125px" }}>
-                          <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                            $
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        {pillarAssignedTotal > 0 && (
+                          <span style={{ fontSize: "0.76rem", fontWeight: 800, color: pillar.color, fontFamily: "JetBrains Mono, monospace" }}>
+                            +{formatMoney(pillarAssignedTotal, currency)}
                           </span>
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            placeholder="0"
-                            value={
-                              splitInputValues[env.id] !== undefined
-                                ? splitInputValues[env.id]
-                                : currentVal > 0
-                                ? formatMoney(currentVal, currency).replace("$", "").trim()
-                                : ""
-                            }
-                            onChange={(e) => {
-                              const raw = e.target.value;
-                              setSplitInputValues((prev) => ({ ...prev, [env.id]: raw }));
-                              const parsed = parseLocalNumber(raw);
-                              setSplitAmounts((prev) => ({
-                                ...prev,
-                                [env.id]: parsed,
-                              }));
-                            }}
-                            onBlur={() => {
-                              setSplitInputValues((prev) => {
-                                const copy = { ...prev };
-                                delete copy[env.id];
-                                return copy;
-                              });
-                            }}
-                            style={{
-                              width: "100%",
-                              padding: "5px 8px 5px 20px",
-                              borderRadius: 8,
-                              border: "1px solid var(--border)",
-                              background: isLight ? "#ffffff" : "rgba(0,0,0,0.3)",
-                              color: "var(--text-primary)",
-                              fontSize: "0.82rem",
-                              fontFamily: "JetBrains Mono, monospace",
-                              fontWeight: 700,
-                              textAlign: "right",
-                            }}
-                          />
-                        </div>
-
-                        {currentVal > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSplitAmounts((prev) => {
-                                const copy = { ...prev };
-                                delete copy[env.id];
-                                return copy;
-                              });
-                              setSplitInputValues((prev) => {
-                                const copy = { ...prev };
-                                delete copy[env.id];
-                                return copy;
-                              });
-                              // Also unmark any sub-items of this envelope
-                              setSplitSubItems((prev) => {
-                                const copy = { ...prev };
-                                Object.keys(copy).forEach((k) => {
-                                  if (copy[k].envId === env.id) delete copy[k];
-                                });
-                                return copy;
-                              });
-                            }}
-                            title="Quitar asignación de este rubro"
-                            style={{
-                              background: "transparent",
-                              border: "none",
-                              color: "var(--text-muted)",
-                              cursor: "pointer",
-                              padding: "2px 4px",
-                              fontSize: "0.75rem",
-                            }}
-                          >
-                            ✕
-                          </button>
                         )}
+                        <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                          {isPillarCollapsed ? `▼ Ver (${pillarEnvelopes.length})` : "▲ Ocultar"}
+                        </span>
                       </div>
                     </div>
 
-                    {/* Resulting Limit Pill */}
-                    {currentVal > 0 && (
-                      <div
-                        style={{
-                          fontSize: "0.72rem",
-                          fontWeight: 600,
-                          padding: "3px 8px",
-                          borderRadius: 6,
-                          background: isExhausted
-                            ? (isLight ? "rgba(245, 158, 11, 0.12)" : "rgba(245, 158, 11, 0.2)")
-                            : (isLight ? "rgba(16, 185, 129, 0.1)" : "rgba(16, 185, 129, 0.16)"),
-                          color: isExhausted ? "#f59e0b" : "#10b981",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 6,
-                          alignSelf: "flex-start",
-                        }}
-                      >
-                        <span>{isExhausted ? "🔒 Cupo 100% agotado este mes" : "🟢 Cupo restante disponible"}</span>
-                        <span>•</span>
-                        <span>
-                          {isExhausted
-                            ? `Límite alcanzado (${formatMoney(newTotal, currency)} / ${formatMoney(budgetedAmt, currency)})`
-                            : `Te queda un cupo de ${formatMoney(remainingCupo, currency)} para otros gastos`}
-                        </span>
-                      </div>
-                    )}
+                    {/* Pillar Envelopes List */}
+                    {!isPillarCollapsed && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "8px" }}>
+                        {pillarEnvelopes.map((env) => {
+                          const metrics = calculateEnvelopeMetrics(env);
+                          const {
+                            budgetedAmt,
+                            alreadySpent,
+                            subItemsList,
+                            pendingReservedConcepts,
+                            pendingReservedAmt,
+                            availableCupo,
+                            currentVal,
+                            newTotal,
+                            isExhausted,
+                            remainingCupo,
+                            canFillCupo,
+                            toFill,
+                          } = metrics;
+                          const isExpanded = Boolean(expandedEnvelopes[env.id]);
 
-                    {/* Collapsible Sub-Items Accordion */}
-                    {subItemsList.length > 0 && (
-                      <div style={{ marginTop: 2 }}>
-                        <button
-                          type="button"
-                          onClick={(e) => toggleExpandEnvelope(env.id, e)}
-                          style={{
-                            background: "transparent",
-                            border: "none",
-                            color: isLight ? "#0284c7" : "#38bdf8",
-                            fontSize: "0.72rem",
-                            fontWeight: 600,
-                            cursor: "pointer",
-                            padding: "2px 0",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 4,
-                          }}
-                        >
-                          <span>{isExpanded ? "▲ Ocultar conceptos" : `▼ Ver conceptos (${subItemsList.length})`}</span>
-                        </button>
+                          return (
+                            <div
+                              key={env.id}
+                              style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                padding: "10px 12px",
+                                borderRadius: 10,
+                                background: currentVal > 0
+                                  ? (isLight ? "rgba(2, 132, 199, 0.05)" : "rgba(2, 132, 199, 0.12)")
+                                  : (isLight ? "#f8fafc" : "rgba(15, 23, 42, 0.6)"),
+                                border: currentVal > 0 ? "1.5px solid #0ea5e9" : (isLight ? "1px solid rgba(0,0,0,0.06)" : "1px solid var(--border)"),
+                                gap: 8,
+                              }}
+                            >
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                                    <span style={{ fontSize: "1rem" }}>{env.icon || "📦"}</span>
+                                    <strong style={{ fontSize: "0.85rem", color: "var(--text-primary)" }}>{env.name}</strong>
+                                  </div>
 
-                        {isExpanded && (
-                          <div
-                            style={{
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: 5,
-                              paddingTop: 6,
-                              marginTop: 4,
-                              borderTop: isLight ? "1px dashed rgba(0,0,0,0.08)" : "1px dashed rgba(255,255,255,0.08)",
-                            }}
-                          >
-                            <div style={{ fontSize: "0.66rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
-                              📌 Conceptos específicos (haz clic para sumar o restar directamente):
-                            </div>
-                            {subItemsList.map((sub, idx) => {
-                              const subKey = sub.id || `${env.id}_sub_${idx}`;
-                              const isSubIncluded = Boolean(splitSubItems[subKey]);
-                              const subAmt = Number(sub.amount) || 0;
-
-                              return (
-                                <div
-                                  key={subKey}
-                                  onClick={() => {
-                                    if (isSubIncluded) {
-                                      setSplitSubItems((prev) => {
-                                        const copy = { ...prev };
-                                        delete copy[subKey];
-                                        return copy;
-                                      });
-                                      setSplitAmounts((prev) => ({
-                                        ...prev,
-                                        [env.id]: Math.max(0, currentVal - subAmt),
-                                      }));
-                                    } else {
-                                      setSplitSubItems((prev) => ({
-                                        ...prev,
-                                        [subKey]: { envId: env.id, sub, amount: subAmt },
-                                      }));
-                                      setSplitAmounts((prev) => ({
-                                        ...prev,
-                                        [env.id]: currentVal + subAmt,
-                                      }));
-                                    }
-                                  }}
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "space-between",
-                                    padding: "5px 10px",
-                                    borderRadius: 7,
-                                    background: isSubIncluded
-                                      ? (isLight ? "rgba(16, 185, 129, 0.14)" : "rgba(16, 185, 129, 0.2)")
-                                      : (isLight ? "#f8fafc" : "rgba(15, 23, 42, 0.45)"),
-                                    border: isSubIncluded ? "1px solid #10b981" : "1px solid var(--border)",
-                                    cursor: "pointer",
-                                    fontSize: "0.75rem",
-                                  }}
-                                >
-                                  <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                                    <span style={{ color: isSubIncluded ? "#10b981" : "var(--text-muted)", fontWeight: 800 }}>
-                                      {isSubIncluded ? "✓" : "+"}
-                                    </span>
-                                    <span style={{ fontWeight: 600, color: isSubIncluded ? "#10b981" : "var(--text-primary)" }}>
-                                      {sub.name}
+                                  <div style={{ display: "flex", gap: 6, fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 2, flexWrap: "wrap" }}>
+                                    <span>Presupuesto: <strong>{formatMoney(budgetedAmt, currency)}</strong></span>
+                                    <span>•</span>
+                                    <span>Gastado: {formatMoney(alreadySpent, currency)}</span>
+                                    <span>•</span>
+                                    <span style={{ color: availableCupo > 0 ? "#10b981" : "var(--text-muted)", fontWeight: 700 }}>
+                                      Cupo libre para tarjeta: {formatMoney(availableCupo, currency)}
                                     </span>
                                   </div>
-                                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                    <span style={{ fontFamily: "JetBrains Mono, monospace", fontWeight: 700 }}>
-                                      {formatMoney(subAmt, currency)}
-                                    </span>
-                                    <span
+
+                                  {/* Pending concept reservation notice */}
+                                  {pendingReservedAmt > 0 && (
+                                    <div
                                       style={{
-                                        fontSize: "0.65rem",
-                                        fontWeight: 700,
-                                        padding: "1px 5px",
-                                        borderRadius: 4,
-                                        background: isSubIncluded ? "#10b981" : (isLight ? "#e2e8f0" : "rgba(255,255,255,0.08)"),
-                                        color: isSubIncluded ? "#04101e" : "var(--text-muted)",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: 4,
+                                        fontSize: "0.68rem",
+                                        color: "#f59e0b",
+                                        background: isLight ? "rgba(245, 158, 11, 0.1)" : "rgba(245, 158, 11, 0.18)",
+                                        padding: "2px 7px",
+                                        borderRadius: 5,
+                                        marginTop: 4,
+                                        fontWeight: 600,
                                       }}
                                     >
-                                      {isSubIncluded ? "✓ Incluido" : "Sumar"}
-                                    </span>
-                                  </div>
+                                      <span>🔒</span>
+                                      <span>
+                                        <strong>{formatMoney(pendingReservedAmt, currency)}</strong> reservado para {pendingReservedConcepts.map((c) => c.name).join(", ")} (se mantiene intacto)
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
-                              );
-                            })}
-                          </div>
-                        )}
+
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                                  {canFillCupo && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSplitAmounts((prev) => ({
+                                          ...prev,
+                                          [env.id]: currentVal + toFill,
+                                        }));
+                                      }}
+                                      style={{
+                                        background: "rgba(16, 185, 129, 0.15)",
+                                        border: "1px solid #10b981",
+                                        borderRadius: 6,
+                                        padding: "4px 8px",
+                                        fontSize: "0.72rem",
+                                        color: "#10b981",
+                                        fontWeight: 700,
+                                        cursor: "pointer",
+                                      }}
+                                      title={`Llenar cupo libre restante respetando los conceptos reservados (+${formatMoney(toFill)})`}
+                                    >
+                                      ⚡ Llenar cupo (+{formatMoney(toFill)})
+                                    </button>
+                                  )}
+
+                                  {splitRemaining > 0 && !canFillCupo && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSplitAmounts((prev) => ({
+                                          ...prev,
+                                          [env.id]: currentVal + splitRemaining,
+                                        }));
+                                      }}
+                                      style={{
+                                        background: "transparent",
+                                        border: "1px dashed var(--border)",
+                                        borderRadius: 6,
+                                        padding: "4px 7px",
+                                        fontSize: "0.7rem",
+                                        color: "var(--text-muted)",
+                                        cursor: "pointer",
+                                      }}
+                                      title="Asignar el saldo restante del movimiento a este rubro"
+                                    >
+                                      + Faltante
+                                    </button>
+                                  )}
+
+                                  <div style={{ position: "relative", width: "120px" }}>
+                                    <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                                      $
+                                    </span>
+                                    <input
+                                      type="text"
+                                      inputMode="decimal"
+                                      placeholder="0"
+                                      value={
+                                        splitInputValues[env.id] !== undefined
+                                          ? splitInputValues[env.id]
+                                          : currentVal > 0
+                                          ? formatMoney(currentVal, currency).replace("$", "").trim()
+                                          : ""
+                                      }
+                                      onChange={(e) => {
+                                        const raw = e.target.value;
+                                        setSplitInputValues((prev) => ({ ...prev, [env.id]: raw }));
+                                        const parsed = parseLocalNumber(raw);
+                                        setSplitAmounts((prev) => ({
+                                          ...prev,
+                                          [env.id]: parsed,
+                                        }));
+                                      }}
+                                      onBlur={() => {
+                                        setSplitInputValues((prev) => {
+                                          const copy = { ...prev };
+                                          delete copy[env.id];
+                                          return copy;
+                                        });
+                                      }}
+                                      style={{
+                                        width: "100%",
+                                        padding: "5px 8px 5px 20px",
+                                        borderRadius: 8,
+                                        border: "1px solid var(--border)",
+                                        background: isLight ? "#ffffff" : "rgba(0,0,0,0.3)",
+                                        color: "var(--text-primary)",
+                                        fontSize: "0.82rem",
+                                        fontFamily: "JetBrains Mono, monospace",
+                                        fontWeight: 700,
+                                        textAlign: "right",
+                                      }}
+                                    />
+                                  </div>
+
+                                  {currentVal > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSplitAmounts((prev) => {
+                                          const copy = { ...prev };
+                                          delete copy[env.id];
+                                          return copy;
+                                        });
+                                        setSplitInputValues((prev) => {
+                                          const copy = { ...prev };
+                                          delete copy[env.id];
+                                          return copy;
+                                        });
+                                        setSplitSubItems((prev) => {
+                                          const copy = { ...prev };
+                                          Object.keys(copy).forEach((k) => {
+                                            if (copy[k].envId === env.id) delete copy[k];
+                                          });
+                                          return copy;
+                                        });
+                                      }}
+                                      title="Quitar asignación de este rubro"
+                                      style={{
+                                        background: "transparent",
+                                        border: "none",
+                                        color: "var(--text-muted)",
+                                        cursor: "pointer",
+                                        padding: "2px 4px",
+                                        fontSize: "0.75rem",
+                                      }}
+                                    >
+                                      ✕
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Status Limit Pill */}
+                              {currentVal > 0 && (
+                                <div
+                                  style={{
+                                    fontSize: "0.72rem",
+                                    fontWeight: 600,
+                                    padding: "3px 8px",
+                                    borderRadius: 6,
+                                    background: isExhausted
+                                      ? (isLight ? "rgba(245, 158, 11, 0.12)" : "rgba(245, 158, 11, 0.2)")
+                                      : (isLight ? "rgba(16, 185, 129, 0.1)" : "rgba(16, 185, 129, 0.16)"),
+                                    color: isExhausted ? "#f59e0b" : "#10b981",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 6,
+                                    alignSelf: "flex-start",
+                                  }}
+                                >
+                                  <span>{isExhausted ? "🔒 Cupo 100% agotado este mes" : "🟢 Cupo disponible restante"}</span>
+                                  <span>•</span>
+                                  <span>
+                                    {isExhausted
+                                      ? `Límite alcanzado (${formatMoney(newTotal, currency)} / ${formatMoney(budgetedAmt, currency)})`
+                                      : `Te queda un cupo de ${formatMoney(remainingCupo, currency)} para otros gastos`}
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* Collapsible Sub-Items Accordion */}
+                              {subItemsList.length > 0 && (
+                                <div style={{ marginTop: 2 }}>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => toggleExpandEnvelope(env.id, e)}
+                                    style={{
+                                      background: "transparent",
+                                      border: "none",
+                                      color: isLight ? "#0284c7" : "#38bdf8",
+                                      fontSize: "0.72rem",
+                                      fontWeight: 600,
+                                      cursor: "pointer",
+                                      padding: "2px 0",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: 4,
+                                    }}
+                                  >
+                                    <span>{isExpanded ? "▲ Ocultar conceptos" : `▼ Ver conceptos (${subItemsList.length})`}</span>
+                                  </button>
+
+                                  {isExpanded && (
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        gap: 5,
+                                        paddingTop: 6,
+                                        marginTop: 4,
+                                        borderTop: isLight ? "1px dashed rgba(0,0,0,0.08)" : "1px dashed rgba(255,255,255,0.08)",
+                                      }}
+                                    >
+                                      <div style={{ fontSize: "0.66rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                                        📌 Conceptos del rubro (haz clic para incluir o excluir de la tarjeta):
+                                      </div>
+                                      {subItemsList.map((sub, idx) => {
+                                        const subKey = sub.id || `${env.id}_sub_${idx}`;
+                                        const isSubIncluded = Boolean(splitSubItems[subKey]);
+                                        const subAmt = Number(sub.amount) || 0;
+
+                                        return (
+                                          <div
+                                            key={subKey}
+                                            onClick={() => {
+                                              if (isSubIncluded) {
+                                                setSplitSubItems((prev) => {
+                                                  const copy = { ...prev };
+                                                  delete copy[subKey];
+                                                  return copy;
+                                                });
+                                                setSplitAmounts((prev) => ({
+                                                  ...prev,
+                                                  [env.id]: Math.max(0, currentVal - subAmt),
+                                                }));
+                                              } else {
+                                                setSplitSubItems((prev) => ({
+                                                  ...prev,
+                                                  [subKey]: { envId: env.id, sub, amount: subAmt },
+                                                }));
+                                                setSplitAmounts((prev) => ({
+                                                  ...prev,
+                                                  [env.id]: currentVal + subAmt,
+                                                }));
+                                              }
+                                            }}
+                                            style={{
+                                              display: "flex",
+                                              alignItems: "center",
+                                              justifyContent: "space-between",
+                                              padding: "5px 10px",
+                                              borderRadius: 7,
+                                              background: isSubIncluded
+                                                ? (isLight ? "rgba(16, 185, 129, 0.14)" : "rgba(16, 185, 129, 0.2)")
+                                                : (isLight ? "#ffffff" : "rgba(15, 23, 42, 0.45)"),
+                                              border: isSubIncluded ? "1px solid #10b981" : "1px solid var(--border)",
+                                              cursor: "pointer",
+                                              fontSize: "0.75rem",
+                                            }}
+                                          >
+                                            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                                              <span style={{ color: isSubIncluded ? "#10b981" : "var(--text-muted)", fontWeight: 800 }}>
+                                                {isSubIncluded ? "✓" : "+"}
+                                              </span>
+                                              <span style={{ fontWeight: 600, color: isSubIncluded ? "#10b981" : "var(--text-primary)" }}>
+                                                {sub.name}
+                                              </span>
+                                            </div>
+                                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                              <span style={{ fontFamily: "JetBrains Mono, monospace", fontWeight: 700 }}>
+                                                {formatMoney(subAmt, currency)}
+                                              </span>
+                                              <span
+                                                style={{
+                                                  fontSize: "0.65rem",
+                                                  fontWeight: 700,
+                                                  padding: "1px 5px",
+                                                  borderRadius: 4,
+                                                  background: isSubIncluded ? "#10b981" : (isLight ? "#e2e8f0" : "rgba(255,255,255,0.08)"),
+                                                  color: isSubIncluded ? "#04101e" : "var(--text-muted)",
+                                                }}
+                                              >
+                                                {isSubIncluded ? "✓ Incluido en tarjeta" : "Sumar a tarjeta"}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -1027,14 +1214,14 @@ export default function AssignMovementModal({
               </div>
             </div>
 
-            {/* List of Envelopes */}
+            {/* List of Envelopes grouped by Strategy Pillars */}
             <div
               style={{
-                maxHeight: 330,
+                maxHeight: 340,
                 overflowY: "auto",
                 display: "flex",
                 flexDirection: "column",
-                gap: 8,
+                gap: 10,
                 marginBottom: 20,
                 paddingRight: 4,
               }}
@@ -1044,298 +1231,396 @@ export default function AssignMovementModal({
                   No se encontraron rubros con ese filtro.
                 </div>
               ) : (
-                filteredBudgetItems.map((item) => {
-                  const isSelected = selectedEnvelopeId === item.id;
-                  const pillarColor =
-                    item.pillarType === "needs" ? "#38bdf8" : item.pillarType === "wants" ? "#ec4899" : "#10b981";
-                  const budgetedAmt = Number(item.amount || item.monthlyContribution) || 0;
+                strategyPillars.map((pillar) => {
+                  const pillarItems = filteredBudgetItems.filter((item) => item.pillarType === pillar.id);
+                  if (selectedPillarFilter !== "all" && selectedPillarFilter !== pillar.id) return null;
+                  if (pillarItems.length === 0) return null;
 
-                  // Real expenses logged for this envelope in current period
-                  const itemExpenses = (expensesLog || []).filter((tx) => {
-                    if (tx.type === "credit" || tx.budgetItemType === "income") return false;
-                    if (tx.budgetItemId && tx.budgetItemId === item.id) return true;
-                    const bName = (tx.budgetItemName || "").toLowerCase();
-                    return bName && bName === item.name.toLowerCase();
-                  });
-
-                  const spentAmt = itemExpenses.reduce((acc, tx) => acc + (Number(tx.amount) || 0), 0);
-                  const subItemsList = Array.isArray(item.subItems) ? item.subItems : [];
-                  const isExpanded = Boolean(expandedEnvelopes[item.id]);
+                  const isPillarCollapsed = Boolean(collapsedPillars[pillar.id]);
+                  const pillarBudgetTotal = pillarItems.reduce((acc, e) => acc + (Number(e.amount || e.monthlyContribution) || 0), 0);
 
                   return (
                     <div
-                      key={item.id}
-                      onClick={() => {
-                        setSelectedEnvelopeId(item.id);
-                        if (selectedEnvelopeId !== item.id) {
-                          // Auto-select subItem if amount matches one subItem
-                          const matchingSub = subItemsList.find((s) => Number(s.amount) === movementAmount);
-                          setSelectedSubItem(matchingSub || null);
-                        }
-                      }}
+                      key={pillar.id}
                       style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 8,
-                        padding: "10px 14px",
-                        borderRadius: "12px",
-                        border: isSelected ? `2px solid ${pillarColor}` : (isLight ? "1px solid rgba(0,0,0,0.08)" : "1px solid var(--border)"),
-                        background: isSelected
-                          ? (isLight ? "rgba(56, 189, 248, 0.08)" : "rgba(56, 189, 248, 0.12)")
-                          : (isLight ? "#ffffff" : "var(--bg-surface)"),
-                        cursor: "pointer",
-                        transition: "all 0.12s ease",
+                        borderRadius: 12,
+                        background: isLight ? "#ffffff" : "rgba(15, 23, 42, 0.45)",
+                        border: `1.5px solid ${pillar.borderColor}`,
+                        overflow: "hidden",
                       }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <span style={{ fontSize: "1.1rem" }}>{item.icon || "📁"}</span>
+                      {/* Pillar Section Header */}
+                      <div
+                        onClick={(e) => toggleCollapsePillar(pillar.id, e)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "8px 12px",
+                          background: pillar.bgColor,
+                          cursor: "pointer",
+                          borderBottom: isPillarCollapsed ? "none" : `1px solid ${pillar.borderColor}`,
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontSize: "1.1rem" }}>{pillar.icon}</span>
                           <div>
-                            <strong style={{ fontSize: "0.84rem", color: "var(--text-primary)", display: "block" }}>
-                              {item.name}
-                            </strong>
-                            <span style={{ fontSize: "0.7rem", color: pillarColor, fontWeight: 600 }}>
-                              {item.typeLabel || item.pillarType}
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <strong style={{ fontSize: "0.85rem", color: "var(--text-primary)" }}>{pillar.name}</strong>
+                              <span style={{ fontSize: "0.68rem", fontWeight: 800, color: pillar.color, background: `${pillar.color}20`, padding: "1px 6px", borderRadius: 4 }}>
+                                {pillar.ratio}
+                              </span>
+                            </div>
+                            <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                              {pillarItems.length} rubro(s) • Total: {formatMoney(pillarBudgetTotal, currency)}
                             </span>
                           </div>
                         </div>
-                        <div style={{ textAlign: "right" }}>
-                          <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.8rem", fontWeight: 700, color: spentAmt >= budgetedAmt && budgetedAmt > 0 ? "#10b981" : "var(--text-primary)" }}>
-                            {formatMoney(spentAmt, currency)} <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>/ {formatMoney(budgetedAmt, currency)}</span>
-                          </div>
-                          <span style={{ fontSize: "0.66rem", color: "var(--text-muted)" }}>
-                            {itemExpenses.length > 0 ? `${itemExpenses.length} gasto(s) registrado(s)` : "Sin gastos este ciclo"}
-                          </span>
-                        </div>
+
+                        <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                          {isPillarCollapsed ? `▼ Ver (${pillarItems.length})` : "▲ Ocultar"}
+                        </span>
                       </div>
 
-                      {/* Collapsible Sub-Items Accordion */}
-                      {subItemsList.length > 0 && (
-                        <div style={{ marginTop: 2 }}>
-                          <button
-                            type="button"
-                            onClick={(e) => toggleExpandEnvelope(item.id, e)}
-                            style={{
-                              background: "transparent",
-                              border: "none",
-                              color: isLight ? "#0284c7" : "#38bdf8",
-                              fontSize: "0.72rem",
-                              fontWeight: 600,
-                              cursor: "pointer",
-                              padding: "2px 0",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 4,
-                            }}
-                          >
-                            <span>{isExpanded ? "▲ Ocultar conceptos" : `▼ Ver conceptos (${subItemsList.length})`}</span>
-                          </button>
+                      {/* Envelopes of Pillar */}
+                      {!isPillarCollapsed && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "8px" }}>
+                          {pillarItems.map((item) => {
+                            const isSelected = selectedEnvelopeId === item.id;
+                            const pillarColor = pillar.color;
+                            const budgetedAmt = Number(item.amount || item.monthlyContribution) || 0;
 
-                          {isExpanded && (
-                            <div
-                              style={{
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: 5,
-                                paddingTop: 6,
-                                marginTop: 4,
-                                borderTop: isLight ? "1px dashed rgba(0,0,0,0.08)" : "1px dashed rgba(255,255,255,0.08)",
-                              }}
-                            >
-                              <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.03em" }}>
-                                📌 Conceptos del rubro (Tachar o imputar movimiento aquí):
-                              </div>
-                              {subItemsList.map((sub, idx) => {
-                                const subKey = sub.id || `${item.id}_sub_${idx}`;
-                                const matchedSubTx = itemExpenses.find(
+                            const itemExpenses = (expensesLog || []).filter((tx) => {
+                              if (tx.type === "credit" || tx.budgetItemType === "income") return false;
+                              if (tx.budgetItemId && tx.budgetItemId === item.id) return true;
+                              const bName = (tx.budgetItemName || "").toLowerCase();
+                              return bName && bName === item.name.toLowerCase();
+                            });
+
+                            const spentAmt = itemExpenses.reduce((acc, tx) => acc + (Number(tx.amount) || 0), 0);
+                            const subItemsList = Array.isArray(item.subItems) ? item.subItems : [];
+                            const isExpanded = Boolean(expandedEnvelopes[item.id]);
+
+                            // Pending reserved concepts check
+                            const pendingReservedConcepts = subItemsList.filter((sub, idx) => {
+                              const subKey = sub.id || `${item.id}_sub_${idx}`;
+                              const isAlreadyPaid = Boolean(
+                                itemExpenses.find(
                                   (tx) =>
                                     (sub.id && tx.subItemId === sub.id) ||
                                     tx.subItemId === subKey ||
                                     (sub.name && tx.subItemName?.toLowerCase() === sub.name.toLowerCase()) ||
                                     (sub.name && tx.description?.toLowerCase().includes(sub.name.toLowerCase()))
-                                );
-                                const isSubChecked = Boolean(matchedSubTx);
-                                const isSubSelectedForAssign =
-                                  isSelected &&
-                                  selectedSubItem &&
-                                  ((selectedSubItem.id && selectedSubItem.id === sub.id) ||
-                                    selectedSubItem.name === sub.name);
-                                const matchesAmount = Number(sub.amount) === movementAmount;
+                                )
+                              );
+                              return !isAlreadyPaid;
+                            });
+                            const pendingReservedAmt = pendingReservedConcepts.reduce(
+                              (sum, sub) => sum + (Number(sub.amount) || 0),
+                              0
+                            );
+                            const freeCupo = Math.max(0, budgetedAmt - spentAmt - pendingReservedAmt);
 
-                                return (
-                                  <div
-                                    key={subKey}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedEnvelopeId(item.id);
-                                      setSelectedSubItem(isSubSelectedForAssign ? null : { ...sub, subKey });
-                                    }}
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "space-between",
-                                      gap: 8,
-                                      padding: "6px 10px",
-                                      borderRadius: "8px",
-                                      background: isSubSelectedForAssign
-                                        ? (isLight ? "rgba(16, 185, 129, 0.14)" : "rgba(16, 185, 129, 0.2)")
-                                        : isSubChecked
-                                        ? (isLight ? "rgba(16, 185, 129, 0.06)" : "rgba(16, 185, 129, 0.08)")
-                                        : (isLight ? "#f8fafc" : "rgba(15, 23, 42, 0.55)"),
-                                      border: isSubSelectedForAssign
-                                        ? "1.5px solid #10b981"
-                                        : matchesAmount
-                                        ? "1px dashed #38bdf8"
-                                        : (isLight ? "1px solid rgba(0,0,0,0.06)" : "1px solid rgba(255,255,255,0.06)"),
-                                    }}
-                                  >
-                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                      {/* Direct Checkbox to Tachar / Desmarcar from here */}
-                                      <button
-                                        type="button"
-                                        onClick={(e) => handleToggleSubItemCheck(e, item, sub, subKey, matchedSubTx)}
-                                        title={isSubChecked ? "Desmarcar este concepto" : "Tachar / Marcar como pagado manualmente"}
-                                        style={{
-                                          width: 20,
-                                          height: 20,
-                                          borderRadius: 5,
-                                          border: isSubChecked ? "1.5px solid #10b981" : "1.5px solid #64748b",
-                                          background: isSubChecked ? "#10b981" : "transparent",
-                                          color: isSubChecked ? "#04101e" : "transparent",
-                                          display: "inline-flex",
-                                          alignItems: "center",
-                                          justifyContent: "center",
-                                          fontSize: "0.72rem",
-                                          fontWeight: 900,
-                                          cursor: "pointer",
-                                          padding: 0,
-                                          flexShrink: 0,
-                                        }}
-                                      >
-                                        ✓
-                                      </button>
-                                      <div>
-                                        <span
-                                          style={{
-                                            fontSize: "0.78rem",
-                                            fontWeight: 600,
-                                            color: isSubChecked ? "#10b981" : "var(--text-primary)",
-                                            textDecoration: isSubChecked ? "line-through" : "none",
-                                          }}
-                                        >
-                                          {sub.name}
-                                        </span>
-                                        {matchesAmount && (
-                                          <span
-                                            style={{
-                                              marginLeft: 6,
-                                              fontSize: "0.64rem",
-                                              padding: "1px 5px",
-                                              borderRadius: 4,
-                                              background: "rgba(56, 189, 248, 0.16)",
-                                              color: "#38bdf8",
-                                              fontWeight: 700,
-                                            }}
-                                          >
-                                            🎯 Mismo valor
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-
-                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                      <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.76rem", fontWeight: 700, color: "var(--text-primary)" }}>
-                                        {formatMoney(sub.amount, currency)}
-                                      </span>
-                                      <span
-                                        style={{
-                                          fontSize: "0.66rem",
-                                          fontWeight: 700,
-                                          padding: "2px 6px",
-                                          borderRadius: 5,
-                                          background: isSubSelectedForAssign
-                                            ? "#10b981"
-                                            : (isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.08)"),
-                                          color: isSubSelectedForAssign ? "#04101e" : "var(--text-muted)",
-                                        }}
-                                      >
-                                        {isSubSelectedForAssign ? "✓ Imputar aquí" : "Elegir"}
+                            return (
+                              <div
+                                key={item.id}
+                                onClick={() => {
+                                  setSelectedEnvelopeId(item.id);
+                                  if (selectedEnvelopeId !== item.id) {
+                                    const matchingSub = subItemsList.find((s) => Number(s.amount) === movementAmount);
+                                    setSelectedSubItem(matchingSub || null);
+                                  }
+                                }}
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: 8,
+                                  padding: "10px 12px",
+                                  borderRadius: "10px",
+                                  border: isSelected ? `2px solid ${pillarColor}` : (isLight ? "1px solid rgba(0,0,0,0.06)" : "1px solid var(--border)"),
+                                  background: isSelected
+                                    ? (isLight ? "rgba(56, 189, 248, 0.08)" : "rgba(56, 189, 248, 0.12)")
+                                    : (isLight ? "#f8fafc" : "rgba(15, 23, 42, 0.6)"),
+                                  cursor: "pointer",
+                                  transition: "all 0.12s ease",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                    <span style={{ fontSize: "1.1rem" }}>{item.icon || "📁"}</span>
+                                    <div>
+                                      <strong style={{ fontSize: "0.85rem", color: "var(--text-primary)", display: "block" }}>
+                                        {item.name}
+                                      </strong>
+                                      <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                                        {item.typeLabel || item.pillarType}
                                       </span>
                                     </div>
                                   </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      )}
+                                  <div style={{ textAlign: "right" }}>
+                                    <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.8rem", fontWeight: 700, color: spentAmt >= budgetedAmt && budgetedAmt > 0 ? "#10b981" : "var(--text-primary)" }}>
+                                      {formatMoney(spentAmt, currency)} <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>/ {formatMoney(budgetedAmt, currency)}</span>
+                                    </div>
+                                    <span style={{ fontSize: "0.66rem", color: freeCupo > 0 ? "#10b981" : "var(--text-muted)", fontWeight: 600 }}>
+                                      Cupo libre: {formatMoney(freeCupo, currency)}
+                                    </span>
+                                  </div>
+                                </div>
 
-                      {/* Registered Expenses in this Envelope (shown when selected or when item has expenses) */}
-                      {isSelected && itemExpenses.length > 0 && (
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 4,
-                            paddingTop: 6,
-                            borderTop: isLight ? "1px dashed rgba(0,0,0,0.08)" : "1px dashed rgba(255,255,255,0.08)",
-                          }}
-                        >
-                          <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "var(--text-muted)" }}>
-                            🧾 Movimientos ya imputados en {item.name}:
-                          </div>
-                          {itemExpenses.map((tx) => (
-                            <div
-                              key={tx.id}
-                              onClick={(e) => e.stopPropagation()}
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                fontSize: "0.73rem",
-                                padding: "4px 8px",
-                                borderRadius: 6,
-                                background: isLight ? "rgba(0,0,0,0.03)" : "rgba(255,255,255,0.04)",
-                              }}
-                            >
-                              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                <span style={{ color: "#10b981" }}>✓</span>
-                                <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>
-                                  {tx.description || tx.subItemName || item.name}
-                                </span>
-                                {tx.isAutoSubItemCheck && (
-                                  <span style={{ fontSize: "0.62rem", color: "#f59e0b", background: "rgba(245, 158, 11, 0.14)", padding: "1px 5px", borderRadius: 4 }}>
-                                    Check manual
-                                  </span>
-                                )}
-                              </div>
-                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <span style={{ fontFamily: "JetBrains Mono, monospace", fontWeight: 700, color: "var(--text-primary)" }}>
-                                  {formatMoney(tx.amount, currency)}
-                                </span>
-                                {onDeleteTransaction && tx.id !== movement.id && (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onDeleteTransaction(tx.id);
-                                    }}
-                                    title="Quitar / destachar este gasto"
+                                {/* Pending concept reservation warning */}
+                                {pendingReservedAmt > 0 && (
+                                  <div
                                     style={{
-                                      background: "transparent",
-                                      border: "none",
-                                      color: "#f43f5e",
-                                      cursor: "pointer",
-                                      fontSize: "0.75rem",
-                                      padding: "0 2px",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: 4,
+                                      fontSize: "0.68rem",
+                                      color: "#f59e0b",
+                                      background: isLight ? "rgba(245, 158, 11, 0.1)" : "rgba(245, 158, 11, 0.18)",
+                                      padding: "2px 7px",
+                                      borderRadius: 5,
+                                      fontWeight: 600,
+                                      alignSelf: "flex-start",
                                     }}
                                   >
-                                    ✕
-                                  </button>
+                                    <span>🔒</span>
+                                    <span>
+                                      <strong>{formatMoney(pendingReservedAmt, currency)}</strong> reservado para {pendingReservedConcepts.map((c) => c.name).join(", ")} (intacto)
+                                    </span>
+                                  </div>
+                                )}
+
+                                {/* Collapsible Sub-Items Accordion */}
+                                {subItemsList.length > 0 && (
+                                  <div style={{ marginTop: 2 }}>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => toggleExpandEnvelope(item.id, e)}
+                                      style={{
+                                        background: "transparent",
+                                        border: "none",
+                                        color: isLight ? "#0284c7" : "#38bdf8",
+                                        fontSize: "0.72rem",
+                                        fontWeight: 600,
+                                        cursor: "pointer",
+                                        padding: "2px 0",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: 4,
+                                      }}
+                                    >
+                                      <span>{isExpanded ? "▲ Ocultar conceptos" : `▼ Ver conceptos (${subItemsList.length})`}</span>
+                                    </button>
+
+                                    {isExpanded && (
+                                      <div
+                                        style={{
+                                          display: "flex",
+                                          flexDirection: "column",
+                                          gap: 5,
+                                          paddingTop: 6,
+                                          marginTop: 4,
+                                          borderTop: isLight ? "1px dashed rgba(0,0,0,0.08)" : "1px dashed rgba(255,255,255,0.08)",
+                                        }}
+                                      >
+                                        <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                                          📌 Conceptos del rubro (Tachar o imputar movimiento aquí):
+                                        </div>
+                                        {subItemsList.map((sub, idx) => {
+                                          const subKey = sub.id || `${item.id}_sub_${idx}`;
+                                          const matchedSubTx = itemExpenses.find(
+                                            (tx) =>
+                                              (sub.id && tx.subItemId === sub.id) ||
+                                              tx.subItemId === subKey ||
+                                              (sub.name && tx.subItemName?.toLowerCase() === sub.name.toLowerCase()) ||
+                                              (sub.name && tx.description?.toLowerCase().includes(sub.name.toLowerCase()))
+                                          );
+                                          const isSubChecked = Boolean(matchedSubTx);
+                                          const isSubSelectedForAssign =
+                                            isSelected &&
+                                            selectedSubItem &&
+                                            ((selectedSubItem.id && selectedSubItem.id === sub.id) ||
+                                              selectedSubItem.name === sub.name);
+                                          const matchesAmount = Number(sub.amount) === movementAmount;
+
+                                          return (
+                                            <div
+                                              key={subKey}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setSelectedEnvelopeId(item.id);
+                                                setSelectedSubItem(isSubSelectedForAssign ? null : { ...sub, subKey });
+                                              }}
+                                              style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "space-between",
+                                                gap: 8,
+                                                padding: "6px 10px",
+                                                borderRadius: "8px",
+                                                background: isSubSelectedForAssign
+                                                  ? (isLight ? "rgba(16, 185, 129, 0.14)" : "rgba(16, 185, 129, 0.2)")
+                                                  : isSubChecked
+                                                  ? (isLight ? "rgba(16, 185, 129, 0.06)" : "rgba(16, 185, 129, 0.08)")
+                                                  : (isLight ? "#ffffff" : "rgba(15, 23, 42, 0.45)"),
+                                                border: isSubSelectedForAssign
+                                                  ? "1.5px solid #10b981"
+                                                  : matchesAmount
+                                                  ? "1px dashed #38bdf8"
+                                                  : (isLight ? "1px solid rgba(0,0,0,0.06)" : "1px solid rgba(255,255,255,0.06)"),
+                                              }}
+                                            >
+                                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => handleToggleSubItemCheck(e, item, sub, subKey, matchedSubTx)}
+                                                  title={isSubChecked ? "Desmarcar este concepto" : "Tachar / Marcar como pagado manualmente"}
+                                                  style={{
+                                                    width: 20,
+                                                    height: 20,
+                                                    borderRadius: 5,
+                                                    border: isSubChecked ? "1.5px solid #10b981" : "1.5px solid #64748b",
+                                                    background: isSubChecked ? "#10b981" : "transparent",
+                                                    color: isSubChecked ? "#04101e" : "transparent",
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
+                                                    fontSize: "0.72rem",
+                                                    fontWeight: 900,
+                                                    cursor: "pointer",
+                                                    padding: 0,
+                                                    flexShrink: 0,
+                                                  }}
+                                                >
+                                                  ✓
+                                                </button>
+                                                <div>
+                                                  <span
+                                                    style={{
+                                                      fontSize: "0.78rem",
+                                                      fontWeight: 600,
+                                                      color: isSubChecked ? "#10b981" : "var(--text-primary)",
+                                                      textDecoration: isSubChecked ? "line-through" : "none",
+                                                    }}
+                                                  >
+                                                    {sub.name}
+                                                  </span>
+                                                  {matchesAmount && (
+                                                    <span
+                                                      style={{
+                                                        marginLeft: 6,
+                                                        fontSize: "0.64rem",
+                                                        padding: "1px 5px",
+                                                        borderRadius: 4,
+                                                        background: "rgba(56, 189, 248, 0.16)",
+                                                        color: "#38bdf8",
+                                                        fontWeight: 700,
+                                                      }}
+                                                    >
+                                                      🎯 Mismo valor
+                                                    </span>
+                                                  )}
+                                                </div>
+                                              </div>
+
+                                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.76rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                                                  {formatMoney(sub.amount, currency)}
+                                                </span>
+                                                <span
+                                                  style={{
+                                                    fontSize: "0.66rem",
+                                                    fontWeight: 700,
+                                                    padding: "2px 6px",
+                                                    borderRadius: 5,
+                                                    background: isSubSelectedForAssign
+                                                      ? "#10b981"
+                                                      : (isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.08)"),
+                                                    color: isSubSelectedForAssign ? "#04101e" : "var(--text-muted)",
+                                                  }}
+                                                >
+                                                  {isSubSelectedForAssign ? "✓ Imputar aquí" : "Elegir"}
+                                                </span>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Registered Expenses in this Envelope */}
+                                {isSelected && itemExpenses.length > 0 && (
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      flexDirection: "column",
+                                      gap: 4,
+                                      paddingTop: 6,
+                                      borderTop: isLight ? "1px dashed rgba(0,0,0,0.08)" : "1px dashed rgba(255,255,255,0.08)",
+                                    }}
+                                  >
+                                    <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "var(--text-muted)" }}>
+                                      🧾 Movimientos ya imputados en {item.name}:
+                                    </div>
+                                    {itemExpenses.map((tx) => (
+                                      <div
+                                        key={tx.id}
+                                        onClick={(e) => e.stopPropagation()}
+                                        style={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          justifyContent: "space-between",
+                                          fontSize: "0.73rem",
+                                          padding: "4px 8px",
+                                          borderRadius: 6,
+                                          background: isLight ? "rgba(0,0,0,0.03)" : "rgba(255,255,255,0.04)",
+                                        }}
+                                      >
+                                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                          <span style={{ color: "#10b981" }}>✓</span>
+                                          <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>
+                                            {tx.description || tx.subItemName || item.name}
+                                          </span>
+                                          {tx.isAutoSubItemCheck && (
+                                            <span style={{ fontSize: "0.62rem", color: "#f59e0b", background: "rgba(245, 158, 11, 0.14)", padding: "1px 5px", borderRadius: 4 }}>
+                                              Check manual
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                          <span style={{ fontFamily: "JetBrains Mono, monospace", fontWeight: 700, color: "var(--text-primary)" }}>
+                                            {formatMoney(tx.amount, currency)}
+                                          </span>
+                                          {onDeleteTransaction && tx.id !== movement.id && (
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                onDeleteTransaction(tx.id);
+                                              }}
+                                              title="Quitar / destachar este gasto"
+                                              style={{
+                                                background: "transparent",
+                                                border: "none",
+                                                color: "#f43f5e",
+                                                cursor: "pointer",
+                                                fontSize: "0.75rem",
+                                                padding: "0 2px",
+                                              }}
+                                            >
+                                              ✕
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
                                 )}
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                     </div>
