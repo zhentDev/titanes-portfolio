@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import GlassModalWrapper from "../Common/GlassModalWrapper";
 import { useTheme } from "../../context/ThemeContext";
 import { parseLocalNumber, formatCashFlowMoney } from "../../utils/cashFlowFormatters";
+import { useCashFlowStore } from "../../store/cashFlowStore";
 
 export default function AssignMovementModal({
   isOpen,
@@ -90,40 +91,60 @@ export default function AssignMovementModal({
 
   const splitRemaining = movementAmount - totalSplitAssigned;
 
-  const strategyPillars = [
-    {
-      id: "needs",
-      name: "Gastos Fijos",
-      ratio: "50%",
-      icon: "🏠",
-      color: "#38bdf8",
-      bgColor: isLight ? "rgba(2, 132, 199, 0.05)" : "rgba(56, 189, 248, 0.08)",
-      borderColor: isLight ? "rgba(2, 132, 199, 0.2)" : "rgba(56, 189, 248, 0.25)",
-      description: "Compromisos fijos y supervivencia (arriendo, servicios, alimentación, salud)",
-    },
-    {
-      id: "wants",
-      name: "Estilo de Vida",
-      ratio: "30%",
-      icon: "🍿",
-      color: "#c084fc",
-      bgColor: isLight ? "rgba(192, 132, 252, 0.06)" : "rgba(192, 132, 252, 0.1)",
-      borderColor: isLight ? "rgba(192, 132, 252, 0.2)" : "rgba(192, 132, 252, 0.25)",
-      description: "Ocio, suscripciones, salidas, hobbies y compras personales",
-    },
-    {
-      id: "wealth",
-      name: "Ahorro & Inversión",
-      ratio: "20%",
-      icon: "💎",
-      color: "#10b981",
-      bgColor: isLight ? "rgba(16, 185, 129, 0.05)" : "rgba(16, 185, 129, 0.08)",
-      borderColor: isLight ? "rgba(16, 185, 129, 0.2)" : "rgba(16, 185, 129, 0.25)",
-      description: "Fondo de emergencia, portafolio e inversión para la libertad financiera",
-    },
-  ];
+  const storeCustomRatios = useCashFlowStore((state) => state.customRatios);
+  const storePeriodsData = useCashFlowStore((state) => state.periodsData);
 
-  const [collapsedPillars, setCollapsedPillars] = useState({});
+  const currentPeriodRatios = useMemo(() => {
+    const periodSnap = activePeriod && storePeriodsData?.[activePeriod];
+    const snapRatios = periodSnap?.customRatios;
+    return {
+      needs: Number(snapRatios?.needs ?? storeCustomRatios?.needs ?? 40),
+      wants: Number(snapRatios?.wants ?? storeCustomRatios?.wants ?? 20),
+      wealth: Number(snapRatios?.savings ?? snapRatios?.wealth ?? storeCustomRatios?.savings ?? storeCustomRatios?.wealth ?? 40),
+    };
+  }, [activePeriod, storePeriodsData, storeCustomRatios]);
+
+  const strategyPillars = useMemo(
+    () => [
+      {
+        id: "needs",
+        name: "Gastos Fijos",
+        ratio: `${currentPeriodRatios.needs}%`,
+        icon: "🏠",
+        color: "#38bdf8",
+        bgColor: isLight ? "rgba(2, 132, 199, 0.05)" : "rgba(56, 189, 248, 0.08)",
+        borderColor: isLight ? "rgba(2, 132, 199, 0.2)" : "rgba(56, 189, 248, 0.25)",
+        description: "Compromisos fijos y supervivencia (arriendo, servicios, alimentación, salud)",
+      },
+      {
+        id: "wants",
+        name: "Estilo de Vida",
+        ratio: `${currentPeriodRatios.wants}%`,
+        icon: "🍿",
+        color: "#c084fc",
+        bgColor: isLight ? "rgba(192, 132, 252, 0.06)" : "rgba(192, 132, 252, 0.1)",
+        borderColor: isLight ? "rgba(192, 132, 252, 0.2)" : "rgba(192, 132, 252, 0.25)",
+        description: "Ocio, suscripciones, salidas, hobbies y compras personales",
+      },
+      {
+        id: "wealth",
+        name: "Ahorro & Inversión",
+        ratio: `${currentPeriodRatios.wealth}%`,
+        icon: "💎",
+        color: "#10b981",
+        bgColor: isLight ? "rgba(16, 185, 129, 0.05)" : "rgba(16, 185, 129, 0.08)",
+        borderColor: isLight ? "rgba(16, 185, 129, 0.2)" : "rgba(16, 185, 129, 0.25)",
+        description: "Fondo de emergencia, portafolio e inversión para la libertad financiera",
+      },
+    ],
+    [currentPeriodRatios, isLight]
+  );
+
+  const [collapsedPillars, setCollapsedPillars] = useState({
+    needs: true,
+    wants: true,
+    wealth: true,
+  });
   const toggleCollapsePillar = (pillarId, e) => {
     if (e) e.stopPropagation();
     setCollapsedPillars((prev) => ({
@@ -727,7 +748,7 @@ export default function AssignMovementModal({
             {/* Quick Collapse/Expand All & Strategy Title */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, marginTop: 4 }}>
               <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-secondary)", letterSpacing: "0.03em" }}>
-                🏛️ PILARES DE LA ESTRATEGIA (50 / 30 / 20)
+                🏛️ PILARES DE LA ESTRATEGIA ({currentPeriodRatios.needs} / {currentPeriodRatios.wants} / {currentPeriodRatios.wealth})
               </span>
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                 <button
@@ -1302,9 +1323,9 @@ export default function AssignMovementModal({
               <div style={{ display: "flex", gap: 4 }}>
                 {[
                   { id: "all", label: "Todos" },
-                  { id: "needs", label: "Fijos (50%)" },
-                  { id: "wants", label: "Estilo (30%)" },
-                  { id: "wealth", label: "Ahorro (20%)" },
+                  { id: "needs", label: `Fijos (${currentPeriodRatios.needs}%)` },
+                  { id: "wants", label: `Estilo (${currentPeriodRatios.wants}%)` },
+                  { id: "wealth", label: `Ahorro (${currentPeriodRatios.wealth}%)` },
                 ].map((pill) => (
                   <button
                     key={pill.id}
@@ -1324,6 +1345,46 @@ export default function AssignMovementModal({
                     {pill.label}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Quick Collapse/Expand All & Strategy Title */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, marginTop: 4 }}>
+              <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-secondary)", letterSpacing: "0.03em" }}>
+                🏛️ PILARES DE LA ESTRATEGIA ({currentPeriodRatios.needs} / {currentPeriodRatios.wants} / {currentPeriodRatios.wealth})
+              </span>
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <button
+                  type="button"
+                  onClick={() => setCollapsedPillars({})}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: isLight ? "#0284c7" : "#38bdf8",
+                    fontSize: "0.72rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    padding: "2px 4px",
+                  }}
+                >
+                  Desplegar todos
+                </button>
+                <span style={{ color: "var(--text-muted)", fontSize: "0.7rem" }}>•</span>
+                <button
+                  type="button"
+                  onClick={() => setCollapsedPillars({ needs: true, wants: true, wealth: true })}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: "var(--text-muted)",
+                    fontSize: "0.72rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    padding: "2px 4px",
+                  }}
+                >
+                  Ocultar todos
+                </button>
               </div>
             </div>
 
