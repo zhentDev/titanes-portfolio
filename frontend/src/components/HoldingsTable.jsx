@@ -424,7 +424,7 @@ export default function HoldingsTable({
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                       <strong style={{ fontSize: "1rem", color: isSelected ? "var(--accent-primary)" : "var(--text-muted)" }}>
                         {h.ticker}
                       </strong>
@@ -730,8 +730,8 @@ export default function HoldingsTable({
                   {/* Ticker + Company Name */}
                   <td style={{ padding: "10px 12px", width: "230px", minWidth: "210px", maxWidth: "250px" }}>
                     <div style={{ display: "flex", flexDirection: "column", gap: "2px", width: "100%" }}>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: "8px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: 0, flexShrink: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: "8px", flexWrap: "wrap" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: 0, flexShrink: 0 }}>
                           <span
                             style={{
                               fontWeight: 700,

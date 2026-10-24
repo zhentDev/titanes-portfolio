@@ -21,7 +21,7 @@ export default function AssignMovementModal({
   const { theme } = useTheme();
   const isLight = theme === "light";
 
-  const [activeTab, setActiveTab] = useState("budget_envelope"); // "budget_envelope" | "debt" | "credit_card"
+  const [activeTab, setActiveTab] = useState("budget_envelope"); // "budget_envelope" | "multi_envelope" | "debt" | "credit_card"
   const [selectedPillarFilter, setSelectedPillarFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -44,6 +44,68 @@ export default function AssignMovementModal({
   const [selectedDestAccountId, setSelectedDestAccountId] = useState(movement?.destinationAccountId || "");
 
   const movementAmount = Number(movement?.amount) || 0;
+
+  // ── Multi-envelope distribution state ──
+  const [splitAmounts, setSplitAmounts] = useState({});
+  const [isCardPaymentInSplit, setIsCardPaymentInSplit] = useState(
+    Boolean(
+      movement?.description?.toLowerCase().includes("rappi") ||
+      movement?.description?.toLowerCase().includes("tarjeta") ||
+      movement?.description?.toLowerCase().includes("credito")
+    )
+  );
+  const [splitCardId, setSplitCardId] = useState(() => {
+    const desc = (movement?.description || "").toLowerCase();
+    const found = (creditCards || []).find((c) => desc.includes(c.name.toLowerCase()));
+    return found ? found.id : (creditCards[0]?.id || "");
+  });
+
+  const totalSplitAssigned = useMemo(() => {
+    return Object.values(splitAmounts).reduce((acc, val) => acc + (Number(val) || 0), 0);
+  }, [splitAmounts]);
+
+  const splitRemaining = movementAmount - totalSplitAssigned;
+
+  const handleAutoDistribute = () => {
+    let remaining = movementAmount;
+    const nextMap = {};
+    const priorityItems = (budgetItems || []).filter(
+      (b) => b.pillarType === "wealth" || b.pillarType === "wants"
+    );
+
+    // 1. Meta Viaje / Estudio
+    const travelStudy = priorityItems.find((b) => b.name?.toLowerCase().includes("viaje") || b.name?.toLowerCase().includes("estudio"));
+    if (travelStudy) {
+      const take = Math.min(remaining, Math.round(movementAmount * 0.45));
+      if (take > 0) {
+        nextMap[travelStudy.id] = take;
+        remaining -= take;
+      }
+    }
+
+    // 2. Ocio / Hobbies
+    const leisure = priorityItems.find((b) => b.name?.toLowerCase().includes("ocio") || b.name?.toLowerCase().includes("hobbies"));
+    if (leisure && remaining > 0) {
+      const take = Math.min(remaining, Math.round(movementAmount * 0.35));
+      if (take > 0) {
+        nextMap[leisure.id] = take;
+        remaining -= take;
+      }
+    }
+
+    // 3. Salidas / Restaurantes
+    const dining = priorityItems.find((b) => b.name?.toLowerCase().includes("restaurante") || b.name?.toLowerCase().includes("salidas"));
+    if (dining && remaining > 0) {
+      nextMap[dining.id] = remaining;
+      remaining = 0;
+    } else if (remaining > 0 && priorityItems.length > 0) {
+      const first = priorityItems[0];
+      nextMap[first.id] = (nextMap[first.id] || 0) + remaining;
+      remaining = 0;
+    }
+
+    setSplitAmounts(nextMap);
+  };
 
   // ── Cuentas principales destino (para rubros de Ahorro / Fondo de Emergencia) ──
   // Por cada bolsillo de ahorro que coincide con el rubro, se ofrece la cuenta
@@ -130,7 +192,30 @@ export default function AssignMovementModal({
   const handleConfirm = () => {
     if (!onReclassify) return;
 
-    if (activeTab === "budget_envelope") {
+    if (activeTab === "multi_envelope") {
+      const distributions = Object.entries(splitAmounts)
+        .filter(([_, amt]) => Number(amt) > 0)
+        .map(([envId, amt]) => {
+          const env = (budgetItems || []).find((b) => b.id === envId);
+          return {
+            budgetItemId: envId,
+            budgetItemName: env?.name || "Rubro",
+            budgetItemType: env?.pillarType || "wants",
+            amount: Number(amt),
+          };
+        });
+
+      if (distributions.length === 0 || splitRemaining !== 0) return;
+
+      onReclassify({
+        movementId: movement.id,
+        destinationType: "split_distribution",
+        cardId: isCardPaymentInSplit ? splitCardId : null,
+        distributions,
+      });
+      onClose();
+      return;
+    } else if (activeTab === "budget_envelope") {
       const envelope = budgetItems.find((b) => b.id === selectedEnvelopeId);
       if (!envelope) return;
       const destOptions = getDestinationOptions(envelope);
@@ -178,7 +263,8 @@ export default function AssignMovementModal({
     (activeTab === "budget_envelope" && !selectedEnvelopeId) ||
     needsDestinationChoice ||
     (activeTab === "debt" && !selectedDebtId) ||
-    (activeTab === "credit_card" && !selectedCardId);
+    (activeTab === "credit_card" && !selectedCardId) ||
+    (activeTab === "multi_envelope" && (splitRemaining !== 0 || totalSplitAssigned <= 0));
 
   return (
     <GlassModalWrapper isOpen={isOpen} onClose={onClose} maxWidth={560}>
@@ -240,7 +326,7 @@ export default function AssignMovementModal({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr",
+            gridTemplateColumns: "1fr 1.15fr 1fr 1fr",
             gap: 6,
             background: isLight ? "#f1f5f9" : "rgba(15, 23, 42, 0.6)",
             padding: "4px",
@@ -253,71 +339,304 @@ export default function AssignMovementModal({
             type="button"
             onClick={() => setActiveTab("budget_envelope")}
             style={{
-              padding: "8px 10px",
+              padding: "8px 6px",
               borderRadius: "9px",
               border: "none",
               background: activeTab === "budget_envelope" ? (isLight ? "#ffffff" : "rgba(30, 41, 59, 0.95)") : "transparent",
               color: activeTab === "budget_envelope" ? "var(--text-primary)" : "var(--text-muted)",
               fontWeight: activeTab === "budget_envelope" ? 700 : 500,
-              fontSize: "0.78rem",
+              fontSize: "0.76rem",
               cursor: "pointer",
               boxShadow: activeTab === "budget_envelope" ? (isLight ? "0 2px 6px rgba(0,0,0,0.08)" : "0 2px 8px rgba(0,0,0,0.3)") : "none",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              gap: 5,
+              gap: 4,
               transition: "all 0.15s ease",
             }}
           >
-            <span>📁</span> Presupuesto
+            <span>📁</span> Un Rubro
           </button>
 
           <button
             type="button"
-            onClick={() => setActiveTab("debt")}
+            onClick={() => setActiveTab("multi_envelope")}
             style={{
-              padding: "8px 10px",
+              padding: "8px 6px",
               borderRadius: "9px",
               border: "none",
-              background: activeTab === "debt" ? (isLight ? "#ffffff" : "rgba(30, 41, 59, 0.95)") : "transparent",
-              color: activeTab === "debt" ? "var(--text-primary)" : "var(--text-muted)",
-              fontWeight: activeTab === "debt" ? 700 : 500,
-              fontSize: "0.78rem",
+              background: activeTab === "multi_envelope" ? (isLight ? "#ffffff" : "rgba(30, 41, 59, 0.95)") : "transparent",
+              color: activeTab === "multi_envelope" ? "#0284c7" : "var(--text-muted)",
+              fontWeight: activeTab === "multi_envelope" ? 700 : 500,
+              fontSize: "0.76rem",
               cursor: "pointer",
-              boxShadow: activeTab === "debt" ? (isLight ? "0 2px 6px rgba(0,0,0,0.08)" : "0 2px 8px rgba(0,0,0,0.3)") : "none",
+              boxShadow: activeTab === "multi_envelope" ? (isLight ? "0 2px 6px rgba(0,0,0,0.08)" : "0 2px 8px rgba(0,0,0,0.3)") : "none",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              gap: 5,
+              gap: 4,
               transition: "all 0.15s ease",
             }}
           >
-            <span>🤝</span> Deuda Personal
+            <span>📊</span> Distribuir Varios
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("credit_card")}
             style={{
-              padding: "8px 10px",
+              padding: "8px 6px",
               borderRadius: "9px",
               border: "none",
               background: activeTab === "credit_card" ? (isLight ? "#ffffff" : "rgba(30, 41, 59, 0.95)") : "transparent",
               color: activeTab === "credit_card" ? "var(--text-primary)" : "var(--text-muted)",
               fontWeight: activeTab === "credit_card" ? 700 : 500,
-              fontSize: "0.78rem",
+              fontSize: "0.76rem",
               cursor: "pointer",
               boxShadow: activeTab === "credit_card" ? (isLight ? "0 2px 6px rgba(0,0,0,0.08)" : "0 2px 8px rgba(0,0,0,0.3)") : "none",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              gap: 5,
+              gap: 4,
               transition: "all 0.15s ease",
             }}
           >
-            <span>💳</span> Tarjeta Crédito
+            <span>💳</span> Tarjeta
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("debt")}
+            style={{
+              padding: "8px 6px",
+              borderRadius: "9px",
+              border: "none",
+              background: activeTab === "debt" ? (isLight ? "#ffffff" : "rgba(30, 41, 59, 0.95)") : "transparent",
+              color: activeTab === "debt" ? "var(--text-primary)" : "var(--text-muted)",
+              fontWeight: activeTab === "debt" ? 700 : 500,
+              fontSize: "0.76rem",
+              cursor: "pointer",
+              boxShadow: activeTab === "debt" ? (isLight ? "0 2px 6px rgba(0,0,0,0.08)" : "0 2px 8px rgba(0,0,0,0.3)") : "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 4,
+              transition: "all 0.15s ease",
+            }}
+          >
+            <span>🤝</span> Deuda
           </button>
         </div>
+
+        {/* Tab 0: Multi-Envelope Distribution */}
+        {activeTab === "multi_envelope" && (
+          <div>
+            <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginBottom: 12, lineHeight: 1.4 }}>
+              Distribuye los <strong>{formatMoney(movementAmount, currency)}</strong> entre varios rubros del presupuesto (ahorros, ocio, compras, salidas, etc.).
+            </p>
+
+            {/* Credit Card Link Option */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "10px 14px",
+                background: isLight ? "rgba(2, 132, 199, 0.06)" : "rgba(56, 189, 248, 0.08)",
+                borderRadius: 10,
+                border: "1px solid rgba(56, 189, 248, 0.25)",
+                marginBottom: 14,
+                flexWrap: "wrap",
+              }}
+            >
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "var(--text-primary)", fontWeight: 600, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={isCardPaymentInSplit}
+                  onChange={(e) => setIsCardPaymentInSplit(e.target.checked)}
+                  style={{ width: 16, height: 16, cursor: "pointer" }}
+                />
+                <span>💳 Vincular como abono a Tarjeta de Crédito (libera cupo)</span>
+              </label>
+
+              {isCardPaymentInSplit && (
+                <select
+                  value={splitCardId}
+                  onChange={(e) => setSplitCardId(e.target.value)}
+                  style={{
+                    marginLeft: "auto",
+                    padding: "5px 10px",
+                    borderRadius: 8,
+                    fontSize: "0.78rem",
+                    background: isLight ? "#ffffff" : "var(--bg-surface)",
+                    color: "var(--text-primary)",
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  {creditCards.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {/* Smart Auto-Distribute & Status Pill */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "10px 14px",
+                borderRadius: 10,
+                background: splitRemaining === 0
+                  ? "rgba(16, 185, 129, 0.12)"
+                  : splitRemaining > 0
+                  ? "rgba(245, 158, 11, 0.12)"
+                  : "rgba(239, 68, 68, 0.12)",
+                border: splitRemaining === 0
+                  ? "1px solid rgba(16, 185, 129, 0.3)"
+                  : splitRemaining > 0
+                  ? "1px solid rgba(245, 158, 11, 0.3)"
+                  : "1px solid rgba(239, 68, 68, 0.3)",
+                marginBottom: 14,
+                flexWrap: "wrap",
+                gap: 8,
+              }}
+            >
+              <div>
+                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block" }}>
+                  Distribuido: <strong>{formatMoney(totalSplitAssigned, currency)}</strong> de {formatMoney(movementAmount, currency)}
+                </span>
+                <span
+                  style={{
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    color: splitRemaining === 0 ? "#10b981" : splitRemaining > 0 ? "#f59e0b" : "#ef4444",
+                  }}
+                >
+                  {splitRemaining === 0
+                    ? "✓ Monto 100% distribuido"
+                    : splitRemaining > 0
+                    ? `Falta asignar: ${formatMoney(splitRemaining, currency)}`
+                    : `Excedido por: ${formatMoney(Math.abs(splitRemaining), currency)}`}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleAutoDistribute}
+                style={{
+                  background: "rgba(14, 165, 233, 0.15)",
+                  border: "1px solid #0ea5e9",
+                  borderRadius: 8,
+                  color: "#0ea5e9",
+                  padding: "5px 10px",
+                  fontSize: "0.76rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                🪄 Sugerir Distribución
+              </button>
+            </div>
+
+            {/* Envelopes list for multi-allocation */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: "300px", overflowY: "auto", paddingRight: 4 }}>
+              {(budgetItems || []).map((env) => {
+                const currentVal = splitAmounts[env.id] || "";
+                const pillarColor =
+                  env.pillarType === "wealth" ? "#38bdf8" : env.pillarType === "wants" ? "#c084fc" : "#10b981";
+
+                return (
+                  <div
+                    key={env.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "8px 12px",
+                      borderRadius: 10,
+                      background: Number(currentVal) > 0 ? (isLight ? "rgba(2, 132, 199, 0.05)" : "rgba(2, 132, 199, 0.12)") : (isLight ? "#ffffff" : "var(--bg-surface)"),
+                      border: Number(currentVal) > 0 ? "1px solid #0ea5e9" : (isLight ? "1px solid rgba(0,0,0,0.06)" : "1px solid var(--border)"),
+                      gap: 10,
+                    }}
+                  >
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: "0.95rem" }}>{env.icon || "📦"}</span>
+                        <strong style={{ fontSize: "0.84rem", color: "var(--text-primary)" }}>{env.name}</strong>
+                        <span style={{ fontSize: "0.66rem", color: pillarColor, background: `${pillarColor}15`, padding: "1px 5px", borderRadius: 4, fontWeight: 700 }}>
+                          {env.pillarType === "wealth" ? "Ahorro" : env.pillarType === "wants" ? "Gusto" : "Fijo"}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                        Presupuesto: {formatMoney(env.amount, currency)}
+                      </span>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                      {splitRemaining > 0 && (!currentVal || Number(currentVal) === 0) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSplitAmounts((prev) => ({
+                              ...prev,
+                              [env.id]: (Number(prev[env.id]) || 0) + splitRemaining,
+                            }));
+                          }}
+                          style={{
+                            background: "transparent",
+                            border: "1px dashed var(--border)",
+                            borderRadius: 6,
+                            padding: "3px 6px",
+                            fontSize: "0.7rem",
+                            color: "var(--text-muted)",
+                            cursor: "pointer",
+                          }}
+                          title="Asignar el saldo restante a este rubro"
+                        >
+                          + Restante
+                        </button>
+                      )}
+
+                      <div style={{ position: "relative", width: "120px" }}>
+                        <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                          $
+                        </span>
+                        <input
+                          type="number"
+                          placeholder="0"
+                          value={currentVal}
+                          onChange={(e) => {
+                            const val = e.target.value === "" ? 0 : Math.max(0, Number(e.target.value));
+                            setSplitAmounts((prev) => ({
+                              ...prev,
+                              [env.id]: val,
+                            }));
+                          }}
+                          style={{
+                            width: "100%",
+                            padding: "5px 8px 5px 20px",
+                            borderRadius: 8,
+                            border: "1px solid var(--border)",
+                            background: isLight ? "#ffffff" : "rgba(0,0,0,0.3)",
+                            color: "var(--text-primary)",
+                            fontSize: "0.82rem",
+                            fontFamily: "JetBrains Mono, monospace",
+                            fontWeight: 700,
+                            textAlign: "right",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Tab 1: Budget Envelope Selection */}
         {activeTab === "budget_envelope" && (

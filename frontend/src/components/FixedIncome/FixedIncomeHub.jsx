@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { fetchColInflationHistory, fetchFxHistory } from "../../api/client";
+import { fetchColInflationHistory, fetchFxHistory, fetchRateTrackerAlerts, applyUpdatedAccountRate } from "../../api/client";
 import { useFixedIncomeStore } from "../../store/fixedIncomeStore";
 import { BANK_PRESETS, computeMissingMonthlyYieldTransactions, getBankPreset, svgToDataUri } from "../../utils/bankPresets";
 import { toastConfirm } from "../../utils/toastAlerts";
@@ -69,6 +69,58 @@ export default function FixedIncomeHub() {
   const [selectedModalEntityId, setSelectedModalEntityId] = useState(null); // Pre-select entity in modal
   const [fxRate, setFxRate] = useState(4150); // USD-COP fallback
   const [colInflationRate, setColInflationRate] = useState(5.16); // YoY IPC fallback
+
+  // Automated Rate Tracker State
+  const [rateTrackerAlerts, setRateTrackerAlerts] = useState([]);
+  const [isCheckingRates, setIsCheckingRates] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchRateTrackerAlerts()
+      .then((data) => {
+        if (isMounted && Array.isArray(data?.alerts)) {
+          setRateTrackerAlerts(data.alerts);
+        }
+      })
+      .catch((err) => {
+        console.warn("[RateTracker] Background rate check bypassed:", err);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [accounts]);
+
+  const handleCheckRatesNow = async () => {
+    setIsCheckingRates(true);
+    try {
+      const data = await fetchRateTrackerAlerts();
+      setRateTrackerAlerts(data?.alerts || []);
+      if ((data?.alerts || []).length === 0) {
+        toast.success("¡Todas tus cuentas están al día con las tasas de mercado!", { icon: "✅" });
+      }
+    } catch {
+      toast.error("Error al consultar tasas de mercado");
+    } finally {
+      setIsCheckingRates(false);
+    }
+  };
+
+  const handleApplyRateUpdate = async (alert) => {
+    try {
+      await applyUpdatedAccountRate({
+        accountId: alert.accountId,
+        newRate: alert.marketRateEA,
+        effectiveDate: alert.suggestedEffectiveDate,
+      });
+      toast.success(`Tasa de ${alert.accountName} actualizada a ${alert.marketRateEA}% E.A.`, { icon: "⚡" });
+      setRateTrackerAlerts((prev) => prev.filter((a) => a.accountId !== alert.accountId));
+      if (typeof initFetchFixedIncome === "function") {
+        initFetchFixedIncome();
+      }
+    } catch {
+      toast.error("Error al aplicar la nueva tasa");
+    }
+  };
   const [editItem, setEditItem] = useState(null);
   const [editType, setEditType] = useState(null); // 'account' | 'cdt' | 'entity' | 'transaction'
   const [migrateFrom, setMigrateFrom] = useState(null); // entityId being migrated
@@ -799,6 +851,117 @@ export default function FixedIncomeHub() {
 
   return (
     <div className="fade-up" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {/* ── AUTOMATED WEEKLY RATE TRACKER ALERTS BANNER ──────── */}
+      {rateTrackerAlerts.length > 0 && (
+        <div
+          style={{
+            background: isLight ? "rgba(2, 132, 199, 0.08)" : "rgba(14, 165, 233, 0.12)",
+            border: "1px solid rgba(14, 165, 233, 0.35)",
+            borderRadius: "14px",
+            padding: "14px 18px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: "1.4rem" }}>🔔</span>
+              <div>
+                <strong style={{ fontSize: "0.92rem", color: "var(--text-primary)" }}>
+                  Seguimiento Semanal de Tasas de Mercado ({rateTrackerAlerts.length} detectadas)
+                </strong>
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", display: "block" }}>
+                  Verificado con fuentes oficiales del sistema financiero colombiano y USD. Solo afecta cálculos desde la fecha de vigencia sin alterar tus rendimientos históricos pasados.
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleCheckRatesNow}
+              disabled={isCheckingRates}
+              style={{
+                background: "rgba(14, 165, 233, 0.2)",
+                border: "1px solid #0ea5e9",
+                color: "#0ea5e9",
+                borderRadius: "8px",
+                padding: "6px 12px",
+                fontSize: "0.76rem",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              {isCheckingRates ? "Verificando..." : "🔄 Re-verificar Ahora"}
+            </button>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {rateTrackerAlerts.map((alert) => (
+              <div
+                key={alert.accountId}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  background: isLight ? "#ffffff" : "var(--bg-surface)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "10px",
+                  padding: "10px 14px",
+                  flexWrap: "wrap",
+                  gap: 10,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: "1 1 240px" }}>
+                  <span style={{ fontSize: "1.1rem" }}>{alert.direction === "up" ? "📈" : "📉"}</span>
+                  <div>
+                    <strong style={{ fontSize: "0.86rem", color: "var(--text-primary)", display: "block" }}>
+                      {alert.entityName} • {alert.accountName}
+                    </strong>
+                    <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
+                      Tasa actual: <span style={{ color: "#f43f5e", fontWeight: 700 }}>{alert.currentRateEA.toFixed(2)}% E.A.</span> ➔ Mercado: <span style={{ color: "#10b981", fontWeight: 700 }}>{alert.marketRateEA.toFixed(2)}% E.A.</span> ({alert.diff > 0 ? `+${alert.diff.toFixed(2)}%` : `${alert.diff.toFixed(2)}%`})
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyRateUpdate(alert)}
+                    style={{
+                      background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                      border: "none",
+                      color: "#fff",
+                      borderRadius: "8px",
+                      padding: "6px 12px",
+                      fontSize: "0.78rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    ⚡ Actualizar a {alert.marketRateEA.toFixed(2)}%
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRateTrackerAlerts((prev) => prev.filter((a) => a.accountId !== alert.accountId))}
+                    style={{
+                      background: "transparent",
+                      border: "1px solid var(--border)",
+                      color: "var(--text-muted)",
+                      borderRadius: "8px",
+                      padding: "6px 10px",
+                      fontSize: "0.76rem",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Descartar
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {/* ── ENTITY VIEW SELECTOR TABS ─────────────────────────── */}
       <div
         style={{

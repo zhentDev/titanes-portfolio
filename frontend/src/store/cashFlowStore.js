@@ -293,6 +293,9 @@ export const useCashFlowStore = create(
               periodsData: currentState.periodsData,
             });
           } catch (err) {
+            if (err?.name === "AbortError" || err?.message?.includes("aborted")) {
+              return;
+            }
             console.error("[CashFlow] Error syncing to backend:", err);
           } finally {
             set({ isSyncing: false });
@@ -502,11 +505,123 @@ export const useCashFlowStore = create(
       },
 
       // ── Universal Movement Reclassification / Imputation ──
-      reclassifyMovement: ({ movementId, destinationType, targetId, targetItem, subItem, destinationAccount }) => {
+      splitExpenseMovement: ({ movementId, cardId, distributions }) => {
+        const state = get();
+        const expense = (state.expensesLog || []).find((e) => e.id === movementId);
+        if (!expense) return;
+
+        const isCard = Boolean(cardId);
+        const card = isCard ? (state.creditCards || []).find((c) => c.id === cardId) : null;
+        const totalAmount = distributions.reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
+
+        let updatedCards = state.creditCards || [];
+        let updatedPayments = state.creditCardPayments || [];
+
+        if (card) {
+          const currentUsed = Number(card.usedLimit) || 0;
+          updatedCards = updatedCards.map((c) => {
+            if (c.id === cardId) {
+              return { ...c, usedLimit: Math.max(0, currentUsed - totalAmount) };
+            }
+            return c;
+          });
+
+          const paymentRecord = {
+            id: `pay_split_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+            period: expense.period || state.activePeriod,
+            cardId: card.id,
+            cardName: card.name,
+            amount: totalAmount,
+            currency: expense.currency || state.currency,
+            date: expense.date || new Date().toISOString().split("T")[0],
+            description: `Pago ${card.name} (Distribuido en ${distributions.length} rubros)`,
+            sourceType: expense.paymentSource?.type || "payroll",
+            sourceAccountId: expense.paymentSource?.targetId || null,
+            sourceAccount: expense.paymentSource?.targetName || state.payrollAccount?.name || "Nómina",
+            notes: `Distribuido desde: ${expense.description || "Pago de Tarjeta"}`,
+            budgetDeductions: distributions.map((d) => ({
+              budgetItemId: d.budgetItemId,
+              budgetItemName: d.budgetItemName,
+              budgetItemType: d.budgetItemType,
+              amount: Number(d.amount),
+            })),
+            createdAt: new Date().toISOString(),
+          };
+          updatedPayments = [paymentRecord, ...updatedPayments];
+        }
+
+        const filteredExpenses = (state.expensesLog || []).filter((e) => e.id !== movementId);
+
+        const newExpenseEntries = distributions
+          .filter((d) => Number(d.amount) > 0)
+          .map((d, idx) => ({
+            id: `${movementId}_split_${idx}_${Date.now()}`,
+            period: expense.period || state.activePeriod,
+            date: expense.date || new Date().toISOString().split("T")[0],
+            time: expense.time || null,
+            amount: Number(d.amount),
+            currency: expense.currency || state.currency,
+            type: "debit",
+            budgetItemId: d.budgetItemId,
+            budgetItemName: d.budgetItemName,
+            budgetItemType: d.budgetItemType || "wants",
+            subItemId: d.subItemId || null,
+            subItemName: d.subItemName || null,
+            description: card
+              ? `💳 Pago ${card.name} (Descontado de ${d.budgetItemName})`
+              : `${expense.description || "Movimiento"} (${d.budgetItemName})`,
+            paymentSource: expense.paymentSource || {
+              type: "payroll",
+              targetName: state.payrollAccount?.name || "Cuenta Nu Débito",
+            },
+            creditCardPaymentId: card ? `ccpay_split_${Date.now()}` : null,
+            isCreditCardPayoff: Boolean(card),
+            itemType: d.budgetItemType === "wealth" ? "wealth_saving" : "expense",
+            destinationAccountId: d.destinationAccountId || null,
+            destinationAccountName: d.destinationAccountName || null,
+            createdAt: new Date().toISOString(),
+          }));
+
+        const finalExpenses = [...newExpenseEntries, ...filteredExpenses];
+
+        set({
+          creditCards: updatedCards,
+          creditCardPayments: updatedPayments,
+          expensesLog: finalExpenses,
+        });
+
+        try {
+          localStorage.setItem(
+            "titanes_cash_flow_store_v2",
+            JSON.stringify({
+              ...state,
+              creditCards: updatedCards,
+              creditCardPayments: updatedPayments,
+              expensesLog: finalExpenses,
+            })
+          );
+        } catch {}
+
+        get().syncStateWithBackend();
+        toast.success(
+          card
+            ? `¡Abono a ${card.name} distribuido en ${distributions.length} rubros y cupo liberado! 🎉`
+            : `Movimiento distribuido exitosamente en ${distributions.length} rubros 📊`,
+          { icon: "✅" }
+        );
+      },
+
+      reclassifyMovement: ({ movementId, destinationType, targetId, targetItem, subItem, destinationAccount, cardId, distributions }) => {
         const state = get();
         const expense = (state.expensesLog || []).find((e) => e.id === movementId);
         if (!expense) return;
         const amount = Number(expense.amount) || 0;
+
+        // 0. Destination: Multi-Rubro Distribution (Split Movement / Distributed Card Payment)
+        if (destinationType === "split_distribution") {
+          get().splitExpenseMovement({ movementId, cardId, distributions });
+          return;
+        }
 
         // 1. Destination: Credit Card Payment
         if (destinationType === "credit_card") {

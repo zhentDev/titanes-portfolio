@@ -3,6 +3,7 @@ import { formatCashFlowMoney } from "../../utils/cashFlowFormatters";
 import GlassModalWrapper from "../Common/GlassModalWrapper";
 import LoanSettlementModal from "./LoanSettlementModal";
 import AssignMovementModal from "./AssignMovementModal";
+import { toastConfirm } from "../../utils/toastAlerts";
 import "./CashFlow.css";
 
 export default function ExpensesLogSection({
@@ -31,6 +32,22 @@ export default function ExpensesLogSection({
   const [filterSource, setFilterSource] = useState("all");
   const [settlingTransaction, setSettlingTransaction] = useState(null);
   const [assignModalItem, setAssignModalItem] = useState(null);
+
+  const handleDeleteTransaction = async (item) => {
+    const title = item.description || "este movimiento";
+    const ok = await toastConfirm(`¿Estás seguro de que deseas eliminar "${title}" por ${formatMoney(item.amount, currency)}?`);
+    if (ok && onDeleteTransaction) {
+      onDeleteTransaction(item.id);
+    }
+  };
+
+  const handleDeleteCardPayment = async (item) => {
+    const cardTitle = item.cardName || "tarjeta";
+    const ok = await toastConfirm(`¿Estás seguro de que deseas eliminar el abono a "${cardTitle}" por ${formatMoney(item.amount, currency)}?`);
+    if (ok && onDeletePayment) {
+      onDeletePayment(item.id);
+    }
+  };
 
   const formatMovementDateTime = (item) => {
     const d = item.date || item.createdAt?.slice(0, 10) || "";
@@ -172,53 +189,53 @@ export default function ExpensesLogSection({
           </p>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
-          <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", justifyContent: "space-between", width: "100%", maxWidth: "100%" }}>
+          <div style={{ display: "flex", gap: "10px 18px", alignItems: "center", flexWrap: "wrap" }}>
             {totalIncomeInPeriod > 0 && (
-              <div style={{ textAlign: "right" }}>
+              <div style={{ minWidth: "105px", textAlign: "left" }}>
                 <span style={{ fontSize: "0.72rem", color: "#10b981", display: "block" }}>📥 Total Ingresos</span>
-                <strong style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.15rem", color: "#10b981" }}>
+                <strong style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.1rem", color: "#10b981" }}>
                   +{formatMoney(totalIncomeInPeriod, currency)}
                 </strong>
               </div>
             )}
 
-            <div style={{ textAlign: "right" }}>
+            <div style={{ minWidth: "105px", textAlign: "left" }}>
               <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block" }}>Total Gastado Real</span>
-              <strong style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.15rem", color: "#f43f5e" }}>
+              <strong style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.1rem", color: "#f43f5e" }}>
                 -{formatMoney(totalSpentInPeriod, currency)}
               </strong>
             </div>
 
             {totalPendingLoansAmt > 0 && (
-              <div style={{ textAlign: "right" }}>
+              <div style={{ minWidth: "105px", textAlign: "left" }}>
                 <span style={{ fontSize: "0.72rem", color: "#fcd34d", display: "block" }}>🤝 Préstamos por Cobrar</span>
-                <strong style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.15rem", color: "#f59e0b" }}>
+                <strong style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.1rem", color: "#f59e0b" }}>
                   {formatMoney(totalPendingLoansAmt, currency)}
                 </strong>
               </div>
             )}
 
             {totalSavedInPeriod > 0 && (
-              <div style={{ textAlign: "right" }}>
+              <div style={{ minWidth: "105px", textAlign: "left" }}>
                 <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block" }}>Aporte a CDTs / Ahorro</span>
-                <strong style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.15rem", color: "#38bdf8" }}>
-                  {formatMoney(totalSavedInPeriod, currency)}
+                <strong style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.1rem", color: "#38bdf8" }}>
+                  -{formatMoney(totalSavedInPeriod, currency)}
                 </strong>
               </div>
             )}
 
             {totalPaidToCards > 0 && (
-              <div style={{ textAlign: "right" }}>
+              <div style={{ minWidth: "105px", textAlign: "left" }}>
                 <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block" }}>Abonos a Tarjetas</span>
-                <strong style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.15rem", color: "#10b981" }}>
-                  {formatMoney(totalPaidToCards, currency)}
+                <strong style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.1rem", color: "#10b981" }}>
+                  -{formatMoney(totalPaidToCards, currency)}
                 </strong>
               </div>
             )}
           </div>
 
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {onOpenPaymentModal && (
               <button
                 type="button"
@@ -311,10 +328,10 @@ export default function ExpensesLogSection({
                     transition: "all 0.15s ease",
                   }}
                 >
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ minWidth: 0, flex: 1, marginRight: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                       <span style={{ fontSize: "1rem" }}>💵</span>
-                      <strong style={{ fontSize: "0.9rem", color: "var(--text-primary)" }}>
+                      <strong style={{ fontSize: "0.9rem", color: "var(--text-primary)", wordBreak: "break-word" }}>
                         {item.cardName} • {item.description || "Abono a deuda / pago factura"}
                       </strong>
                       <span
@@ -330,9 +347,22 @@ export default function ExpensesLogSection({
                       >
                         ✓ Abono / Libera Cupo
                       </span>
+                      <span
+                        style={{
+                          background: "rgba(16, 185, 129, 0.12)",
+                          border: "1px solid rgba(16, 185, 129, 0.3)",
+                          padding: "2px 6px",
+                          borderRadius: "6px",
+                          fontSize: "0.68rem",
+                          color: "#10b981",
+                          fontWeight: 700,
+                        }}
+                      >
+                        📤 Salida (Abono)
+                      </span>
                     </div>
 
-                    <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: 3, display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: 3, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                       <span>📅 {formatMovementDateTime(item).date || "Fecha no especificada"}</span>
                       {formatMovementDateTime(item).time && (
                         <>
@@ -347,14 +377,14 @@ export default function ExpensesLogSection({
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, textAlign: "right" }}>
                     <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.05rem", fontWeight: 800, color: "#10b981" }}>
                       -{formatMoney(item.amount, currency)}
                     </span>
                     {onDeletePayment && (
                       <button
                         type="button"
-                        onClick={() => onDeletePayment(item.id)}
+                        onClick={() => handleDeleteCardPayment(item)}
                         style={{
                           background: "transparent",
                           border: "none",
@@ -388,10 +418,10 @@ export default function ExpensesLogSection({
                     transition: "all 0.15s ease",
                   }}
                 >
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ minWidth: 0, flex: 1, marginRight: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                       <span style={{ fontSize: "1rem" }}>💎</span>
-                      <strong style={{ fontSize: "0.9rem", color: "var(--text-primary)" }}>
+                      <strong style={{ fontSize: "0.9rem", color: "var(--text-primary)", wordBreak: "break-word" }}>
                         {item.description}
                       </strong>
                       <span
@@ -406,6 +436,19 @@ export default function ExpensesLogSection({
                         }}
                       >
                         {item.budgetItemName} • Inversión / Ahorro
+                      </span>
+                      <span
+                        style={{
+                          background: "rgba(56, 189, 248, 0.15)",
+                          border: "1px solid rgba(56, 189, 248, 0.35)",
+                          padding: "2px 6px",
+                          borderRadius: "6px",
+                          fontSize: "0.68rem",
+                          color: "#38bdf8",
+                          fontWeight: 700,
+                        }}
+                      >
+                        📤 Salida (Aporte a Ahorro)
                       </span>
                     </div>
 
@@ -457,14 +500,31 @@ export default function ExpensesLogSection({
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, textAlign: "right" }}>
                     <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.05rem", fontWeight: 800, color: "#38bdf8" }}>
-                      {formatMoney(item.amount, currency)}
+                      -{formatMoney(item.amount, currency)}
                     </span>
+                    {onEditTransaction && (
+                      <button
+                        type="button"
+                        onClick={() => onEditTransaction(item)}
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          color: "#38bdf8",
+                          cursor: "pointer",
+                          padding: "4px",
+                          fontSize: "0.85rem",
+                        }}
+                        title="Editar este aporte o movimiento"
+                      >
+                        ✏️
+                      </button>
+                    )}
                     {onDeleteTransaction && (
                       <button
                         type="button"
-                        onClick={() => onDeleteTransaction(item.id)}
+                        onClick={() => handleDeleteTransaction(item)}
                         style={{
                           background: "transparent",
                           border: "none",
@@ -523,9 +583,9 @@ export default function ExpensesLogSection({
                   transition: "all 0.15s ease",
                 }}
               >
-                <div>
+                <div style={{ minWidth: 0, flex: 1, marginRight: 10 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <strong style={{ fontSize: "0.9rem", color: "var(--text-primary)" }}>
+                    <strong style={{ fontSize: "0.9rem", color: "var(--text-primary)", wordBreak: "break-word" }}>
                       {item.description}
                     </strong>
 
@@ -541,22 +601,39 @@ export default function ExpensesLogSection({
                           fontWeight: 700,
                         }}
                       >
-                        📥 Ingreso / Consignación
+                        📥 Entrada (Consignación)
                       </span>
                     ) : (
-                      item.budgetItemName && (
-                        <span
-                          style={{
-                            background: "rgba(128, 128, 128, 0.1)",
-                            padding: "2px 8px",
-                            borderRadius: "6px",
-                            fontSize: "0.72rem",
-                            color: "var(--text-muted)",
-                          }}
-                        >
-                          {item.budgetItemName}
-                        </span>
-                      )
+                      <>
+                        {!isLoan && (
+                          <span
+                            style={{
+                              background: "rgba(239, 68, 68, 0.12)",
+                              border: "1px solid rgba(239, 68, 68, 0.25)",
+                              padding: "2px 6px",
+                              borderRadius: "6px",
+                              fontSize: "0.68rem",
+                              color: "#f87171",
+                              fontWeight: 700,
+                            }}
+                          >
+                            📤 Salida
+                          </span>
+                        )}
+                        {item.budgetItemName && (
+                          <span
+                            style={{
+                              background: "rgba(128, 128, 128, 0.1)",
+                              padding: "2px 8px",
+                              borderRadius: "6px",
+                              fontSize: "0.72rem",
+                              color: "var(--text-muted)",
+                            }}
+                          >
+                            {item.budgetItemName}
+                          </span>
+                        )}
+                      </>
                     )}
 
                     {/* Loan Badges */}
@@ -669,7 +746,7 @@ export default function ExpensesLogSection({
                   </div>
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, textAlign: "right" }}>
                   {/* Mark as Settled Button */}
                   {isLoan && !isSettled && (
                     <button
@@ -730,7 +807,7 @@ export default function ExpensesLogSection({
                   {onDeleteTransaction && (
                     <button
                       type="button"
-                      onClick={() => onDeleteTransaction(item.id)}
+                      onClick={() => handleDeleteTransaction(item)}
                       style={{
                         background: "transparent",
                         border: "none",

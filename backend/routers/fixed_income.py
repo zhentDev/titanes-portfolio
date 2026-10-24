@@ -983,3 +983,66 @@ def confirm_statement_import(payload: ConfirmImportRequest, request: Request):
         "importedTransactions": created_transactions,
         "timestamp": datetime.now().isoformat()
     }
+
+
+class ApplyRatePayload(BaseModel):
+    accountId: str
+    newRate: float
+    effectiveDate: Optional[str] = None
+
+
+@router.get("/rates/tracker")
+async def get_rate_tracker(request: Request):
+    """Evaluates weekly market rates against active accounts across all financial institutions."""
+    user_id = getattr(request.state, "user_id", None)
+    db = get_fixed_income_db(user_id)
+    from services.rate_tracker import evaluate_user_rates
+    result = evaluate_user_rates(db.get("accounts", []), db.get("entities", []))
+    return result
+
+
+@router.post("/rates/tracker/apply")
+async def apply_rate_tracker(payload: ApplyRatePayload, request: Request):
+    """Applies a verified market rate update to a specific account, preserving historical yield integrity."""
+    user_id = getattr(request.state, "user_id", None)
+    db = get_fixed_income_db(user_id)
+
+    target_acc = None
+    for acc in db.get("accounts", []):
+        if acc.get("id") == payload.accountId:
+            target_acc = acc
+            break
+
+    if not target_acc:
+        raise HTTPException(status_code=404, detail="Cuenta no encontrada")
+
+    old_rate = float(target_acc.get("interestRateEA") or 0.0)
+    effective_date = payload.effectiveDate or datetime.now().strftime("%Y-%m-%d")
+
+    rate_history = target_acc.get("rateHistory", [])
+    if not rate_history and old_rate > 0:
+        rate_history.append({
+            "rate": old_rate,
+            "effectiveDate": target_acc.get("createdAt", "2026-01-01T00:00:00").split("T")[0]
+        })
+
+    rate_history.append({
+        "rate": float(payload.newRate),
+        "effectiveDate": effective_date,
+        "updatedAt": datetime.now().isoformat()
+    })
+
+    target_acc["rateHistory"] = rate_history
+    target_acc["interestRateEA"] = float(payload.newRate)
+    target_acc["updatedAt"] = datetime.now().isoformat()
+
+    save_fixed_income_db(db, user_id)
+    logger.info("Tasa de cuenta %s actualizada de %.2f%% a %.2f%% con vigencia desde %s",
+                target_acc.get("name"), old_rate, payload.newRate, effective_date)
+
+    return {
+        "success": True,
+        "message": f"Tasa de {target_acc.get('name')} actualizada exitosamente a {payload.newRate:.2f}% E.A.",
+        "updatedAccount": target_acc
+    }
+

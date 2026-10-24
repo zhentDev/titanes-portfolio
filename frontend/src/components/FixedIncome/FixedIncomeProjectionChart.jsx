@@ -579,25 +579,25 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
       {/* ── CLEAN FIXED HUD VALUES GRID (ZERO JUMPING / FIXED POSITIONS) ── */}
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(115px, auto) repeat(auto-fit, minmax(130px, 1fr))",
-          gap: 10,
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "8px 16px",
           alignItems: "center",
-          padding: "6px 14px",
+          padding: "8px 14px",
           background: "var(--bg-surface)",
           borderRadius: 8,
           border: "1px solid var(--border)",
           marginBottom: 8,
-          fontSize: "0.72rem",
+          fontSize: "0.74rem",
           fontFamily: "'JetBrains Mono', monospace",
         }}
       >
-        <div style={{ color: "var(--text-muted)", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 4 }}>
+        <div style={{ color: "var(--text-muted)", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
           <span>📅</span>
           <span style={{ color: "var(--text-primary)", fontWeight: 700 }}>{currentDisplay.date || "Hoy"}</span>
         </div>
 
-        <div style={{ color: chartColors.balance, display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap", opacity: visibleSeries.balance ? 1 : 0.25 }}>
+        <div style={{ color: chartColors.balance, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", flex: "1 1 auto", minWidth: "120px", opacity: visibleSeries.balance ? 1 : 0.25 }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: chartColors.balance, flexShrink: 0 }} />
           <span style={{ color: "var(--text-muted)", fontSize: "0.68rem" }}>Saldo:</span>
           <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>
@@ -605,7 +605,7 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
           </span>
         </div>
 
-        <div style={{ color: chartColors.capital, display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap", opacity: visibleSeries.capital ? 1 : 0.25 }}>
+        <div style={{ color: chartColors.capital, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", flex: "1 1 auto", minWidth: "120px", opacity: visibleSeries.capital ? 1 : 0.25 }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: chartColors.capital, flexShrink: 0 }} />
           <span style={{ color: "var(--text-muted)", fontSize: "0.68rem" }}>Capital:</span>
           <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>
@@ -613,7 +613,7 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
           </span>
         </div>
 
-        <div style={{ color: chartColors.earnings, display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap", opacity: visibleSeries.earnings ? 1 : 0.25 }}>
+        <div style={{ color: chartColors.earnings, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", flex: "1 1 auto", minWidth: "120px", opacity: visibleSeries.earnings ? 1 : 0.25 }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: chartColors.earnings, flexShrink: 0 }} />
           <span style={{ color: "var(--text-muted)", fontSize: "0.68rem" }}>Ganancia:</span>
           <span style={{ fontWeight: 700, color: chartColors.earnings }}>
@@ -621,7 +621,7 @@ function FixedIncomeProjectionChart({ projectionData, currency = "COP", mode = "
           </span>
         </div>
 
-        <div style={{ color: chartColors.rate, display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap", opacity: visibleSeries.rate ? 1 : 0.25 }}>
+        <div style={{ color: chartColors.rate, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", flex: "1 1 auto", minWidth: "120px", opacity: visibleSeries.rate ? 1 : 0.25 }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: chartColors.rate, flexShrink: 0 }} />
           <span style={{ color: "var(--text-muted)", fontSize: "0.68rem" }}>Tasa Ponderada:</span>
           <span style={{ fontWeight: 700, color: chartColors.rate }}>

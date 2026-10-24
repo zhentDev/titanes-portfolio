@@ -928,6 +928,22 @@ export async function confirmStatementImportApi(
   return res.json();
 }
 
+export async function fetchRateTrackerAlerts() {
+  const res = await safeFetch(`${BASE}/fixed-income/rates/tracker`);
+  if (!res.ok) throw new Error("Error al obtener seguimiento de tasas");
+  return res.json();
+}
+
+export async function applyUpdatedAccountRate({ accountId, newRate, effectiveDate }) {
+  const res = await safeFetch(`${BASE}/fixed-income/rates/tracker/apply`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ accountId, newRate, effectiveDate }),
+  });
+  if (!res.ok) throw new Error("Error al actualizar la tasa de la cuenta");
+  return res.json();
+}
+
 // ── Cash Flow & Budget Allocation API ────────────────────────────
 
 export async function fetchCashFlowData(options = {}) {

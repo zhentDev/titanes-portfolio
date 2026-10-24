@@ -274,11 +274,11 @@ export default function CreditCardsSection({
               }}
             >
               {/* Card Title & Icon */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: "1 1 200px" }}>
                   <span style={{ fontSize: "1.6rem" }}>{card.icon || "💳"}</span>
                   <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                       <h4 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "var(--text-primary)" }}>
                         {card.name}
                       </h4>
@@ -310,7 +310,7 @@ export default function CreditCardsSection({
                   </div>
                 </div>
 
-                <div style={{ textAlign: "right" }}>
+                <div style={{ textAlign: "right", flexShrink: 0, minWidth: "120px" }}>
                   <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block" }}>
                     {card.monthlyBill > 0 ? "Factura / Cuota Mes" : "Saldo por Pagar"}
                   </span>
