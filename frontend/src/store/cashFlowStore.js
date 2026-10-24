@@ -166,11 +166,11 @@ export const useCashFlowStore = create(
           }
         });
 
-        // Exact user items — server SSOT is prioritized for transactional & debt logs so deletions stick permanently
-        const mergedCreditCards = Array.isArray(source?.creditCards) ? source.creditCards : (cachedLocal?.creditCards || []);
-        const mergedCreditPurchases = Array.isArray(source?.creditPurchases) ? source.creditPurchases : (cachedLocal?.creditPurchases || []);
-        const mergedCreditCardPayments = Array.isArray(source?.creditCardPayments) ? source.creditCardPayments : (cachedLocal?.creditCardPayments || []);
-        const mergedExpensesLog = Array.isArray(source?.expensesLog) ? source.expensesLog : (cachedLocal?.expensesLog || []);
+        // Exact user items — union lossless between remote and local so incoming webhooks and classifications are never wiped
+        const mergedCreditCards = Array.isArray(source?.creditCards) && source.creditCards.length > 0 ? source.creditCards : (cachedLocal?.creditCards || []);
+        const mergedCreditPurchases = unionById(source?.creditPurchases, cachedLocal?.creditPurchases);
+        const mergedCreditCardPayments = unionById(source?.creditCardPayments, cachedLocal?.creditCardPayments);
+        const mergedExpensesLog = unionById(source?.expensesLog, cachedLocal?.expensesLog);
         
         // Auto-corrección: si el movimiento de $37,000 (Plan móvil) quedó por error asignado al Fondo de Emergencia,
         // restaurarlo al rubro correspondiente de Servicios Públicos: Plan móvil; y vincular la transferencia real de $350k a Finandina.
