@@ -319,7 +319,7 @@ export function calculateAccountYield(account, transactions = [], historicalRate
   const maturedCdtByDate = {};
   maturedCDTsList.forEach((m) => {
     const matD = m.maturityDate || m.startDate;
-    maturedCdtByDate[matD] = (maturedCdtByDate[matD] || 0) + Number(m.finalProfit || 0);
+    maturedCdtByDate[matD] = (maturedCdtByDate[matD] || 0) + Number(m.capital || 0) + Number(m.finalProfit || 0);
   });
 
   // Period tracking
@@ -389,15 +389,31 @@ export function calculateAccountYield(account, transactions = [], historicalRate
 
   const finalEarnedInterest = explicitInterestTotal > 0 ? explicitInterestTotal : simulatedInterest;
   const grossPocketBalance = Math.max(0, netCapital + finalEarnedInterest);
-  // Discount active CDT capital that is locked/frozen out of this pocket
-  const liquidTotal = Math.max(0, grossPocketBalance - activeCDTsCapital);
+
+  // If the account has an explicit, authoritative balance (e.g. from app sync or account configuration)
+  const hasAuthoritativeBalance =
+    account.balance !== undefined &&
+    account.balance !== null &&
+    !isNaN(Number(account.balance)) &&
+    Number(account.balance) > 0;
+
+  // Liquid available balance discounting active CDT capital if balance includes CDTs, or using balance directly if already liquid
+  const liquidTotal = hasAuthoritativeBalance
+    ? (Number(account.balance) >= activeCDTsCapital
+        ? Number(account.balance) - activeCDTsCapital
+        : Number(account.balance))
+    : Math.max(0, grossPocketBalance - activeCDTsCapital);
 
   // Available cash in hand: if monthly disbursement, current in-progress month's yields are not yet in hand
   const liquidAvail = isMonthlyDisbursement
-    ? Math.max(0, netCapital + creditedYield + explicitInterestTotal - activeCDTsCapital)
+    ? (hasAuthoritativeBalance
+        ? liquidTotal
+        : Math.max(0, netCapital + creditedYield + explicitInterestTotal - activeCDTsCapital))
     : liquidTotal;
 
-  const liquidNetCap = Math.max(0, netCapital - activeCDTsCapital);
+  const liquidNetCap = hasAuthoritativeBalance
+    ? Math.max(0, liquidTotal - Math.min(liquidTotal, finalEarnedInterest))
+    : Math.max(0, netCapital - activeCDTsCapital);
 
   const periodBreakdown = Array.from(periodMap.values());
 

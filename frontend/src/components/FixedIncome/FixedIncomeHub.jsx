@@ -338,10 +338,10 @@ export default function FixedIncomeHub() {
   const formatMoney = (amount, currency = "COP") => {
     const val = Number(amount || 0);
     if (currency === "USD" || currency === "USDC") {
-      return `USD $${val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      return `USD $${val.toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
     const hasDecimals = Math.abs(val - Math.round(val)) >= 0.005;
-    return `$${val.toLocaleString("en-US", {
+    return `$${val.toLocaleString("es-CO", {
       minimumFractionDigits: hasDecimals ? 2 : 0,
       maximumFractionDigits: 2,
     })}`;
@@ -358,7 +358,7 @@ export default function FixedIncomeHub() {
 
       const totalNewYield = missingPayouts.reduce((sum, t) => sum + t.amount, 0);
       const confirmed = await toastConfirm(
-        `¿Deseas auto-generar ${missingPayouts.length} rendimientos mensuales (+COP $${totalNewYield.toLocaleString("en-US", { minimumFractionDigits: 2 })} en total) para ${account.name}?`
+        `¿Deseas auto-generar ${missingPayouts.length} rendimientos mensuales (+COP $${totalNewYield.toLocaleString("es-CO", { minimumFractionDigits: 2 })} en total) para ${account.name}?`
       );
 
       if (!confirmed) return;
@@ -1111,36 +1111,36 @@ export default function FixedIncomeHub() {
             }}
           >
             {currSymbol}{" "}
-            {metrics.totalPatrimony.toLocaleString("en-US", {
+            {metrics.totalPatrimony.toLocaleString("es-CO", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
           </div>
           <div style={{ fontSize: "0.68rem", color: "var(--accent-primary)", marginTop: 4, fontWeight: 600, display: "flex", gap: 6, flexWrap: "wrap" }}>
-            <span>💧 Cajitas de Inversión: {currSymbol} {metrics.liquidBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <span>💧 Cajitas de Inversión: {currSymbol} {metrics.liquidBalance.toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             {metrics.cdtsCapitalTotal > 0 && (
               <>
                 <span>•</span>
-                <span>⏳ CDTs ({metrics.activeCdtsCount}): {currSymbol} {metrics.cdtsCapitalTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                <span>⏳ CDTs ({metrics.activeCdtsCount}): {currSymbol} {metrics.cdtsCapitalTotal.toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </>
             )}
             {metrics.cdtsExtraYield > 0 && (
               <>
                 <span>•</span>
-                <span style={{ color: "var(--gain)" }}>📈 +{currSymbol} {metrics.cdtsExtraYield.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} rend.</span>
+                <span style={{ color: "var(--gain)" }}>📈 +{currSymbol} {metrics.cdtsExtraYield.toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} rend.</span>
               </>
             )}
             {metrics.transactionalBalance > 0 && (
               <>
                 <span>•</span>
-                <span style={{ color: "var(--text-muted)" }}>💼 Nómina & Billeteras: {currSymbol} {metrics.transactionalBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                <span style={{ color: "var(--text-muted)" }}>💼 Nómina & Billeteras: {currSymbol} {metrics.transactionalBalance.toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </>
             )}
           </div>
           <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 2 }}>
             {preferredCurrency === "COP"
               ? `≈ USD $${(metrics.totalPatrimony / fxRate).toFixed(2)}`
-              : `≈ COP $${(metrics.totalPatrimony * fxRate).toLocaleString("en-US", { maximumFractionDigits: 0 })}`}
+              : `≈ COP $${(metrics.totalPatrimony * fxRate).toLocaleString("es-CO", { maximumFractionDigits: 0 })}`}
           </div>
         </div>
 
@@ -1166,7 +1166,7 @@ export default function FixedIncomeHub() {
             }}
           >
             +{currSymbol}{" "}
-            {metrics.totalDailyIncome.toLocaleString("en-US", {
+            {metrics.totalDailyIncome.toLocaleString("es-CO", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
@@ -1198,7 +1198,7 @@ export default function FixedIncomeHub() {
             }}
           >
             +{currSymbol}{" "}
-            {metrics.monthlyIncome.toLocaleString("en-US", {
+            {metrics.monthlyIncome.toLocaleString("es-CO", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
@@ -1633,19 +1633,19 @@ export default function FixedIncomeHub() {
               <div>
                 <span style={{ fontSize: "0.6rem", color: "#94a3b8", display: "block" }}>💰 Saldo Proyectado (+{futureYears}A)</span>
                 <span className="mono" style={{ fontSize: "0.88rem", fontWeight: 800, color: "#10b981" }}>
-                  {currSymbol} {futBal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {currSymbol} {futBal.toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
               <div>
                 <span style={{ fontSize: "0.6rem", color: "#94a3b8", display: "block" }}>📈 Ganancia Neta Proyectada</span>
                 <span className="mono" style={{ fontSize: "0.88rem", fontWeight: 800, color: "#38bdf8" }}>
-                  +{currSymbol} {futGain.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  +{currSymbol} {futGain.toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
               <div>
                 <span style={{ fontSize: "0.6rem", color: "#94a3b8", display: "block" }}>💎 Renta Pasiva Estimada al Año {futureYears}</span>
                 <span className="mono" style={{ fontSize: "0.88rem", fontWeight: 800, color: isLight ? "#92400e" : "#f59e0b" }}>
-                  {currSymbol} {futMonthlyIncome.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / mes
+                  {currSymbol} {futMonthlyIncome.toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / mes
                 </span>
               </div>
             </div>
@@ -2103,7 +2103,7 @@ export default function FixedIncomeHub() {
                           📦 Inversión Cajitas
                         </span>
                         <span className="mono" style={{ fontWeight: 800, color: isLight ? "#047857" : "#10b981", fontSize: "1.08rem" }}>
-                          {entCurrSymbol} {accountsLiquidInvested.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {entCurrSymbol} {accountsLiquidInvested.toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       </div>
                     )}
@@ -2124,7 +2124,7 @@ export default function FixedIncomeHub() {
                           {investedAccounts.length === 0 && activeEntityCDTs.length === 0 ? "👛 Saldo en Billetera" : "💼 Nómina / Efectivo"}
                         </span>
                         <span className="mono" style={{ fontWeight: 800, color: isLight ? "#1e40af" : "#60a5fa", fontSize: "1.08rem" }}>
-                          {entCurrSymbol} {accountsTransactionalTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {entCurrSymbol} {accountsTransactionalTotal.toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                         <div style={{ fontSize: "0.62rem", color: "var(--text-muted)", fontWeight: 600 }}>
                           (0% E.A. • No graficado)
@@ -2148,11 +2148,11 @@ export default function FixedIncomeHub() {
                           ⏳ En {activeEntityCDTs.length} CDT(s)
                         </span>
                         <span className="mono" style={{ fontWeight: 800, color: isLight ? "#92400e" : "#d97706", fontSize: "1.02rem" }}>
-                          {entCurrSymbol} {activeCDTsTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {entCurrSymbol} {activeCDTsTotal.toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                         {activeCDTsAccruedYield > 0 && (
                           <div style={{ fontSize: "0.65rem", color: isLight ? "#059669" : "#34d399", fontWeight: 600 }}>
-                            (+$ {activeCDTsAccruedYield.toLocaleString("en-US", { maximumFractionDigits: 2 })} rend. a hoy)
+                            (+$ {activeCDTsAccruedYield.toLocaleString("es-CO", { maximumFractionDigits: 2 })} rend. a hoy)
                           </div>
                         )}
                       </div>
@@ -2172,11 +2172,11 @@ export default function FixedIncomeHub() {
                           Total Invertido (RF)
                         </span>
                         <span className="mono" style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "1.05rem" }}>
-                          {entCurrSymbol} {entityInvestedTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {entCurrSymbol} {entityInvestedTotal.toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                         {accountsTransactionalTotal > 0 && (
                           <div style={{ fontSize: "0.62rem", color: "var(--text-muted)", fontWeight: 600 }}>
-                            Total Global: {entCurrSymbol} {entityGrandTotal.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                            Total Global: {entCurrSymbol} {entityGrandTotal.toLocaleString("es-CO", { maximumFractionDigits: 0 })}
                           </div>
                         )}
                       </div>
@@ -2478,7 +2478,7 @@ export default function FixedIncomeHub() {
                                   type="button"
                                   onClick={async () => {
                                     await updateAccount({ ...acc, balance: targetBalance });
-                                    toast.success(`Saldo líquido de "${acc.name}" sincronizado a $${targetBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })} COP`);
+                                    toast.success(`Saldo líquido de "${acc.name}" sincronizado a $${targetBalance.toLocaleString("es-CO", { maximumFractionDigits: 2 })} COP`);
                                   }}
                                   style={{
                                     background: "rgba(16, 185, 129, 0.15)",
@@ -2493,7 +2493,7 @@ export default function FixedIncomeHub() {
                                     alignItems: "center",
                                     gap: 4,
                                   }}
-                                  title={`Sincronizar el saldo oficial de la cuenta con el saldo líquido real ($${targetBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })})`}
+                                  title={`Sincronizar el saldo oficial de la cuenta con el saldo líquido real ($${targetBalance.toLocaleString("es-CO", { maximumFractionDigits: 2 })})`}
                                 >
                                   <span>🔄 Sincronizar</span>
                                 </button>
@@ -2592,7 +2592,7 @@ export default function FixedIncomeHub() {
                             </span>
                             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                               <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 800, fontSize: "1.12rem" }}>
-                                ${displayBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
+                                ${displayBalance.toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
                                 <span style={{ fontSize: "0.74rem", color: "var(--text-muted)", fontWeight: 600 }}>{acc.currency}</span>
                               </span>
                               {canMove && (
@@ -2735,7 +2735,7 @@ export default function FixedIncomeHub() {
                                 📥 Aportado Neto
                               </span>
                               <span className="mono" style={{ color: "var(--text-secondary)", fontWeight: 700, fontSize: "0.95rem", display: "block", marginTop: 2 }}>
-                                ${yieldData.liquidNetCapital.toLocaleString("en-US", { maximumFractionDigits: 2 })}
+                                ${yieldData.liquidNetCapital.toLocaleString("es-CO", { maximumFractionDigits: 2 })}
                               </span>
                               {yieldData.liquidNetCapital === 0 && (yieldData.activeCDTsCapital > 0 || yieldData.totalDeposits > 0) && (
                                 <span style={{ color: "var(--text-muted)", fontSize: "0.62rem", display: "block", marginTop: 1 }}>
@@ -2750,17 +2750,17 @@ export default function FixedIncomeHub() {
                                 padding: "4px 8px",
                                 borderRight: "1px solid var(--border)",
                               }}
-                              title={yieldData.isMonthlyDisbursement ? `Total devengado: +$${yieldData.liquidEarnedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })} (+$${yieldData.creditedYield.toLocaleString("en-US", { maximumFractionDigits: 2 })} ya abonado en caja + $${yieldData.pendingMonthlyYield.toLocaleString("en-US", { maximumFractionDigits: 2 })} en curso por abonar el ${yieldData.nextPayoutDateLabel})` : "Rendimientos diarios acumulados ganados en esta cajita"}
+                              title={yieldData.isMonthlyDisbursement ? `Total devengado: +$${yieldData.liquidEarnedInterest.toLocaleString("es-CO", { maximumFractionDigits: 2 })} (+$${yieldData.creditedYield.toLocaleString("es-CO", { maximumFractionDigits: 2 })} ya abonado en caja + $${yieldData.pendingMonthlyYield.toLocaleString("es-CO", { maximumFractionDigits: 2 })} en curso por abonar el ${yieldData.nextPayoutDateLabel})` : "Rendimientos diarios acumulados ganados en esta cajita"}
                             >
                               <span style={{ color: "var(--text-muted)", fontSize: "0.7rem", display: "block", fontWeight: 600 }}>
                                 📈 Rentabilidad
                               </span>
                               <span className="mono" style={{ color: "#10b981", fontWeight: 700, fontSize: "0.95rem", display: "block", marginTop: 2 }}>
-                                +${yieldData.liquidEarnedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })}
+                                +${yieldData.liquidEarnedInterest.toLocaleString("es-CO", { maximumFractionDigits: 2 })}
                               </span>
                               {yieldData.isMonthlyDisbursement && yieldData.pendingMonthlyYield > 0 && (
                                 <span style={{ color: isLight ? "#b45309" : "#fbbf24", fontSize: "0.63rem", display: "block", fontWeight: 600, marginTop: 1 }}>
-                                  ⏳ (+${yieldData.pendingMonthlyYield.toLocaleString("en-US", { maximumFractionDigits: 0 })} el {yieldData.nextPayoutDateLabel})
+                                  ⏳ (+${yieldData.pendingMonthlyYield.toLocaleString("es-CO", { maximumFractionDigits: 0 })} el {yieldData.nextPayoutDateLabel})
                                 </span>
                               )}
                             </div>
@@ -2779,7 +2779,7 @@ export default function FixedIncomeHub() {
                                     💵 Disp. en Caja
                                   </span>
                                   <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 800, fontSize: "1.02rem", display: "block", marginTop: 2 }}>
-                                    ${yieldData.liquidAvailableBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
+                                    ${yieldData.liquidAvailableBalance.toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
                                     <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>{acc.currency}</span>
                                   </span>
                                 </div>
@@ -2793,7 +2793,7 @@ export default function FixedIncomeHub() {
                                     ✨ Total + Devengado
                                   </span>
                                   <span className="mono" style={{ color: isLight ? "#065f46" : "#6ee7b7", fontWeight: 700, fontSize: "0.95rem", display: "block", marginTop: 2 }}>
-                                    ${yieldData.liquidTotalBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    ${yieldData.liquidTotalBalance.toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </span>
                                 </div>
                               </>
@@ -2809,7 +2809,7 @@ export default function FixedIncomeHub() {
                                   💰 Saldo Líquido
                                 </span>
                                 <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 800, fontSize: "1.05rem", display: "block", marginTop: 2 }}>
-                                  ${yieldData.liquidTotalBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
+                                  ${yieldData.liquidTotalBalance.toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
                                   <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600 }}>{acc.currency}</span>
                                 </span>
                                 {yieldData.activeCDTsCapital > 0 && (
@@ -2827,16 +2827,16 @@ export default function FixedIncomeHub() {
                                   padding: "4px 8px",
                                   borderRight: "1px solid var(--border)",
                                 }}
-                                title={`Capital en CDT: $${yieldData.activeCDTsCapital.toLocaleString("en-US")} + Rendimientos devengados a hoy: +$${yieldData.activeCDTsAccruedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })}`}
+                                title={`Capital en CDT: $${yieldData.activeCDTsCapital.toLocaleString("es-CO")} + Rendimientos devengados a hoy: +$${yieldData.activeCDTsAccruedInterest.toLocaleString("es-CO", { maximumFractionDigits: 2 })}`}
                               >
                                 <span style={{ color: isLight ? "#92400e" : "#f59e0b", fontSize: "0.7rem", display: "block", fontWeight: 700 }}>
                                   ⏳ En {yieldData.activeCDTsList.length} CDT(s)
                                 </span>
                                 <span className="mono" style={{ color: "var(--text-primary)", fontWeight: 800, fontSize: "0.98rem", display: "block", marginTop: 2 }}>
-                                  ${(yieldData.activeCDTsCapital + yieldData.activeCDTsAccruedInterest).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  ${(yieldData.activeCDTsCapital + yieldData.activeCDTsAccruedInterest).toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
                                 <span style={{ color: "#10b981", fontSize: "0.65rem", display: "block", fontWeight: 600, marginTop: 1 }}>
-                                  (+${yieldData.activeCDTsAccruedInterest.toLocaleString("en-US", { maximumFractionDigits: 0 })} rend. a hoy)
+                                  (+${yieldData.activeCDTsAccruedInterest.toLocaleString("es-CO", { maximumFractionDigits: 0 })} rend. a hoy)
                                 </span>
                               </div>
                             )}
@@ -2853,7 +2853,7 @@ export default function FixedIncomeHub() {
                                   💼 Total Cuenta
                                 </span>
                                 <span className="mono" style={{ color: "#10b981", fontWeight: 800, fontSize: "1.06rem", display: "block", marginTop: 2 }}>
-                                  ${(yieldData.liquidTotalBalance + yieldData.activeCDTsCapital + yieldData.activeCDTsAccruedInterest).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  ${(yieldData.liquidTotalBalance + yieldData.activeCDTsCapital + yieldData.activeCDTsAccruedInterest).toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
                                 <span style={{ color: "var(--text-muted)", fontSize: "0.62rem", display: "block", marginTop: 1 }}>
                                   (Líquido + CDT)
@@ -2963,9 +2963,9 @@ export default function FixedIncomeHub() {
 
                                     <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                                       <span style={{ fontSize: "0.78rem", color: isLight ? "#059669" : "var(--gain)", fontWeight: 700 }}>
-                                        {yieldData.activeCDTsList.length > 0 && `Activos: $${yieldData.activeCDTsCapital.toLocaleString("en-US", { maximumFractionDigits: 0 })} COP (+$${yieldData.activeCDTsAccruedInterest.toLocaleString("en-US", { maximumFractionDigits: 0 })} rend.)`}
+                                        {yieldData.activeCDTsList.length > 0 && `Activos: $${yieldData.activeCDTsCapital.toLocaleString("es-CO", { maximumFractionDigits: 0 })} COP (+$${yieldData.activeCDTsAccruedInterest.toLocaleString("es-CO", { maximumFractionDigits: 0 })} rend.)`}
                                         {yieldData.activeCDTsList.length > 0 && yieldData.maturedCDTsList.length > 0 && " • "}
-                                        {yieldData.maturedCDTsList.length > 0 && `📦 ${yieldData.maturedCDTsList.length} Cerrados (+$${yieldData.maturedCDTsTotalProfit.toLocaleString("en-US", { maximumFractionDigits: 0 })} cobrados)`}
+                                        {yieldData.maturedCDTsList.length > 0 && `📦 ${yieldData.maturedCDTsList.length} Cerrados (+$${yieldData.maturedCDTsTotalProfit.toLocaleString("es-CO", { maximumFractionDigits: 0 })} cobrados)`}
                                       </span>
 
                                       <button
@@ -3012,13 +3012,13 @@ export default function FixedIncomeHub() {
                                             <span style={{ color: isLight ? "#92400e" : "#d97706", fontWeight: 700 }}>{c.interestRateEA}% E.A.</span>
                                           </div>
                                           <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                                            <span>Capital: ${Number(c.capital || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
+                                            <span>Capital: ${Number(c.capital || 0).toLocaleString("es-CO", { maximumFractionDigits: 0 })}</span>
                                             <span>{c.daysElapsed} de {c.termDays}d</span>
                                           </div>
                                           <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: "0.75rem" }}>
                                             <span style={{ color: "var(--text-muted)" }}>Rend. a hoy:</span>
                                             <span style={{ color: isLight ? "#059669" : "var(--gain)", fontWeight: 700, fontFamily: "JetBrains Mono" }}>
-                                              +${Number(c.accruedYield || 0).toLocaleString("en-US", { maximumFractionDigits: 2 })} COP
+                                              +${Number(c.accruedYield || 0).toLocaleString("es-CO", { maximumFractionDigits: 2 })} COP
                                             </span>
                                           </div>
                                         </div>
@@ -3042,7 +3042,7 @@ export default function FixedIncomeHub() {
                                           <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: "0.75rem" }}>
                                             <span style={{ color: "var(--text-muted)" }}>Ganancia cobrada:</span>
                                             <span style={{ color: isLight ? "#059669" : "var(--gain)", fontWeight: 700, fontFamily: "JetBrains Mono" }}>
-                                              +${Number(c.finalProfit || 0).toLocaleString("en-US", { maximumFractionDigits: 2 })} {c.currency || acc.currency || "COP"}
+                                              +${Number(c.finalProfit || 0).toLocaleString("es-CO", { maximumFractionDigits: 2 })} {c.currency || acc.currency || "COP"}
                                             </span>
                                           </div>
                                         </div>
@@ -3101,7 +3101,7 @@ export default function FixedIncomeHub() {
 
                                     <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                                       <span style={{ fontSize: "0.82rem", color: isLight ? "#047857" : "#34d399", fontWeight: 800 }}>
-                                        Total Ganado en Cuenta: +${yieldData.liquidEarnedInterest.toLocaleString("en-US", { maximumFractionDigits: 2 })} {acc.currency || "COP"}
+                                        Total Ganado en Cuenta: +${yieldData.liquidEarnedInterest.toLocaleString("es-CO", { maximumFractionDigits: 2 })} {acc.currency || "COP"}
                                       </span>
 
                                       <button
@@ -3211,7 +3211,7 @@ export default function FixedIncomeHub() {
                                                 whiteSpace: "nowrap",
                                               }}
                                             >
-                                              +${p.interestEarned.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {acc.currency || "COP"}
+                                              +${p.interestEarned.toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {acc.currency || "COP"}
                                             </span>
                                           </div>
                                         </div>
@@ -3441,9 +3441,9 @@ export default function FixedIncomeHub() {
                                     <div style={{ display: "flex", flexWrap: "wrap", gap: 14, fontSize: "0.76rem", color: "var(--text-secondary)", marginBottom: 10 }}>
                                       <span>Mostrando: <strong style={{ color: "var(--text-primary)" }}>{filteredTx.length}</strong> de {accTx.length}</span>
                                       <span>•</span>
-                                      <span>Total Entradas: <strong style={{ color: "var(--gain)" }}>+${totalCredits.toLocaleString("en-US", { maximumFractionDigits: 0 })}</strong></span>
+                                      <span>Total Entradas: <strong style={{ color: "var(--gain)" }}>+${totalCredits.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</strong></span>
                                       <span>•</span>
-                                      <span>Total Salidas: <strong style={{ color: "var(--loss)" }}>-${totalDebits.toLocaleString("en-US", { maximumFractionDigits: 0 })}</strong></span>
+                                      <span>Total Salidas: <strong style={{ color: "var(--loss)" }}>-${totalDebits.toLocaleString("es-CO", { maximumFractionDigits: 0 })}</strong></span>
                                     </div>
                                   )}
                                 </>
@@ -3527,7 +3527,7 @@ export default function FixedIncomeHub() {
                                             fontSize: "0.85rem",
                                             color: isCredit ? "var(--gain)" : "var(--loss)",
                                           }}>
-                                            {isCredit ? "+" : "-"}${Math.abs(Number(tx.amount || 0)).toLocaleString("en-US", { maximumFractionDigits: 2 })}
+                                            {isCredit ? "+" : "-"}${Math.abs(Number(tx.amount || 0)).toLocaleString("es-CO", { maximumFractionDigits: 2 })}
                                           </td>
                                           <td style={{ padding: "8px 6px", textAlign: "right", whiteSpace: "nowrap" }}>
                                             <button
@@ -3736,7 +3736,7 @@ export default function FixedIncomeHub() {
                                     }}
                                   >
                                     $
-                                    {cdt.capital.toLocaleString("en-US", {
+                                    {cdt.capital.toLocaleString("es-CO", {
                                       maximumFractionDigits: 0,
                                     })}
                                   </td>
@@ -3757,7 +3757,7 @@ export default function FixedIncomeHub() {
                                       const nowD = new Date();
                                       const daysEl = Math.max(0, Math.floor((nowD - startD) / (1000 * 60 * 60 * 24)));
                                       const gain = (cdt.capital || 0) * (Math.pow(1 + rateDecimal, daysEl / 360) - 1) * reteMul;
-                                      return `+$${gain.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+                                      return `+$${gain.toLocaleString("es-CO", { maximumFractionDigits: 0 })}`;
                                     })()}
                                   </td>
                                   <td style={{ padding: "6px 2px", textAlign: "right" }}>
@@ -3935,7 +3935,7 @@ export default function FixedIncomeHub() {
                                       }}
                                     >
                                       $
-                                      {cdt.capital.toLocaleString("en-US", {
+                                      {cdt.capital.toLocaleString("es-CO", {
                                         maximumFractionDigits: 0,
                                       })}
                                     </td>
@@ -3949,7 +3949,7 @@ export default function FixedIncomeHub() {
                                       }}
                                     >
                                       $
-                                      {(cdt.payoutAmount || cdt.capital).toLocaleString("en-US", {
+                                      {(cdt.payoutAmount || cdt.capital).toLocaleString("es-CO", {
                                         maximumFractionDigits: 0,
                                       })}
                                     </td>
@@ -3962,7 +3962,7 @@ export default function FixedIncomeHub() {
                                         fontWeight: 700,
                                       }}
                                     >
-                                      +${profit.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                                      +${profit.toLocaleString("es-CO", { maximumFractionDigits: 0 })}
                                     </td>
                                     <td style={{ padding: "6px 2px", textAlign: "right" }}>
                                       <button

@@ -1,13 +1,14 @@
 import React, { useState, useMemo } from "react";
 import GlassModalWrapper from "../Common/GlassModalWrapper";
 import { useTheme } from "../../context/ThemeContext";
+import { parseLocalNumber, formatCashFlowMoney } from "../../utils/cashFlowFormatters";
 
 export default function AssignMovementModal({
   isOpen,
   onClose,
   movement,
   currency = "COP",
-  formatMoney = (val) => `$${Number(val || 0).toLocaleString("es-CO")}`,
+  formatMoney = (val, cur = "COP") => formatCashFlowMoney(val, cur),
   creditCards = [],
   debts = [],
   budgetItems = [],
@@ -21,7 +22,17 @@ export default function AssignMovementModal({
   const { theme } = useTheme();
   const isLight = theme === "light";
 
-  const [activeTab, setActiveTab] = useState("budget_envelope"); // "budget_envelope" | "multi_envelope" | "debt" | "credit_card"
+  const isCardMovementInitial = Boolean(
+    movement?.isPayment ||
+    movement?.cardId ||
+    movement?.itemType === "card_payment" ||
+    movement?.description?.toLowerCase().includes("rappi") ||
+    movement?.description?.toLowerCase().includes("tarjeta") ||
+    movement?.description?.toLowerCase().includes("credito") ||
+    movement?.budgetItemType === "split_distribution"
+  );
+
+  const [activeTab, setActiveTab] = useState(isCardMovementInitial ? "multi_envelope" : "budget_envelope"); // "budget_envelope" | "multi_envelope" | "debt" | "credit_card"
   const [selectedPillarFilter, setSelectedPillarFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -43,17 +54,30 @@ export default function AssignMovementModal({
   const [selectedCardId, setSelectedCardId] = useState(creditCards[0]?.id || "");
   const [selectedDestAccountId, setSelectedDestAccountId] = useState(movement?.destinationAccountId || "");
 
+  // Accordion state for collapsible sub-items per envelope
+  const [expandedEnvelopes, setExpandedEnvelopes] = useState(() => {
+    const initial = {};
+    if (movement?.budgetItemId) {
+      initial[movement.budgetItemId] = true;
+    }
+    return initial;
+  });
+
+  const toggleExpandEnvelope = (envId, e) => {
+    if (e) e.stopPropagation();
+    setExpandedEnvelopes((prev) => ({
+      ...prev,
+      [envId]: !prev[envId],
+    }));
+  };
+
   const movementAmount = Number(movement?.amount) || 0;
 
   // ── Multi-envelope distribution state ──
   const [splitAmounts, setSplitAmounts] = useState({});
-  const [isCardPaymentInSplit, setIsCardPaymentInSplit] = useState(
-    Boolean(
-      movement?.description?.toLowerCase().includes("rappi") ||
-      movement?.description?.toLowerCase().includes("tarjeta") ||
-      movement?.description?.toLowerCase().includes("credito")
-    )
-  );
+  const [splitSubItems, setSplitSubItems] = useState({}); // { [subKey]: { envId, sub, amount } }
+  const [splitInputValues, setSplitInputValues] = useState({}); // For controlled typing with commas
+  const [isCardPaymentInSplit, setIsCardPaymentInSplit] = useState(isCardMovementInitial);
   const [splitCardId, setSplitCardId] = useState(() => {
     const desc = (movement?.description || "").toLowerCase();
     const found = (creditCards || []).find((c) => desc.includes(c.name.toLowerCase()));
@@ -197,11 +221,16 @@ export default function AssignMovementModal({
         .filter(([_, amt]) => Number(amt) > 0)
         .map(([envId, amt]) => {
           const env = (budgetItems || []).find((b) => b.id === envId);
+          const subMatches = Object.values(splitSubItems).filter((s) => s.envId === envId);
+          const subItemName = subMatches.length > 0 ? subMatches.map((s) => s.sub.name).join(", ") : null;
+          const subItemId = subMatches.length === 1 ? (subMatches[0].sub.id || subMatches[0].sub.subKey) : null;
           return {
             budgetItemId: envId,
             budgetItemName: env?.name || "Rubro",
             budgetItemType: env?.pillarType || "wants",
             amount: Number(amt),
+            subItemId,
+            subItemName,
           };
         });
 
@@ -432,7 +461,7 @@ export default function AssignMovementModal({
         {activeTab === "multi_envelope" && (
           <div>
             <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginBottom: 12, lineHeight: 1.4 }}>
-              Distribuye los <strong>{formatMoney(movementAmount, currency)}</strong> entre varios rubros del presupuesto (ahorros, ocio, compras, salidas, etc.).
+              Distribuye los <strong>{formatMoney(movementAmount, currency)}</strong> entre varios rubros del presupuesto (ahorros, ocio, compras, salidas, etc.). Puedes seleccionar conceptos específicos o llenar el cupo disponible de cada rubro hasta completar el pago.
             </p>
 
             {/* Credit Card Link Option */}
@@ -524,113 +553,384 @@ export default function AssignMovementModal({
                 </span>
               </div>
 
-              <button
-                type="button"
-                onClick={handleAutoDistribute}
-                style={{
-                  background: "rgba(14, 165, 233, 0.15)",
-                  border: "1px solid #0ea5e9",
-                  borderRadius: 8,
-                  color: "#0ea5e9",
-                  padding: "5px 10px",
-                  fontSize: "0.76rem",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                🪄 Sugerir Distribución
-              </button>
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                {totalSplitAssigned > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSplitAmounts({});
+                      setSplitSubItems({});
+                      setSplitInputValues({});
+                    }}
+                    style={{
+                      background: "transparent",
+                      border: "1px solid var(--border)",
+                      borderRadius: 8,
+                      color: "var(--text-muted)",
+                      padding: "5px 9px",
+                      fontSize: "0.74rem",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Limpiar
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleAutoDistribute}
+                  style={{
+                    background: "rgba(14, 165, 233, 0.15)",
+                    border: "1px solid #0ea5e9",
+                    borderRadius: 8,
+                    color: "#0ea5e9",
+                    padding: "5px 10px",
+                    fontSize: "0.76rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  🪄 Sugerir Distribución
+                </button>
+              </div>
             </div>
 
             {/* Envelopes list for multi-allocation */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: "300px", overflowY: "auto", paddingRight: 4 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: "340px", overflowY: "auto", paddingRight: 4 }}>
               {(budgetItems || []).map((env) => {
-                const currentVal = splitAmounts[env.id] || "";
+                const currentVal = Number(splitAmounts[env.id]) || 0;
                 const pillarColor =
                   env.pillarType === "wealth" ? "#38bdf8" : env.pillarType === "wants" ? "#c084fc" : "#10b981";
+                const budgetedAmt = Number(env.amount || env.monthlyContribution) || 0;
+
+                // Prior cycle expenses in this envelope
+                const envExpenses = (expensesLog || []).filter((tx) => {
+                  if (tx.type === "credit" || tx.budgetItemType === "income") return false;
+                  if (tx.budgetItemId && tx.budgetItemId === env.id) return true;
+                  const bName = (tx.budgetItemName || "").toLowerCase();
+                  return bName && bName === env.name.toLowerCase();
+                });
+                const alreadySpent = envExpenses.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+                const availableCupo = Math.max(0, budgetedAmt - alreadySpent);
+                const newTotal = alreadySpent + currentVal;
+                const isExhausted = currentVal > 0 && newTotal >= budgetedAmt && budgetedAmt > 0;
+                const remainingCupo = Math.max(0, budgetedAmt - newTotal);
+                const subItemsList = Array.isArray(env.subItems) ? env.subItems : [];
+                const isExpanded = Boolean(expandedEnvelopes[env.id]);
+
+                // Can we fill remaining cupo?
+                const canFillCupo = availableCupo > 0 && splitRemaining > 0 && currentVal < availableCupo;
+                const toFill = canFillCupo ? Math.min(availableCupo - currentVal, splitRemaining) : 0;
 
                 return (
                   <div
                     key={env.id}
                     style={{
                       display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "8px 12px",
-                      borderRadius: 10,
-                      background: Number(currentVal) > 0 ? (isLight ? "rgba(2, 132, 199, 0.05)" : "rgba(2, 132, 199, 0.12)") : (isLight ? "#ffffff" : "var(--bg-surface)"),
-                      border: Number(currentVal) > 0 ? "1px solid #0ea5e9" : (isLight ? "1px solid rgba(0,0,0,0.06)" : "1px solid var(--border)"),
-                      gap: 10,
+                      flexDirection: "column",
+                      padding: "10px 14px",
+                      borderRadius: 12,
+                      background: currentVal > 0
+                        ? (isLight ? "rgba(2, 132, 199, 0.05)" : "rgba(2, 132, 199, 0.12)")
+                        : (isLight ? "#ffffff" : "var(--bg-surface)"),
+                      border: currentVal > 0 ? "1.5px solid #0ea5e9" : (isLight ? "1px solid rgba(0,0,0,0.06)" : "1px solid var(--border)"),
+                      gap: 8,
                     }}
                   >
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ fontSize: "0.95rem" }}>{env.icon || "📦"}</span>
-                        <strong style={{ fontSize: "0.84rem", color: "var(--text-primary)" }}>{env.name}</strong>
-                        <span style={{ fontSize: "0.66rem", color: pillarColor, background: `${pillarColor}15`, padding: "1px 5px", borderRadius: 4, fontWeight: 700 }}>
-                          {env.pillarType === "wealth" ? "Ahorro" : env.pillarType === "wants" ? "Gusto" : "Fijo"}
-                        </span>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: "1rem" }}>{env.icon || "📦"}</span>
+                          <strong style={{ fontSize: "0.85rem", color: "var(--text-primary)" }}>{env.name}</strong>
+                          <span style={{ fontSize: "0.66rem", color: pillarColor, background: `${pillarColor}15`, padding: "1px 5px", borderRadius: 4, fontWeight: 700 }}>
+                            {env.pillarType === "wealth" ? "Ahorro" : env.pillarType === "wants" ? "Gusto" : "Fijo"}
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 2, flexWrap: "wrap" }}>
+                          <span>Presupuesto: <strong>{formatMoney(budgetedAmt, currency)}</strong></span>
+                          <span>•</span>
+                          <span>Gastado: {formatMoney(alreadySpent, currency)}</span>
+                          <span>•</span>
+                          <span style={{ color: availableCupo > 0 ? "#10b981" : "var(--text-muted)", fontWeight: 600 }}>
+                            Cupo libre: {formatMoney(availableCupo, currency)}
+                          </span>
+                        </div>
                       </div>
-                      <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                        Presupuesto: {formatMoney(env.amount, currency)}
-                      </span>
+
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                        {canFillCupo && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSplitAmounts((prev) => ({
+                                ...prev,
+                                [env.id]: currentVal + toFill,
+                              }));
+                            }}
+                            style={{
+                              background: "rgba(16, 185, 129, 0.15)",
+                              border: "1px solid #10b981",
+                              borderRadius: 6,
+                              padding: "4px 8px",
+                              fontSize: "0.72rem",
+                              color: "#10b981",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                            }}
+                            title={`Llenar el cupo restante de este rubro (+${formatMoney(toFill)})`}
+                          >
+                            ⚡ Llenar cupo (+{formatMoney(toFill)})
+                          </button>
+                        )}
+
+                        {splitRemaining > 0 && !canFillCupo && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSplitAmounts((prev) => ({
+                                ...prev,
+                                [env.id]: currentVal + splitRemaining,
+                              }));
+                            }}
+                            style={{
+                              background: "transparent",
+                              border: "1px dashed var(--border)",
+                              borderRadius: 6,
+                              padding: "4px 7px",
+                              fontSize: "0.7rem",
+                              color: "var(--text-muted)",
+                              cursor: "pointer",
+                            }}
+                            title="Asignar el saldo restante del movimiento a este rubro"
+                          >
+                            + Faltante
+                          </button>
+                        )}
+
+                        <div style={{ position: "relative", width: "125px" }}>
+                          <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                            $
+                          </span>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="0"
+                            value={
+                              splitInputValues[env.id] !== undefined
+                                ? splitInputValues[env.id]
+                                : currentVal > 0
+                                ? formatMoney(currentVal, currency).replace("$", "").trim()
+                                : ""
+                            }
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              setSplitInputValues((prev) => ({ ...prev, [env.id]: raw }));
+                              const parsed = parseLocalNumber(raw);
+                              setSplitAmounts((prev) => ({
+                                ...prev,
+                                [env.id]: parsed,
+                              }));
+                            }}
+                            onBlur={() => {
+                              setSplitInputValues((prev) => {
+                                const copy = { ...prev };
+                                delete copy[env.id];
+                                return copy;
+                              });
+                            }}
+                            style={{
+                              width: "100%",
+                              padding: "5px 8px 5px 20px",
+                              borderRadius: 8,
+                              border: "1px solid var(--border)",
+                              background: isLight ? "#ffffff" : "rgba(0,0,0,0.3)",
+                              color: "var(--text-primary)",
+                              fontSize: "0.82rem",
+                              fontFamily: "JetBrains Mono, monospace",
+                              fontWeight: 700,
+                              textAlign: "right",
+                            }}
+                          />
+                        </div>
+
+                        {currentVal > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSplitAmounts((prev) => {
+                                const copy = { ...prev };
+                                delete copy[env.id];
+                                return copy;
+                              });
+                              setSplitInputValues((prev) => {
+                                const copy = { ...prev };
+                                delete copy[env.id];
+                                return copy;
+                              });
+                              // Also unmark any sub-items of this envelope
+                              setSplitSubItems((prev) => {
+                                const copy = { ...prev };
+                                Object.keys(copy).forEach((k) => {
+                                  if (copy[k].envId === env.id) delete copy[k];
+                                });
+                                return copy;
+                              });
+                            }}
+                            title="Quitar asignación de este rubro"
+                            style={{
+                              background: "transparent",
+                              border: "none",
+                              color: "var(--text-muted)",
+                              cursor: "pointer",
+                              padding: "2px 4px",
+                              fontSize: "0.75rem",
+                            }}
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
                     </div>
 
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                      {splitRemaining > 0 && (!currentVal || Number(currentVal) === 0) && (
+                    {/* Resulting Limit Pill */}
+                    {currentVal > 0 && (
+                      <div
+                        style={{
+                          fontSize: "0.72rem",
+                          fontWeight: 600,
+                          padding: "3px 8px",
+                          borderRadius: 6,
+                          background: isExhausted
+                            ? (isLight ? "rgba(245, 158, 11, 0.12)" : "rgba(245, 158, 11, 0.2)")
+                            : (isLight ? "rgba(16, 185, 129, 0.1)" : "rgba(16, 185, 129, 0.16)"),
+                          color: isExhausted ? "#f59e0b" : "#10b981",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          alignSelf: "flex-start",
+                        }}
+                      >
+                        <span>{isExhausted ? "🔒 Cupo 100% agotado este mes" : "🟢 Cupo restante disponible"}</span>
+                        <span>•</span>
+                        <span>
+                          {isExhausted
+                            ? `Límite alcanzado (${formatMoney(newTotal, currency)} / ${formatMoney(budgetedAmt, currency)})`
+                            : `Te queda un cupo de ${formatMoney(remainingCupo, currency)} para otros gastos`}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Collapsible Sub-Items Accordion */}
+                    {subItemsList.length > 0 && (
+                      <div style={{ marginTop: 2 }}>
                         <button
                           type="button"
-                          onClick={() => {
-                            setSplitAmounts((prev) => ({
-                              ...prev,
-                              [env.id]: (Number(prev[env.id]) || 0) + splitRemaining,
-                            }));
-                          }}
+                          onClick={(e) => toggleExpandEnvelope(env.id, e)}
                           style={{
                             background: "transparent",
-                            border: "1px dashed var(--border)",
-                            borderRadius: 6,
-                            padding: "3px 6px",
-                            fontSize: "0.7rem",
-                            color: "var(--text-muted)",
+                            border: "none",
+                            color: isLight ? "#0284c7" : "#38bdf8",
+                            fontSize: "0.72rem",
+                            fontWeight: 600,
                             cursor: "pointer",
+                            padding: "2px 0",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
                           }}
-                          title="Asignar el saldo restante a este rubro"
                         >
-                          + Restante
+                          <span>{isExpanded ? "▲ Ocultar conceptos" : `▼ Ver conceptos (${subItemsList.length})`}</span>
                         </button>
-                      )}
 
-                      <div style={{ position: "relative", width: "120px" }}>
-                        <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                          $
-                        </span>
-                        <input
-                          type="number"
-                          placeholder="0"
-                          value={currentVal}
-                          onChange={(e) => {
-                            const val = e.target.value === "" ? 0 : Math.max(0, Number(e.target.value));
-                            setSplitAmounts((prev) => ({
-                              ...prev,
-                              [env.id]: val,
-                            }));
-                          }}
-                          style={{
-                            width: "100%",
-                            padding: "5px 8px 5px 20px",
-                            borderRadius: 8,
-                            border: "1px solid var(--border)",
-                            background: isLight ? "#ffffff" : "rgba(0,0,0,0.3)",
-                            color: "var(--text-primary)",
-                            fontSize: "0.82rem",
-                            fontFamily: "JetBrains Mono, monospace",
-                            fontWeight: 700,
-                            textAlign: "right",
-                          }}
-                        />
+                        {isExpanded && (
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 5,
+                              paddingTop: 6,
+                              marginTop: 4,
+                              borderTop: isLight ? "1px dashed rgba(0,0,0,0.08)" : "1px dashed rgba(255,255,255,0.08)",
+                            }}
+                          >
+                            <div style={{ fontSize: "0.66rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                              📌 Conceptos específicos (haz clic para sumar o restar directamente):
+                            </div>
+                            {subItemsList.map((sub, idx) => {
+                              const subKey = sub.id || `${env.id}_sub_${idx}`;
+                              const isSubIncluded = Boolean(splitSubItems[subKey]);
+                              const subAmt = Number(sub.amount) || 0;
+
+                              return (
+                                <div
+                                  key={subKey}
+                                  onClick={() => {
+                                    if (isSubIncluded) {
+                                      setSplitSubItems((prev) => {
+                                        const copy = { ...prev };
+                                        delete copy[subKey];
+                                        return copy;
+                                      });
+                                      setSplitAmounts((prev) => ({
+                                        ...prev,
+                                        [env.id]: Math.max(0, currentVal - subAmt),
+                                      }));
+                                    } else {
+                                      setSplitSubItems((prev) => ({
+                                        ...prev,
+                                        [subKey]: { envId: env.id, sub, amount: subAmt },
+                                      }));
+                                      setSplitAmounts((prev) => ({
+                                        ...prev,
+                                        [env.id]: currentVal + subAmt,
+                                      }));
+                                    }
+                                  }}
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    padding: "5px 10px",
+                                    borderRadius: 7,
+                                    background: isSubIncluded
+                                      ? (isLight ? "rgba(16, 185, 129, 0.14)" : "rgba(16, 185, 129, 0.2)")
+                                      : (isLight ? "#f8fafc" : "rgba(15, 23, 42, 0.45)"),
+                                    border: isSubIncluded ? "1px solid #10b981" : "1px solid var(--border)",
+                                    cursor: "pointer",
+                                    fontSize: "0.75rem",
+                                  }}
+                                >
+                                  <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                                    <span style={{ color: isSubIncluded ? "#10b981" : "var(--text-muted)", fontWeight: 800 }}>
+                                      {isSubIncluded ? "✓" : "+"}
+                                    </span>
+                                    <span style={{ fontWeight: 600, color: isSubIncluded ? "#10b981" : "var(--text-primary)" }}>
+                                      {sub.name}
+                                    </span>
+                                  </div>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                    <span style={{ fontFamily: "JetBrains Mono, monospace", fontWeight: 700 }}>
+                                      {formatMoney(subAmt, currency)}
+                                    </span>
+                                    <span
+                                      style={{
+                                        fontSize: "0.65rem",
+                                        fontWeight: 700,
+                                        padding: "1px 5px",
+                                        borderRadius: 4,
+                                        background: isSubIncluded ? "#10b981" : (isLight ? "#e2e8f0" : "rgba(255,255,255,0.08)"),
+                                        color: isSubIncluded ? "#04101e" : "var(--text-muted)",
+                                      }}
+                                    >
+                                      {isSubIncluded ? "✓ Incluido" : "Sumar"}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
-                    </div>
+                    )}
                   </div>
                 );
               })}
@@ -641,6 +941,41 @@ export default function AssignMovementModal({
         {/* Tab 1: Budget Envelope Selection */}
         {activeTab === "budget_envelope" && (
           <div>
+            {isCardMovementInitial && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                  background: isLight ? "rgba(2, 132, 199, 0.08)" : "rgba(56, 189, 248, 0.12)",
+                  border: "1px solid rgba(56, 189, 248, 0.3)",
+                  marginBottom: 12,
+                  fontSize: "0.76rem",
+                  color: "var(--text-primary)",
+                }}
+              >
+                <span>💡 ¿Este pago de tarjeta cubrió varios gastos (ej. Gemini + Ocio + Viajes)?</span>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("multi_envelope")}
+                  style={{
+                    background: "#0ea5e9",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: 6,
+                    padding: "4px 8px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontSize: "0.72rem",
+                  }}
+                >
+                  📊 Distribuir Varios
+                </button>
+              </div>
+            )}
+
             <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginBottom: 12, lineHeight: 1.4 }}>
               Asigna este movimiento a un rubro del presupuesto. El valor consumirá el cupo disponible del rubro correspondiente en este mes.
             </p>
@@ -725,6 +1060,7 @@ export default function AssignMovementModal({
 
                   const spentAmt = itemExpenses.reduce((acc, tx) => acc + (Number(tx.amount) || 0), 0);
                   const subItemsList = Array.isArray(item.subItems) ? item.subItems : [];
+                  const isExpanded = Boolean(expandedEnvelopes[item.id]);
 
                   return (
                     <div
@@ -773,140 +1109,164 @@ export default function AssignMovementModal({
                         </div>
                       </div>
 
-                      {/* Sub-Items (Desglose de conceptos como Plan movil, GYM, etc.) */}
+                      {/* Collapsible Sub-Items Accordion */}
                       {subItemsList.length > 0 && (
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 5,
-                            paddingTop: 6,
-                            borderTop: isLight ? "1px dashed rgba(0,0,0,0.08)" : "1px dashed rgba(255,255,255,0.08)",
-                          }}
-                        >
-                          <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.03em" }}>
-                            📌 Conceptos del rubro (Tachar o imputar movimiento aquí):
-                          </div>
-                          {subItemsList.map((sub, idx) => {
-                            const subKey = sub.id || `${item.id}_sub_${idx}`;
-                            const matchedSubTx = itemExpenses.find(
-                              (tx) =>
-                                (sub.id && tx.subItemId === sub.id) ||
-                                tx.subItemId === subKey ||
-                                (sub.name && tx.subItemName?.toLowerCase() === sub.name.toLowerCase()) ||
-                                (sub.name && tx.description?.toLowerCase().includes(sub.name.toLowerCase()))
-                            );
-                            const isSubChecked = Boolean(matchedSubTx);
-                            const isSubSelectedForAssign =
-                              isSelected &&
-                              selectedSubItem &&
-                              ((selectedSubItem.id && selectedSubItem.id === sub.id) ||
-                                selectedSubItem.name === sub.name);
-                            const matchesAmount = Number(sub.amount) === movementAmount;
+                        <div style={{ marginTop: 2 }}>
+                          <button
+                            type="button"
+                            onClick={(e) => toggleExpandEnvelope(item.id, e)}
+                            style={{
+                              background: "transparent",
+                              border: "none",
+                              color: isLight ? "#0284c7" : "#38bdf8",
+                              fontSize: "0.72rem",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              padding: "2px 0",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            <span>{isExpanded ? "▲ Ocultar conceptos" : `▼ Ver conceptos (${subItemsList.length})`}</span>
+                          </button>
 
-                            return (
-                              <div
-                                key={subKey}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedEnvelopeId(item.id);
-                                  setSelectedSubItem(isSubSelectedForAssign ? null : { ...sub, subKey });
-                                }}
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                  gap: 8,
-                                  padding: "6px 10px",
-                                  borderRadius: "8px",
-                                  background: isSubSelectedForAssign
-                                    ? (isLight ? "rgba(16, 185, 129, 0.14)" : "rgba(16, 185, 129, 0.2)")
-                                    : isSubChecked
-                                    ? (isLight ? "rgba(16, 185, 129, 0.06)" : "rgba(16, 185, 129, 0.08)")
-                                    : (isLight ? "#f8fafc" : "rgba(15, 23, 42, 0.55)"),
-                                  border: isSubSelectedForAssign
-                                    ? "1.5px solid #10b981"
-                                    : matchesAmount
-                                    ? "1px dashed #38bdf8"
-                                    : (isLight ? "1px solid rgba(0,0,0,0.06)" : "1px solid rgba(255,255,255,0.06)"),
-                                }}
-                              >
-                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                  {/* Direct Checkbox to Tachar / Desmarcar from here */}
-                                  <button
-                                    type="button"
-                                    onClick={(e) => handleToggleSubItemCheck(e, item, sub, subKey, matchedSubTx)}
-                                    title={isSubChecked ? "Desmarcar este concepto" : "Tachar / Marcar como pagado manualmente"}
+                          {isExpanded && (
+                            <div
+                              style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 5,
+                                paddingTop: 6,
+                                marginTop: 4,
+                                borderTop: isLight ? "1px dashed rgba(0,0,0,0.08)" : "1px dashed rgba(255,255,255,0.08)",
+                              }}
+                            >
+                              <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                                📌 Conceptos del rubro (Tachar o imputar movimiento aquí):
+                              </div>
+                              {subItemsList.map((sub, idx) => {
+                                const subKey = sub.id || `${item.id}_sub_${idx}`;
+                                const matchedSubTx = itemExpenses.find(
+                                  (tx) =>
+                                    (sub.id && tx.subItemId === sub.id) ||
+                                    tx.subItemId === subKey ||
+                                    (sub.name && tx.subItemName?.toLowerCase() === sub.name.toLowerCase()) ||
+                                    (sub.name && tx.description?.toLowerCase().includes(sub.name.toLowerCase()))
+                                );
+                                const isSubChecked = Boolean(matchedSubTx);
+                                const isSubSelectedForAssign =
+                                  isSelected &&
+                                  selectedSubItem &&
+                                  ((selectedSubItem.id && selectedSubItem.id === sub.id) ||
+                                    selectedSubItem.name === sub.name);
+                                const matchesAmount = Number(sub.amount) === movementAmount;
+
+                                return (
+                                  <div
+                                    key={subKey}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedEnvelopeId(item.id);
+                                      setSelectedSubItem(isSubSelectedForAssign ? null : { ...sub, subKey });
+                                    }}
                                     style={{
-                                      width: 20,
-                                      height: 20,
-                                      borderRadius: 5,
-                                      border: isSubChecked ? "1.5px solid #10b981" : "1.5px solid #64748b",
-                                      background: isSubChecked ? "#10b981" : "transparent",
-                                      color: isSubChecked ? "#04101e" : "transparent",
-                                      display: "inline-flex",
+                                      display: "flex",
                                       alignItems: "center",
-                                      justifyContent: "center",
-                                      fontSize: "0.72rem",
-                                      fontWeight: 900,
-                                      cursor: "pointer",
-                                      padding: 0,
-                                      flexShrink: 0,
+                                      justifyContent: "space-between",
+                                      gap: 8,
+                                      padding: "6px 10px",
+                                      borderRadius: "8px",
+                                      background: isSubSelectedForAssign
+                                        ? (isLight ? "rgba(16, 185, 129, 0.14)" : "rgba(16, 185, 129, 0.2)")
+                                        : isSubChecked
+                                        ? (isLight ? "rgba(16, 185, 129, 0.06)" : "rgba(16, 185, 129, 0.08)")
+                                        : (isLight ? "#f8fafc" : "rgba(15, 23, 42, 0.55)"),
+                                      border: isSubSelectedForAssign
+                                        ? "1.5px solid #10b981"
+                                        : matchesAmount
+                                        ? "1px dashed #38bdf8"
+                                        : (isLight ? "1px solid rgba(0,0,0,0.06)" : "1px solid rgba(255,255,255,0.06)"),
                                     }}
                                   >
-                                    ✓
-                                  </button>
-                                  <div>
-                                    <span
-                                      style={{
-                                        fontSize: "0.78rem",
-                                        fontWeight: 600,
-                                        color: isSubChecked ? "#10b981" : "var(--text-primary)",
-                                        textDecoration: isSubChecked ? "line-through" : "none",
-                                      }}
-                                    >
-                                      {sub.name}
-                                    </span>
-                                    {matchesAmount && (
-                                      <span
+                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                      {/* Direct Checkbox to Tachar / Desmarcar from here */}
+                                      <button
+                                        type="button"
+                                        onClick={(e) => handleToggleSubItemCheck(e, item, sub, subKey, matchedSubTx)}
+                                        title={isSubChecked ? "Desmarcar este concepto" : "Tachar / Marcar como pagado manualmente"}
                                         style={{
-                                          marginLeft: 6,
-                                          fontSize: "0.64rem",
-                                          padding: "1px 5px",
-                                          borderRadius: 4,
-                                          background: "rgba(56, 189, 248, 0.16)",
-                                          color: "#38bdf8",
-                                          fontWeight: 700,
+                                          width: 20,
+                                          height: 20,
+                                          borderRadius: 5,
+                                          border: isSubChecked ? "1.5px solid #10b981" : "1.5px solid #64748b",
+                                          background: isSubChecked ? "#10b981" : "transparent",
+                                          color: isSubChecked ? "#04101e" : "transparent",
+                                          display: "inline-flex",
+                                          alignItems: "center",
+                                          justifyContent: "center",
+                                          fontSize: "0.72rem",
+                                          fontWeight: 900,
+                                          cursor: "pointer",
+                                          padding: 0,
+                                          flexShrink: 0,
                                         }}
                                       >
-                                        🎯 Mismo valor
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
+                                        ✓
+                                      </button>
+                                      <div>
+                                        <span
+                                          style={{
+                                            fontSize: "0.78rem",
+                                            fontWeight: 600,
+                                            color: isSubChecked ? "#10b981" : "var(--text-primary)",
+                                            textDecoration: isSubChecked ? "line-through" : "none",
+                                          }}
+                                        >
+                                          {sub.name}
+                                        </span>
+                                        {matchesAmount && (
+                                          <span
+                                            style={{
+                                              marginLeft: 6,
+                                              fontSize: "0.64rem",
+                                              padding: "1px 5px",
+                                              borderRadius: 4,
+                                              background: "rgba(56, 189, 248, 0.16)",
+                                              color: "#38bdf8",
+                                              fontWeight: 700,
+                                            }}
+                                          >
+                                            🎯 Mismo valor
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
 
-                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                  <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.76rem", fontWeight: 700, color: "var(--text-primary)" }}>
-                                    {formatMoney(sub.amount, currency)}
-                                  </span>
-                                  <span
-                                    style={{
-                                      fontSize: "0.66rem",
-                                      fontWeight: 700,
-                                      padding: "2px 6px",
-                                      borderRadius: 5,
-                                      background: isSubSelectedForAssign
-                                        ? "#10b981"
-                                        : (isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.08)"),
-                                      color: isSubSelectedForAssign ? "#04101e" : "var(--text-muted)",
-                                    }}
-                                  >
-                                    {isSubSelectedForAssign ? "✓ Imputar aquí" : "Elegir"}
-                                  </span>
-                                </div>
-                              </div>
-                            );
-                          })}
+                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                      <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.76rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                                        {formatMoney(sub.amount, currency)}
+                                      </span>
+                                      <span
+                                        style={{
+                                          fontSize: "0.66rem",
+                                          fontWeight: 700,
+                                          padding: "2px 6px",
+                                          borderRadius: 5,
+                                          background: isSubSelectedForAssign
+                                            ? "#10b981"
+                                            : (isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.08)"),
+                                          color: isSubSelectedForAssign ? "#04101e" : "var(--text-muted)",
+                                        }}
+                                      >
+                                        {isSubSelectedForAssign ? "✓ Imputar aquí" : "Elegir"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       )}
 
