@@ -35,8 +35,8 @@ export default function ExpensesLogSection({
   const [filterSource, setFilterSource] = useState("all");
   const [settlingTransaction, setSettlingTransaction] = useState(null);
   const [assignModalItem, setAssignModalItem] = useState(null);
-  const [collapsedDeductions, setCollapsedDeductions] = useState({});
-  const toggleDeductions = (id) => setCollapsedDeductions((prev) => ({ ...prev, [id]: !prev[id] }));
+  const [expandedDeductions, setExpandedDeductions] = useState({});
+  const toggleDeductions = (id) => setExpandedDeductions((prev) => ({ ...prev, [id]: !prev[id] }));
 
   const handleDeleteTransaction = async (item) => {
     const title = item.description || "este movimiento";
@@ -406,7 +406,7 @@ export default function ExpensesLogSection({
               const hasWealthEmergency = hasDeductions && item.budgetDeductions.some(
                 (d) => d.budgetItemType === "wealth" || d.isEmergencySavingsDeduction || d.budgetItemName?.toLowerCase().includes("ahorro") || d.budgetItemName?.toLowerCase().includes("renta") || d.budgetItemName?.toLowerCase().includes("invers")
               );
-              const isCollapsed = Boolean(collapsedDeductions[item.id]);
+              const isExpanded = Boolean(expandedDeductions[item.id]);
 
               return (
                 <div
@@ -553,7 +553,7 @@ export default function ExpensesLogSection({
                     </div>
                   </div>
 
-                  {/* Integrated Distribution Sub-list ("parte de lista") */}
+                  {/* Integrated Distribution Sub-list ("parte de lista") - Collapsed by default */}
                   {hasDeductions && (
                     <div style={{ marginTop: 10, width: "100%" }}>
                       <div
@@ -566,13 +566,17 @@ export default function ExpensesLogSection({
                           fontWeight: 700,
                           color: isLight ? "#0284c7" : "#38bdf8",
                           cursor: "pointer",
-                          padding: "2px 0",
+                          padding: "4px 8px",
+                          borderRadius: "6px",
+                          background: isLight ? "rgba(2, 132, 199, 0.08)" : "rgba(56, 189, 248, 0.12)",
+                          border: isLight ? "1px solid rgba(2, 132, 199, 0.2)" : "1px solid rgba(56, 189, 248, 0.25)",
                           userSelect: "none",
+                          transition: "all 0.15s ease",
                         }}
                       >
-                        <span>{isCollapsed ? "▶" : "▼"}</span>
+                        <span>{isExpanded ? "▼" : "▶"}</span>
                         <span>
-                          Distribución imputada en {item.budgetDeductions.length} rubros
+                          {isExpanded ? "Ocultar distribución" : "Ver distribución"} ({item.budgetDeductions.length} rubros)
                           {hasWealthEmergency && (
                             <span style={{ color: "#f59e0b", marginLeft: 6, fontWeight: 700 }}>
                               (⚠️ Ahorro usado para cubrir tarjeta por emergencia)
@@ -581,7 +585,7 @@ export default function ExpensesLogSection({
                         </span>
                       </div>
 
-                      {!isCollapsed && (
+                      {isExpanded && (
                         <div
                           style={{
                             display: "flex",
