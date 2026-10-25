@@ -266,22 +266,6 @@
   ],
   "expensesLog": [
     {
-      "id": "exp_provision_mike_202610",
-      "period": "2026-10",
-      "date": "2026-10-24",
-      "amount": 210000,
-      "currency": "COP",
-      "type": "debit",
-      "budgetItemType": "needs",
-      "budgetItemName": "Deudas / Compromisos (Mike)",
-      "description": "💰 Provisión Cuota Mike (Transferencia a Cajita Deudas)",
-      "paymentSource": {
-        "type": "payroll",
-        "targetName": "Nómina Nu Débito"
-      },
-      "createdAt": "2026-10-24T20:45:00.000Z"
-    },
-    {
       "id": "cf_tx_mb_1792827342417_1d3bf5",
       "period": "2026-11",
       "date": "2026-10-24",

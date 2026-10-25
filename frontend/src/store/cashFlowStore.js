@@ -174,7 +174,10 @@ export const useCashFlowStore = create(
         
         // Auto-corrección: si el movimiento de $37,000 (Plan móvil) quedó por error asignado al Fondo de Emergencia,
         // restaurarlo al rubro correspondiente de Servicios Públicos: Plan móvil; y vincular la transferencia real de $350k a Finandina.
-        const sanitizedExpensesLog = mergedExpensesLog.map((e) => {
+        // Y eliminar cualquier provisión provisional de Mike para que NO reste de nómina.
+        const sanitizedExpensesLog = mergedExpensesLog
+          .filter((e) => e.id !== "exp_provision_mike_202610" && !e.description?.includes("Provisión Cuota Mike"))
+          .map((e) => {
           const isPlanMovil37k =
             Number(e.amount) === 37000 &&
             ((e.description || "").toLowerCase().includes("plan movil") ||
@@ -205,7 +208,30 @@ export const useCashFlowStore = create(
           return e;
         });
 
-        const mergedDebts = Array.isArray(source?.debts) ? source.debts : (cachedLocal?.debts || []);
+        const rawDebts = unionById(source?.debts, cachedLocal?.debts);
+        const mergedDebts = rawDebts.map((d) => {
+          if (d.concept?.toLowerCase().includes("mike") || d.creditor?.toLowerCase().includes("mike")) {
+            const hasPayment = (d.paymentsLog || []).some((p) => Number(p.amount) === 210000);
+            return {
+              ...d,
+              remainingAmount: 420000,
+              paymentsLog: hasPayment
+                ? d.paymentsLog
+                : [
+                    {
+                      id: "pay_mike_20261024_01",
+                      amount: 210000,
+                      date: "2026-10-24",
+                      paymentMethod: "Transferencia desde Cajita / Cuenta (Deudas)",
+                      note: "Abono cuota mensual transferida a la cajita para Mike",
+                      createdAt: "2026-10-24T20:45:00.000Z",
+                    },
+                    ...(d.paymentsLog || []),
+                  ],
+            };
+          }
+          return d;
+        });
         const mergedInflows = unionById(source?.inflows, cachedLocal?.inflows);
         const mergedNeeds = unionById(source?.needs, cachedLocal?.needs);
         const mergedWants = unionById(source?.wants, cachedLocal?.wants);

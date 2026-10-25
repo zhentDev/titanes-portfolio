@@ -207,8 +207,19 @@ export default function ExpensesLogSection({
     return combinedActivities;
   }, [combinedActivities, filterSource]);
 
+  // Only outflows actually executed from Payroll (Debit) account affect Saldo en Nómina.
+  // Outflows from Cajitas (fixed_pocket), Credit Cards, or external savings do not touch Nómina.
+  const isPayrollOutflow = (item) => {
+    const srcType = item.paymentSource?.type || item.sourceType;
+    return !srcType || srcType === "payroll" || srcType === "debit";
+  };
+
   const totalSpentInPeriod = standaloneExpenses
     .filter((tx) => tx.itemType === "expense")
+    .reduce((acc, tx) => acc + (Number(tx.amount) || 0), 0);
+
+  const totalSpentFromPayroll = standaloneExpenses
+    .filter((tx) => tx.itemType === "expense" && isPayrollOutflow(tx))
     .reduce((acc, tx) => acc + (Number(tx.amount) || 0), 0);
 
   const totalIncomeInPeriod = standaloneExpenses
@@ -219,7 +230,18 @@ export default function ExpensesLogSection({
     .filter((tx) => tx.itemType === "wealth_saving")
     .reduce((acc, tx) => acc + (Number(tx.amount) || 0), 0);
 
+  const totalSavedFromPayroll = standaloneExpenses
+    .filter((tx) => tx.itemType === "wealth_saving" && isPayrollOutflow(tx))
+    .reduce((acc, tx) => acc + (Number(tx.amount) || 0), 0);
+
   const totalPaidToCards = periodPayments.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
+
+  const totalPaidToCardsFromPayroll = periodPayments
+    .filter((p) => isPayrollOutflow(p))
+    .reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
+
+  const payrollNetBalance =
+    totalIncomeInPeriod - totalSpentFromPayroll - totalSavedFromPayroll - totalPaidToCardsFromPayroll;
 
   return (
     <div className="cashflow-expenses-section">
@@ -250,10 +272,10 @@ export default function ExpensesLogSection({
               <span style={{ fontSize: "0.72rem", color: "#10b981", display: "flex", alignItems: "center", gap: 4, fontWeight: 700 }}>
                 <span>🏦</span> Saldo en Nómina
               </span>
-              <strong style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.15rem", color: (totalIncomeInPeriod - totalSpentInPeriod - totalSavedInPeriod - totalPaidToCards) >= 0 ? "#10b981" : "#f43f5e" }}>
-                {(totalIncomeInPeriod - totalSpentInPeriod - totalSavedInPeriod - totalPaidToCards) >= 0
-                  ? `+${formatMoney(totalIncomeInPeriod - totalSpentInPeriod - totalSavedInPeriod - totalPaidToCards, currency)}`
-                  : `-${formatMoney(Math.abs(totalIncomeInPeriod - totalSpentInPeriod - totalSavedInPeriod - totalPaidToCards), currency)}`}
+              <strong style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.15rem", color: payrollNetBalance >= 0 ? "#10b981" : "#f43f5e" }}>
+                {payrollNetBalance >= 0
+                  ? `+${formatMoney(payrollNetBalance, currency)}`
+                  : `-${formatMoney(Math.abs(payrollNetBalance), currency)}`}
               </strong>
             </div>
 
