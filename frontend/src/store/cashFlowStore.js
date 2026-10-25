@@ -313,6 +313,39 @@ export const useCashFlowStore = create(
           ];
         }
 
+        const has150kViaje = sanitizedExpensesLog.some(
+          (e) =>
+            (e.id?.includes("viaje") ||
+              (e.description || "").toLowerCase().includes("viaje") ||
+              e.budgetItemId === "wealth_travel_goal") &&
+            (e.period === "2026-11" || !e.period)
+        );
+        if (!has150kViaje) {
+          sanitizedExpensesLog = [
+            {
+              id: "cf_tx_cajita_viaje_150k_202611",
+              period: "2026-11",
+              date: "2026-10-24",
+              amount: 150000,
+              currency: "COP",
+              type: "debit",
+              budgetItemId: "wealth_travel_goal",
+              budgetItemName: "Meta Viaje / Estudio",
+              budgetItemType: "wealth",
+              description: "Aporte a Cajita Viaje Nu (Meta Viaje / Estudio)",
+              destinationAccountId: "acc_viaje",
+              destinationAccountName: "Cajita Viaje (9.35% E.A.)",
+              paymentSource: {
+                type: "payroll",
+                targetId: "acc_nu_debito",
+                targetName: "Cuenta Nu Débito (Nómina)",
+              },
+              createdAt: "2026-10-24T21:00:00.000Z",
+            },
+            ...sanitizedExpensesLog,
+          ];
+        }
+
         const has150kEmergency = sanitizedExpensesLog.some(
           (e) =>
             Number(e.amount) === 150000 &&
@@ -1314,6 +1347,22 @@ export const useCashFlowStore = create(
               createdAt: new Date().toISOString(),
             };
             updatedInflows = [reimbursementInflow, ...updatedInflows];
+          } else if (settlementData.targetType === "cash") {
+            // Cash inflow to wallet
+            const cashInflow = {
+              id: `in_cash_${Date.now()}`,
+              name: `Cobro Préstamo (Efectivo Físico): ${settlementData.recipient || "Tercero"}`,
+              category: "reimbursement",
+              amount: Number(settlementData.amount),
+              currency: settlementData.currency || state.currency,
+              isPassive: false,
+              frequency: "one_time",
+              period: state.activePeriod,
+              paymentSource: { type: "cash", targetName: "Efectivo / Billetera" },
+              icon: "💵",
+              createdAt: new Date().toISOString(),
+            };
+            updatedInflows = [cashInflow, ...updatedInflows];
           }
 
           return {

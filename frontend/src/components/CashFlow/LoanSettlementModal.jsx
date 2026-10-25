@@ -3,6 +3,7 @@ import CurrencyInput from "../Common/CurrencyInput";
 import DynamicDatePicker from "../Common/DynamicDatePicker";
 import GlassModalWrapper from "../Common/GlassModalWrapper";
 import { formatCashFlowMoney } from "../../utils/cashFlowFormatters";
+import { useTheme } from "../../context/ThemeContext";
 import "./CashFlow.css";
 
 export default function LoanSettlementModal({
@@ -18,6 +19,8 @@ export default function LoanSettlementModal({
 }) {
   if (!transaction) return null;
 
+  const { theme } = useTheme();
+  const isLight = theme === "light";
   const formatMoney = (val) => formatCashFlowMoney(val, currency, fxRate);
 
   const baseLoanAmount = Number(transaction.loanAmount) > 0 ? Number(transaction.loanAmount) : Number(transaction.amount) || 0;
@@ -68,6 +71,9 @@ export default function LoanSettlementModal({
       targetName = pocket ? pocket.name : "Cuenta de Ahorro";
     } else if (targetType === "investment_cash") {
       targetName = "Portafolio de Inversión / Broker";
+    } else if (targetType === "cash") {
+      targetName = "Efectivo / Billetera (Cash físico)";
+      targetId = "cash_wallet";
     }
 
     onConfirmSettlement(transaction.id, {
@@ -247,17 +253,46 @@ export default function LoanSettlementModal({
                   padding: "12px 14px",
                   borderRadius: "10px",
                   cursor: "pointer",
-                  background: targetType === "investment_cash" ? "rgba(234, 179, 8, 0.22)" : "rgba(255, 255, 255, 0.03)",
-                  border: targetType === "investment_cash" ? "1.5px solid #eab308" : "1px solid rgba(255, 255, 255, 0.08)",
+                  background: targetType === "investment_cash" ? "rgba(234, 179, 8, 0.22)" : (isLight ? "rgba(0, 0, 0, 0.03)" : "rgba(255, 255, 255, 0.03)"),
+                  border: targetType === "investment_cash" ? "1.5px solid #eab308" : (isLight ? "1px solid rgba(0, 0, 0, 0.1)" : "1px solid rgba(255, 255, 255, 0.08)"),
                   transition: "all 0.15s ease",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: "0.82rem", color: targetType === "investment_cash" ? "#fde047" : "#e2e8f0" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: "0.82rem", color: targetType === "investment_cash" ? "#fde047" : "var(--text-primary)" }}>
                   <span>📈</span> Inversiones / Bolsa
                 </div>
-                <div style={{ fontSize: "0.72rem", color: "#94a3b8", marginTop: 4 }}>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>
                   Portafolio Titanes / Broker
                 </div>
+              </div>
+
+              {/* Option 5: Efectivo Físico / Billetera */}
+              <div
+                onClick={() => setTargetType("cash")}
+                style={{
+                  padding: "12px 14px",
+                  borderRadius: "10px",
+                  cursor: "pointer",
+                  gridColumn: "span 2",
+                  background: targetType === "cash" ? "rgba(16, 185, 129, 0.22)" : (isLight ? "rgba(0, 0, 0, 0.03)" : "rgba(255, 255, 255, 0.03)"),
+                  border: targetType === "cash" ? "1.5px solid #10b981" : (isLight ? "1px solid rgba(0, 0, 0, 0.1)" : "1px solid rgba(255, 255, 255, 0.08)"),
+                  transition: "all 0.15s ease",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: "0.84rem", color: targetType === "cash" ? "#10b981" : "var(--text-primary)" }}>
+                    <span>💵</span> Efectivo Físico / Billetera
+                  </div>
+                  <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>
+                    Dinero en mano recibido en efectivo • Queda en tu bolsillo (no entra a bancos)
+                  </div>
+                </div>
+                <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 8px", borderRadius: "6px", background: targetType === "cash" ? "#10b981" : (isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.08)"), color: targetType === "cash" ? "#ffffff" : "var(--text-muted)" }}>
+                  {targetType === "cash" ? "✓ Seleccionado" : "Elegir"}
+                </span>
               </div>
             </div>
           </div>
