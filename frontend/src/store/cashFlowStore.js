@@ -234,32 +234,84 @@ export const useCashFlowStore = create(
           return e;
         });
 
-        const hasMikeTransfer = mappedExpenses.some(
-          (e) => (e.id === "exp_transfer_mike_cajita_202611" || (e.description || "").toLowerCase().includes("mike")) && (e.period === "2026-11" || !e.period)
+        // Preservar la distribución exacta de la deuda de Mike:
+        // $150.000 en Gastos Fijos (needs -> need_debts_mike) + $60.000 en Renta Variable (wealth -> wealth_tech_etf) = $210.000 total
+        const has60kMikeWealth = mappedExpenses.some(
+          (e) =>
+            Number(e.amount) === 60000 &&
+            (e.description || "").toLowerCase().includes("mike") &&
+            (e.budgetItemId === "wealth_tech_etf" || (e.budgetItemName || "").toLowerCase().includes("renta variable")) &&
+            (e.period === "2026-11" || !e.period)
         );
-        let sanitizedExpensesLog = hasMikeTransfer
-          ? mappedExpenses
-          : [
-              {
-                id: "exp_transfer_mike_cajita_202611",
-                period: "2026-11",
-                date: "2026-10-24",
-                amount: 210000,
-                currency: "COP",
-                type: "debit",
-                budgetItemType: "needs",
-                budgetItemId: "need_debts_mike",
-                budgetItemName: "Deudas / Compromisos (Mike)",
-                description: "💰 Transferencia a Cajita (Abono Deuda con Mike)",
-                paymentSource: {
-                  type: "payroll",
-                  targetId: "acc_nu_debito",
-                  targetName: "Cuenta Nu Débito (Nómina)",
-                },
-                createdAt: "2026-10-24T20:45:00.000Z",
+
+        let sanitizedExpensesLog = mappedExpenses.map((e) => {
+          if (
+            (e.id === "exp_transfer_mike_cajita_202611" || (e.description || "").toLowerCase().includes("deuda con mike")) &&
+            Number(e.amount) === 210000 &&
+            e.budgetItemId === "need_debts_mike"
+          ) {
+            return {
+              ...e,
+              amount: 150000,
+              description: "💰 Transferencia a Cajita (Abono Deuda con Mike)",
+            };
+          }
+          return e;
+        });
+
+        if (!has60kMikeWealth) {
+          sanitizedExpensesLog = [
+            {
+              id: "exp_transfer_mike_cajita_202611_split_wealth_60k",
+              period: "2026-11",
+              date: "2026-10-24",
+              amount: 60000,
+              currency: "COP",
+              type: "debit",
+              budgetItemId: "wealth_tech_etf",
+              budgetItemName: "Portafolio Renta Variable (Al día / Tiempo Real)",
+              budgetItemType: "wealth",
+              description: "💰 Transferencia a Cajita (Abono Deuda con Mike) (Portafolio Renta Variable (Al día / Tiempo Real))",
+              paymentSource: {
+                type: "payroll",
+                targetId: "acc_nu_debito",
+                targetName: "Cuenta Nu Débito (Nómina)",
               },
-              ...mappedExpenses,
-            ];
+              createdAt: "2026-10-24T20:45:00.000Z",
+            },
+            ...sanitizedExpensesLog,
+          ];
+        }
+
+        const hasMikeNeeds = sanitizedExpensesLog.some(
+          (e) =>
+            (e.id === "exp_transfer_mike_cajita_202611" || (e.description || "").toLowerCase().includes("mike")) &&
+            e.budgetItemId === "need_debts_mike" &&
+            (e.period === "2026-11" || !e.period)
+        );
+        if (!hasMikeNeeds) {
+          sanitizedExpensesLog = [
+            {
+              id: "exp_transfer_mike_cajita_202611",
+              period: "2026-11",
+              date: "2026-10-24",
+              amount: 150000,
+              currency: "COP",
+              type: "debit",
+              budgetItemType: "needs",
+              budgetItemId: "need_debts_mike",
+              budgetItemName: "Deudas / Compromisos (Mike)",
+              description: "💰 Transferencia a Cajita (Abono Deuda con Mike)",
+              paymentSource: {
+                type: "payroll",
+                targetId: "acc_nu_debito",
+                targetName: "Cuenta Nu Débito (Nómina)",
+              },
+              createdAt: "2026-10-24T20:45:00.000Z",
+            },
+            ...sanitizedExpensesLog,
+          ];
+        }
 
         const has150kEmergency = sanitizedExpensesLog.some(
           (e) =>

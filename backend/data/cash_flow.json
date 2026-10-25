@@ -266,6 +266,24 @@
   ],
   "expensesLog": [
     {
+      "id": "exp_transfer_mike_cajita_202611_split_wealth_60k",
+      "period": "2026-11",
+      "date": "2026-10-24",
+      "amount": 60000,
+      "currency": "COP",
+      "type": "debit",
+      "budgetItemId": "wealth_tech_etf",
+      "budgetItemName": "Portafolio Renta Variable (Al día / Tiempo Real)",
+      "budgetItemType": "wealth",
+      "description": "💰 Transferencia a Cajita (Abono Deuda con Mike) (Portafolio Renta Variable (Al día / Tiempo Real))",
+      "paymentSource": {
+        "type": "payroll",
+        "targetId": "acc_nu_debito",
+        "targetName": "Cuenta Nu Débito (Nómina)"
+      },
+      "createdAt": "2026-10-24T20:45:00.000Z"
+    },
+    {
       "id": "cf_tx_mb_rappi_emergency_150k_202611",
       "period": "2026-11",
       "date": "2026-10-24",
@@ -289,7 +307,7 @@
       "id": "exp_transfer_mike_cajita_202611",
       "period": "2026-11",
       "date": "2026-10-24",
-      "amount": 210000,
+      "amount": 150000,
       "currency": "COP",
       "type": "debit",
       "budgetItemType": "needs",
