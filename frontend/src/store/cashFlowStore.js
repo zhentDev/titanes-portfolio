@@ -710,6 +710,7 @@ export const useCashFlowStore = create(
             },
             creditCardPaymentId: paymentRecord ? paymentRecord.id : null,
             isCreditCardPayoff: Boolean(card),
+            cardId: card ? card.id : null,
             isEmergencySavingsDeduction: d.budgetItemType === "wealth" && Boolean(card),
             itemType: d.budgetItemType === "wealth" ? "wealth_saving" : "expense",
             destinationAccountId: d.destinationAccountId || null,

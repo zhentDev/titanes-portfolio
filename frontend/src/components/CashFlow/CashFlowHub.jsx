@@ -2894,8 +2894,8 @@ export default function CashFlowHub() {
                     (!tx.period || tx.period === activePeriod) &&
                     !tx.isCreditCardPayoff &&
                     !tx.creditCardPaymentId &&
-                    !(tx.id && String(tx.id).includes("_split_")) &&
-                    !(tx.description && String(tx.description).toLowerCase().includes("descontado de"))
+                    !(tx.cardId && tx.id && String(tx.id).includes("_split_")) &&
+                    !(tx.description && String(tx.description).toLowerCase().includes("descontado de") && !String(tx.description).toLowerCase().includes("mike"))
                 ),
                 ...(creditCardPayments || []).filter((p) => !p.period || p.period === activePeriod),
               ].length} movimientos

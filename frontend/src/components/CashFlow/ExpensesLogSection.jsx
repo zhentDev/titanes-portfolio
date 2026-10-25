@@ -96,11 +96,13 @@ export default function ExpensesLogSection({
 
   // Sub-items resulting from credit card multi-rubro split distribution are deductions,
   // NOT standalone movements. The only true primary movement is the credit card payment.
+  // Only hide deductions that belong to a parent credit card payment.
+  // Ordinary split expenses (like bank debit transfers split between envelopes) are standalone and must be shown.
   const isSplitDeductionChild = (tx) => Boolean(
     tx.isCreditCardPayoff ||
     tx.creditCardPaymentId ||
-    (tx.id && String(tx.id).includes("_split_")) ||
-    (tx.description && String(tx.description).toLowerCase().includes("descontado de"))
+    (tx.cardId && tx.id && String(tx.id).includes("_split_")) ||
+    (tx.description && String(tx.description).toLowerCase().includes("descontado de") && !String(tx.description).toLowerCase().includes("mike"))
   );
 
   const standaloneExpenses = useMemo(() => {
@@ -120,8 +122,7 @@ export default function ExpensesLogSection({
           const matchingChildren = (expensesLog || []).filter(
             (e) =>
               (e.creditCardPaymentId === p.id ||
-                (e.id && String(e.id).includes("_split_")) ||
-                (e.description && String(e.description).toLowerCase().includes("descontado de"))) &&
+                (e.isCreditCardPayoff && (e.cardId === p.cardId || !e.cardId))) &&
               (!e.period || e.period === activePeriod)
           );
           if (matchingChildren.length > 0) {

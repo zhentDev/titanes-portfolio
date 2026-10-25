@@ -51,8 +51,8 @@ export default function RealCashLiquidityCard({
       if (
         tx.isCreditCardPayoff ||
         Boolean(tx.creditCardPaymentId) ||
-        (tx.id && String(tx.id).includes("_split_")) ||
-        (tx.description && String(tx.description).toLowerCase().includes("descontado de"))
+        (tx.cardId && tx.id && String(tx.id).includes("_split_")) ||
+        (tx.description && String(tx.description).toLowerCase().includes("descontado de") && !String(tx.description).toLowerCase().includes("mike"))
       ) {
         return false;
       }
