@@ -175,11 +175,14 @@ export const useCashFlowStore = create(
         
         // Auto-corrección: si el movimiento de $37,000 (Plan móvil) quedó por error asignado al Fondo de Emergencia,
         // restaurarlo al rubro correspondiente de Servicios Públicos: Plan móvil; y vincular la transferencia real de $350k a Finandina.
-        // Asegurar que la transferencia a la cajita para la deuda de Mike (-$210,000) esté 100% registrada en Gastos Fijos (needs) y no contamine Renta Variable u otros rubros.
-        const mappedExpenses = mergedExpensesLog
-          // Filtrar cualquier pieza dividida o asignación residual de Mike (como la de $60.000 a Renta Variable)
-          .filter((e) => !(e.id?.includes("mike") || (e.description || "").toLowerCase().includes("deuda con mike") || (e.description || "").toLowerCase().includes("abono deuda con mike")))
-          .map((e) => {
+        const mappedExpenses = mergedExpensesLog.map((e) => {
+          // Si el movimiento de Mike quedó con período previo 2026-10, moverlo al período activo real 2026-11
+          if ((e.id?.includes("mike") || (e.description || "").toLowerCase().includes("mike")) && e.period === "2026-10") {
+            return {
+              ...e,
+              period: "2026-11",
+            };
+          }
           const isPlanMovil37k =
             Number(e.amount) === 37000 &&
             ((e.description || "").toLowerCase().includes("plan movil") ||
@@ -231,26 +234,32 @@ export const useCashFlowStore = create(
           return e;
         });
 
-        const canonicalMikeTransfer = {
-          id: "exp_transfer_mike_cajita_202611",
-          period: "2026-11",
-          date: "2026-10-24",
-          amount: 210000,
-          currency: "COP",
-          type: "debit",
-          budgetItemType: "needs",
-          budgetItemId: "need_debts_mike",
-          budgetItemName: "Deudas / Compromisos (Mike)",
-          description: "💰 Transferencia a Cajita (Abono Deuda con Mike)",
-          paymentSource: {
-            type: "payroll",
-            targetId: "acc_nu_debito",
-            targetName: "Cuenta Nu Débito (Nómina)",
-          },
-          createdAt: "2026-10-24T20:45:00.000Z",
-        };
-
-        let sanitizedExpensesLog = [canonicalMikeTransfer, ...mappedExpenses];
+        const hasMikeTransfer = mappedExpenses.some(
+          (e) => (e.id === "exp_transfer_mike_cajita_202611" || (e.description || "").toLowerCase().includes("mike")) && (e.period === "2026-11" || !e.period)
+        );
+        let sanitizedExpensesLog = hasMikeTransfer
+          ? mappedExpenses
+          : [
+              {
+                id: "exp_transfer_mike_cajita_202611",
+                period: "2026-11",
+                date: "2026-10-24",
+                amount: 210000,
+                currency: "COP",
+                type: "debit",
+                budgetItemType: "needs",
+                budgetItemId: "need_debts_mike",
+                budgetItemName: "Deudas / Compromisos (Mike)",
+                description: "💰 Transferencia a Cajita (Abono Deuda con Mike)",
+                paymentSource: {
+                  type: "payroll",
+                  targetId: "acc_nu_debito",
+                  targetName: "Cuenta Nu Débito (Nómina)",
+                },
+                createdAt: "2026-10-24T20:45:00.000Z",
+              },
+              ...mappedExpenses,
+            ];
 
         const has150kEmergency = sanitizedExpensesLog.some(
           (e) =>

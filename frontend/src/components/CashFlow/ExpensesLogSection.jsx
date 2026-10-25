@@ -187,12 +187,16 @@ export default function ExpensesLogSection({
     if (filterSource === "payroll") {
       return combinedActivities.filter(
         (i) =>
-          ((i.itemType === "expense" || i.itemType === "wealth_saving") && (!i.paymentSource || i.paymentSource.type === "payroll")) ||
+          ((i.itemType === "expense" || i.itemType === "wealth_saving" || i.itemType === "income") && (!i.paymentSource || i.paymentSource.type === "payroll")) ||
           (i.itemType === "card_payment" && (!i.sourceType || i.sourceType === "payroll"))
       );
     }
     if (filterSource === "credit_card") {
-      return combinedActivities.filter((i) => i.itemType === "expense" && i.paymentSource?.type === "credit_card");
+      return combinedActivities.filter(
+        (i) =>
+          (i.itemType === "expense" && i.paymentSource?.type === "credit_card") ||
+          (i.itemType === "card_payment")
+      );
     }
     if (filterSource === "fixed_pocket") {
       return combinedActivities.filter(
@@ -202,7 +206,11 @@ export default function ExpensesLogSection({
       );
     }
     if (filterSource === "investment_cash") {
-      return combinedActivities.filter((i) => i.paymentSource?.type === "investment_cash");
+      return combinedActivities.filter(
+        (i) =>
+          ((i.itemType === "expense" || i.itemType === "wealth_saving") && i.paymentSource?.type === "investment_cash") ||
+          (i.paymentSource?.type === "investment_cash")
+      );
     }
     return combinedActivities;
   }, [combinedActivities, filterSource]);
@@ -242,6 +250,51 @@ export default function ExpensesLogSection({
 
   const payrollNetBalance =
     totalIncomeInPeriod - totalSpentFromPayroll - totalSavedFromPayroll - totalPaidToCardsFromPayroll;
+
+  const payrollCount = useMemo(() => {
+    return combinedActivities.filter(
+      (i) =>
+        ((i.itemType === "expense" || i.itemType === "wealth_saving" || i.itemType === "income") && (!i.paymentSource || i.paymentSource.type === "payroll")) ||
+        (i.itemType === "card_payment" && (!i.sourceType || i.sourceType === "payroll"))
+    ).length;
+  }, [combinedActivities]);
+
+  const creditCardCount = useMemo(() => {
+    return combinedActivities.filter(
+      (i) =>
+        (i.itemType === "expense" && i.paymentSource?.type === "credit_card") ||
+        (i.itemType === "card_payment")
+    ).length;
+  }, [combinedActivities]);
+
+  const pocketCount = useMemo(() => {
+    return combinedActivities.filter(
+      (i) =>
+        ((i.itemType === "expense" || i.itemType === "wealth_saving") && i.paymentSource?.type === "fixed_pocket") ||
+        (i.itemType === "card_payment" && i.sourceType === "fixed_pocket")
+    ).length;
+  }, [combinedActivities]);
+
+  const brokerCount = useMemo(() => {
+    return combinedActivities.filter(
+      (i) =>
+        ((i.itemType === "expense" || i.itemType === "wealth_saving") && i.paymentSource?.type === "investment_cash") ||
+        (i.paymentSource?.type === "investment_cash")
+    ).length;
+  }, [combinedActivities]);
+
+  const filterButtons = useMemo(() => [
+    { id: "all", label: `Todos los Movimientos (${combinedActivities.length})`, group: "nature" },
+    { id: "only_expenses", label: `💸 Gastos Reales (${standaloneExpenses.filter(i => i.itemType === "expense" && !i.isLoan).length})`, group: "nature" },
+    { id: "only_incomes", label: `📥 Ingresos (${standaloneExpenses.filter(i => i.itemType === "income").length})`, group: "nature" },
+    { id: "only_payments", label: `💵 Abonos a Tarjetas (${periodPayments.length})`, group: "nature" },
+    { id: "only_loans", label: `🤝 Préstamos por Cobrar ${pendingLoans.length > 0 ? `(${pendingLoans.length})` : ""}`, group: "nature" },
+    { id: "only_wealth", label: `💎 Aportes CDTs/Ahorro (${standaloneExpenses.filter(i => i.itemType === "wealth_saving").length})`, group: "nature" },
+    { id: "payroll", label: `🏦 Nómina (${payrollCount})`, group: "source" },
+    { id: "credit_card", label: `💳 Tarjeta de Crédito (${creditCardCount})`, group: "source" },
+    { id: "fixed_pocket", label: `📦 Cuentas de Ahorro / Renta Fija (${pocketCount})`, group: "source" },
+    { id: "investment_cash", label: `🚀 Broker (${brokerCount})`, group: "source" },
+  ], [combinedActivities, standaloneExpenses, periodPayments, pendingLoans, payrollCount, creditCardCount, pocketCount, brokerCount]);
 
   return (
     <div className="cashflow-expenses-section">
@@ -355,39 +408,43 @@ export default function ExpensesLogSection({
         </div>
       </div>
 
-      {/* Filter Pills */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-        {[
-          { id: "all", label: `Todos los Movimientos (${combinedActivities.length})` },
-          { id: "only_expenses", label: `💸 Gastos Reales (${standaloneExpenses.filter(i => i.itemType === "expense" && !i.isLoan).length})` },
-          { id: "only_incomes", label: `📥 Ingresos (${standaloneExpenses.filter(i => i.itemType === "income").length})` },
-          { id: "only_payments", label: `💵 Abonos a Tarjetas (${periodPayments.length})` },
-          { id: "only_loans", label: `🤝 Préstamos por Cobrar ${pendingLoans.length > 0 ? `(${pendingLoans.length})` : ""}` },
-          { id: "only_wealth", label: `💎 Aportes CDTs/Ahorro (${standaloneExpenses.filter(i => i.itemType === "wealth_saving").length})` },
-          { id: "payroll", label: "🏦 Nómina" },
-          { id: "credit_card", label: "💳 Tarjeta de Crédito" },
-          { id: "fixed_pocket", label: "📦 Cuentas de Ahorro / Renta Fija" },
-          { id: "investment_cash", label: "🚀 Broker" },
-        ].map((f) => (
-          <button
-            key={f.id}
-            type="button"
-            onClick={() => setFilterSource(f.id)}
-            style={{
-              padding: "6px 12px",
-              borderRadius: "8px",
-              border: filterSource === f.id ? "1px solid var(--text-accent)" : "1px solid var(--border)",
-              background: filterSource === f.id ? "rgba(2, 132, 199, 0.15)" : "var(--bg-surface)",
-              color: filterSource === f.id ? "var(--text-accent)" : "var(--text-muted)",
-              fontSize: "0.78rem",
-              fontWeight: filterSource === f.id ? 700 : 500,
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-            }}
-          >
-            {f.label}
-          </button>
-        ))}
+      {/* Filter Pills with Visual Separation: Tipo vs Origen */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+        {filterButtons.map((f, idx) => {
+          const isSourceStart = f.group === "source" && filterButtons[idx - 1]?.group === "nature";
+          return (
+            <React.Fragment key={f.id}>
+              {isSourceStart && (
+                <div
+                  style={{
+                    height: 20,
+                    width: 1,
+                    background: isLight ? "rgba(0,0,0,0.15)" : "rgba(255,255,255,0.15)",
+                    margin: "0 4px",
+                  }}
+                  title="Separador: Cuenta / Origen"
+                />
+              )}
+              <button
+                type="button"
+                onClick={() => setFilterSource(f.id)}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: "8px",
+                  border: filterSource === f.id ? "1px solid var(--text-accent)" : "1px solid var(--border)",
+                  background: filterSource === f.id ? "rgba(2, 132, 199, 0.15)" : "var(--bg-surface)",
+                  color: filterSource === f.id ? "var(--text-accent)" : "var(--text-muted)",
+                  fontSize: "0.78rem",
+                  fontWeight: filterSource === f.id ? 700 : 500,
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {f.label}
+              </button>
+            </React.Fragment>
+          );
+        })}
       </div>
 
       {/* Transactions & Payments List */}
