@@ -96,13 +96,14 @@ export default function ExpensesLogSection({
 
   // Sub-items resulting from credit card multi-rubro split distribution are deductions,
   // NOT standalone movements. The only true primary movement is the credit card payment.
-  // Only hide deductions that belong to a parent credit card payment.
-  // Ordinary split expenses (like bank debit transfers split between envelopes) are standalone and must be shown.
+  // Deductions from distributed movements (cards, debts, or multi-envelope splits) are shown nested in the parent movement
   const isSplitDeductionChild = (tx) => Boolean(
+    tx.isSplitChild ||
+    tx.splitParentId ||
     tx.isCreditCardPayoff ||
     tx.creditCardPaymentId ||
     (tx.cardId && tx.id && String(tx.id).includes("_split_")) ||
-    (tx.description && String(tx.description).toLowerCase().includes("descontado de") && !String(tx.description).toLowerCase().includes("mike"))
+    (tx.description && String(tx.description).toLowerCase().includes("descontado de") && !tx.isDistributed)
   );
 
   const standaloneExpenses = useMemo(() => {
@@ -456,7 +457,8 @@ export default function ExpensesLogSection({
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {filteredActivities.map((item) => {
-            const isPayment = item.itemType === "card_payment";
+            const isDistributedExpense = Boolean(item.isDistributed) || (Array.isArray(item.budgetDeductions) && item.budgetDeductions.length > 0);
+            const isPayment = item.itemType === "card_payment" || isDistributedExpense;
             const isWealth = item.itemType === "wealth_saving";
 
             if (isPayment) {
@@ -465,6 +467,8 @@ export default function ExpensesLogSection({
                 (d) => d.budgetItemType === "wealth" || d.isEmergencySavingsDeduction || d.budgetItemName?.toLowerCase().includes("ahorro") || d.budgetItemName?.toLowerCase().includes("renta") || d.budgetItemName?.toLowerCase().includes("invers")
               );
               const isExpanded = Boolean(expandedDeductions[item.id]);
+              const isCard = item.itemType === "card_payment" || Boolean(item.cardName);
+              const isDebt = Boolean(item.isDebt) || (item.description || "").toLowerCase().includes("deuda") || (item.description || "").toLowerCase().includes("mike");
 
               return (
                 <div
@@ -472,8 +476,12 @@ export default function ExpensesLogSection({
                   style={{
                     display: "flex",
                     flexDirection: "column",
-                    background: hasWealthEmergency ? "rgba(245, 158, 11, 0.05)" : "rgba(16, 185, 129, 0.08)",
-                    border: hasWealthEmergency ? "1px solid rgba(245, 158, 11, 0.35)" : "1px solid rgba(16, 185, 129, 0.25)",
+                    background: isDebt
+                      ? (isLight ? "rgba(245, 158, 11, 0.08)" : "rgba(245, 158, 11, 0.1)")
+                      : hasWealthEmergency ? "rgba(245, 158, 11, 0.05)" : "rgba(16, 185, 129, 0.08)",
+                    border: isDebt
+                      ? "1px solid rgba(245, 158, 11, 0.4)"
+                      : hasWealthEmergency ? "1px solid rgba(245, 158, 11, 0.35)" : "1px solid rgba(16, 185, 129, 0.25)",
                     borderRadius: "12px",
                     padding: "12px 16px",
                     transition: "all 0.15s ease",
@@ -482,22 +490,22 @@ export default function ExpensesLogSection({
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
                     <div style={{ minWidth: 0, flex: 1, marginRight: 10 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                        <span style={{ fontSize: "1rem" }}>{hasWealthEmergency ? "⚠️ 💳" : "💵"}</span>
+                        <span style={{ fontSize: "1rem" }}>{isDebt ? "🤝" : (hasWealthEmergency ? "⚠️ 💳" : isCard ? "💳" : "📋")}</span>
                         <strong style={{ fontSize: "0.9rem", color: "var(--text-primary)", wordBreak: "break-word" }}>
-                          {item.cardName} • {item.description || "Abono a deuda / pago factura"}
+                          {isCard ? `${item.cardName} • ${item.description || "Abono a tarjeta"}` : item.description}
                         </strong>
                         <span
                           style={{
-                            background: "rgba(16, 185, 129, 0.2)",
-                            border: "1px solid #10b981",
+                            background: isDebt ? "rgba(245, 158, 11, 0.2)" : "rgba(16, 185, 129, 0.2)",
+                            border: isDebt ? "1px solid #f59e0b" : "1px solid #10b981",
                             padding: "2px 8px",
                             borderRadius: "6px",
                             fontSize: "0.72rem",
-                            color: "#10b981",
+                            color: isDebt ? (isLight ? "#d97706" : "#fcd34d") : "#10b981",
                             fontWeight: 700,
                           }}
                         >
-                          ✓ Abono / Libera Cupo
+                          {isDebt ? "🤝 Abono a Deuda (Distribuido)" : isCard ? "✓ Abono / Libera Cupo" : "📋 Deducción Multi-Rubro"}
                         </span>
                         {hasWealthEmergency ? (
                           <span
@@ -540,7 +548,7 @@ export default function ExpensesLogSection({
                         )}
                         <span>•</span>
                         <span style={{ color: "#38bdf8", fontWeight: 600 }}>
-                          Pagado desde: {item.sourceAccount || "Nómina Nu"}
+                          Pagado desde: {item.sourceAccount || item.paymentSource?.targetName || "Nómina Nu"}
                         </span>
                         {onReclassifyMovement && (
                           <>
@@ -591,10 +599,10 @@ export default function ExpensesLogSection({
                           ✏️
                         </button>
                       )}
-                      {onDeletePayment && (
+                      {(isCard ? onDeletePayment : onDeleteTransaction) && (
                         <button
                           type="button"
-                          onClick={() => handleDeleteCardPayment(item)}
+                          onClick={() => isCard ? handleDeleteCardPayment(item) : handleDeleteTransaction(item)}
                           style={{
                             background: "transparent",
                             border: "none",
@@ -603,7 +611,7 @@ export default function ExpensesLogSection({
                             padding: "4px",
                             fontSize: "0.85rem",
                           }}
-                          title="Revertir este pago de tarjeta"
+                          title={isCard ? "Revertir este pago de tarjeta" : "Eliminar este movimiento distribuido"}
                         >
                           🗑️
                         </button>

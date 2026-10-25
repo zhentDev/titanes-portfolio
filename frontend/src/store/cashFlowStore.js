@@ -539,7 +539,9 @@ export const useCashFlowStore = create(
             });
           }
 
-          const filteredExpenses = (state.expensesLog || []).filter((tx) => tx.id !== id);
+          const filteredExpenses = (state.expensesLog || []).filter(
+            (tx) => tx.id !== id && tx.splitParentId !== id
+          );
           const nextDeletedIds = [...new Set([...(state.deletedExpenseIds || []), id])];
           try {
             localStorage.setItem(
@@ -684,12 +686,17 @@ export const useCashFlowStore = create(
           updatedPayments = [paymentRecord, ...updatedPayments];
         }
 
-        const filteredExpenses = (state.expensesLog || []).filter((e) => e.id !== movementId);
+        const filteredExpenses = (state.expensesLog || []).filter(
+          (e) => e.id !== movementId && e.splitParentId !== movementId && e.parentId !== movementId
+        );
 
         const newExpenseEntries = distributions
           .filter((d) => Number(d.amount) > 0)
           .map((d, idx) => ({
             id: `${movementId}_split_${idx}_${Date.now()}`,
+            splitParentId: movementId,
+            isSplitChild: true,
+            isSplitDeductionChild: true,
             period: sourceItem.period || state.activePeriod,
             date: sourceItem.date || new Date().toISOString().split("T")[0],
             time: sourceItem.time || null,
@@ -718,7 +725,32 @@ export const useCashFlowStore = create(
             createdAt: new Date().toISOString(),
           }));
 
-        const finalExpenses = [...newExpenseEntries, ...filteredExpenses];
+        let finalExpenses = [...newExpenseEntries, ...filteredExpenses];
+        if (!card) {
+          const isDebt = Boolean(sourceItem.isDebt) || (sourceItem.description || "").toLowerCase().includes("deuda") || (sourceItem.description || "").toLowerCase().includes("mike");
+          const distributedParent = {
+            ...sourceItem,
+            id: movementId,
+            amount: totalAmount,
+            isDistributed: true,
+            isDebt,
+            budgetItemId: null,
+            budgetItemType: "split_distribution",
+            budgetDeductions: distributions.map((d) => ({
+              budgetItemId: d.budgetItemId,
+              budgetItemName: d.budgetItemName,
+              budgetItemType: d.budgetItemType,
+              amount: Number(d.amount),
+              subItemId: d.subItemId || null,
+              subItemName: d.subItemName || null,
+              isEmergencySavingsDeduction: d.budgetItemType === "wealth",
+            })),
+            description: (sourceItem.description || "Movimiento").includes("Distribuido")
+              ? sourceItem.description
+              : `${sourceItem.description || "Movimiento"} (Distribuido en ${distributions.length} rubros)`,
+          };
+          finalExpenses = [distributedParent, ...finalExpenses];
+        }
 
         set({
           creditCards: updatedCards,

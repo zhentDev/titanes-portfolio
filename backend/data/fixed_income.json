@@ -59,6 +59,14 @@
       "icon": "📲",
       "createdAt": "2026-10-23T00:00:00.000Z",
       "logoUrl": ""
+    },
+    {
+      "id": "ent_efectivo",
+      "name": "Efectivo / Billetera",
+      "country": "🇨🇴",
+      "color": "#10b981",
+      "icon": "💵",
+      "createdAt": "2026-10-24T00:00:00.000Z"
     }
   ],
   "accounts": [
@@ -379,6 +387,19 @@
         }
       ],
       "createdAt": 1786771929000
+    },
+    {
+      "id": "acc_efectivo_fisico",
+      "entityId": "ent_efectivo",
+      "name": "Efectivo Físico (Billetera)",
+      "type": "pocket",
+      "currency": "COP",
+      "balance": 100000.0,
+      "interestRateEA": 0,
+      "isTaxExemptGMF": true,
+      "accountCategory": "cash",
+      "syncType": "manual",
+      "createdAt": "2026-10-24T00:00:00.000Z"
     }
   ],
   "cdts": [
@@ -2217,6 +2238,20 @@
       "description": "Fondeo desde Nómina Nu ($200.000 COP) para reserva Broker",
       "source": "manual",
       "createdAt": "2026-10-24T22:50:00.000Z"
+    },
+    {
+      "id": "fi_tx_abono_presea_100k_cash",
+      "accountId": "acc_efectivo_fisico",
+      "accountName": "Efectivo Físico (Billetera)",
+      "entityId": "ent_efectivo",
+      "entityName": "Efectivo / Billetera",
+      "type": "credit",
+      "amount": 100000.0,
+      "currency": "COP",
+      "date": "2026-10-24",
+      "description": "Abono recibido en efectivo de la salida Presea Rooftop ($100.000 COP de $265.000)",
+      "source": "manual",
+      "createdAt": "2026-10-24T23:30:00.000Z"
     }
   ]
 }

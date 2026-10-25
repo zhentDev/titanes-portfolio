@@ -58,6 +58,23 @@
       },
       "icon": "📈",
       "createdAt": "2026-09-19T16:57:44.254Z"
+    },
+    {
+      "id": "in_reimb_presea_100k_cash",
+      "name": "Reintegro Préstamo (Efectivo Físico): Amigos Presea Rooftop",
+      "category": "reimbursement",
+      "amount": 100000.0,
+      "currency": "COP",
+      "isPassive": false,
+      "frequency": "one_time",
+      "period": "2026-11",
+      "paymentSource": {
+        "type": "cash",
+        "targetId": "acc_efectivo_fisico",
+        "targetName": "Efectivo Físico (Billetera)"
+      },
+      "icon": "💵",
+      "createdAt": "2026-10-24T23:30:00.000Z"
     }
   ],
   "needs": [
@@ -286,24 +303,6 @@
       "createdAt": "2026-10-24T21:00:00.000Z"
     },
     {
-      "id": "exp_transfer_mike_cajita_202611_split_wealth_60k",
-      "period": "2026-11",
-      "date": "2026-10-24",
-      "amount": 60000,
-      "currency": "COP",
-      "type": "debit",
-      "budgetItemId": "wealth_tech_etf",
-      "budgetItemName": "Portafolio Renta Variable (Al día / Tiempo Real)",
-      "budgetItemType": "wealth",
-      "description": "💰 Transferencia a Cajita (Abono Deuda con Mike) (Portafolio Renta Variable (Al día / Tiempo Real))",
-      "paymentSource": {
-        "type": "payroll",
-        "targetId": "acc_nu_debito",
-        "targetName": "Cuenta Nu Débito (Nómina)"
-      },
-      "createdAt": "2026-10-24T20:45:00.000Z"
-    },
-    {
       "id": "cf_tx_mb_rappi_emergency_150k_202611",
       "period": "2026-11",
       "date": "2026-10-24",
@@ -322,24 +321,6 @@
         "targetName": "Cuenta RappiPay (Principal)"
       },
       "createdAt": "2026-10-24T22:00:00.000Z"
-    },
-    {
-      "id": "exp_transfer_mike_cajita_202611",
-      "period": "2026-11",
-      "date": "2026-10-24",
-      "amount": 150000,
-      "currency": "COP",
-      "type": "debit",
-      "budgetItemType": "needs",
-      "budgetItemId": "need_debts_mike",
-      "budgetItemName": "Deudas / Compromisos (Mike)",
-      "description": "💰 Transferencia a Cajita (Abono Deuda con Mike)",
-      "paymentSource": {
-        "type": "payroll",
-        "targetId": "acc_nu_debito",
-        "targetName": "Cuenta Nu Débito (Nómina)"
-      },
-      "createdAt": "2026-10-24T20:45:00.000Z"
     },
     {
       "id": "cf_tx_mb_1792827342417_1d3bf5",
@@ -396,7 +377,25 @@
         "targetId": "acc_nu_debito",
         "targetName": "Cuenta Nu Débito (Nómina)"
       },
-      "createdAt": "2026-10-24T01:43:24.973417-05:00"
+      "createdAt": "2026-10-24T01:43:24.973417-05:00",
+      "isLoan": true,
+      "loanRecipient": "Amigos (Salida Presea Rooftop)",
+      "loanAmount": 265000.0,
+      "loanStatus": "partially_settled",
+      "totalSettled": 100000.0,
+      "remainingLoan": 165000.0,
+      "settlements": [
+        {
+          "id": "stl_presea_100k_cash",
+          "amount": 100000.0,
+          "date": "2026-10-24",
+          "targetType": "cash",
+          "targetId": "acc_efectivo_fisico",
+          "targetName": "Efectivo Físico (Billetera)",
+          "note": "Abono recibido en efectivo ($100.000 COP) de los $265.000 prestados en Presea Rooftop",
+          "settledAt": "2026-10-24T23:30:00.000Z"
+        }
+      ]
     },
     {
       "id": "cf_tx_mb_1792810591520_fdef77",
@@ -576,6 +575,83 @@
         "targetName": "Cuenta Nu Débito (Nómina)"
       },
       "createdAt": "2026-10-24T22:50:00.000Z"
+    },
+    {
+      "id": "exp_transfer_mike_cajita_202611",
+      "period": "2026-11",
+      "date": "2026-10-24",
+      "time": "15:45:00",
+      "amount": 210000,
+      "currency": "COP",
+      "type": "debit",
+      "isDistributed": true,
+      "isDebt": true,
+      "budgetItemId": null,
+      "budgetItemType": "split_distribution",
+      "description": "💰 Transferencia a Cajita (Abono Deuda con Mike) (Distribuido en 2 rubros)",
+      "paymentSource": {
+        "type": "payroll",
+        "targetId": "acc_nu_debito",
+        "targetName": "Cuenta Nu Débito (Nómina)"
+      },
+      "budgetDeductions": [
+        {
+          "budgetItemId": "need_debts_mike",
+          "budgetItemName": "Deudas / Compromisos (Mike)",
+          "budgetItemType": "needs",
+          "amount": 150000
+        },
+        {
+          "budgetItemId": "wealth_tech_etf",
+          "budgetItemName": "Portafolio Renta Variable (Al día / Tiempo Real)",
+          "budgetItemType": "wealth",
+          "amount": 60000,
+          "isEmergencySavingsDeduction": true
+        }
+      ],
+      "createdAt": "2026-10-24T20:45:00.000Z"
+    },
+    {
+      "id": "exp_transfer_mike_cajita_202611_split_0",
+      "splitParentId": "exp_transfer_mike_cajita_202611",
+      "isSplitChild": true,
+      "isSplitDeductionChild": true,
+      "period": "2026-11",
+      "date": "2026-10-24",
+      "amount": 150000,
+      "currency": "COP",
+      "type": "debit",
+      "budgetItemId": "need_debts_mike",
+      "budgetItemName": "Deudas / Compromisos (Mike)",
+      "budgetItemType": "needs",
+      "description": "💰 Transferencia a Cajita (Abono Deuda con Mike) (Deudas / Compromisos (Mike))",
+      "paymentSource": {
+        "type": "payroll",
+        "targetId": "acc_nu_debito",
+        "targetName": "Cuenta Nu Débito (Nómina)"
+      },
+      "createdAt": "2026-10-24T20:45:00.000Z"
+    },
+    {
+      "id": "exp_transfer_mike_cajita_202611_split_1",
+      "splitParentId": "exp_transfer_mike_cajita_202611",
+      "isSplitChild": true,
+      "isSplitDeductionChild": true,
+      "period": "2026-11",
+      "date": "2026-10-24",
+      "amount": 60000,
+      "currency": "COP",
+      "type": "debit",
+      "budgetItemId": "wealth_tech_etf",
+      "budgetItemName": "Portafolio Renta Variable (Al día / Tiempo Real)",
+      "budgetItemType": "wealth",
+      "description": "💰 Transferencia a Cajita (Abono Deuda con Mike) (Portafolio Renta Variable (Al día / Tiempo Real))",
+      "paymentSource": {
+        "type": "payroll",
+        "targetId": "acc_nu_debito",
+        "targetName": "Cuenta Nu Débito (Nómina)"
+      },
+      "createdAt": "2026-10-24T20:45:00.000Z"
     }
   ],
   "creditCards": [

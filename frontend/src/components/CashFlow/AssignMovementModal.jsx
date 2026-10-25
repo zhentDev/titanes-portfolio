@@ -75,7 +75,18 @@ export default function AssignMovementModal({
   const movementAmount = Number(movement?.amount) || 0;
 
   // ── Multi-envelope distribution state ──
-  const [splitAmounts, setSplitAmounts] = useState({});
+  const [splitAmounts, setSplitAmounts] = useState(() => {
+    if (Array.isArray(movement?.budgetDeductions) && movement.budgetDeductions.length > 0) {
+      const map = {};
+      movement.budgetDeductions.forEach((d) => {
+        if (d.budgetItemId) {
+          map[d.budgetItemId] = Number(d.amount) || 0;
+        }
+      });
+      return map;
+    }
+    return {};
+  });
   const [splitSubItems, setSplitSubItems] = useState({}); // { [subKey]: { envId, sub, amount } }
   const [splitInputValues, setSplitInputValues] = useState({}); // For controlled typing with commas
   const [isCardPaymentInSplit, setIsCardPaymentInSplit] = useState(isCardMovementInitial);
