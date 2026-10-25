@@ -214,6 +214,14 @@ export default function ExpensesLogSection({
           (i.paymentSource?.type === "investment_cash")
       );
     }
+    if (filterSource === "cash") {
+      return combinedActivities.filter(
+        (i) =>
+          i.paymentSource?.type === "cash" ||
+          (i.paymentSource?.targetName || "").toLowerCase().includes("efectivo") ||
+          (i.settlements || []).some((s) => s.targetType === "cash")
+      );
+    }
     return combinedActivities;
   }, [combinedActivities, filterSource]);
 
@@ -285,6 +293,22 @@ export default function ExpensesLogSection({
     ).length;
   }, [combinedActivities]);
 
+  const cashWalletAccount = useMemo(() => {
+    return (fixedIncomeAccounts || []).find(
+      (a) => a.accountCategory === "cash" || (a.name || "").toLowerCase().includes("efectivo") || (a.name || "").toLowerCase().includes("billetera")
+    );
+  }, [fixedIncomeAccounts]);
+  const cashWalletBalance = Number(cashWalletAccount?.balance || 0);
+
+  const cashCount = useMemo(() => {
+    return combinedActivities.filter(
+      (i) =>
+        i.paymentSource?.type === "cash" ||
+        (i.paymentSource?.targetName || "").toLowerCase().includes("efectivo") ||
+        (i.settlements || []).some((s) => s.targetType === "cash")
+    ).length;
+  }, [combinedActivities]);
+
   const filterButtons = useMemo(() => [
     { id: "all", label: `Todos los Movimientos (${combinedActivities.length})`, group: "nature" },
     { id: "only_expenses", label: `💸 Gastos Reales (${standaloneExpenses.filter(i => i.itemType === "expense" && !i.isLoan).length})`, group: "nature" },
@@ -296,7 +320,8 @@ export default function ExpensesLogSection({
     { id: "credit_card", label: `💳 Tarjeta de Crédito (${creditCardCount})`, group: "source" },
     { id: "fixed_pocket", label: `📦 Cuentas de Ahorro / Renta Fija (${pocketCount})`, group: "source" },
     { id: "investment_cash", label: `🚀 Broker (${brokerCount})`, group: "source" },
-  ], [combinedActivities, standaloneExpenses, periodPayments, pendingLoans, payrollCount, creditCardCount, pocketCount, brokerCount]);
+    ...(cashWalletAccount || cashCount > 0 ? [{ id: "cash", label: `💵 Efectivo (${cashCount})`, group: "source" }] : []),
+  ], [combinedActivities, standaloneExpenses, periodPayments, pendingLoans, payrollCount, creditCardCount, pocketCount, brokerCount, cashWalletAccount, cashCount]);
 
   return (
     <div className="cashflow-expenses-section">
@@ -333,6 +358,27 @@ export default function ExpensesLogSection({
                   : `-${formatMoney(Math.abs(payrollNetBalance), currency)}`}
               </strong>
             </div>
+
+            {/* Saldo Actual en Efectivo Físico (Billetera) */}
+            {cashWalletAccount && (
+              <div
+                style={{
+                  minWidth: "135px",
+                  textAlign: "left",
+                  background: isLight ? "rgba(245, 158, 11, 0.08)" : "rgba(245, 158, 11, 0.12)",
+                  border: isLight ? "1px solid rgba(245, 158, 11, 0.35)" : "1px solid rgba(245, 158, 11, 0.4)",
+                  borderRadius: "10px",
+                  padding: "4px 10px",
+                }}
+              >
+                <span style={{ fontSize: "0.72rem", color: "#f59e0b", display: "flex", alignItems: "center", gap: 4, fontWeight: 700 }}>
+                  <span>💵</span> Efectivo (Billetera)
+                </span>
+                <strong style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.15rem", color: "#f59e0b" }}>
+                  +{formatMoney(cashWalletBalance, currency)}
+                </strong>
+              </div>
+            )}
 
             {totalIncomeInPeriod > 0 && (
               <div style={{ minWidth: "105px", textAlign: "left" }}>
