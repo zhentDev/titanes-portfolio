@@ -268,9 +268,14 @@ export default function AssignMovementModal({
     const accs = fixedIncomeAccounts || [];
     const envName = (envelope.name || "").toLowerCase();
     const isEmergency = envelope.category === "emergency_fund" || envName.includes("emergencia");
+    const isEquity = envelope.category === "equity_investment" || envName.includes("renta variable") || envName.includes("portafolio");
+    const isTravelStudy = envelope.category === "medium_term_goal" || envName.includes("viaje") || envName.includes("estudio");
+
     const pockets = accs.filter((a) => {
       const n = (a.name || "").toLowerCase();
       if (isEmergency) return n.includes("emergencia") || n.includes("emergency");
+      if (isEquity) return a.id === "acc_1786777955489" || (a.currency === "USD" && n.includes("bolsillo")) || n.includes("plenti");
+      if (isTravelStudy) return n.includes("viaje") || n.includes("estudio");
       return Number(a.interestRateEA || 0) > 0 && a.accountCategory !== "payroll";
     });
     const seen = new Set();
@@ -283,7 +288,7 @@ export default function AssignMovementModal({
             a.entityId === pocket.entityId &&
             a.id !== pocket.id &&
             (a.accountCategory === "digital_wallet" || Number(a.interestRateEA || 0) === 0)
-        );
+        ) || pocket;
       if (!principal || seen.has(principal.id)) return;
       seen.add(principal.id);
       options.push({ principal, pocket });
@@ -411,14 +416,9 @@ export default function AssignMovementModal({
 
   const selectedEnvelopeObj = (budgetItems || []).find((b) => b.id === selectedEnvelopeId);
   const destinationOptions = getDestinationOptions(selectedEnvelopeObj);
-  const needsDestinationChoice =
-    activeTab === "budget_envelope" &&
-    destinationOptions.length > 1 &&
-    !destinationOptions.some((o) => o.principal.id === selectedDestAccountId);
 
   const isConfirmDisabled =
     (activeTab === "budget_envelope" && !selectedEnvelopeId) ||
-    needsDestinationChoice ||
     (activeTab === "debt" && !selectedDebtId) ||
     (activeTab === "credit_card" && !selectedCardId) ||
     (activeTab === "multi_envelope" && (splitRemaining !== 0 || totalSplitAssigned <= 0));
@@ -1529,6 +1529,10 @@ export default function AssignMovementModal({
                                 key={item.id}
                                 onClick={() => {
                                   setSelectedEnvelopeId(item.id);
+                                  const opts = getDestinationOptions(item);
+                                  if (opts.length > 0 && (!selectedDestAccountId || !opts.some((o) => o.principal.id === selectedDestAccountId))) {
+                                    setSelectedDestAccountId(opts[0].principal.id);
+                                  }
                                   if (selectedEnvelopeId !== item.id) {
                                     const matchingSub = subItemsList.find((s) => Number(s.amount) === movementAmount);
                                     setSelectedSubItem(matchingSub || null);
@@ -1893,11 +1897,6 @@ export default function AssignMovementModal({
                     );
                   })}
                 </div>
-                {needsDestinationChoice && (
-                  <div style={{ fontSize: "0.7rem", color: isLight ? "#b45309" : "#fbbf24", fontWeight: 600, marginTop: 8 }}>
-                    ⚠️ Elige la cuenta destino para continuar.
-                  </div>
-                )}
               </div>
             )}
           </div>
