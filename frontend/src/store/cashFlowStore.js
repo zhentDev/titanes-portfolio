@@ -211,13 +211,34 @@ export const useCashFlowStore = create(
               destinationAccountName: "FlexiDigital + (Principal)",
             };
           }
+
+          const is150kRappiOrEmergency =
+            Number(e.amount) === 150000 &&
+            ((e.description || "").toLowerCase().includes("rappicuenta") ||
+              (e.description || "").toLowerCase().includes("fondo de emergencia") ||
+              e.budgetItemId === "wealth_emergency");
+          if (is150kRappiOrEmergency) {
+            return {
+              ...e,
+              period: "2026-11",
+              type: "debit",
+              budgetItemId: "wealth_emergency",
+              budgetItemName: "Fondo de Emergencia (6 Meses)",
+              budgetItemType: "wealth",
+              description: e.description && !e.description.toLowerCase().includes("transferencia para fondo")
+                ? e.description
+                : "Compra en tu RappiCuenta",
+              destinationAccountId: "acc_rappi_principal",
+              destinationAccountName: "Cuenta RappiPay (Principal)",
+            };
+          }
           return e;
         });
 
         const hasMikeTransfer = mappedExpenses.some(
           (e) => (e.id === "exp_transfer_mike_cajita_202611" || (Number(e.amount) === 210000 && (e.description || "").toLowerCase().includes("mike"))) && (e.period === "2026-11" || !e.period)
         );
-        const sanitizedExpensesLog = hasMikeTransfer
+        let sanitizedExpensesLog = hasMikeTransfer
           ? mappedExpenses
           : [
               {
@@ -240,6 +261,39 @@ export const useCashFlowStore = create(
               },
               ...mappedExpenses,
             ];
+
+        const has150kEmergency = sanitizedExpensesLog.some(
+          (e) =>
+            Number(e.amount) === 150000 &&
+            ((e.description || "").toLowerCase().includes("rappicuenta") ||
+              e.budgetItemId === "wealth_emergency") &&
+            (e.period === "2026-11" || !e.period)
+        );
+        if (!has150kEmergency) {
+          sanitizedExpensesLog = [
+            {
+              id: "cf_tx_mb_rappi_emergency_150k_202611",
+              period: "2026-11",
+              date: "2026-10-24",
+              amount: 150000,
+              currency: "COP",
+              type: "debit",
+              budgetItemId: "wealth_emergency",
+              budgetItemName: "Fondo de Emergencia (6 Meses)",
+              budgetItemType: "wealth",
+              description: "Compra en tu RappiCuenta",
+              destinationAccountId: "acc_rappi_principal",
+              destinationAccountName: "Cuenta RappiPay (Principal)",
+              paymentSource: {
+                type: "fixed_pocket",
+                targetId: "acc_rappi_principal",
+                targetName: "Cuenta RappiPay (Principal)",
+              },
+              createdAt: "2026-10-24T22:00:00.000Z",
+            },
+            ...sanitizedExpensesLog,
+          ];
+        }
 
         const rawDebts = unionById(source?.debts, cachedLocal?.debts);
         const mergedDebts = rawDebts.map((d) => {
@@ -871,11 +925,20 @@ export const useCashFlowStore = create(
                 ? e.description
                 : envelope.name;
 
+            const resolvedPillar =
+              envelope.pillarType ||
+              (envelope.id?.startsWith("wealth_") || envelope.category === "emergency_fund" || (envelope.name || "").toLowerCase().includes("emergencia")
+                ? "wealth"
+                : envelope.id?.startsWith("want_")
+                ? "wants"
+                : "needs");
+
             return {
               ...e,
+              type: "debit", // Asegurar que sea egreso/aporte efectivo imputable al rubro
               budgetItemId: envelope.id,
               budgetItemName: envelope.name,
-              budgetItemType: envelope.pillarType || "needs",
+              budgetItemType: resolvedPillar,
               subItemId: resolvedSubId || e.subItemId || null,
               subItemName: resolvedSubName || e.subItemName || null,
               description: cleanDesc,

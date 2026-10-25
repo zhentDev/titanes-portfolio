@@ -266,6 +266,26 @@
   ],
   "expensesLog": [
     {
+      "id": "cf_tx_mb_rappi_emergency_150k_202611",
+      "period": "2026-11",
+      "date": "2026-10-24",
+      "amount": 150000,
+      "currency": "COP",
+      "type": "debit",
+      "budgetItemId": "wealth_emergency",
+      "budgetItemName": "Fondo de Emergencia (6 Meses)",
+      "budgetItemType": "wealth",
+      "description": "Compra en tu RappiCuenta",
+      "destinationAccountId": "acc_rappi_principal",
+      "destinationAccountName": "Cuenta RappiPay (Principal)",
+      "paymentSource": {
+        "type": "fixed_pocket",
+        "targetId": "acc_rappi_principal",
+        "targetName": "Cuenta RappiPay (Principal)"
+      },
+      "createdAt": "2026-10-24T22:00:00.000Z"
+    },
+    {
       "id": "exp_transfer_mike_cajita_202611",
       "period": "2026-11",
       "date": "2026-10-24",

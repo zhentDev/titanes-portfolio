@@ -111,6 +111,29 @@ export const useFixedIncomeStore = create(
             return rest;
           });
 
+          // Sanitizar duplicados por reclasificación en Cuenta RappiPay (Principal)
+          const hasRappiCompra150k = finalTransactions.some(
+            (t) => t.accountId === "acc_rappi_principal" && Math.abs(Number(t.amount)) === 150000 && (t.description || "").toLowerCase().includes("compra en tu rappicuenta")
+          );
+          if (hasRappiCompra150k) {
+            const hasDuplicateTransfer = finalTransactions.some(
+              (t) => t.accountId === "acc_rappi_principal" && Math.abs(Number(t.amount)) === 150000 && (t.description || "").toLowerCase().includes("transferencia para fondo de emergencia")
+            );
+            if (hasDuplicateTransfer) {
+              finalTransactions = finalTransactions.filter(
+                (t) => !(t.accountId === "acc_rappi_principal" && Math.abs(Number(t.amount)) === 150000 && (t.description || "").toLowerCase().includes("transferencia para fondo de emergencia"))
+              );
+              finalAccounts = finalAccounts.map((a) => {
+                if (a.id === "acc_rappi_principal") {
+                  const correctedBalance = Math.max(0, Number(a.balance || 0) - 150000);
+                  return { ...a, balance: correctedBalance };
+                }
+                return a;
+              });
+              localHadExtraTx = true;
+            }
+          }
+
           // If local had new transactions that remote lacked, push them upstream
           if (localHadExtraTx && finalTransactions.length > (res?.transactions?.length || 0)) {
             syncFixedIncomeStateApi({
@@ -628,8 +651,14 @@ export const useFixedIncomeStore = create(
         const acc = state.accounts.find((a) => a.id === accountId);
         if (!acc || amt <= 0) return;
         const txId = `tx_cf_${movementId || Date.now()}`;
-        if ((state.transactions || []).some((t) => t.id === txId)) {
-          toast("Este movimiento ya estaba abonado en la cuenta", { icon: "ℹ️" });
+        const isDuplicate = (state.transactions || []).some(
+          (t) =>
+            t.id === txId ||
+            (movementId && (t.id === movementId || String(t.id).includes(String(movementId)) || String(movementId).includes(String(t.id)))) ||
+            (t.accountId === accountId && Math.abs(Number(t.amount)) === amt && t.date === (date || new Date().toISOString().slice(0, 10)))
+        );
+        if (isDuplicate) {
+          toast("Este movimiento ya existe en esta cuenta", { icon: "ℹ️" });
           return;
         }
         const newTx = {

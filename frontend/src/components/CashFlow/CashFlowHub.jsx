@@ -102,14 +102,34 @@ export default function CashFlowHub() {
     revertAccountCredit,
   } = useFixedIncomeStore();
 
-  // Reclasifica el movimiento y, si se eligió una cuenta destino (p.ej. Principal de
-  // Finandina o RappiPay para el Fondo de Emergencia), abona el dinero en esa cuenta.
+  // Reclasifica el movimiento y, si se eligió una cuenta destino distinta al origen (p.ej. Principal de
+  // Finandina o RappiPay desde Nómina para el Fondo de Emergencia), abona el dinero en esa cuenta.
   const handleReclassifyMovement = (payload) => {
     const mv = (expensesLog || []).find((e) => e.id === payload.movementId);
     reclassifyMovement(payload);
     if (mv) {
+      const destAccId = payload?.destinationAccount?.id;
+      const srcAccId = mv.paymentSource?.targetId;
+      const srcAccName = (mv.paymentSource?.targetName || "").toLowerCase().trim();
+      const destAccName = (payload?.destinationAccount?.name || "").toLowerCase().trim();
+
+      // Es la misma cuenta si el ID coincide o los nombres coinciden
+      const isSameAccount = Boolean(
+        destAccId && (
+          destAccId === srcAccId ||
+          (srcAccName && destAccName && (srcAccName.includes(destAccName) || destAccName.includes(srcAccName)))
+        )
+      );
+
+      // Si el movimiento ya provino de Renta Fija (bolsillo o webhook)
+      const isFromFixedIncome = Boolean(
+        mv.source === "macrodroid_webhook" ||
+        mv.paymentSource?.type === "fixed_pocket" ||
+        (mv.id && (String(mv.id).startsWith("cf_tx_") || String(mv.id).toLowerCase().includes("rappi")))
+      );
+
       // Si antes tenía una cuenta destino y ahora cambió o se quitó, revertir el abono anterior
-      if (mv.destinationAccountId && mv.destinationAccountId !== payload?.destinationAccount?.id) {
+      if (mv.destinationAccountId && mv.destinationAccountId !== destAccId) {
         if (typeof revertAccountCredit === "function") {
           revertAccountCredit({
             accountId: mv.destinationAccountId,
@@ -118,10 +138,22 @@ export default function CashFlowHub() {
           });
         }
       }
-      // Si ahora tiene cuenta destino asignada, acreditarla
-      if (payload?.destinationAccount?.id && typeof creditAccountFromCashFlow === "function") {
+
+      // Si la cuenta destino seleccionada es la MISMA cuenta de origen, revertir cualquier abono espurio previo
+      if (isSameAccount && (mv.destinationAccountId || destAccId)) {
+        if (typeof revertAccountCredit === "function") {
+          revertAccountCredit({
+            accountId: destAccId || mv.destinationAccountId,
+            amount: mv.amount,
+            movementId: mv.id,
+          });
+        }
+      }
+
+      // SOLO acreditar si es una cuenta DESTINO DISTINTA y el dinero no estaba ya radicado allí
+      if (destAccId && !isSameAccount && !isFromFixedIncome && typeof creditAccountFromCashFlow === "function") {
         creditAccountFromCashFlow({
-          accountId: payload.destinationAccount.id,
+          accountId: destAccId,
           amount: mv.amount,
           date: mv.date,
           movementId: mv.id,

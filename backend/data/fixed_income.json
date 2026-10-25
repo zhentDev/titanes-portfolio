@@ -241,7 +241,7 @@
       "accountCategory": "digital_wallet",
       "syncType": "api",
       "currency": "COP",
-      "balance": 8400.16,
+      "balance": 152000.0,
       "interestRateEA": 0,
       "isTaxExemptGMF": true,
       "rateHistory": [
@@ -647,6 +647,19 @@
     }
   ],
   "transactions": [
+    {
+      "id": "tx_rappi_compra_150k_20261024",
+      "accountId": "acc_rappi_principal",
+      "entityId": "ent_1789616750396",
+      "date": "2026-10-24",
+      "description": "Compra en tu RappiCuenta",
+      "amount": 150000,
+      "currency": "COP",
+      "type": "credit",
+      "category": "Gasto Móvil",
+      "source": "macrodroid_webhook",
+      "createdAt": "2026-10-24T22:00:00.000Z"
+    },
     {
       "id": "tx_int_finandina_in_350k",
       "accountId": "acc_1786771927434",

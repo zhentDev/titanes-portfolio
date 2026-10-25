@@ -200,13 +200,15 @@ export default function CashFlowSankey({
       const spent = (expensesLog || [])
         .filter((tx) => {
           if (tx.period && activePeriod && tx.period !== activePeriod) return false;
-          if (tx.type === "credit" || tx.budgetItemType === "income") return false;
+          // Si está explícitamente asignado al rubro por su ID, siempre cuenta como ejecución
           if (tx.budgetItemId && tx.budgetItemId === item.id) return true;
           const desc = (tx.description || "").toLowerCase();
           const bName = (tx.budgetItemName || "").toLowerCase();
           const itemName = item.name.toLowerCase();
           if (bName && (bName.includes(itemName) || itemName.includes(bName))) return true;
+          if (itemName.includes("emergencia") && (desc.includes("emergencia") || bName.includes("emergencia") || desc.includes("rappicuenta"))) return true;
           if (itemName.includes("arriendo") && (desc.includes("arriendo") || bName.includes("arriendo"))) return true;
+          if (tx.type === "credit" || tx.budgetItemType === "income") return false;
           return false;
         })
         .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
