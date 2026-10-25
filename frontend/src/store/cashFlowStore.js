@@ -842,7 +842,7 @@ export const useCashFlowStore = create(
         toast.success("Concepto reasignado exitosamente al nuevo rubro ✅");
       },
 
-      reclassifyMovement: ({ movementId, destinationType, targetId, targetItem, subItem, destinationAccount, cardId, distributions }) => {
+      reclassifyMovement: ({ movementId, destinationType, targetId, targetItem, subItem, destinationAccount, cardId, distributions, paymentSource }) => {
         const state = get();
 
         // 0. Destination: Multi-Rubro Distribution (Split Movement / Distributed Card Payment)
@@ -854,8 +854,42 @@ export const useCashFlowStore = create(
         const expense = (state.expensesLog || []).find((e) => e.id === movementId);
         if (!expense) return;
         const amount = Number(expense.amount) || 0;
-        if (destinationType === "split_distribution") {
-          get().splitExpenseMovement({ movementId, cardId, distributions });
+
+        // 0b. Destination: Credit Card Purchase (Compra con Tarjeta de Crédito)
+        if (destinationType === "credit_card_purchase") {
+          const cid = targetId || cardId;
+          const card = (state.creditCards || []).find((c) => c.id === cid);
+          const wasCard = expense.paymentSource?.type === "credit_card";
+          
+          let updatedCards = [...(state.creditCards || [])];
+          if (!wasCard && card) {
+            updatedCards = updatedCards.map((c) => {
+              if (c.id === card.id) {
+                return { ...c, usedLimit: Math.round(((Number(c.usedLimit) || 0) + amount) * 100) / 100 };
+              }
+              return c;
+            });
+          }
+
+          const updatedExpenses = (state.expensesLog || []).map((e) => {
+            if (e.id !== movementId) return e;
+            return {
+              ...e,
+              budgetItemType: e.budgetItemType || "wants",
+              paymentSource: {
+                type: "credit_card",
+                targetId: card ? card.id : cid,
+                targetName: card ? card.name : "Tarjeta de Crédito",
+              },
+            };
+          });
+
+          set({ creditCards: updatedCards, expensesLog: updatedExpenses });
+          try {
+            localStorage.setItem("titanes_cash_flow_store_v2", JSON.stringify({ ...state, creditCards: updatedCards, expensesLog: updatedExpenses }));
+          } catch {}
+          get().syncStateWithBackend();
+          toast.success(`Movimiento clasificado como compra con ${card?.name || 'Tarjeta'}. Cupo usado actualizado 💳`);
           return;
         }
 
@@ -976,6 +1010,7 @@ export const useCashFlowStore = create(
                 ? "wants"
                 : "needs");
 
+            const nextPaymentSource = paymentSource || e.paymentSource;
             return {
               ...e,
               type: "debit", // Asegurar que sea egreso/aporte efectivo imputable al rubro
@@ -987,12 +1022,35 @@ export const useCashFlowStore = create(
               description: cleanDesc,
               isDebtPayment: false,
               debtId: null,
+              paymentSource: nextPaymentSource,
               destinationAccountId: destinationAccount ? destinationAccount.id : null,
               destinationAccountName: destinationAccount ? destinationAccount.name : null,
             };
           });
 
-          set({ expensesLog: updatedExpenses });
+          // If payment source changed to/from credit card, adjust card usedLimit
+          let nextCreditCards = [...(state.creditCards || [])];
+          if (paymentSource) {
+            const wasCard = expense.paymentSource?.type === "credit_card";
+            const nowCard = paymentSource.type === "credit_card";
+            if (!wasCard && nowCard) {
+              nextCreditCards = nextCreditCards.map((c) => {
+                if (c.id === paymentSource.targetId) {
+                  return { ...c, usedLimit: Math.round(((Number(c.usedLimit) || 0) + amount) * 100) / 100 };
+                }
+                return c;
+              });
+            } else if (wasCard && !nowCard) {
+              nextCreditCards = nextCreditCards.map((c) => {
+                if (c.id === expense.paymentSource?.targetId) {
+                  return { ...c, usedLimit: Math.max(0, Math.round(((Number(c.usedLimit) || 0) - amount) * 100) / 100) };
+                }
+                return c;
+              });
+            }
+          }
+
+          set({ expensesLog: updatedExpenses, creditCards: nextCreditCards });
           try {
             localStorage.setItem(
               "titanes_cash_flow_store_v2",

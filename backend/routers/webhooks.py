@@ -65,9 +65,16 @@ def parse_cop_amount(val: Any) -> float:
 
     s = val.replace("$", "").replace("COP", "").replace("cop", "").strip()
 
-    # Comma and dot both present: 1.250.000,50 -> 1250000.50
+    # Comma and dot both present: handle both European (1.250.000,50) and Anglo (8,667.00) formats
     if "," in s and "." in s:
-        s = s.replace(".", "").replace(",", ".")
+        comma_idx = s.rfind(",")
+        dot_idx = s.rfind(".")
+        if dot_idx > comma_idx:
+            # Anglo: 8,667.00 -> comma is thousands, dot is cents
+            s = s.replace(",", "")
+        else:
+            # European/Latin: 1.250.000,50 -> dot is thousands, comma is cents
+            s = s.replace(".", "").replace(",", ".")
     elif "," in s:
         parts = s.split(",")
         if len(parts) == 2 and len(parts[1]) in (1, 2):
@@ -465,7 +472,28 @@ def get_mobile_pockets(
             pockets_list.append(f"⭐ {default_main_label} ($0)")
             clean_names.append(default_main_label)
 
-        # 2. Pockets (Cajitas)
+        # 2. Credit Cards belonging to this entity or matched bank (ej. Tarjeta Nu Crédito 3887)
+        try:
+            cf_db = load_cash_flow_db(effective_uid)
+            credit_cards = cf_db.get("creditCards", [])
+            for c in credit_cards:
+                c_name_norm = normalize_text(c.get("name", ""))
+                c_id_norm = normalize_text(c.get("id", ""))
+                is_match = (
+                    ("nu" in normalize_text(ent_clean_name) and ("nu" in c_name_norm or "nu" in c_id_norm)) or
+                    ("rappi" in normalize_text(ent_clean_name) and ("rappi" in c_name_norm or "rappi" in c_id_norm)) or
+                    ent_clean_name.lower() in c_name_norm
+                )
+                if is_match:
+                    tot_lim = float(c.get("totalLimit", 0))
+                    used_lim = float(c.get("usedLimit", 0))
+                    avail_lim = max(0.0, tot_lim - used_lim)
+                    pockets_list.append(f"💳 {c['name']} (Cupo libre: ${avail_lim:,.0f})")
+                    clean_names.append(c["name"])
+        except Exception as err:
+            logger.warning(f"[Webhook] Error adding credit cards to pockets: {err}")
+
+        # 3. Pockets (Cajitas)
         for a in ent_accounts:
             if principal_acc and a.get("id") == principal_acc.get("id"):
                 continue
@@ -473,7 +501,7 @@ def get_mobile_pockets(
             pockets_list.append(f"📦 {a['name']} (${bal:,.0f})")
             clean_names.append(a["name"])
 
-        # 3. Cancel / Ignore option
+        # 4. Cancel / Ignore option
         pockets_list.append("❌ Ignorar / Cancelar")
         clean_names.append("Ignorar / Cancelar")
 
@@ -492,6 +520,19 @@ def get_mobile_pockets(
     # All banks / Google Wallet fallback
     all_pockets = []
     all_names = []
+
+    # Include credit cards in global list
+    try:
+        cf_db = load_cash_flow_db(effective_uid)
+        for c in cf_db.get("creditCards", []):
+            tot_lim = float(c.get("totalLimit", 0))
+            used_lim = float(c.get("usedLimit", 0))
+            avail_lim = max(0.0, tot_lim - used_lim)
+            all_pockets.append(f"💳 {c['name']} (Cupo libre: ${avail_lim:,.0f})")
+            all_names.append(c["name"])
+    except Exception as err:
+        logger.warning(f"[Webhook] Error adding credit cards to all_pockets: {err}")
+
     for ent in entities:
         short_bank = ent.get("name", "").replace("Colombia", "").replace("(Ahorros)", "").strip()
         ent_accs = [a for a in accounts if a.get("entityId") == ent.get("id")]
@@ -623,6 +664,43 @@ def register_mobile_transaction(
 
     tx_time = payload.time.strip() if payload.time else now_colombia.strftime("%H:%M:%S")
 
+    # 4b. Check if this transaction is a Credit Card Purchase (e.g. Nu 3887, RappiCard)
+    cf_temp = load_cash_flow_db(effective_uid)
+    available_cards = cf_temp.get("creditCards", [])
+    clean_acc_query = clean_account_query(payload.account)
+    aq_clean_norm = normalize_text(clean_acc_query)
+
+    is_cc_purchase = False
+    matched_cc = None
+
+    # Check if user selected a credit card from MacroDroid
+    for c in available_cards:
+        c_name_norm = normalize_text(c.get("name", ""))
+        c_id_norm = normalize_text(c.get("id", ""))
+        if (c_id_norm and c_id_norm == aq_clean_norm) or (c_name_norm and (c_name_norm in aq_clean_norm or aq_clean_norm in c_name_norm)):
+            matched_cc = c
+            is_cc_purchase = True
+            break
+        if "3887" in aq_clean_norm and ("3887" in c_name_norm or "nu" in c_name_norm):
+            matched_cc = c
+            is_cc_purchase = True
+            break
+
+    # Also detect from notification text (e.g., "tarjeta terminada en 3887 ha sido APROBADA")
+    if not is_cc_purchase and tx_type == "debit":
+        cc_notification_patterns = [
+            "ha sido aprobada", "ha sido aprobada.", "compra aprobada",
+            "tarjeta de credito", "tarjeta de crédito", "con tu tarjeta"
+        ]
+        if any(p in search_context for p in cc_notification_patterns) or "3887" in search_context:
+            is_cc_purchase = True
+            if "3887" in search_context or "nu" in search_context:
+                matched_cc = next((c for c in available_cards if "3887" in normalize_text(c.get("name", "")) or "nu" in normalize_text(c.get("name", ""))), None)
+            elif "rappi" in search_context:
+                matched_cc = next((c for c in available_cards if "rappi" in normalize_text(c.get("name", ""))), None)
+            if not matched_cc and available_cards:
+                matched_cc = available_cards[0]
+
     # 5. Update Account Balance with Pocket Overdraft / Cascading Fallback
     previous_balance = float(account.get("balance", 0.0))
     is_pocket = account.get("type") == "pocket" or any(k in normalize_text(account.get("name")) for k in ["cajita", "bolsillo", "impresora"])
@@ -633,7 +711,10 @@ def register_mobile_transaction(
     prev_principal_bal = 0.0
     new_principal_bal = 0.0
 
-    if tx_type == "debit" and is_pocket and amount_val > previous_balance:
+    if is_cc_purchase:
+        # Credit Card purchases DO NOT deduct from bank savings/payroll accounts!
+        new_balance = previous_balance
+    elif tx_type == "debit" and is_pocket and amount_val > previous_balance:
         # Movement exceeds what this pocket has!
         # Fallback to the entity's Principal Account
         cascaded = True
@@ -709,6 +790,17 @@ def register_mobile_transaction(
 
     if is_cc_payment:
         clean_desc = f"Pago {detected_card_name or 'Tarjeta de Crédito'}"
+    elif is_cc_purchase:
+        m_en = re.search(r"compra en\s+([A-Za-z0-9\*\.\-_\s]+?)\s+(?:por|\.|\.\.\.|\,|$)", payload.raw_text or "", re.IGNORECASE)
+        m_aprob = re.search(r"en\s+([A-Za-z0-9\*\.\-_\s]+?)\s+por", payload.raw_text or "", re.IGNORECASE)
+        if m_en and len(m_en.group(1).strip()) > 1:
+            clean_desc = f"Compra en {m_en.group(1).strip()}"
+        elif m_aprob and len(m_aprob.group(1).strip()) > 1:
+            clean_desc = f"Compra en {m_aprob.group(1).strip()}"
+        elif clean_desc and not any(b in clean_desc.lower() for b in ["aprobada", "terminada en", "gasto", "movimiento"]):
+            clean_desc = f"Compra {clean_desc}"
+        else:
+            clean_desc = f"Compra {matched_cc['name'] if matched_cc else 'Tarjeta Crédito'}"
     elif any(b in clean_desc.lower() for b in generic_bad_descriptions) or not clean_desc:
         m_en = re.search(r"\ben\s+([A-Za-z0-9\s\.\-_]+?)(?:\s+por|\.|\.\.\.|\,|$)", payload.raw_text or "", re.IGNORECASE)
         m_via = re.search(r"a través de\s+([A-Za-z0-9\-\s]+?)(?:fue exitoso|\.|\.\.\.|$)", payload.raw_text or "", re.IGNORECASE)
@@ -814,8 +906,58 @@ def register_mobile_transaction(
             save_cash_flow_db(cf, effective_uid)
             cf_synced = True
             logger.info(f"[Webhook] Dual-synced credit card payment {tx_id} to Cash Flow creditCardPayments.")
+        elif is_cc_purchase and matched_cc:
+            # 8b. Credit card purchase: Increase used limit and record in expensesLog & creditPurchases
+            cards = cf.get("creditCards", [])
+            for c in cards:
+                if c.get("id") == matched_cc["id"]:
+                    old_u = float(c.get("usedLimit", 0.0))
+                    c["usedLimit"] = round(old_u + amount_val, 2)
+                    break
+
+            if "expensesLog" not in cf or not isinstance(cf["expensesLog"], list):
+                cf["expensesLog"] = []
+
+            cf_tx = {
+                "id": f"cf_{tx_id}",
+                "period": active_period,
+                "budgetItemId": None,
+                "budgetItemName": clean_desc,
+                "budgetItemType": "wants",
+                "description": clean_desc,
+                "amount": amount_val,
+                "currency": "COP",
+                "date": tx_date,
+                "time": tx_time,
+                "type": "debit",
+                "paymentSource": {
+                    "type": "credit_card",
+                    "targetId": matched_cc["id"],
+                    "targetName": matched_cc["name"],
+                },
+                "createdAt": now_colombia.isoformat(),
+            }
+            cf["expensesLog"].insert(0, cf_tx)
+
+            if "creditPurchases" not in cf or not isinstance(cf["creditPurchases"], list):
+                cf["creditPurchases"] = []
+            cf["creditPurchases"].insert(0, {
+                "id": f"cp_{tx_id}",
+                "cardId": matched_cc["id"],
+                "description": clean_desc,
+                "amount": amount_val,
+                "installmentsCount": 1,
+                "startPeriod": active_period,
+                "monthlyInstallment": amount_val,
+                "date": tx_date,
+                "createdAt": now_colombia.isoformat(),
+            })
+
+            save_cash_flow_db(cf, effective_uid)
+            cf_synced = True
+            logger.info(f"[Webhook] Dual-synced credit purchase {tx_id} to {matched_cc['name']}: usedLimit increased by {amount_val} COP.")
         else:
-            # 8b. Regular expense: Record in expensesLog
+            # 8c. Regular expense: Record in expensesLog
             if "expensesLog" not in cf or not isinstance(cf["expensesLog"], list):
                 cf["expensesLog"] = []
 
@@ -858,6 +1000,11 @@ def register_mobile_transaction(
         action_msg = (
             f"Pago a {clean_desc} por ${amount_val:,.2f} COP registrado exitosamente desde '{account['name']}'. "
             f"¡Cupo de tarjeta liberado automáticamente en Flujo de Caja!"
+        )
+    elif is_cc_purchase and matched_cc:
+        action_msg = (
+            f"Compra con {matched_cc['name']} por ${amount_val:,.2f} COP en '{clean_desc}' registrada exitosamente. "
+            f"Cupo usado actualizado en Flujo de Caja."
         )
     elif cascaded and principal_acc:
         action_msg = (

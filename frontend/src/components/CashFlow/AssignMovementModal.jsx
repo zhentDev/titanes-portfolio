@@ -54,6 +54,46 @@ export default function AssignMovementModal({
   const [selectedDebtId, setSelectedDebtId] = useState(debts[0]?.id || "");
   const [selectedCardId, setSelectedCardId] = useState(creditCards[0]?.id || "");
   const [selectedDestAccountId, setSelectedDestAccountId] = useState(movement?.destinationAccountId || "");
+  const [cardActionMode, setCardActionMode] = useState("purchase"); // "purchase" | "payoff"
+  const [selectedSourceAccountKey, setSelectedSourceAccountKey] = useState(() => {
+    if (movement?.paymentSource?.type === "credit_card") {
+      return `card_${movement?.paymentSource?.targetId || ""}`;
+    }
+    if (movement?.paymentSource?.targetId) {
+      return `acc_${movement.paymentSource.targetId}`;
+    }
+    return "acc_nu_debito";
+  });
+
+  const allPaymentSources = useMemo(() => {
+    const list = [
+      { key: "acc_nu_debito", id: "acc_nu_debito", name: "Cuenta Nu Débito (Nómina)", type: "payroll", icon: "🏦" },
+    ];
+    (fixedIncomeAccounts || []).forEach((acc) => {
+      if (acc.id === "acc_nu_debito") return;
+      const isCash = acc.accountCategory === "cash" || (acc.name || "").toLowerCase().includes("efectivo");
+      list.push({
+        key: `acc_${acc.id}`,
+        id: acc.id,
+        name: acc.name,
+        type: isCash ? "cash" : "fixed_pocket",
+        icon: isCash ? "💵" : "📦",
+        balance: acc.balance,
+      });
+    });
+    (creditCards || []).forEach((card) => {
+      const avail = Math.max(0, (Number(card.totalLimit) || 0) - (Number(card.usedLimit) || 0));
+      list.push({
+        key: `card_${card.id}`,
+        id: card.id,
+        name: card.name,
+        type: "credit_card",
+        icon: "💳",
+        availableLimit: avail,
+      });
+    });
+    return list;
+  }, [fixedIncomeAccounts, creditCards]);
 
   // Accordion state for collapsible sub-items per envelope
   const [expandedEnvelopes, setExpandedEnvelopes] = useState(() => {
@@ -444,6 +484,7 @@ export default function AssignMovementModal({
       const destOpt =
         destOptions.find((o) => o.principal.id === selectedDestAccountId) ||
         (destOptions.length === 1 ? destOptions[0] : null);
+      const chosenSource = allPaymentSources.find((s) => s.key === selectedSourceAccountKey) || allPaymentSources[0];
       onReclassify({
         movementId: movement.id,
         destinationType: "budget_envelope",
@@ -451,25 +492,56 @@ export default function AssignMovementModal({
         targetItem: envelope,
         subItem: selectedSubItem,
         destinationAccount: destOpt ? destOpt.principal : null,
+        paymentSource: {
+          type: chosenSource.type,
+          targetId: chosenSource.id,
+          targetName: chosenSource.name,
+        },
       });
     } else if (activeTab === "debt") {
       const debt = debts.find((d) => d.id === selectedDebtId);
       if (!debt) return;
+      const chosenSource = allPaymentSources.find((s) => s.key === selectedSourceAccountKey) || allPaymentSources[0];
       onReclassify({
         movementId: movement.id,
         destinationType: "debt",
         targetId: debt.id,
         targetItem: debt,
+        paymentSource: {
+          type: chosenSource.type,
+          targetId: chosenSource.id,
+          targetName: chosenSource.name,
+        },
       });
     } else if (activeTab === "credit_card") {
       const card = creditCards.find((c) => c.id === selectedCardId);
       if (!card) return;
-      onReclassify({
-        movementId: movement.id,
-        destinationType: "credit_card",
-        targetId: card.id,
-        targetItem: card,
-      });
+      if (cardActionMode === "purchase") {
+        onReclassify({
+          movementId: movement.id,
+          destinationType: "credit_card_purchase",
+          cardId: card.id,
+          cardItem: card,
+          paymentSource: {
+            type: "credit_card",
+            targetId: card.id,
+            targetName: card.name,
+          },
+        });
+      } else {
+        const chosenSource = allPaymentSources.find((s) => s.key === selectedSourceAccountKey) || allPaymentSources[0];
+        onReclassify({
+          movementId: movement.id,
+          destinationType: "credit_card",
+          targetId: card.id,
+          targetItem: card,
+          paymentSource: {
+            type: chosenSource.type,
+            targetId: chosenSource.id,
+            targetName: chosenSource.name,
+          },
+        });
+      }
     }
     onClose();
   };
@@ -552,13 +624,41 @@ export default function AssignMovementModal({
           <div style={{ display: "flex", gap: 12, fontSize: "0.76rem", color: "var(--text-muted)", flexWrap: "wrap" }}>
             <span>📅 Fecha: {movement.date}</span>
             <span>•</span>
-            <span>🏦 Origen: {movement.paymentSource?.targetName || movement.sourceAccount || "Nómina"}</span>
+            <span>🏦 Origen actual: <strong>{movement.paymentSource?.targetName || movement.sourceAccount || "Nómina"}</strong></span>
             {movement.budgetItemName && (
               <>
                 <span>•</span>
                 <span>Rubro actual: <strong>{movement.budgetItemName}</strong></span>
               </>
             )}
+          </div>
+
+          {/* Selector de Medio / Cuenta de Origen */}
+          <div style={{ marginTop: 12, paddingTop: 10, borderTop: isLight ? "1px solid rgba(0,0,0,0.06)" : "1px solid rgba(255,255,255,0.06)" }}>
+            <label style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: 6 }}>
+              💳 Cambiar Cuenta / Medio de Pago Origen (¿De dónde salió realmente el dinero?):
+            </label>
+            <select
+              value={selectedSourceAccountKey}
+              onChange={(e) => setSelectedSourceAccountKey(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                borderRadius: "8px",
+                fontSize: "0.82rem",
+                fontWeight: 600,
+                background: isLight ? "#ffffff" : "var(--bg-primary)",
+                color: "var(--text-primary)",
+                border: isLight ? "1px solid rgba(0,0,0,0.15)" : "1px solid var(--border)",
+                cursor: "pointer",
+              }}
+            >
+              {allPaymentSources.map((src) => (
+                <option key={src.key} value={src.key}>
+                  {src.icon} {src.name} {src.availableLimit !== undefined ? `(Cupo libre: $${Number(src.availableLimit).toLocaleString("es-CO")})` : src.balance !== undefined ? `(Saldo: $${Number(src.balance).toLocaleString("es-CO")})` : ""}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -2106,11 +2206,57 @@ export default function AssignMovementModal({
           </div>
         )}
 
-        {/* Tab 3: Credit Card Payment Selection */}
+        {/* Tab 3: Credit Card Selection */}
         {activeTab === "credit_card" && (
           <div>
+            {/* Mode Switcher: Compra vs Abono */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+              <button
+                type="button"
+                onClick={() => setCardActionMode("purchase")}
+                style={{
+                  padding: "9px 12px",
+                  borderRadius: "10px",
+                  border: cardActionMode === "purchase" ? "2px solid #0284c7" : (isLight ? "1px solid rgba(0,0,0,0.1)" : "1px solid var(--border)"),
+                  background: cardActionMode === "purchase" ? (isLight ? "rgba(2, 132, 199, 0.1)" : "rgba(2, 132, 199, 0.2)") : "transparent",
+                  color: cardActionMode === "purchase" ? (isLight ? "#0284c7" : "#38bdf8") : "var(--text-muted)",
+                  fontWeight: 700,
+                  fontSize: "0.78rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                }}
+              >
+                <span>🛍️</span> Compra con Tarjeta
+              </button>
+              <button
+                type="button"
+                onClick={() => setCardActionMode("payoff")}
+                style={{
+                  padding: "9px 12px",
+                  borderRadius: "10px",
+                  border: cardActionMode === "payoff" ? "2px solid #10b981" : (isLight ? "1px solid rgba(0,0,0,0.1)" : "1px solid var(--border)"),
+                  background: cardActionMode === "payoff" ? (isLight ? "rgba(16, 185, 129, 0.1)" : "rgba(16, 185, 129, 0.2)") : "transparent",
+                  color: cardActionMode === "payoff" ? "#10b981" : "var(--text-muted)",
+                  fontWeight: 700,
+                  fontSize: "0.78rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                }}
+              >
+                <span>💵</span> Abono / Pago a Tarjeta
+              </button>
+            </div>
+
             <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginBottom: 12, lineHeight: 1.4 }}>
-              Convierte este movimiento en un <strong>Abono a Tarjeta de Crédito</strong>. El valor se restará de la deuda actual liberando cupo inmediatamente.
+              {cardActionMode === "purchase"
+                ? "Este movimiento fue pagado con tu tarjeta de crédito. Sumará al cupo utilizado de la tarjeta y NO se descontará de tu nómina o cuentas bancarias."
+                : "Convierte este movimiento en un Abono a Tarjeta de Crédito desde tu cuenta. Se restará de la deuda actual liberando cupo inmediatamente."}
             </p>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
