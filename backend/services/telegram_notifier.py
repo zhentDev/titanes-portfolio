@@ -115,6 +115,68 @@ def send_sell_alert_telegram(
     return send_telegram_message(message, parse_mode="HTML")
 
 
+def send_debt_reminder_telegram(
+    concept: str,
+    person_name: str,
+    amount: float,
+    due_date: Optional[str],
+    debt_type: str = "payable",
+    payment_method: Optional[str] = None,
+    currency: str = "COP",
+) -> bool:
+    """Send an instant Telegram alarm for debt due dates (both payables and receivables)."""
+    now = datetime.now(COLOMBIA_TZ)
+    now_str = now.strftime("%d/%m/%Y %I:%M %p")
+    today_str = now.strftime("%Y-%m-%d")
+
+    clean_concept = html.escape(concept or "Deuda")
+    clean_person = html.escape(person_name or "Particular")
+    clean_method = html.escape(payment_method or "Transferencia")
+    formatted_amount = f"${amount:,.0f} {currency}".replace(",", ".")
+
+    is_receivable = debt_type == "receivable"
+
+    # Compute urgency badge and relative days
+    urgency_badge = "🗓️"
+    relative_time = ""
+    if due_date:
+        if due_date == today_str:
+            urgency_badge = "⏰ <b>¡VENCE HOY!</b>"
+            relative_time = "El pago debe realizarse hoy."
+        elif due_date < today_str:
+            urgency_badge = "⚠️ <b>¡VENCIDO!</b>"
+            relative_time = f"La fecha acordada fue {due_date}."
+        else:
+            urgency_badge = f"🗓️ <b>Programado para: {due_date}</b>"
+            relative_time = f"Fecha límite acordada: {due_date}."
+
+    if is_receivable:
+        header = "🤝 <b>RECORDATORIO: COBRO DE PRÉSTAMO A TU FAVOR</b>"
+        role_label = "👤 <b>Quién te debe (Deudor):</b>"
+        amount_label = "💰 <b>Monto Pendiente por Cobrar:</b>"
+        action = "💡 <i>Recuerda contactar al deudor o verificar tu cuenta/cajita para registrar el cobro.</i>"
+    else:
+        header = "💳 <b>RECORDATORIO: PAGO DE DEUDA PENDIENTE</b>"
+        role_label = "👤 <b>Acreedor (A quién debes):</b>"
+        amount_label = "💵 <b>Cuota / Saldo a Pagar:</b>"
+        action = f"💡 <i>Recuerda realizar el abono vía: <b>{clean_method}</b> y registrarlo en la app.</i>"
+
+    message = (
+        f"{header}\n\n"
+        f"📋 <b>Concepto:</b> {clean_concept}\n"
+        f"{role_label} {clean_person}\n"
+        f"{amount_label} <code>{formatted_amount}</code>\n"
+        f"━━━━━━━━━━━━━━━━━━\n"
+        f"{urgency_badge}\n"
+        f"ℹ️ {relative_time}\n"
+        f"━━━━━━━━━━━━━━━━━━\n"
+        f"{action}\n\n"
+        f"🕒 <i>Titanes Portfolio • {now_str}</i>"
+    )
+
+    return send_telegram_message(message, parse_mode="HTML")
+
+
 def send_test_telegram() -> dict[str, Any]:
     """Test function to verify bot token and chat ID connectivity."""
     config = get_telegram_config()

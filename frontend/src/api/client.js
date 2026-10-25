@@ -1049,6 +1049,22 @@ export async function deleteDebtApi(id) {
   return res.json();
 }
 
+export async function notifyDebtTelegramApi(id) {
+  const res = await safeFetch(`${getBase()}/cash-flow/debt/${id}/notify-telegram`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error("Error al enviar recordatorio a Telegram");
+  return res.json();
+}
+
+export async function checkDebtRemindersApi() {
+  const res = await safeFetch(`${getBase()}/cash-flow/debts/check-reminders`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error("Error al verificar alarmas de deudas");
+  return res.json();
+}
+
 // ── AUTH API ENDPOINTS ─────────────────────────────────────────────────────────
 
 export async function loginApi(email, password) {

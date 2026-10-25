@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 
 from services.auth import get_optional_current_user
 from services.db import get_user_cash_flow_db, save_user_cash_flow_db
+from services.telegram_notifier import send_debt_reminder_telegram
 
 logger = logging.getLogger(__name__)
 
@@ -348,6 +349,81 @@ def delete_debt(debt_id: str, request: Request):
     db["debts"] = [x for x in db.get("debts", []) if x.get("id") != debt_id]
     save_cash_flow_db(db, user_id)
     return {"status": "ok", "deletedId": debt_id}
+
+
+@router.post("/cash-flow/debt/{debt_id}/notify-telegram")
+def notify_debt_telegram(debt_id: str, request: Request):
+    """Send an instant Telegram alert for a specific debt due date or loan collection."""
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    db = load_cash_flow_db(user_id)
+    debt = next((d for d in db.get("debts", []) if d.get("id") == debt_id), None)
+    if not debt:
+        raise HTTPException(status_code=404, detail="Deuda o préstamo no encontrado")
+
+    concept = debt.get("concept", "Deuda")
+    debt_type = debt.get("debtType", "payable")
+    person = debt.get("debtor") if debt_type == "receivable" else debt.get("creditor")
+    person_name = person or ("Deudor" if debt_type == "receivable" else "Acreedor")
+
+    amount = float(debt.get("installmentAmount") or debt.get("remainingAmount") or debt.get("totalAmount") or 0)
+    due_date = debt.get("dueDate") or debt.get("nextPaymentDate")
+    payment_method = debt.get("paymentMethod")
+    currency = db.get("currency", "COP")
+
+    sent = send_debt_reminder_telegram(
+        concept=concept,
+        person_name=person_name,
+        amount=amount,
+        due_date=due_date,
+        debt_type=debt_type,
+        payment_method=payment_method,
+        currency=currency,
+    )
+    return {"status": "ok", "sent": sent, "debtId": debt_id}
+
+
+@router.post("/cash-flow/debts/check-reminders")
+def check_all_debt_reminders(request: Request):
+    """Check all active debts and receivables due within 3 days or today and notify via Telegram."""
+    user = get_optional_current_user(request)
+    user_id = user["sub"] if user else None
+    db = load_cash_flow_db(user_id)
+    debts = db.get("debts", [])
+
+    from datetime import timedelta
+    today = datetime.now().date()
+    max_date = today + timedelta(days=3)
+
+    notified = []
+    for debt in debts:
+        if debt.get("status") == "paid" or float(debt.get("remainingAmount") or debt.get("totalAmount") or 0) <= 0:
+            continue
+        due_str = debt.get("dueDate") or debt.get("nextPaymentDate")
+        if not due_str:
+            continue
+        try:
+            due_d = datetime.strptime(due_str[:10], "%Y-%m-%d").date()
+        except Exception:
+            continue
+
+        if due_d <= max_date:
+            debt_type = debt.get("debtType", "payable")
+            person_name = (debt.get("debtor") if debt_type == "receivable" else debt.get("creditor")) or "Particular"
+            amt = float(debt.get("installmentAmount") or debt.get("remainingAmount") or debt.get("totalAmount") or 0)
+            ok = send_debt_reminder_telegram(
+                concept=debt.get("concept", "Deuda"),
+                person_name=person_name,
+                amount=amt,
+                due_date=due_str[:10],
+                debt_type=debt_type,
+                payment_method=debt.get("paymentMethod"),
+                currency=db.get("currency", "COP"),
+            )
+            if ok:
+                notified.append(debt.get("id"))
+
+    return {"status": "ok", "notifiedCount": len(notified), "debtIds": notified}
 
 
 @router.post("/cash-flow/inflow")

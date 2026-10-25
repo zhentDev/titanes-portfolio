@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from "react";
 import { useTheme } from "../../context/ThemeContext";
 import { formatCashFlowMoney } from "../../utils/cashFlowFormatters";
+import { notifyDebtTelegramApi, checkDebtRemindersApi } from "../../api/client";
+import { toast } from "react-hot-toast";
 import "./CashFlow.css";
 
 export default function DebtsSection({
@@ -49,6 +51,42 @@ export default function DebtsSection({
   );
   const totalPaid = Math.max(0, totalInitial - totalRemaining);
   const overallProgress = totalInitial > 0 ? ((totalPaid / totalInitial) * 100).toFixed(0) : 0;
+
+  const [sendingAlertId, setSendingAlertId] = useState(null);
+  const [checkingAll, setCheckingAll] = useState(false);
+
+  const handleSendTelegramAlert = async (debt) => {
+    try {
+      setSendingAlertId(debt.id);
+      await notifyDebtTelegramApi(debt.id);
+      toast.success(
+        debt.debtType === "receivable"
+          ? `¡Recordatorio de cobro enviado a Telegram! 📲`
+          : `¡Alarma de pago de deuda enviada a Telegram! 📲`,
+        { icon: "✈️" }
+      );
+    } catch (err) {
+      toast.error("Error al enviar alarma a Telegram");
+    } finally {
+      setSendingAlertId(null);
+    }
+  };
+
+  const handleCheckAllReminders = async () => {
+    try {
+      setCheckingAll(true);
+      const res = await checkDebtRemindersApi();
+      if (res.notifiedCount > 0) {
+        toast.success(`¡Se enviaron ${res.notifiedCount} recordatorios a Telegram! 📲`, { icon: "🔔" });
+      } else {
+        toast("No hay deudas con vencimiento en los próximos 3 días.", { icon: "✅" });
+      }
+    } catch (err) {
+      toast.error("Error al verificar alarmas");
+    } finally {
+      setCheckingAll(false);
+    }
+  };
 
   const getDueDateInfo = (dueDate) => {
     if (!dueDate) return null;
@@ -292,31 +330,56 @@ export default function DebtsSection({
           </button>
         </div>
 
-        <button
-          type="button"
-          onClick={() => onOpenDebtModal(null, isReceivableTab ? "receivable" : "payable")}
-          style={{
-            background: isReceivableTab
-              ? "linear-gradient(135deg, #10b981 0%, #059669 100%)"
-              : "linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)",
-            color: "#ffffff",
-            border: "none",
-            borderRadius: 8,
-            padding: "7px 14px",
-            fontSize: "0.8rem",
-            fontWeight: 800,
-            cursor: "pointer",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            boxShadow: isReceivableTab
-              ? "0 4px 12px rgba(16, 185, 129, 0.25)"
-              : "0 4px 12px rgba(244, 63, 94, 0.25)",
-          }}
-        >
-          <span>+</span>
-          <span>{isReceivableTab ? "Nuevo Préstamo por Cobrar" : "Nueva Deuda / Compromiso"}</span>
-        </button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={handleCheckAllReminders}
+            disabled={checkingAll}
+            style={{
+              background: isLight ? "rgba(2, 132, 199, 0.1)" : "rgba(56, 189, 248, 0.14)",
+              border: `1px solid ${isLight ? "rgba(2, 132, 199, 0.3)" : "rgba(56, 189, 248, 0.35)"}`,
+              color: isLight ? "#0284c7" : "#38bdf8",
+              padding: "7px 12px",
+              borderRadius: 8,
+              fontSize: "0.78rem",
+              fontWeight: 700,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+            title="Verificar y enviar alarmas de deudas y cobros a Telegram"
+          >
+            <span>{checkingAll ? "⏳" : "📲"}</span>
+            <span>{checkingAll ? "Verificando..." : "Alarma Telegram"}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onOpenDebtModal(null, isReceivableTab ? "receivable" : "payable")}
+            style={{
+              background: isReceivableTab
+                ? "linear-gradient(135deg, #10b981 0%, #059669 100%)"
+                : "linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: 8,
+              padding: "7px 14px",
+              fontSize: "0.8rem",
+              fontWeight: 800,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              boxShadow: isReceivableTab
+                ? "0 4px 12px rgba(16, 185, 129, 0.25)"
+                : "0 4px 12px rgba(244, 63, 94, 0.25)",
+            }}
+          >
+            <span>+</span>
+            <span>{isReceivableTab ? "Nuevo Préstamo por Cobrar" : "Nueva Deuda / Compromiso"}</span>
+          </button>
+        </div>
       </div>
 
       {/* Debts List */}
@@ -590,6 +653,24 @@ export default function DebtsSection({
                         title="Ver historial de abonos y notas"
                       >
                         {isExpanded ? "▲" : "▼"} {debt.paymentsLog?.length > 0 ? `(${debt.paymentsLog.length})` : ""}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleSendTelegramAlert(debt)}
+                        disabled={sendingAlertId === debt.id}
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          color: isLight ? "#0284c7" : "#38bdf8",
+                          cursor: "pointer",
+                          fontSize: "0.95rem",
+                          padding: "4px",
+                          opacity: sendingAlertId === debt.id ? 0.5 : 1,
+                        }}
+                        title={isReceivable ? "Enviar alarma de cobro a tu Telegram" : "Enviar alarma de pago a tu Telegram"}
+                      >
+                        {sendingAlertId === debt.id ? "⏳" : "📲"}
                       </button>
 
                       <button

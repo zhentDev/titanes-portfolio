@@ -266,6 +266,22 @@
   ],
   "expensesLog": [
     {
+      "id": "exp_provision_mike_202610",
+      "period": "2026-10",
+      "date": "2026-10-24",
+      "amount": 210000,
+      "currency": "COP",
+      "type": "debit",
+      "budgetItemType": "needs",
+      "budgetItemName": "Deudas / Compromisos (Mike)",
+      "description": "💰 Provisión Cuota Mike (Transferencia a Cajita Deudas)",
+      "paymentSource": {
+        "type": "payroll",
+        "targetName": "Nómina Nu Débito"
+      },
+      "createdAt": "2026-10-24T20:45:00.000Z"
+    },
+    {
       "id": "cf_tx_mb_1792827342417_1d3bf5",
       "period": "2026-11",
       "date": "2026-10-24",
@@ -924,6 +940,34 @@
   "creditPurchases": [],
   "debts": [
     {
+      "id": "debt_mike_nu_2026",
+      "debtType": "payable",
+      "concept": "Deuda con Mike",
+      "creditor": "Mike",
+      "debtor": "Mike",
+      "totalAmount": 630000,
+      "remainingAmount": 420000,
+      "installmentAmount": 210000,
+      "paymentMethod": "Transferencia desde Cajita / Cuenta (Deudas)",
+      "paymentSourceId": null,
+      "paymentFrequency": "monthly",
+      "dueDate": "2026-11-25",
+      "nextPaymentDate": "2026-11-25",
+      "status": "active",
+      "notes": "Cuota mensual de .000 pagada desde la Cajita Deudas",
+      "paymentsLog": [
+        {
+          "id": "pay_mike_20261024_01",
+          "amount": 210000,
+          "date": "2026-10-24",
+          "paymentMethod": "Transferencia desde Cajita / Cuenta (Deudas)",
+          "note": "Abono cuota mensual transferida a la cajita para Mike",
+          "createdAt": "2026-10-24T20:45:00.000Z"
+        }
+      ],
+      "createdAt": "2026-10-24T18:00:00.000Z"
+    },
+    {
       "id": "debt_1792784275907_r2b4",
       "concept": "Cálculo de: Declaración de renta.",
       "creditor": "Maye",
@@ -939,6 +983,25 @@
       "notes": "",
       "paymentsLog": [],
       "createdAt": "2026-10-23T19:37:55.907Z"
+    },
+    {
+      "id": "debt_loan_carlos_2026",
+      "debtType": "receivable",
+      "concept": "Préstamo personal",
+      "creditor": "Carlos Gómez",
+      "debtor": "Carlos Gómez",
+      "totalAmount": 500000,
+      "remainingAmount": 500000,
+      "installmentAmount": 0,
+      "paymentMethod": "Transferencia a Cajita / Cuenta",
+      "paymentSourceId": null,
+      "paymentFrequency": "one_time",
+      "dueDate": "2026-11-15",
+      "nextPaymentDate": "2026-11-15",
+      "status": "active",
+      "notes": "Acuerdo de pago el 15 de noviembre tras pago quincenal",
+      "paymentsLog": [],
+      "createdAt": "2026-10-24T19:00:00.000Z"
     }
   ]
 }
