@@ -93,6 +93,8 @@ export default function AssignMovementModal({
 
   const storeCustomRatios = useCashFlowStore((state) => state.customRatios);
   const storePeriodsData = useCashFlowStore((state) => state.periodsData);
+  const defaultFundingAccountId = useCashFlowStore((state) => state.defaultFundingAccountId) || "acc_plenti_principal";
+  const setDefaultFundingAccount = useCashFlowStore((state) => state.setDefaultFundingAccount);
 
   const currentPeriodRatios = useMemo(() => {
     const periodSnap = activePeriod && storePeriodsData?.[activePeriod];
@@ -271,10 +273,57 @@ export default function AssignMovementModal({
     const isEquity = envelope.category === "equity_investment" || envName.includes("renta variable") || envName.includes("portafolio");
     const isTravelStudy = envelope.category === "medium_term_goal" || envName.includes("viaje") || envName.includes("estudio");
 
+    if (isEquity) {
+      // Generalizado: Todas las cuentas en USD, USDC o marcadas/nombradas para fondeo de broker
+      const dollarAccs = accs.filter(
+        (a) =>
+          a.currency === "USD" ||
+          a.currency === "USDC" ||
+          a.isFundingAccount ||
+          a.isBrokerFunding ||
+          (a.name || "").toLowerCase().includes("plenti") ||
+          (a.name || "").toLowerCase().includes("broker") ||
+          (a.name || "").toLowerCase().includes("dolar") ||
+          (a.name || "").toLowerCase().includes("interactive") ||
+          (a.name || "").toLowerCase().includes("schwab") ||
+          (a.name || "").toLowerCase().includes("hapi") ||
+          (a.name || "").toLowerCase().includes("trii")
+      );
+
+      const seen = new Set();
+      const equityOptions = [];
+
+      dollarAccs.forEach((acc) => {
+        const principal =
+          acc.fallbackAccountId
+            ? accs.find((a) => a.id === acc.fallbackAccountId) || acc
+            : acc;
+        const pocket = acc.type === "pocket" ? acc : null;
+        if (seen.has(principal.id)) return;
+        seen.add(principal.id);
+        equityOptions.push({
+          principal,
+          pocket: pocket || principal,
+          isDollar: true,
+          currency: principal.currency || "USD",
+        });
+      });
+
+      // Ordenar: primero la cuenta marcada como predeterminada de fondeo
+      equityOptions.sort((a, b) => {
+        const aIsDef = a.principal.id === defaultFundingAccountId;
+        const bIsDef = b.principal.id === defaultFundingAccountId;
+        if (aIsDef && !bIsDef) return -1;
+        if (!aIsDef && bIsDef) return 1;
+        return (a.principal.name || "").localeCompare(b.principal.name || "");
+      });
+
+      return equityOptions;
+    }
+
     const pockets = accs.filter((a) => {
       const n = (a.name || "").toLowerCase();
       if (isEmergency) return n.includes("emergencia") || n.includes("emergency");
-      if (isEquity) return a.id === "acc_1786777955489" || (a.currency === "USD" && n.includes("bolsillo")) || n.includes("plenti");
       if (isTravelStudy) return n.includes("viaje") || n.includes("estudio");
       return Number(a.interestRateEA || 0) > 0 && a.accountCategory !== "payroll";
     });
@@ -1849,20 +1898,26 @@ export default function AssignMovementModal({
                 }}
               >
                 <div style={{ fontSize: "0.8rem", fontWeight: 700, color: isLight ? "#047857" : "#34d399", marginBottom: 4 }}>
-                  🏦 ¿A qué cuenta llegó este dinero?
+                  {selectedEnvelopeObj?.category === "equity_investment" || (selectedEnvelopeObj?.name || "").toLowerCase().includes("renta variable") || (selectedEnvelopeObj?.name || "").toLowerCase().includes("portafolio")
+                    ? "💵 ¿A qué cuenta en dólares / fondeo llegó este dinero?"
+                    : "🏦 ¿A qué cuenta llegó este dinero?"}
                 </div>
                 <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: 10, lineHeight: 1.4 }}>
-                  Se abonará en la <strong>cuenta principal</strong> de la entidad. Luego, desde Renta Fija, podrás moverlo al bolsillo con un <strong>movimiento interno</strong>.
+                  {selectedEnvelopeObj?.category === "equity_investment" || (selectedEnvelopeObj?.name || "").toLowerCase().includes("renta variable") || (selectedEnvelopeObj?.name || "").toLowerCase().includes("portafolio")
+                    ? "Selecciona la cuenta en dólares para fondear tu broker. Puedes marcar tu favorita con la estrella ⭐ para que se elija por defecto."
+                    : "Se abonará en la cuenta principal de la entidad. Luego, desde Renta Fija, podrás moverlo al bolsillo con un movimiento interno."}
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {destinationOptions.map(({ principal, pocket }) => {
+                  {destinationOptions.map(({ principal, pocket, isDollar }) => {
                     const isChosen =
                       selectedDestAccountId === principal.id ||
                       (destinationOptions.length === 1 && !selectedDestAccountId);
+                    const isDefaultFunding = principal.id === defaultFundingAccountId;
+                    const isEquityItem = selectedEnvelopeObj?.category === "equity_investment" || (selectedEnvelopeObj?.name || "").toLowerCase().includes("renta variable") || (selectedEnvelopeObj?.name || "").toLowerCase().includes("portafolio");
+
                     return (
-                      <button
+                      <div
                         key={principal.id}
-                        type="button"
                         onClick={() => setSelectedDestAccountId(principal.id)}
                         style={{
                           display: "flex",
@@ -1880,20 +1935,65 @@ export default function AssignMovementModal({
                             ? (isLight ? "rgba(16, 185, 129, 0.12)" : "rgba(16, 185, 129, 0.18)")
                             : (isLight ? "#ffffff" : "var(--bg-surface)"),
                           color: "var(--text-primary)",
+                          transition: "all 0.15s ease",
                         }}
                       >
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: "0.8rem", fontWeight: 700 }}>
-                            {isChosen ? "✅ " : "○ "}{principal.name}
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                            <span style={{ fontSize: "0.82rem", fontWeight: 700 }}>
+                              {isChosen ? "✅ " : "○ "}{principal.name}
+                            </span>
+                            {isDefaultFunding && isEquityItem && (
+                              <span style={{ fontSize: "0.64rem", padding: "1px 6px", borderRadius: 4, background: "rgba(245, 158, 11, 0.2)", color: "#f59e0b", fontWeight: 700 }}>
+                                ⭐ Predeterminada Fondeo
+                              </span>
+                            )}
+                            {isDollar && !isDefaultFunding && (
+                              <span style={{ fontSize: "0.64rem", padding: "1px 6px", borderRadius: 4, background: "rgba(56, 189, 248, 0.15)", color: "#38bdf8", fontWeight: 600 }}>
+                                💵 USD
+                              </span>
+                            )}
                           </div>
                           <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 2 }}>
-                            ➔ luego a: {pocket.name} ({Number(pocket.interestRateEA || 0)}% E.A.)
+                            {pocket && pocket.id !== principal.id
+                              ? `➔ luego a: ${pocket.name} (${Number(pocket.interestRateEA || 0)}% E.A.)`
+                              : isEquityItem ? "Fondeo directo a broker o cuenta en dólares" : "Cuenta de custodia"}
                           </div>
                         </div>
-                        <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.74rem", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
-                          {formatMoney(principal.balance, principal.currency || currency)}
-                        </span>
-                      </button>
+
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.76rem", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
+                            {principal.currency === "USD" || isDollar
+                              ? `$${Number(principal.balance || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`
+                              : formatMoney(principal.balance, principal.currency || currency)}
+                          </span>
+
+                          {isEquityItem && !isDefaultFunding && setDefaultFundingAccount && (
+                            <button
+                              type="button"
+                              title="Marcar como cuenta de fondeo predeterminada"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDefaultFundingAccount(principal.id);
+                                setSelectedDestAccountId(principal.id);
+                              }}
+                              style={{
+                                background: "rgba(245, 158, 11, 0.12)",
+                                border: "1px solid rgba(245, 158, 11, 0.35)",
+                                color: "#f59e0b",
+                                borderRadius: 6,
+                                padding: "3px 7px",
+                                fontSize: "0.64rem",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              ⭐ Default
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     );
                   })}
                 </div>

@@ -97,6 +97,7 @@ export const useCashFlowStore = create(
     allocationModel: "custom", // 'custom' | '50_30_20' | 'pay_yourself_first' | 'envelope'
     customRatios: DEFAULT_RATIOS,
     emergencyFundTargetMonths: 6,
+    defaultFundingAccountId: "acc_plenti_principal",
     payrollAccount: DEFAULT_PAYROLL_ACCOUNT,
     creditCards: DEFAULT_CREDIT_CARDS,
     creditPurchases: DEFAULT_CREDIT_PURCHASES,
@@ -331,6 +332,7 @@ export const useCashFlowStore = create(
           allocationModel: source?.allocationModel || cachedLocal?.allocationModel || "custom",
           customRatios: resolvedRatios,
           emergencyFundTargetMonths: source?.emergencyFundTargetMonths ?? cachedLocal?.emergencyFundTargetMonths ?? 6,
+          defaultFundingAccountId: source?.defaultFundingAccountId || cachedLocal?.defaultFundingAccountId || "acc_plenti_principal",
           payrollAccount: {
             ...DEFAULT_PAYROLL_ACCOUNT,
             ...(cachedLocal?.payrollAccount || {}),
@@ -393,6 +395,7 @@ export const useCashFlowStore = create(
               allocationModel: currentState.allocationModel,
               customRatios: currentState.customRatios,
               emergencyFundTargetMonths: currentState.emergencyFundTargetMonths,
+              defaultFundingAccountId: currentState.defaultFundingAccountId,
               payrollAccount: currentState.payrollAccount,
               creditCards: currentState.creditCards,
               creditPurchases: currentState.creditPurchases,
@@ -414,6 +417,21 @@ export const useCashFlowStore = create(
             set({ isSyncing: false });
           }
         }, 300);
+      },
+
+      // ── Broker Funding Account Settings (USD / Brokers) ──
+      setDefaultFundingAccount: (accountId) => {
+        set({ defaultFundingAccountId: accountId });
+        try {
+          const raw = localStorage.getItem("titanes_cash_flow_store_v2");
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            parsed.defaultFundingAccountId = accountId;
+            localStorage.setItem("titanes_cash_flow_store_v2", JSON.stringify(parsed));
+          }
+        } catch {}
+        get().syncStateWithBackend();
+        toast.success("Cuenta en dólares para fondear establecida como predeterminada ⭐", { icon: "💵" });
       },
 
       // ── Payroll Account Settings ─────────────────────
