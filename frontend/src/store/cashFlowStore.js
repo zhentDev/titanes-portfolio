@@ -133,10 +133,12 @@ export const useCashFlowStore = create(
         // Helper for lossless union of array of objects by id
         const unionById = (serverArr = [], localArr = []) => {
           const map = new Map();
-          (serverArr || []).forEach((item) => {
+          // First add local items (drafts or offline items)
+          (localArr || []).forEach((item) => {
             if (item && item.id) map.set(item.id, { ...item });
           });
-          (localArr || []).forEach((item) => {
+          // Server items take precedence (authoritative source)
+          (serverArr || []).forEach((item) => {
             if (item && item.id) {
               const existing = map.get(item.id);
               map.set(item.id, existing ? { ...existing, ...item } : { ...item });
@@ -184,6 +186,26 @@ export const useCashFlowStore = create(
             return {
               ...e,
               period: "2026-11",
+            };
+          }
+
+          // Compra con Tarjeta de Crédito Nu (3887) Xbox: no debe salir de Nómina, sale de Tarjeta Nu
+          const isXboxOr3887 =
+            Number(e.amount) === 31392 ||
+            (e.description || "").toLowerCase().includes("3887") ||
+            (e.description || "").toLowerCase().includes("xbox");
+          if (isXboxOr3887) {
+            return {
+              ...e,
+              description: "Compra en Microsoft*Xbox",
+              budgetItemId: e.budgetItemId || "want_leisure",
+              budgetItemName: !e.budgetItemName || e.budgetItemName.includes("3887") ? "Ocio, Hobbies & Suscripciones" : e.budgetItemName,
+              budgetItemType: "wants",
+              paymentSource: {
+                type: "credit_card",
+                targetId: "card_nu_credito",
+                targetName: "Tarjeta Nu Mastercard (3887)",
+              },
             };
           }
           const isPlanMovil37k =
