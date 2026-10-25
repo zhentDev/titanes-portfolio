@@ -176,6 +176,14 @@ export const useCashFlowStore = create(
         // restaurarlo al rubro correspondiente de Servicios Públicos: Plan móvil; y vincular la transferencia real de $350k a Finandina.
         // Asegurar que la transferencia a la cajita para la deuda de Mike (-$210,000) esté siempre registrada y reste de nómina.
         const mappedExpenses = mergedExpensesLog.map((e) => {
+          // Si el movimiento de Mike quedó con período previo 2026-10, moverlo al período activo real 2026-11
+          if ((e.id?.includes("mike") || (e.description || "").toLowerCase().includes("mike")) && e.period === "2026-10") {
+            return {
+              ...e,
+              id: "exp_transfer_mike_cajita_202611",
+              period: "2026-11",
+            };
+          }
           const isPlanMovil37k =
             Number(e.amount) === 37000 &&
             ((e.description || "").toLowerCase().includes("plan movil") ||
@@ -207,14 +215,14 @@ export const useCashFlowStore = create(
         });
 
         const hasMikeTransfer = mappedExpenses.some(
-          (e) => e.id === "exp_transfer_mike_cajita_202610" || (Number(e.amount) === 210000 && (e.description || "").toLowerCase().includes("mike"))
+          (e) => (e.id === "exp_transfer_mike_cajita_202611" || (Number(e.amount) === 210000 && (e.description || "").toLowerCase().includes("mike"))) && (e.period === "2026-11" || !e.period)
         );
         const sanitizedExpensesLog = hasMikeTransfer
           ? mappedExpenses
           : [
               {
-                id: "exp_transfer_mike_cajita_202610",
-                period: "2026-10",
+                id: "exp_transfer_mike_cajita_202611",
+                period: "2026-11",
                 date: "2026-10-24",
                 amount: 210000,
                 currency: "COP",
@@ -1012,6 +1020,28 @@ export const useCashFlowStore = create(
               createdAt: new Date().toISOString(),
             };
             updatedExpenses = [createdIncomeTx, ...updatedExpenses];
+          } else if (!isReceivable && payment.createExpenseMovement) {
+            const srcAccount = (state.fixedIncomeAccounts || []).find((a) => a.id === payment.paymentSourceId);
+            const isPayroll = payment.deductFromPayroll || (!srcAccount && (!payment.paymentMethod || payment.paymentMethod.toLowerCase().includes("nómina") || payment.paymentMethod.toLowerCase().includes("débito") || payment.paymentMethod.toLowerCase().includes("cajita")));
+            const createdExpenseTx = {
+              id: `exp_debt_pay_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+              period: state.activePeriod,
+              date: payment.date || new Date().toISOString().slice(0, 10),
+              amount: pAmt,
+              currency: state.currency,
+              type: "debit",
+              budgetItemType: "needs",
+              budgetItemId: "need_debts",
+              budgetItemName: `Deudas / Compromisos (${debt.concept || debt.creditor})`,
+              description: `💰 Abono Deuda: ${debt.concept || debt.creditor} (${payment.paymentMethod || "Transferencia"})`,
+              paymentSource: {
+                type: isPayroll ? "payroll" : "fixed_pocket",
+                targetId: isPayroll ? (state.payrollAccount?.id || "acc_nu_debito") : (payment.paymentSourceId || null),
+                targetName: isPayroll ? (state.payrollAccount?.name || "Cuenta Nu Débito (Nómina)") : (srcAccount?.name || "Cajita"),
+              },
+              createdAt: new Date().toISOString(),
+            };
+            updatedExpenses = [createdExpenseTx, ...updatedExpenses];
           }
 
           try {

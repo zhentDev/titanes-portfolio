@@ -21,6 +21,7 @@ export default function DebtPaymentModal({
   const [paymentMethod, setPaymentMethod] = useState(() => debt?.paymentMethod || (isReceivable ? "Transferencia a Cajita / Cuenta" : "Nómina / Débito directa"));
   const [paymentSourceId, setPaymentSourceId] = useState(() => debt?.paymentSourceId || "");
   const [createIncomeMovement, setCreateIncomeMovement] = useState(true);
+  const [createExpenseMovement, setCreateExpenseMovement] = useState(true);
   const [note, setNote] = useState("");
 
   if (!isOpen || !debt) return null;
@@ -41,6 +42,8 @@ export default function DebtPaymentModal({
       paymentMethod,
       paymentSourceId: paymentSourceId || null,
       createIncomeMovement: isReceivable ? createIncomeMovement : false,
+      createExpenseMovement: !isReceivable ? createExpenseMovement : false,
+      deductFromPayroll: true,
       note: note.trim(),
     });
 
@@ -293,6 +296,34 @@ export default function DebtPaymentModal({
               />
               <span>
                 <strong>Registrar como Ingreso real</strong> en el Flujo de Caja (Nómina/Cajita)
+              </span>
+            </label>
+          )}
+
+          {/* Checkbox para registrar salida en Cash Flow cuando es abono/pago de deuda */}
+          {!isReceivable && (
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                background: isLight ? "rgba(244, 63, 94, 0.06)" : "rgba(244, 63, 94, 0.12)",
+                padding: "8px 12px",
+                borderRadius: 8,
+                border: "1px solid rgba(244, 63, 94, 0.25)",
+                fontSize: "0.75rem",
+                color: "var(--text-primary)",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={createExpenseMovement}
+                onChange={(e) => setCreateExpenseMovement(e.target.checked)}
+                style={{ accentColor: "#f43f5e", width: 16, height: 16 }}
+              />
+              <span>
+                <strong>Registrar salida en Flujo de Caja</strong> (descuenta de Saldo en Nómina)
               </span>
             </label>
           )}
