@@ -174,10 +174,8 @@ export const useCashFlowStore = create(
         
         // Auto-corrección: si el movimiento de $37,000 (Plan móvil) quedó por error asignado al Fondo de Emergencia,
         // restaurarlo al rubro correspondiente de Servicios Públicos: Plan móvil; y vincular la transferencia real de $350k a Finandina.
-        // Y eliminar cualquier provisión provisional de Mike para que NO reste de nómina.
-        const sanitizedExpensesLog = mergedExpensesLog
-          .filter((e) => e.id !== "exp_provision_mike_202610" && !e.description?.includes("Provisión Cuota Mike"))
-          .map((e) => {
+        // Asegurar que la transferencia a la cajita para la deuda de Mike (-$210,000) esté siempre registrada y reste de nómina.
+        const mappedExpenses = mergedExpensesLog.map((e) => {
           const isPlanMovil37k =
             Number(e.amount) === 37000 &&
             ((e.description || "").toLowerCase().includes("plan movil") ||
@@ -207,6 +205,33 @@ export const useCashFlowStore = create(
           }
           return e;
         });
+
+        const hasMikeTransfer = mappedExpenses.some(
+          (e) => e.id === "exp_transfer_mike_cajita_202610" || (Number(e.amount) === 210000 && (e.description || "").toLowerCase().includes("mike"))
+        );
+        const sanitizedExpensesLog = hasMikeTransfer
+          ? mappedExpenses
+          : [
+              {
+                id: "exp_transfer_mike_cajita_202610",
+                period: "2026-10",
+                date: "2026-10-24",
+                amount: 210000,
+                currency: "COP",
+                type: "debit",
+                budgetItemType: "needs",
+                budgetItemId: "need_debts_mike",
+                budgetItemName: "Deudas / Compromisos (Mike)",
+                description: "💰 Transferencia a Cajita (Abono Deuda con Mike)",
+                paymentSource: {
+                  type: "payroll",
+                  targetId: "acc_nu_debito",
+                  targetName: "Cuenta Nu Débito (Nómina)",
+                },
+                createdAt: "2026-10-24T20:45:00.000Z",
+              },
+              ...mappedExpenses,
+            ];
 
         const rawDebts = unionById(source?.debts, cachedLocal?.debts);
         const mergedDebts = rawDebts.map((d) => {
