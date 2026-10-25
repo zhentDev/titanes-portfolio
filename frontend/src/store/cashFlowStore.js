@@ -112,6 +112,7 @@ export const useCashFlowStore = create(
     periodsData: {}, // Multi-month snapshots: { [period]: { inflows, needs, wants, wealth, customRatios, allocationModel } }
     isInitialized: false,
     isSyncing: false,
+    deletedExpenseIds: [],
 
     // ── Initialization directly from Local Backend Database (SSOT) + Offline Cache ──
     initFetchCashFlow: async () => {
@@ -171,7 +172,9 @@ export const useCashFlowStore = create(
         const mergedCreditCards = Array.isArray(source?.creditCards) && source.creditCards.length > 0 ? source.creditCards : (cachedLocal?.creditCards || []);
         const mergedCreditPurchases = unionById(source?.creditPurchases, cachedLocal?.creditPurchases);
         const mergedCreditCardPayments = unionById(source?.creditCardPayments, cachedLocal?.creditCardPayments);
-        const mergedExpensesLog = unionById(source?.expensesLog, cachedLocal?.expensesLog);
+        const deletedExpenseIds = new Set(cachedLocal?.deletedExpenseIds || []);
+        const rawMergedExpenses = unionById(source?.expensesLog, cachedLocal?.expensesLog);
+        const mergedExpensesLog = rawMergedExpenses.filter((e) => !deletedExpenseIds.has(e?.id));
         
         // Auto-corrección: si el movimiento de $37,000 (Plan móvil) quedó por error asignado al Fondo de Emergencia,
         // restaurarlo al rubro correspondiente de Servicios Públicos: Plan móvil; y vincular la transferencia real de $350k a Finandina.
@@ -234,149 +237,14 @@ export const useCashFlowStore = create(
           return e;
         });
 
-        // Preservar la distribución exacta de la deuda de Mike:
-        // $150.000 en Gastos Fijos (needs -> need_debts_mike) + $60.000 en Renta Variable (wealth -> wealth_tech_etf) = $210.000 total
-        const has60kMikeWealth = mappedExpenses.some(
-          (e) =>
-            Number(e.amount) === 60000 &&
-            (e.description || "").toLowerCase().includes("mike") &&
-            (e.budgetItemId === "wealth_tech_etf" || (e.budgetItemName || "").toLowerCase().includes("renta variable")) &&
-            (e.period === "2026-11" || !e.period)
-        );
-
-        let sanitizedExpensesLog = mappedExpenses.map((e) => {
-          if (
-            (e.id === "exp_transfer_mike_cajita_202611" || (e.description || "").toLowerCase().includes("deuda con mike")) &&
-            Number(e.amount) === 210000 &&
-            e.budgetItemId === "need_debts_mike"
-          ) {
-            return {
-              ...e,
-              amount: 150000,
-              description: "💰 Transferencia a Cajita (Abono Deuda con Mike)",
-            };
+        // Deduplicar estrictamente por id para prevenir filas repetidas
+        const seenExpIds = new Set();
+        let sanitizedExpensesLog = [];
+        for (const exp of mappedExpenses) {
+          if (exp && exp.id && !seenExpIds.has(exp.id)) {
+            seenExpIds.add(exp.id);
+            sanitizedExpensesLog.push(exp);
           }
-          return e;
-        });
-
-        if (!has60kMikeWealth) {
-          sanitizedExpensesLog = [
-            {
-              id: "exp_transfer_mike_cajita_202611_split_wealth_60k",
-              period: "2026-11",
-              date: "2026-10-24",
-              amount: 60000,
-              currency: "COP",
-              type: "debit",
-              budgetItemId: "wealth_tech_etf",
-              budgetItemName: "Portafolio Renta Variable (Al día / Tiempo Real)",
-              budgetItemType: "wealth",
-              description: "💰 Transferencia a Cajita (Abono Deuda con Mike) (Portafolio Renta Variable (Al día / Tiempo Real))",
-              paymentSource: {
-                type: "payroll",
-                targetId: "acc_nu_debito",
-                targetName: "Cuenta Nu Débito (Nómina)",
-              },
-              createdAt: "2026-10-24T20:45:00.000Z",
-            },
-            ...sanitizedExpensesLog,
-          ];
-        }
-
-        const hasMikeNeeds = sanitizedExpensesLog.some(
-          (e) =>
-            (e.id === "exp_transfer_mike_cajita_202611" || (e.description || "").toLowerCase().includes("mike")) &&
-            e.budgetItemId === "need_debts_mike" &&
-            (e.period === "2026-11" || !e.period)
-        );
-        if (!hasMikeNeeds) {
-          sanitizedExpensesLog = [
-            {
-              id: "exp_transfer_mike_cajita_202611",
-              period: "2026-11",
-              date: "2026-10-24",
-              amount: 150000,
-              currency: "COP",
-              type: "debit",
-              budgetItemType: "needs",
-              budgetItemId: "need_debts_mike",
-              budgetItemName: "Deudas / Compromisos (Mike)",
-              description: "💰 Transferencia a Cajita (Abono Deuda con Mike)",
-              paymentSource: {
-                type: "payroll",
-                targetId: "acc_nu_debito",
-                targetName: "Cuenta Nu Débito (Nómina)",
-              },
-              createdAt: "2026-10-24T20:45:00.000Z",
-            },
-            ...sanitizedExpensesLog,
-          ];
-        }
-
-        const has150kViaje = sanitizedExpensesLog.some(
-          (e) =>
-            (e.id?.includes("viaje") ||
-              (e.description || "").toLowerCase().includes("viaje") ||
-              e.budgetItemId === "wealth_travel_goal") &&
-            (e.period === "2026-11" || !e.period)
-        );
-        if (!has150kViaje) {
-          sanitizedExpensesLog = [
-            {
-              id: "cf_tx_cajita_viaje_150k_202611",
-              period: "2026-11",
-              date: "2026-10-24",
-              amount: 150000,
-              currency: "COP",
-              type: "debit",
-              budgetItemId: "wealth_travel_goal",
-              budgetItemName: "Meta Viaje / Estudio",
-              budgetItemType: "wealth",
-              description: "Aporte a Cajita Viaje Nu (Meta Viaje / Estudio)",
-              destinationAccountId: "acc_viaje",
-              destinationAccountName: "Cajita Viaje (9.35% E.A.)",
-              paymentSource: {
-                type: "payroll",
-                targetId: "acc_nu_debito",
-                targetName: "Cuenta Nu Débito (Nómina)",
-              },
-              createdAt: "2026-10-24T21:00:00.000Z",
-            },
-            ...sanitizedExpensesLog,
-          ];
-        }
-
-        const has150kEmergency = sanitizedExpensesLog.some(
-          (e) =>
-            Number(e.amount) === 150000 &&
-            ((e.description || "").toLowerCase().includes("rappicuenta") ||
-              e.budgetItemId === "wealth_emergency") &&
-            (e.period === "2026-11" || !e.period)
-        );
-        if (!has150kEmergency) {
-          sanitizedExpensesLog = [
-            {
-              id: "cf_tx_mb_rappi_emergency_150k_202611",
-              period: "2026-11",
-              date: "2026-10-24",
-              amount: 150000,
-              currency: "COP",
-              type: "debit",
-              budgetItemId: "wealth_emergency",
-              budgetItemName: "Fondo de Emergencia (6 Meses)",
-              budgetItemType: "wealth",
-              description: "Compra en tu RappiCuenta",
-              destinationAccountId: "acc_rappi_principal",
-              destinationAccountName: "Cuenta RappiPay (Principal)",
-              paymentSource: {
-                type: "fixed_pocket",
-                targetId: "acc_rappi_principal",
-                targetName: "Cuenta RappiPay (Principal)",
-              },
-              createdAt: "2026-10-24T22:00:00.000Z",
-            },
-            ...sanitizedExpensesLog,
-          ];
         }
 
         const rawDebts = unionById(source?.debts, cachedLocal?.debts);
@@ -672,12 +540,14 @@ export const useCashFlowStore = create(
           }
 
           const filteredExpenses = (state.expensesLog || []).filter((tx) => tx.id !== id);
+          const nextDeletedIds = [...new Set([...(state.deletedExpenseIds || []), id])];
           try {
             localStorage.setItem(
               "titanes_cash_flow_store_v2",
               JSON.stringify({
                 ...state,
                 expensesLog: filteredExpenses,
+                deletedExpenseIds: nextDeletedIds,
                 creditCards: updatedCards,
                 creditCardPayments: updatedPayments,
               })
@@ -686,6 +556,7 @@ export const useCashFlowStore = create(
 
           return {
             expensesLog: filteredExpenses,
+            deletedExpenseIds: nextDeletedIds,
             creditCards: updatedCards,
             creditCardPayments: updatedPayments,
           };

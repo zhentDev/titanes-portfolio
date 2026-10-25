@@ -140,7 +140,7 @@
       "name": "Bolsillo a la vista",
       "type": "pocket",
       "currency": "USD",
-      "balance": 386.95000000000005,
+      "balance": 450.51,
       "interestRateEA": 4,
       "isTaxExemptGMF": true,
       "rateHistory": [
@@ -2203,6 +2203,20 @@
       "amount": 50000,
       "currency": "COP",
       "type": "credit"
+    },
+    {
+      "id": "fi_tx_plenti_funding_6356usd_20261024",
+      "accountId": "acc_1786777955489",
+      "accountName": "Bolsillo a la vista",
+      "entityId": "ent_1786777900826",
+      "entityName": "Plenti (Ahorros)",
+      "type": "credit",
+      "amount": 63.56,
+      "currency": "USD",
+      "date": "2026-10-24",
+      "description": "Fondeo desde Nómina Nu ($200.000 COP) para reserva Broker",
+      "source": "manual",
+      "createdAt": "2026-10-24T22:50:00.000Z"
     }
   ]
 }

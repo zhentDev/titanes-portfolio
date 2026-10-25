@@ -3,6 +3,7 @@ import CurrencyInput from "../Common/CurrencyInput";
 import CascadingCategorySelector from "../Common/CascadingCategorySelector";
 import DynamicDatePicker from "../Common/DynamicDatePicker";
 import GlassModalWrapper from "../Common/GlassModalWrapper";
+import { useTheme } from "../../context/ThemeContext";
 import { getCurrentPeriod } from "../../utils/periodUtils";
 import "./CashFlow.css";
 
@@ -27,6 +28,8 @@ export default function ExpenseTransactionModal({
   onSaveExpenseTransaction,
   onUpdateExpenseTransaction,
 }) {
+  const { theme } = useTheme();
+  const isLight = theme === "light";
   const currentPeriod = activePeriod || getCurrentPeriod();
   const [selectedBudgetItemId, setSelectedBudgetItemId] = useState(budgetItems[0]?.id || "");
   const [description, setDescription] = useState("");
@@ -205,7 +208,7 @@ export default function ExpenseTransactionModal({
           </button>
         </div>
 
-        <p style={{ fontSize: "0.8rem", color: "#94a3b8", marginTop: 4, marginBottom: 14 }}>
+        <p style={{ fontSize: "0.8rem", color: isLight ? "#475569" : "#94a3b8", marginTop: 4, marginBottom: 14 }}>
           {isWealthItem
             ? "Indica de qué cuenta salió la plata para tu CDT, cuenta de ahorro o inversión (ej. Nómina Nu) para descontarla de tu saldo líquido disponible."
             : "Carga un gasto real consumido a tu sobre presupuestal y elige de qué cuenta o tarjeta salió el dinero."}
@@ -214,7 +217,7 @@ export default function ExpenseTransactionModal({
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {/* Target Budget Envelope */}
           <div>
-            <label style={{ display: "block", fontSize: "0.76rem", color: "#94a3b8", marginBottom: 5, fontWeight: 600 }}>
+            <label style={{ display: "block", fontSize: "0.76rem", color: isLight ? "#334155" : "#94a3b8", marginBottom: 5, fontWeight: 600 }}>
               Destino / Sobre Presupuestal a Cargar
             </label>
             <CascadingCategorySelector
@@ -227,13 +230,23 @@ export default function ExpenseTransactionModal({
 
           {/* Description */}
           <div>
-            <label style={{ display: "block", fontSize: "0.76rem", color: "#94a3b8", marginBottom: 5, fontWeight: 600 }}>
+            <label style={{ display: "block", fontSize: "0.76rem", color: isLight ? "#334155" : "#94a3b8", marginBottom: 5, fontWeight: 600 }}>
               {isWealthItem ? "Detalle / Nombre de la Inversión o Aporte" : "Detalle / Comercio del Gasto Real"}
             </label>
             <input
               type="text"
               className="currency-native-input"
-              style={{ width: "100%", boxSizing: "border-box", background: "rgba(13, 18, 38, 0.7)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "8px", padding: "8px 12px", color: "#f8fafc", fontSize: "0.85rem" }}
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                background: isLight ? "#ffffff" : "rgba(13, 18, 38, 0.7)",
+                border: isLight ? "1px solid rgba(0, 0, 0, 0.15)" : "1px solid rgba(255, 255, 255, 0.1)",
+                borderRadius: "8px",
+                padding: "8px 12px",
+                color: isLight ? "#0f172a" : "#f8fafc",
+                fontSize: "0.85rem",
+                boxShadow: isLight ? "inset 0 1px 2px rgba(0,0,0,0.05)" : "none",
+              }}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder={isWealthItem ? "ej. CDT Bancolombia 180 días, Ahorro Vacaciones, Acciones..." : "ej. Almuerzo Crepes & Waffles, Compra Éxito, Cine..."}
@@ -245,7 +258,7 @@ export default function ExpenseTransactionModal({
           {/* Amount & Date */}
           <div className="cashflow-form-row">
             <div>
-              <label style={{ display: "block", fontSize: "0.76rem", color: "#94a3b8", marginBottom: 5, fontWeight: 600 }}>
+              <label style={{ display: "block", fontSize: "0.76rem", color: isLight ? "#334155" : "#94a3b8", marginBottom: 5, fontWeight: 600 }}>
                 {isWealthItem ? `Monto Invertido / Transferido (${currency})` : `Monto Gastado (${currency})`}
               </label>
               <CurrencyInput
@@ -257,7 +270,7 @@ export default function ExpenseTransactionModal({
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.76rem", color: "#94a3b8", marginBottom: 5, fontWeight: 600 }}>
+              <label style={{ display: "block", fontSize: "0.76rem", color: isLight ? "#334155" : "#94a3b8", marginBottom: 5, fontWeight: 600 }}>
                 Fecha del Movimiento
               </label>
               <DynamicDatePicker
@@ -272,14 +285,18 @@ export default function ExpenseTransactionModal({
           {!isWealthItem && (
             <div
               style={{
-                background: isLoan ? "rgba(245, 158, 11, 0.1)" : "rgba(255, 255, 255, 0.025)",
-                border: isLoan ? "1px solid rgba(245, 158, 11, 0.35)" : "1px solid rgba(255, 255, 255, 0.08)",
+                background: isLoan
+                  ? (isLight ? "rgba(245, 158, 11, 0.12)" : "rgba(245, 158, 11, 0.1)")
+                  : (isLight ? "rgba(0, 0, 0, 0.02)" : "rgba(255, 255, 255, 0.025)"),
+                border: isLoan
+                  ? "1px solid rgba(245, 158, 11, 0.4)"
+                  : (isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.08)"),
                 borderRadius: "10px",
                 padding: "10px 14px",
                 transition: "all 0.15s ease",
               }}
             >
-              <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: "0.82rem", fontWeight: 700, color: isLoan ? "#fcd34d" : "#cbd5e1" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: "0.82rem", fontWeight: 700, color: isLoan ? (isLight ? "#d97706" : "#fcd34d") : (isLight ? "#334155" : "#cbd5e1") }}>
                 <input
                   type="checkbox"
                   checked={isLoan}
@@ -305,7 +322,7 @@ export default function ExpenseTransactionModal({
                       value={loanRecipient}
                       onChange={(e) => setLoanRecipient(e.target.value)}
                       placeholder="ej. Camilo, Mamá, Compañero..."
-                      style={{ width: "100%", boxSizing: "border-box", background: "rgba(13, 18, 38, 0.8)", border: "1px solid rgba(245, 158, 11, 0.3)", borderRadius: "6px", padding: "6px 10px", color: "#f8fafc", fontSize: "0.82rem" }}
+                      style={{ width: "100%", boxSizing: "border-box", background: isLight ? "#ffffff" : "rgba(13, 18, 38, 0.8)", border: "1px solid rgba(245, 158, 11, 0.4)", borderRadius: "6px", padding: "6px 10px", color: isLight ? "#0f172a" : "#f8fafc", fontSize: "0.82rem" }}
                       required={isLoan}
                     />
                   </div>
@@ -350,8 +367,8 @@ export default function ExpenseTransactionModal({
           )}
 
           {/* Payment Source */}
-          <div style={{ background: "rgba(13, 18, 38, 0.6)", padding: "12px 14px", borderRadius: "12px", border: "1px solid rgba(255, 255, 255, 0.06)" }}>
-            <label style={{ display: "block", fontSize: "0.76rem", color: "#94a3b8", marginBottom: 6, fontWeight: 700 }}>
+          <div style={{ background: isLight ? "rgba(0, 0, 0, 0.03)" : "rgba(13, 18, 38, 0.6)", padding: "12px 14px", borderRadius: "12px", border: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.06)" }}>
+            <label style={{ display: "block", fontSize: "0.76rem", color: isLight ? "#1e293b" : "#94a3b8", marginBottom: 6, fontWeight: 700 }}>
               🏦 ¿De dónde salió la plata? (Cuenta Origen)
             </label>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 6, marginBottom: 8 }}>
@@ -361,9 +378,9 @@ export default function ExpenseTransactionModal({
                 style={{
                   padding: "6px 8px",
                   borderRadius: "8px",
-                  background: sourceType === "payroll" ? "rgba(130, 10, 209, 0.2)" : "rgba(255,255,255,0.04)",
-                  border: sourceType === "payroll" ? "1px solid #820ad1" : "1px solid rgba(255,255,255,0.06)",
-                  color: sourceType === "payroll" ? "#c084fc" : "#94a3b8",
+                  background: sourceType === "payroll" ? (isLight ? "rgba(130, 10, 209, 0.12)" : "rgba(130, 10, 209, 0.2)") : (isLight ? "#ffffff" : "rgba(255,255,255,0.04)"),
+                  border: sourceType === "payroll" ? "1px solid #820ad1" : (isLight ? "1px solid rgba(0,0,0,0.12)" : "1px solid rgba(255,255,255,0.06)"),
+                  color: sourceType === "payroll" ? (isLight ? "#7e22ce" : "#c084fc") : (isLight ? "#475569" : "#94a3b8"),
                   fontSize: "0.74rem",
                   fontWeight: 600,
                   cursor: "pointer",
@@ -379,9 +396,9 @@ export default function ExpenseTransactionModal({
                 style={{
                   padding: "6px 8px",
                   borderRadius: "8px",
-                  background: sourceType === "credit_card" ? "rgba(244, 63, 94, 0.2)" : "rgba(255,255,255,0.04)",
-                  border: sourceType === "credit_card" ? "1px solid #f43f5e" : "1px solid rgba(255,255,255,0.06)",
-                  color: sourceType === "credit_card" ? "#f43f5e" : "#94a3b8",
+                  background: sourceType === "credit_card" ? (isLight ? "rgba(244, 63, 94, 0.12)" : "rgba(244, 63, 94, 0.2)") : (isLight ? "#ffffff" : "rgba(255,255,255,0.04)"),
+                  border: sourceType === "credit_card" ? "1px solid #f43f5e" : (isLight ? "1px solid rgba(0,0,0,0.12)" : "1px solid rgba(255,255,255,0.06)"),
+                  color: sourceType === "credit_card" ? (isLight ? "#e11d48" : "#f43f5e") : (isLight ? "#475569" : "#94a3b8"),
                   fontSize: "0.74rem",
                   fontWeight: 600,
                   cursor: "pointer",
@@ -397,9 +414,9 @@ export default function ExpenseTransactionModal({
                 style={{
                   padding: "6px 8px",
                   borderRadius: "8px",
-                  background: sourceType === "fixed_pocket" ? "rgba(56, 189, 248, 0.2)" : "rgba(255,255,255,0.04)",
-                  border: sourceType === "fixed_pocket" ? "1px solid #38bdf8" : "1px solid rgba(255,255,255,0.06)",
-                  color: sourceType === "fixed_pocket" ? "#38bdf8" : "#94a3b8",
+                  background: sourceType === "fixed_pocket" ? (isLight ? "rgba(14, 165, 233, 0.12)" : "rgba(56, 189, 248, 0.2)") : (isLight ? "#ffffff" : "rgba(255,255,255,0.04)"),
+                  border: sourceType === "fixed_pocket" ? "1px solid #0284c7" : (isLight ? "1px solid rgba(0,0,0,0.12)" : "1px solid rgba(255,255,255,0.06)"),
+                  color: sourceType === "fixed_pocket" ? (isLight ? "#0284c7" : "#38bdf8") : (isLight ? "#475569" : "#94a3b8"),
                   fontSize: "0.74rem",
                   fontWeight: 600,
                   cursor: "pointer",
@@ -415,9 +432,9 @@ export default function ExpenseTransactionModal({
                 style={{
                   padding: "6px 8px",
                   borderRadius: "8px",
-                  background: sourceType === "investment_cash" ? "rgba(168, 85, 247, 0.2)" : "rgba(255,255,255,0.04)",
-                  border: sourceType === "investment_cash" ? "1px solid #a855f7" : "1px solid rgba(255,255,255,0.06)",
-                  color: sourceType === "investment_cash" ? "#a855f7" : "#94a3b8",
+                  background: sourceType === "investment_cash" ? (isLight ? "rgba(168, 85, 247, 0.12)" : "rgba(168, 85, 247, 0.2)") : (isLight ? "#ffffff" : "rgba(255,255,255,0.04)"),
+                  border: sourceType === "investment_cash" ? "1px solid #9333ea" : (isLight ? "1px solid rgba(0,0,0,0.12)" : "1px solid rgba(255,255,255,0.06)"),
+                  color: sourceType === "investment_cash" ? (isLight ? "#9333ea" : "#a855f7") : (isLight ? "#475569" : "#94a3b8"),
                   fontSize: "0.74rem",
                   fontWeight: 600,
                   cursor: "pointer",
@@ -432,11 +449,11 @@ export default function ExpenseTransactionModal({
             {sourceType === "credit_card" && (
               <div className="cashflow-form-row" style={{ marginTop: 8 }}>
                 <div>
-                  <label style={{ fontSize: "0.72rem", color: "#94a3b8" }}>Seleccionar Tarjeta:</label>
+                  <label style={{ fontSize: "0.72rem", color: isLight ? "#475569" : "#94a3b8" }}>Seleccionar Tarjeta:</label>
                   <select
                     value={selectedCardId}
                     onChange={(e) => setSelectedCardId(e.target.value)}
-                    style={{ width: "100%", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "6px", padding: "6px 8px", color: "#fff", fontSize: "0.78rem" }}
+                    style={{ width: "100%", background: isLight ? "#ffffff" : "rgba(0,0,0,0.5)", border: isLight ? "1px solid rgba(0,0,0,0.15)" : "1px solid rgba(255,255,255,0.1)", borderRadius: "6px", padding: "6px 8px", color: isLight ? "#0f172a" : "#fff", fontSize: "0.78rem" }}
                   >
                     {creditCards.map((c) => (
                       <option key={c.id} value={c.id}>
@@ -447,11 +464,11 @@ export default function ExpenseTransactionModal({
                 </div>
 
                 <div>
-                  <label style={{ fontSize: "0.72rem", color: "#94a3b8" }}>Cuotas (Sin Interés / MSI):</label>
+                  <label style={{ fontSize: "0.72rem", color: isLight ? "#475569" : "#94a3b8" }}>Cuotas (Sin Interés / MSI):</label>
                   <select
                     value={cardInstallments}
                     onChange={(e) => setCardInstallments(Number(e.target.value))}
-                    style={{ width: "100%", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "6px", padding: "6px 8px", color: "#fff", fontSize: "0.78rem" }}
+                    style={{ width: "100%", background: isLight ? "#ffffff" : "rgba(0,0,0,0.5)", border: isLight ? "1px solid rgba(0,0,0,0.15)" : "1px solid rgba(255,255,255,0.1)", borderRadius: "6px", padding: "6px 8px", color: isLight ? "#0f172a" : "#fff", fontSize: "0.78rem" }}
                   >
                     <option value={1}>1 Cuota (0% Sin Interés)</option>
                     <option value={2}>2 Cuotas Sin Interés (0% MSI)</option>
@@ -474,11 +491,11 @@ export default function ExpenseTransactionModal({
             {/* Sub-selector for Pockets */}
             {sourceType === "fixed_pocket" && fixedIncomeAccounts.length > 0 && (
               <div style={{ marginTop: 8 }}>
-                <label style={{ fontSize: "0.72rem", color: "#94a3b8" }}>Cuenta de Ahorro / Bolsillo:</label>
+                <label style={{ fontSize: "0.72rem", color: isLight ? "#475569" : "#94a3b8" }}>Cuenta de Ahorro / Bolsillo:</label>
                 <select
                   value={selectedPocketId}
                   onChange={(e) => setSelectedPocketId(e.target.value)}
-                  style={{ width: "100%", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "6px", padding: "6px 8px", color: "#fff", fontSize: "0.78rem" }}
+                  style={{ width: "100%", background: isLight ? "#ffffff" : "rgba(0,0,0,0.5)", border: isLight ? "1px solid rgba(0,0,0,0.15)" : "1px solid rgba(255,255,255,0.1)", borderRadius: "6px", padding: "6px 8px", color: isLight ? "#0f172a" : "#fff", fontSize: "0.78rem" }}
                 >
                   {fixedIncomeAccounts.map((acc) => (
                     <option key={acc.id} value={acc.id}>

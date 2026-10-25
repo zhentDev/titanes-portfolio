@@ -266,6 +266,26 @@
   ],
   "expensesLog": [
     {
+      "id": "cf_tx_cajita_viaje_150k_202611",
+      "period": "2026-11",
+      "date": "2026-10-24",
+      "amount": 150000,
+      "currency": "COP",
+      "type": "debit",
+      "budgetItemId": "wealth_travel_goal",
+      "budgetItemName": "Meta Viaje / Estudio",
+      "budgetItemType": "wealth",
+      "description": "Aporte a Cajita Viaje Nu (Meta Viaje / Estudio)",
+      "destinationAccountId": "acc_viaje",
+      "destinationAccountName": "Cajita Viaje (9.35% E.A.)",
+      "paymentSource": {
+        "type": "payroll",
+        "targetId": "acc_nu_debito",
+        "targetName": "Cuenta Nu Débito (Nómina)"
+      },
+      "createdAt": "2026-10-24T21:00:00.000Z"
+    },
+    {
       "id": "exp_transfer_mike_cajita_202611_split_wealth_60k",
       "period": "2026-11",
       "date": "2026-10-24",
@@ -535,6 +555,27 @@
         "targetName": "Cuenta Nu Débito (Nómina)"
       },
       "createdAt": "2026-10-23T13:15:38.792630-05:00"
+    },
+    {
+      "id": "cf_tx_plenti_broker_funding_200k_202611",
+      "period": "2026-11",
+      "date": "2026-10-24",
+      "amount": 200000,
+      "currency": "COP",
+      "type": "debit",
+      "budgetItemId": "wealth_tech_etf",
+      "budgetItemName": "Portafolio Renta Variable (Al día / Tiempo Real)",
+      "budgetItemType": "wealth",
+      "description": "Compra USD en Plenti (Fondeo Broker) - $63,56 USD",
+      "destinationAccountId": "acc_1786777955489",
+      "destinationAccountName": "Bolsillo a la vista (Plenti USD)",
+      "usdAmount": 63.56,
+      "paymentSource": {
+        "type": "payroll",
+        "targetId": "acc_nu_debito",
+        "targetName": "Cuenta Nu Débito (Nómina)"
+      },
+      "createdAt": "2026-10-24T22:50:00.000Z"
     }
   ],
   "creditCards": [

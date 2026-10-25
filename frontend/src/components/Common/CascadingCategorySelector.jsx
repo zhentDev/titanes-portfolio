@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
+import { useTheme } from "../../context/ThemeContext";
 import { formatCashFlowMoney } from "../../utils/cashFlowFormatters";
 
 export default function CascadingCategorySelector({
@@ -9,6 +10,8 @@ export default function CascadingCategorySelector({
   fxRate = 4150,
 }) {
   const formatMoney = (val, cur = currency) => formatCashFlowMoney(val, cur, fxRate);
+  const { theme } = useTheme();
+  const isLight = theme === "light";
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredPillar, setHoveredPillar] = useState("needs");
   const [searchQuery, setSearchQuery] = useState("");
@@ -99,17 +102,21 @@ export default function CascadingCategorySelector({
       <div
         onClick={() => setIsOpen((prev) => !prev)}
         style={{
-          background: "rgba(13, 18, 38, 0.8)",
-          border: isOpen ? "1px solid #00e5ff" : "1px solid rgba(255, 255, 255, 0.12)",
+          background: isLight ? "#ffffff" : "rgba(13, 18, 38, 0.8)",
+          border: isOpen
+            ? "1px solid #00e5ff"
+            : (isLight ? "1px solid rgba(0, 0, 0, 0.15)" : "1px solid rgba(255, 255, 255, 0.12)"),
           borderRadius: "10px",
           padding: "10px 14px",
-          color: "#f8fafc",
+          color: isLight ? "#0f172a" : "#f8fafc",
           fontSize: "0.86rem",
           cursor: "pointer",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          boxShadow: isOpen ? "0 0 12px rgba(0, 229, 255, 0.25)" : "none",
+          boxShadow: isLight
+            ? (isOpen ? "0 0 0 2px rgba(0, 229, 255, 0.3)" : "0 1px 3px rgba(0,0,0,0.06)")
+            : (isOpen ? "0 0 12px rgba(0, 229, 255, 0.25)" : "none"),
           transition: "all 0.2s ease",
         }}
       >
@@ -149,7 +156,7 @@ export default function CascadingCategorySelector({
                   ? "🟣 Estilo de Vida"
                   : "🔴 Gastos Fijos"}
               </span>
-              <span style={{ fontWeight: 600, color: "#f8fafc" }}>
+              <span style={{ fontWeight: 600, color: isLight ? "#0f172a" : "#f8fafc" }}>
                 {selectedItem.icon || "🎯"} {selectedItem.name}
               </span>
               <span style={{ color: "#64748b", fontSize: "0.76rem" }}>
@@ -175,18 +182,18 @@ export default function CascadingCategorySelector({
             left: 0,
             right: 0,
             zIndex: 1200,
-            background: "rgba(15, 22, 42, 0.96)",
+            background: isLight ? "#ffffff" : "rgba(15, 22, 42, 0.96)",
             backdropFilter: "blur(20px)",
-            border: "1px solid rgba(0, 229, 255, 0.25)",
+            border: isLight ? "1px solid rgba(0, 0, 0, 0.12)" : "1px solid rgba(0, 229, 255, 0.25)",
             borderRadius: "14px",
-            boxShadow: "0 16px 40px rgba(0, 0, 0, 0.6)",
+            boxShadow: isLight ? "0 16px 36px rgba(0, 0, 0, 0.15)" : "0 16px 40px rgba(0, 0, 0, 0.6)",
             overflow: "hidden",
             display: "flex",
             flexDirection: "column",
           }}
         >
           {/* Search Header */}
-          <div style={{ padding: "10px 12px", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", background: "rgba(0,0,0,0.3)" }}>
+          <div style={{ padding: "10px 12px", borderBottom: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.08)", background: isLight ? "rgba(0,0,0,0.02)" : "rgba(0,0,0,0.3)" }}>
             <input
               type="text"
               placeholder="🔍 Buscar sobre, gasto o inversión en CDT..."
@@ -194,11 +201,11 @@ export default function CascadingCategorySelector({
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
                 width: "100%",
-                background: "rgba(255, 255, 255, 0.06)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
+                background: isLight ? "#f8fafc" : "rgba(255, 255, 255, 0.06)",
+                border: isLight ? "1px solid rgba(0, 0, 0, 0.12)" : "1px solid rgba(255, 255, 255, 0.1)",
                 borderRadius: "8px",
                 padding: "6px 12px",
-                color: "#f8fafc",
+                color: isLight ? "#0f172a" : "#f8fafc",
                 fontSize: "0.8rem",
                 boxSizing: "border-box",
                 outline: "none",
@@ -228,10 +235,10 @@ export default function CascadingCategorySelector({
                       cursor: "pointer",
                       fontSize: "0.82rem",
                       background: item.id === value ? "rgba(0, 229, 255, 0.15)" : "transparent",
-                      color: "#f8fafc",
+                      color: isLight ? "#0f172a" : "#f8fafc",
                       transition: "background 0.15s ease",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)")}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = isLight ? "rgba(0, 0, 0, 0.05)" : "rgba(255, 255, 255, 0.08)")}
                     onMouseLeave={(e) =>
                       (e.currentTarget.style.background = item.id === value ? "rgba(0, 229, 255, 0.15)" : "transparent")
                     }
@@ -253,8 +260,8 @@ export default function CascadingCategorySelector({
               {/* Left Pane: General Pillar Categories */}
               <div
                 style={{
-                  borderRight: "1px solid rgba(255, 255, 255, 0.08)",
-                  background: "rgba(10, 15, 30, 0.6)",
+                  borderRight: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.08)",
+                  background: isLight ? "rgba(0, 0, 0, 0.02)" : "rgba(10, 15, 30, 0.6)",
                   padding: "8px",
                   display: "flex",
                   flexDirection: "column",
@@ -279,7 +286,7 @@ export default function CascadingCategorySelector({
                         fontWeight: isHovered ? 700 : 500,
                         background: isHovered ? `${pillar.color}22` : "transparent",
                         borderLeft: isHovered ? `3px solid ${pillar.color}` : "3px solid transparent",
-                        color: isHovered ? "#f8fafc" : "#94a3b8",
+                        color: isHovered ? (isLight ? "#0f172a" : "#f8fafc") : (isLight ? "#64748b" : "#94a3b8"),
                         transition: "all 0.15s ease",
                       }}
                     >
@@ -303,7 +310,7 @@ export default function CascadingCategorySelector({
                   display: "flex",
                   flexDirection: "column",
                   gap: 4,
-                  background: "rgba(13, 18, 38, 0.4)",
+                  background: isLight ? "#ffffff" : "rgba(13, 18, 38, 0.4)",
                 }}
               >
                 <div style={{ fontSize: "0.72rem", fontWeight: 700, color: activePillarObj.color, padding: "4px 8px 8px 8px", borderBottom: "1px solid rgba(255, 255, 255, 0.05)", display: "flex", justifyContent: "space-between" }}>
@@ -332,11 +339,11 @@ export default function CascadingCategorySelector({
                           fontSize: "0.82rem",
                           background: isSelected ? "rgba(0, 229, 255, 0.18)" : "transparent",
                           border: isSelected ? "1px solid rgba(0, 229, 255, 0.3)" : "1px solid transparent",
-                          color: isSelected ? "#00e5ff" : "#f8fafc",
+                          color: isSelected ? (isLight ? "#0284c7" : "#00e5ff") : (isLight ? "#0f172a" : "#f8fafc"),
                           transition: "all 0.15s ease",
                         }}
                         onMouseEnter={(e) => {
-                          if (!isSelected) e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
+                          if (!isSelected) e.currentTarget.style.background = isLight ? "rgba(0, 0, 0, 0.05)" : "rgba(255, 255, 255, 0.08)";
                         }}
                         onMouseLeave={(e) => {
                           if (!isSelected) e.currentTarget.style.background = "transparent";
