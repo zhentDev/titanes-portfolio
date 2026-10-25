@@ -15,10 +15,12 @@ export default function DebtPaymentModal({
   const { theme } = useTheme();
   const isLight = theme === "light";
 
+  const isReceivable = debt?.debtType === "receivable";
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [paymentMethod, setPaymentMethod] = useState(() => debt?.paymentMethod || "Nómina / Débito directa");
+  const [paymentMethod, setPaymentMethod] = useState(() => debt?.paymentMethod || (isReceivable ? "Transferencia a Cajita / Cuenta" : "Nómina / Débito directa"));
   const [paymentSourceId, setPaymentSourceId] = useState(() => debt?.paymentSourceId || "");
+  const [createIncomeMovement, setCreateIncomeMovement] = useState(true);
   const [note, setNote] = useState("");
 
   if (!isOpen || !debt) return null;
@@ -29,7 +31,7 @@ export default function DebtPaymentModal({
     e.preventDefault();
     const pAmt = Number(amount) || 0;
     if (pAmt <= 0) {
-      alert("Ingresa un monto válido para el abono.");
+      alert(`Ingresa un monto válido para el ${isReceivable ? "cobro" : "abono"}.`);
       return;
     }
 
@@ -38,6 +40,7 @@ export default function DebtPaymentModal({
       date,
       paymentMethod,
       paymentSourceId: paymentSourceId || null,
+      createIncomeMovement: isReceivable ? createIncomeMovement : false,
       note: note.trim(),
     });
 
@@ -69,7 +72,9 @@ export default function DebtPaymentModal({
           borderRadius: "18px",
           width: "100%",
           maxWidth: "460px",
-          border: isLight ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(16, 185, 129, 0.4)",
+          border: isReceivable
+            ? (isLight ? "1px solid rgba(16, 185, 129, 0.4)" : "1px solid rgba(16, 185, 129, 0.5)")
+            : (isLight ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(16, 185, 129, 0.4)"),
           boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.7)",
           padding: "24px",
           color: "var(--text-primary)",
@@ -78,13 +83,13 @@ export default function DebtPaymentModal({
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: "1.4rem" }}>💰</span>
+            <span style={{ fontSize: "1.4rem" }}>{isReceivable ? "📥" : "💰"}</span>
             <div>
               <h2 style={{ fontSize: "1.1rem", fontWeight: 800, margin: 0 }}>
-                Abonar a Deuda
+                {isReceivable ? "Registrar Cobro / Abono Recibido" : "Abonar a Deuda"}
               </h2>
               <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", margin: "2px 0 0" }}>
-                {debt.concept} ({debt.creditor})
+                {debt.concept} ({isReceivable ? `Deudor: ${debt.debtor || debt.creditor}` : debt.creditor})
               </p>
             </div>
           </div>
@@ -106,8 +111,12 @@ export default function DebtPaymentModal({
         {/* Info Box */}
         <div
           style={{
-            background: isLight ? "rgba(244, 63, 94, 0.08)" : "rgba(244, 63, 94, 0.12)",
-            border: "1px solid rgba(244, 63, 94, 0.25)",
+            background: isReceivable
+              ? (isLight ? "rgba(16, 185, 129, 0.08)" : "rgba(16, 185, 129, 0.12)")
+              : (isLight ? "rgba(244, 63, 94, 0.08)" : "rgba(244, 63, 94, 0.12)"),
+            border: isReceivable
+              ? "1px solid rgba(16, 185, 129, 0.3)"
+              : "1px solid rgba(244, 63, 94, 0.25)",
             borderRadius: 10,
             padding: "10px 14px",
             marginBottom: 16,
@@ -117,8 +126,17 @@ export default function DebtPaymentModal({
           }}
         >
           <div>
-            <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "block" }}>Saldo Pendiente</span>
-            <span className="mono" style={{ fontSize: "1.15rem", fontWeight: 800, color: "#f43f5e" }}>
+            <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "block" }}>
+              {isReceivable ? "Saldo Pendiente por Cobrar" : "Saldo Pendiente"}
+            </span>
+            <span
+              className="mono"
+              style={{
+                fontSize: "1.15rem",
+                fontWeight: 800,
+                color: isReceivable ? "#10b981" : "#f43f5e",
+              }}
+            >
               ${remaining.toLocaleString("en-US", { maximumFractionDigits: 2 })} {currency}
             </span>
           </div>
@@ -136,14 +154,14 @@ export default function DebtPaymentModal({
               cursor: "pointer",
             }}
           >
-            Pagar Total
+            {isReceivable ? "Cobrar Total" : "Pagar Total"}
           </button>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div>
             <label style={{ fontSize: "0.76rem", fontWeight: 700, display: "block", marginBottom: 4 }}>
-              Monto del Abono ({currency}) *
+              {isReceivable ? "Monto Cobrado / Recibido" : "Monto del Abono"} ({currency}) *
             </label>
             <input
               type="number"
@@ -169,7 +187,7 @@ export default function DebtPaymentModal({
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
               <label style={{ fontSize: "0.75rem", fontWeight: 700, display: "block", marginBottom: 4 }}>
-                Fecha del Pago
+                {isReceivable ? "Fecha del Cobro" : "Fecha del Pago"}
               </label>
               <input
                 type="date"
@@ -190,7 +208,7 @@ export default function DebtPaymentModal({
 
             <div>
               <label style={{ fontSize: "0.75rem", fontWeight: 700, display: "block", marginBottom: 4 }}>
-                Medio de Pago
+                {isReceivable ? "Medio de Recepción" : "Medio de Pago"}
               </label>
               <select
                 value={paymentMethod}
@@ -205,18 +223,29 @@ export default function DebtPaymentModal({
                   fontSize: "0.8rem",
                 }}
               >
-                <option value="Transferencia desde Cajita / Cuenta">Cajita específica</option>
-                <option value="Nómina / Débito directa">Nómina / Débito</option>
-                <option value="Transferencia Bancaria">Transferencia</option>
-                <option value="Efectivo">Efectivo</option>
-                <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
+                {isReceivable ? (
+                  <>
+                    <option value="Transferencia a Cajita / Cuenta">Transferencia a Cajita</option>
+                    <option value="Nómina / Débito directa">Transferencia a Nómina</option>
+                    <option value="Transferencia Bancaria">Transferencia a otra cuenta</option>
+                    <option value="Efectivo">En Efectivo</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="Transferencia desde Cajita / Cuenta">Cajita específica</option>
+                    <option value="Nómina / Débito directa">Nómina / Débito</option>
+                    <option value="Transferencia Bancaria">Transferencia</option>
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
+                  </>
+                )}
               </select>
             </div>
           </div>
 
           <div>
             <label style={{ fontSize: "0.75rem", fontWeight: 700, display: "block", marginBottom: 4 }}>
-              Cuenta / Cajita Origen (Opcional)
+              {isReceivable ? "Cuenta / Cajita Destino (Opcional)" : "Cuenta / Cajita Origen (Opcional)"}
             </label>
             <select
               value={paymentSourceId}
@@ -239,6 +268,34 @@ export default function DebtPaymentModal({
               ))}
             </select>
           </div>
+
+          {/* Checkbox para registrar ingreso en Cash Flow cuando es cobro */}
+          {isReceivable && (
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                background: isLight ? "rgba(16, 185, 129, 0.08)" : "rgba(16, 185, 129, 0.12)",
+                padding: "8px 12px",
+                borderRadius: 8,
+                border: "1px solid rgba(16, 185, 129, 0.3)",
+                fontSize: "0.75rem",
+                color: "var(--text-primary)",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={createIncomeMovement}
+                onChange={(e) => setCreateIncomeMovement(e.target.checked)}
+                style={{ accentColor: "#10b981", width: 16, height: 16 }}
+              />
+              <span>
+                <strong>Registrar como Ingreso real</strong> en el Flujo de Caja (Nómina/Cajita)
+              </span>
+            </label>
+          )}
 
           <div>
             <label style={{ fontSize: "0.75rem", fontWeight: 600, display: "block", marginBottom: 4, color: "var(--text-muted)" }}>
@@ -292,7 +349,7 @@ export default function DebtPaymentModal({
                 boxShadow: "0 4px 14px rgba(16, 185, 129, 0.3)",
               }}
             >
-              Confirmar Abono
+              {isReceivable ? "Confirmar Cobro" : "Confirmar Abono"}
             </button>
           </div>
         </form>

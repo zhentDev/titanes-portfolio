@@ -846,18 +846,21 @@ export const useCashFlowStore = create(
 
       // ── Debts & Liabilities CRUD ────────────────────────
       addDebt: (debt) => {
+        const isReceivable = debt.debtType === "receivable";
         const newDebt = {
           id: debt.id || `debt_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          debtType: debt.debtType || "payable", // 'payable' (Pasivo, yo debo) | 'receivable' (Activo, me deben)
           concept: (debt.concept || "").trim(),
-          creditor: (debt.creditor || "").trim(),
+          creditor: (debt.creditor || debt.debtor || "").trim(),
+          debtor: (debt.debtor || debt.creditor || "").trim(),
           totalAmount: Number(debt.totalAmount || 0),
           remainingAmount: Number(debt.remainingAmount !== undefined ? debt.remainingAmount : debt.totalAmount || 0),
-          paymentMethod: debt.paymentMethod || "Nómina / Débito",
+          paymentMethod: debt.paymentMethod || (isReceivable ? "Transferencia a Cuenta / Cajita" : "Nómina / Débito"),
           paymentSourceId: debt.paymentSourceId || null,
-          paymentFrequency: debt.paymentFrequency || "monthly",
+          paymentFrequency: debt.paymentFrequency || (isReceivable ? "one_time" : "monthly"),
           installmentAmount: Number(debt.installmentAmount || 0),
-          dueDate: debt.dueDate || null,
-          nextPaymentDate: debt.nextPaymentDate || null,
+          dueDate: debt.dueDate || debt.nextPaymentDate || null,
+          nextPaymentDate: debt.nextPaymentDate || debt.dueDate || null,
           status: debt.status || "active",
           notes: debt.notes || "",
           paymentsLog: Array.isArray(debt.paymentsLog) ? debt.paymentsLog : [],
@@ -871,7 +874,12 @@ export const useCashFlowStore = create(
           return { debts: updatedDebts };
         });
         get().syncStateWithBackend();
-        toast.success(`Deuda "${newDebt.concept}" registrada`, { icon: "💳" });
+        toast.success(
+          isReceivable
+            ? `Préstamo por cobrar "${newDebt.concept}" registrado con éxito`
+            : `Deuda "${newDebt.concept}" registrada`,
+          { icon: isReceivable ? "🤝" : "💳" }
+        );
       },
 
       updateDebt: (id, updates) => {
@@ -883,7 +891,7 @@ export const useCashFlowStore = create(
           return { debts: updatedDebts };
         });
         get().syncStateWithBackend();
-        toast.success("Deuda actualizada", { icon: "✏️" });
+        toast.success("Deuda/Préstamo actualizado", { icon: "✏️" });
       },
 
       deleteDebt: (id) => {
@@ -900,11 +908,15 @@ export const useCashFlowStore = create(
       },
 
       recordDebtPayment: (debtId, payment) => {
+        let isReceivable = false;
+        let createdIncomeTx = null;
+
         set((state) => {
           const currentDebts = state.debts || [];
           const debt = currentDebts.find((d) => d.id === debtId);
           if (!debt) return state;
 
+          isReceivable = debt.debtType === "receivable";
           const pAmt = Number(payment.amount || 0);
           const newRemaining = Math.max(0, Number(debt.remainingAmount || 0) - pAmt);
           const isSettled = newRemaining <= 0;
@@ -929,14 +941,46 @@ export const useCashFlowStore = create(
             };
           });
 
+          let updatedExpenses = state.expensesLog || [];
+          if (isReceivable && payment.createIncomeMovement) {
+            const destAccount = (state.fixedIncomeAccounts || []).find((a) => a.id === payment.paymentSourceId);
+            createdIncomeTx = {
+              id: `inc_loan_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+              period: state.activePeriod,
+              date: payment.date || new Date().toISOString().slice(0, 10),
+              amount: pAmt,
+              currency: state.currency,
+              type: "credit",
+              budgetItemType: "income",
+              description: `📥 Reintegro/Cobro de préstamo: ${debt.concept} (${debt.debtor || debt.creditor || "Deudor"})`,
+              paymentSource: {
+                type: destAccount ? "fixed_pocket" : "payroll",
+                targetId: payment.paymentSourceId || null,
+                targetName: destAccount ? destAccount.name : (state.payrollAccount?.name || "Nómina"),
+              },
+              createdAt: new Date().toISOString(),
+            };
+            updatedExpenses = [createdIncomeTx, ...updatedExpenses];
+          }
+
           try {
-            localStorage.setItem("titanes_cash_flow_store_v2", JSON.stringify({ ...state, debts: updatedDebts }));
+            localStorage.setItem("titanes_cash_flow_store_v2", JSON.stringify({
+              ...state,
+              debts: updatedDebts,
+              expensesLog: updatedExpenses,
+            }));
           } catch {}
 
-          return { debts: updatedDebts };
+          return { debts: updatedDebts, expensesLog: updatedExpenses };
         });
+
         get().syncStateWithBackend();
-        toast.success("Abono a deuda registrado", { icon: "💰" });
+        toast.success(
+          isReceivable
+            ? `¡Cobro de $${Number(payment.amount || 0).toLocaleString("es-CO")} registrado! 🎉`
+            : "Abono a deuda registrado",
+          { icon: isReceivable ? "📥" : "💰" }
+        );
       },
 
       // ── Loan Settlement & Reimbursement (Full or Partial) ──────────────

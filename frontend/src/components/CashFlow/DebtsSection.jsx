@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useTheme } from "../../context/ThemeContext";
 import { formatCashFlowMoney } from "../../utils/cashFlowFormatters";
 import "./CashFlow.css";
@@ -14,6 +14,7 @@ export default function DebtsSection({
 }) {
   const { theme } = useTheme();
   const isLight = theme === "light";
+  const [sectionTab, setSectionTab] = useState("payable"); // 'payable' | 'receivable'
   const [expandedDebtIds, setExpandedDebtIds] = useState(new Set());
   const [filterStatus, setFilterStatus] = useState("active"); // 'active' | 'all' | 'paid'
 
@@ -26,19 +27,133 @@ export default function DebtsSection({
     });
   };
 
-  const filteredDebts = debts.filter((d) => {
-    if (filterStatus === "active") return d.status !== "paid" && (d.remainingAmount || 0) > 0;
-    if (filterStatus === "paid") return d.status === "paid" || (d.remainingAmount || 0) <= 0;
+  const isReceivableTab = sectionTab === "receivable";
+
+  // Split into Pasivos (yo debo) and Cuentas por cobrar (me deben)
+  const payableDebts = useMemo(() => debts.filter((d) => d.debtType !== "receivable"), [debts]);
+  const receivableDebts = useMemo(() => debts.filter((d) => d.debtType === "receivable"), [debts]);
+
+  const activeDebtsList = isReceivableTab ? receivableDebts : payableDebts;
+
+  const filteredDebts = activeDebtsList.filter((d) => {
+    const rem = Number(d.remainingAmount !== undefined ? d.remainingAmount : d.totalAmount || 0);
+    if (filterStatus === "active") return d.status !== "paid" && rem > 0;
+    if (filterStatus === "paid") return d.status === "paid" || rem <= 0;
     return true;
   });
 
-  const totalInitial = debts.reduce((sum, d) => sum + (Number(d.totalAmount) || 0), 0);
-  const totalRemaining = debts.reduce((sum, d) => sum + (Number(d.remainingAmount !== undefined ? d.remainingAmount : d.totalAmount) || 0), 0);
+  const totalInitial = activeDebtsList.reduce((sum, d) => sum + (Number(d.totalAmount) || 0), 0);
+  const totalRemaining = activeDebtsList.reduce(
+    (sum, d) => sum + (Number(d.remainingAmount !== undefined ? d.remainingAmount : d.totalAmount) || 0),
+    0
+  );
   const totalPaid = Math.max(0, totalInitial - totalRemaining);
   const overallProgress = totalInitial > 0 ? ((totalPaid / totalInitial) * 100).toFixed(0) : 0;
 
+  const getDueDateInfo = (dueDate) => {
+    if (!dueDate) return null;
+    const today = new Date().toISOString().slice(0, 10);
+    const due = new Date(dueDate).toISOString().slice(0, 10);
+    if (due === today) {
+      return { text: `⏰ Vence hoy (${dueDate})`, color: "#f59e0b", bg: isLight ? "rgba(245, 158, 11, 0.12)" : "rgba(245, 158, 11, 0.2)", isOverdue: false };
+    }
+    if (due < today) {
+      const diffDays = Math.round((new Date(today) - new Date(due)) / (1000 * 60 * 60 * 24));
+      return { text: `⚠️ Vencido hace ${diffDays} día(s) (Quedó: ${dueDate})`, color: "#f43f5e", bg: isLight ? "rgba(244, 63, 94, 0.1)" : "rgba(244, 63, 94, 0.18)", isOverdue: true };
+    }
+    const diffDays = Math.round((new Date(due) - new Date(today)) / (1000 * 60 * 60 * 24));
+    return { text: `🗓️ Quedó de pagar el ${dueDate} (en ${diffDays} días)`, color: "#10b981", bg: isLight ? "rgba(16, 185, 129, 0.1)" : "rgba(16, 185, 129, 0.18)", isOverdue: false };
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* ── Switcher de Pestañas: Pasivos (Yo debo) vs Préstamos a Mi Favor (Por Cobrar) ── */}
+      <div
+        style={{
+          display: "flex",
+          gap: 10,
+          borderBottom: "1px solid var(--border)",
+          paddingBottom: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => {
+            setSectionTab("payable");
+            setFilterStatus("active");
+          }}
+          style={{
+            padding: "8px 16px",
+            borderRadius: 10,
+            border: !isReceivableTab ? "1.5px solid #f43f5e" : "1px solid var(--border)",
+            background: !isReceivableTab
+              ? isLight ? "rgba(244, 63, 94, 0.12)" : "rgba(244, 63, 94, 0.2)"
+              : "var(--bg-surface)",
+            color: !isReceivableTab ? (isLight ? "#be123c" : "#fb7185") : "var(--text-muted)",
+            fontWeight: !isReceivableTab ? 800 : 600,
+            fontSize: "0.82rem",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            transition: "all 0.15s ease",
+          }}
+        >
+          <span>🔴</span>
+          <span>Mis Deudas por Pagar (Pasivos)</span>
+          <span
+            style={{
+              fontSize: "0.7rem",
+              background: isLight ? "rgba(244, 63, 94, 0.15)" : "rgba(244, 63, 94, 0.3)",
+              padding: "1px 7px",
+              borderRadius: 10,
+              fontWeight: 700,
+            }}
+          >
+            {payableDebts.filter((d) => (d.remainingAmount || 0) > 0).length} activa(s)
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setSectionTab("receivable");
+            setFilterStatus("active");
+          }}
+          style={{
+            padding: "8px 16px",
+            borderRadius: 10,
+            border: isReceivableTab ? "1.5px solid #10b981" : "1px solid var(--border)",
+            background: isReceivableTab
+              ? isLight ? "rgba(16, 185, 129, 0.12)" : "rgba(16, 185, 129, 0.2)"
+              : "var(--bg-surface)",
+            color: isReceivableTab ? (isLight ? "#047857" : "#34d399") : "var(--text-muted)",
+            fontWeight: isReceivableTab ? 800 : 600,
+            fontSize: "0.82rem",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            transition: "all 0.15s ease",
+          }}
+        >
+          <span>🟢</span>
+          <span>Deudas a Mi Favor (Por Cobrar)</span>
+          <span
+            style={{
+              fontSize: "0.7rem",
+              background: isLight ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.3)",
+              padding: "1px 7px",
+              borderRadius: 10,
+              fontWeight: 700,
+            }}
+          >
+            {receivableDebts.filter((d) => (d.remainingAmount || 0) > 0).length} pendiente(s)
+          </span>
+        </button>
+      </div>
+
       {/* KPI Summary Bar */}
       <div
         style={{
@@ -52,17 +167,26 @@ export default function DebtsSection({
             background: "var(--bg-surface)",
             padding: "12px 16px",
             borderRadius: 12,
-            border: isLight ? "1px solid rgba(244, 63, 94, 0.25)" : "1px solid rgba(244, 63, 94, 0.3)",
+            border: isReceivableTab
+              ? (isLight ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(16, 185, 129, 0.35)")
+              : (isLight ? "1px solid rgba(244, 63, 94, 0.25)" : "1px solid rgba(244, 63, 94, 0.3)"),
           }}
         >
           <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "block", fontWeight: 700, textTransform: "uppercase" }}>
-            Saldo Pendiente por Pagar
+            {isReceivableTab ? "Saldo Pendiente por Cobrar" : "Saldo Pendiente por Pagar"}
           </span>
-          <span className="mono" style={{ fontSize: "1.25rem", fontWeight: 800, color: totalRemaining > 0 ? "#f43f5e" : "#10b981" }}>
+          <span
+            className="mono"
+            style={{
+              fontSize: "1.25rem",
+              fontWeight: 800,
+              color: isReceivableTab ? "#10b981" : (totalRemaining > 0 ? "#f43f5e" : "#10b981"),
+            }}
+          >
             ${totalRemaining.toLocaleString("en-US", { maximumFractionDigits: 0 })} {currency}
           </span>
           <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 2 }}>
-            {debts.filter(d => (d.remainingAmount || 0) > 0).length} deuda(s) activa(s)
+            {activeDebtsList.filter((d) => (d.remainingAmount || 0) > 0).length} {isReceivableTab ? "préstamo(s) por cobrar" : "deuda(s) activa(s)"}
           </div>
         </div>
 
@@ -75,13 +199,13 @@ export default function DebtsSection({
           }}
         >
           <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "block", fontWeight: 700, textTransform: "uppercase" }}>
-            Total Pagado / Amortizado
+            {isReceivableTab ? "Total Cobrado / Recuperado" : "Total Pagado / Amortizado"}
           </span>
           <span className="mono" style={{ fontSize: "1.25rem", fontWeight: 800, color: "#10b981" }}>
             +${totalPaid.toLocaleString("en-US", { maximumFractionDigits: 0 })} {currency}
           </span>
           <div style={{ fontSize: "0.68rem", color: "#10b981", marginTop: 2, fontWeight: 600 }}>
-            {overallProgress}% del capital total amortizado
+            {overallProgress}% {isReceivableTab ? "del capital prestado recuperado" : "del capital amortizado"}
           </div>
         </div>
 
@@ -94,13 +218,13 @@ export default function DebtsSection({
           }}
         >
           <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", display: "block", fontWeight: 700, textTransform: "uppercase" }}>
-            Monto Total Inicial de Deudas
+            {isReceivableTab ? "Monto Total Prestado" : "Monto Total Inicial de Deudas"}
           </span>
           <span className="mono" style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--text-primary)" }}>
             ${totalInitial.toLocaleString("en-US", { maximumFractionDigits: 0 })} {currency}
           </span>
           <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 2 }}>
-            Total histórico registrado
+            {isReceivableTab ? "Total histórico prestado" : "Total histórico registrado"}
           </div>
         </div>
       </div>
@@ -112,9 +236,19 @@ export default function DebtsSection({
             type="button"
             onClick={() => setFilterStatus("active")}
             style={{
-              background: filterStatus === "active" ? (isLight ? "rgba(244, 63, 94, 0.15)" : "rgba(244, 63, 94, 0.25)") : "var(--bg-surface)",
-              border: filterStatus === "active" ? "1.5px solid #f43f5e" : "1px solid var(--border)",
-              color: filterStatus === "active" ? (isLight ? "#be123c" : "#fb7185") : "var(--text-secondary)",
+              background: filterStatus === "active"
+                ? (isReceivableTab
+                    ? (isLight ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.25)")
+                    : (isLight ? "rgba(244, 63, 94, 0.15)" : "rgba(244, 63, 94, 0.25)"))
+                : "var(--bg-surface)",
+              border: filterStatus === "active"
+                ? (isReceivableTab ? "1.5px solid #10b981" : "1.5px solid #f43f5e")
+                : "1px solid var(--border)",
+              color: filterStatus === "active"
+                ? (isReceivableTab
+                    ? (isLight ? "#047857" : "#34d399")
+                    : (isLight ? "#be123c" : "#fb7185"))
+                : "var(--text-secondary)",
               padding: "5px 12px",
               borderRadius: 8,
               fontSize: "0.75rem",
@@ -122,7 +256,7 @@ export default function DebtsSection({
               cursor: "pointer",
             }}
           >
-            🔴 Activas ({debts.filter(d => (d.remainingAmount || 0) > 0).length})
+            {isReceivableTab ? "🟢 Pendientes" : "🔴 Activas"} ({activeDebtsList.filter((d) => (d.remainingAmount || 0) > 0).length})
           </button>
           <button
             type="button"
@@ -138,7 +272,7 @@ export default function DebtsSection({
               cursor: "pointer",
             }}
           >
-            Todas ({debts.length})
+            Todas ({activeDebtsList.length})
           </button>
           <button
             type="button"
@@ -154,15 +288,17 @@ export default function DebtsSection({
               cursor: "pointer",
             }}
           >
-            🟢 Liquidadas ({debts.filter(d => (d.remainingAmount || 0) <= 0).length})
+            {isReceivableTab ? "🏁 Cobradas" : "🟢 Liquidadas"} ({activeDebtsList.filter((d) => (d.remainingAmount || 0) <= 0).length})
           </button>
         </div>
 
         <button
           type="button"
-          onClick={() => onOpenDebtModal(null)}
+          onClick={() => onOpenDebtModal(null, isReceivableTab ? "receivable" : "payable")}
           style={{
-            background: "linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)",
+            background: isReceivableTab
+              ? "linear-gradient(135deg, #10b981 0%, #059669 100%)"
+              : "linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)",
             color: "#ffffff",
             border: "none",
             borderRadius: 8,
@@ -173,11 +309,13 @@ export default function DebtsSection({
             display: "inline-flex",
             alignItems: "center",
             gap: 6,
-            boxShadow: "0 4px 12px rgba(244, 63, 94, 0.25)",
+            boxShadow: isReceivableTab
+              ? "0 4px 12px rgba(16, 185, 129, 0.25)"
+              : "0 4px 12px rgba(244, 63, 94, 0.25)",
           }}
         >
           <span>+</span>
-          <span>Nueva Deuda / Compromiso</span>
+          <span>{isReceivableTab ? "Nuevo Préstamo por Cobrar" : "Nueva Deuda / Compromiso"}</span>
         </button>
       </div>
 
@@ -192,20 +330,32 @@ export default function DebtsSection({
             textAlign: "center",
           }}
         >
-          <span style={{ fontSize: "2rem", display: "block", marginBottom: 8 }}>🎉</span>
+          <span style={{ fontSize: "2rem", display: "block", marginBottom: 8 }}>
+            {isReceivableTab ? "🤝" : "🎉"}
+          </span>
           <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "1rem" }}>
-            {filterStatus === "active" ? "¡No tienes deudas activas pendientes!" : "No hay deudas en esta vista"}
+            {isReceivableTab
+              ? filterStatus === "active"
+                ? "¡No tienes deudas a tu favor pendientes por cobrar!"
+                : "No hay préstamos registrados en esta vista"
+              : filterStatus === "active"
+              ? "¡No tienes deudas activas pendientes!"
+              : "No hay deudas en esta vista"}
           </div>
-          <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", maxWidth: 440, margin: "6px auto 14px" }}>
-            Registra préstamos personales (ej. con mamá o familiares), créditos o compromisos especificando obligatoriamente su concepto y cómo los pagas.
+          <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", maxWidth: 460, margin: "6px auto 14px" }}>
+            {isReceivableTab
+              ? "Lleva el control exacto de dinero prestado a amigos o familiares, con la fecha prometida de pago y sin que cuente como movimiento hasta que efectivamente ingrese el dinero."
+              : "Registra préstamos personales (ej. con mamá o familiares), créditos o compromisos especificando obligatoriamente su concepto y cómo los pagas."}
           </p>
           <button
             type="button"
-            onClick={() => onOpenDebtModal(null)}
+            onClick={() => onOpenDebtModal(null, isReceivableTab ? "receivable" : "payable")}
             style={{
-              background: "rgba(244, 63, 94, 0.15)",
-              border: "1px solid rgba(244, 63, 94, 0.4)",
-              color: isLight ? "#be123c" : "#fb7185",
+              background: isReceivableTab ? "rgba(16, 185, 129, 0.15)" : "rgba(244, 63, 94, 0.15)",
+              border: isReceivableTab ? "1px solid rgba(16, 185, 129, 0.4)" : "1px solid rgba(244, 63, 94, 0.4)",
+              color: isReceivableTab
+                ? (isLight ? "#047857" : "#34d399")
+                : (isLight ? "#be123c" : "#fb7185"),
               borderRadius: 8,
               padding: "7px 16px",
               fontSize: "0.8rem",
@@ -213,7 +363,7 @@ export default function DebtsSection({
               cursor: "pointer",
             }}
           >
-            + Registrar mi primera deuda
+            {isReceivableTab ? "+ Registrar préstamo por cobrar" : "+ Registrar mi primera deuda"}
           </button>
         </div>
       ) : (
@@ -225,8 +375,10 @@ export default function DebtsSection({
             const paidAmt = Math.max(0, initialAmt - remainingAmt);
             const progress = initialAmt > 0 ? Math.min(100, Math.round((paidAmt / initialAmt) * 100)) : 100;
             const isPaid = remainingAmt <= 0;
+            const isReceivable = debt.debtType === "receivable";
 
             const matchedSource = fixedIncomeAccounts.find((a) => a.id === debt.paymentSourceId);
+            const dueDateInfo = getDueDateInfo(debt.dueDate || debt.nextPaymentDate);
 
             return (
               <div
@@ -236,6 +388,8 @@ export default function DebtsSection({
                   borderRadius: 12,
                   border: isPaid
                     ? (isLight ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(16, 185, 129, 0.25)")
+                    : isReceivable
+                    ? (isLight ? "1px solid rgba(16, 185, 129, 0.35)" : "1px solid rgba(16, 185, 129, 0.4)")
                     : (isLight ? "1px solid rgba(244, 63, 94, 0.25)" : "1px solid rgba(244, 63, 94, 0.3)"),
                   overflow: "hidden",
                   transition: "all 0.18s ease",
@@ -252,7 +406,7 @@ export default function DebtsSection({
                     gap: 14,
                   }}
                 >
-                  {/* Left: Concept + Creditor + Payment Method */}
+                  {/* Left: Concept + Creditor/Debtor + Payment Method */}
                   <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 240, flex: "1 1 280px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                       <span style={{ fontSize: "1.05rem", fontWeight: 800, color: "var(--text-primary)" }}>
@@ -270,55 +424,83 @@ export default function DebtsSection({
                             border: "1px solid rgba(16, 185, 129, 0.35)",
                           }}
                         >
-                          🟢 PAGADA
+                          {isReceivable ? "🏁 COBRADO" : "🟢 PAGADA"}
                         </span>
                       ) : (
                         <span
                           style={{
                             fontSize: "0.68rem",
                             fontWeight: 800,
-                            background: "rgba(244, 63, 94, 0.15)",
-                            color: isLight ? "#be123c" : "#fb7185",
+                            background: isReceivable ? "rgba(16, 185, 129, 0.15)" : "rgba(244, 63, 94, 0.15)",
+                            color: isReceivable
+                              ? (isLight ? "#047857" : "#34d399")
+                              : (isLight ? "#be123c" : "#fb7185"),
                             padding: "2px 7px",
                             borderRadius: 6,
-                            border: "1px solid rgba(244, 63, 94, 0.35)",
+                            border: isReceivable
+                              ? "1px solid rgba(16, 185, 129, 0.35)"
+                              : "1px solid rgba(244, 63, 94, 0.35)",
                           }}
                         >
-                          🔴 ACTIVA
+                          {isReceivable ? "🟢 PENDIENTE DE COBRO" : "🔴 ACTIVA"}
                         </span>
                       )}
                     </div>
 
                     <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.74rem", color: "var(--text-secondary)", flexWrap: "wrap" }}>
                       <span>
-                        👤 Acreedor: <strong>{debt.creditor}</strong>
+                        👤 {isReceivable ? "Deudor:" : "Acreedor:"}{" "}
+                        <strong>{debt.debtor || debt.creditor}</strong>
                       </span>
                       <span>•</span>
                       <span
                         style={{
-                          background: isLight ? "rgba(244, 63, 94, 0.08)" : "rgba(244, 63, 94, 0.15)",
-                          color: isLight ? "#be123c" : "#fb7185",
+                          background: isReceivable
+                            ? (isLight ? "rgba(16, 185, 129, 0.08)" : "rgba(16, 185, 129, 0.15)")
+                            : (isLight ? "rgba(244, 63, 94, 0.08)" : "rgba(244, 63, 94, 0.15)"),
+                          color: isReceivable
+                            ? (isLight ? "#047857" : "#34d399")
+                            : (isLight ? "#be123c" : "#fb7185"),
                           padding: "2px 6px",
                           borderRadius: 5,
                           fontWeight: 700,
                           fontSize: "0.7rem",
-                          border: `1px solid ${isLight ? "rgba(244, 63, 94, 0.2)" : "rgba(244, 63, 94, 0.3)"}`,
+                          border: `1px solid ${
+                            isReceivable
+                              ? (isLight ? "rgba(16, 185, 129, 0.2)" : "rgba(16, 185, 129, 0.3)")
+                              : (isLight ? "rgba(244, 63, 94, 0.2)" : "rgba(244, 63, 94, 0.3)")
+                          }`,
                         }}
-                        title="Cómo se paga esta deuda"
+                        title={isReceivable ? "Dónde se espera recibir el dinero" : "Cómo se paga esta deuda"}
                       >
-                        🔄 {debt.paymentMethod} {matchedSource ? `(${matchedSource.name})` : ""}
+                        {isReceivable ? "📥" : "🔄"} {debt.paymentMethod} {matchedSource ? `(${matchedSource.name})` : ""}
                       </span>
+
                       {debt.installmentAmount > 0 && (
                         <>
                           <span>•</span>
-                          <span>Cuota: <strong>${Number(debt.installmentAmount).toLocaleString()} {currency}</strong> ({debt.paymentFrequency === "monthly" ? "Mensual" : debt.paymentFrequency})</span>
+                          <span>
+                            Cuota: <strong>${Number(debt.installmentAmount).toLocaleString()} {currency}</strong> (
+                            {debt.paymentFrequency === "monthly" ? "Mensual" : debt.paymentFrequency}
+                            )
+                          </span>
                         </>
                       )}
-                      {debt.nextPaymentDate && !isPaid && (
+
+                      {/* Fecha de pago / vencimiento */}
+                      {dueDateInfo && !isPaid && (
                         <>
                           <span>•</span>
-                          <span style={{ color: isLight ? "#b45309" : "#fbbf24", fontWeight: 700 }}>
-                            🗓️ Próx. {debt.nextPaymentDate}
+                          <span
+                            style={{
+                              color: dueDateInfo.color,
+                              fontWeight: 700,
+                              background: dueDateInfo.bg,
+                              padding: "1px 6px",
+                              borderRadius: 4,
+                            }}
+                          >
+                            {dueDateInfo.text}
                           </span>
                         </>
                       )}
@@ -327,7 +509,7 @@ export default function DebtsSection({
                     {/* Progress Bar */}
                     <div style={{ marginTop: 4, maxWidth: 380 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.68rem", color: "var(--text-muted)", marginBottom: 2 }}>
-                        <span>Amortizado: ${paidAmt.toLocaleString()} ({progress}%)</span>
+                        <span>{isReceivable ? "Cobrado:" : "Amortizado:"} ${paidAmt.toLocaleString()} ({progress}%)</span>
                         <span>Total: ${initialAmt.toLocaleString()}</span>
                       </div>
                       <div style={{ width: "100%", height: 6, background: "var(--bg-card)", borderRadius: 3, overflow: "hidden", border: "1px solid var(--border)" }}>
@@ -335,7 +517,11 @@ export default function DebtsSection({
                           style={{
                             width: `${progress}%`,
                             height: "100%",
-                            background: isPaid ? "#10b981" : "linear-gradient(90deg, #f43f5e, #fb7185)",
+                            background: isPaid
+                              ? "#10b981"
+                              : isReceivable
+                              ? "linear-gradient(90deg, #10b981, #34d399)"
+                              : "linear-gradient(90deg, #f43f5e, #fb7185)",
                             borderRadius: 3,
                             transition: "width 0.3s ease",
                           }}
@@ -348,9 +534,16 @@ export default function DebtsSection({
                   <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", justifyContent: "flex-end", marginLeft: "auto" }}>
                     <div style={{ textAlign: "right" }}>
                       <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", display: "block", textTransform: "uppercase", fontWeight: 700 }}>
-                        Saldo Pendiente
+                        {isReceivable ? "Saldo por Cobrar" : "Saldo Pendiente"}
                       </span>
-                      <span className="mono" style={{ fontSize: "1.15rem", fontWeight: 800, color: isPaid ? "#10b981" : "#f43f5e" }}>
+                      <span
+                        className="mono"
+                        style={{
+                          fontSize: "1.15rem",
+                          fontWeight: 800,
+                          color: isPaid ? "#10b981" : isReceivable ? "#10b981" : "#f43f5e",
+                        }}
+                      >
                         ${remainingAmt.toLocaleString("en-US", { maximumFractionDigits: 2 })}{" "}
                         <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{currency}</span>
                       </span>
@@ -374,10 +567,10 @@ export default function DebtsSection({
                             alignItems: "center",
                             gap: 5,
                           }}
-                          title="Registrar un abono o pago total a esta deuda"
+                          title={isReceivable ? "Registrar cobro o pago recibido de este préstamo" : "Registrar un abono o pago total a esta deuda"}
                         >
-                          <span>💰</span>
-                          <span>Abonar</span>
+                          <span>{isReceivable ? "📥" : "💰"}</span>
+                          <span>{isReceivable ? "Registrar Cobro" : "Abonar"}</span>
                         </button>
                       )}
 
@@ -401,7 +594,7 @@ export default function DebtsSection({
 
                       <button
                         type="button"
-                        onClick={() => onOpenDebtModal(debt)}
+                        onClick={() => onOpenDebtModal(debt, isReceivable ? "receivable" : "payable")}
                         style={{
                           background: "transparent",
                           border: "none",
@@ -410,7 +603,7 @@ export default function DebtsSection({
                           fontSize: "0.88rem",
                           padding: "4px",
                         }}
-                        title="Editar Deuda"
+                        title={isReceivable ? "Editar Préstamo por Cobrar" : "Editar Deuda"}
                       >
                         ✏️
                       </button>
@@ -418,7 +611,8 @@ export default function DebtsSection({
                       <button
                         type="button"
                         onClick={() => {
-                          if (window.confirm(`¿Seguro que deseas eliminar la deuda "${debt.concept}"?`)) {
+                          const actionText = isReceivable ? "el préstamo por cobrar" : "la deuda";
+                          if (window.confirm(`¿Seguro que deseas eliminar ${actionText} "${debt.concept}"?`)) {
                             onDeleteDebt(debt.id);
                           }
                         }}
@@ -430,7 +624,7 @@ export default function DebtsSection({
                           fontSize: "0.88rem",
                           padding: "4px",
                         }}
-                        title="Eliminar Deuda"
+                        title="Eliminar"
                       >
                         🗑️
                       </button>
@@ -449,17 +643,19 @@ export default function DebtsSection({
                   >
                     {debt.notes && (
                       <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: 10, fontStyle: "italic" }}>
-                        💬 Notas: {debt.notes}
+                        💬 Notas / Acuerdos: {debt.notes}
                       </div>
                     )}
 
                     <div style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: 6 }}>
-                      Historial de Abonos Realizados:
+                      {isReceivable ? "Historial de Cobros Recibidos:" : "Historial de Abonos Realizados:"}
                     </div>
 
                     {!debt.paymentsLog || debt.paymentsLog.length === 0 ? (
                       <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                        No se han registrado abonos todavía para esta deuda.
+                        {isReceivable
+                          ? "No se han registrado cobros todavía para este préstamo."
+                          : "No se han registrado abonos todavía para esta deuda."}
                       </div>
                     ) : (
                       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -478,12 +674,18 @@ export default function DebtsSection({
                             }}
                           >
                             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              <span style={{ color: "#10b981", fontWeight: 700 }}>+{formatCashFlowMoney(p.amount, currency, fxRate)}</span>
+                              <span style={{ color: "#10b981", fontWeight: 700 }}>
+                                +{formatCashFlowMoney(p.amount, currency, fxRate)}
+                              </span>
                               <span style={{ color: "var(--text-muted)" }}>• {p.date}</span>
-                              <span style={{ color: "var(--text-secondary)" }}>({p.paymentMethod || "Abono"})</span>
+                              <span style={{ color: "var(--text-secondary)" }}>
+                                ({p.paymentMethod || (isReceivable ? "Cobro recibido" : "Abono")})
+                              </span>
                               {p.note && <span style={{ color: "var(--text-muted)", fontStyle: "italic" }}>"{p.note}"</span>}
                             </div>
-                            <span style={{ color: "#10b981", fontSize: "0.68rem", fontWeight: 700 }}>✓ Aplicado</span>
+                            <span style={{ color: "#10b981", fontSize: "0.68rem", fontWeight: 700 }}>
+                              ✓ {isReceivable ? "Ingresado" : "Aplicado"}
+                            </span>
                           </div>
                         ))}
                       </div>

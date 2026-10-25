@@ -163,6 +163,7 @@ export default function CashFlowHub() {
   const [paymentInitialAmount, setPaymentInitialAmount] = useState(null);
   const [debtModalOpen, setDebtModalOpen] = useState(false);
   const [debtToEdit, setDebtToEdit] = useState(null);
+  const [defaultDebtType, setDefaultDebtType] = useState("payable");
   const [debtPaymentModalOpen, setDebtPaymentModalOpen] = useState(false);
   const [selectedDebtForPayment, setSelectedDebtForPayment] = useState(null);
   const [showSankey, setShowSankey] = useState(true);
@@ -3104,7 +3105,7 @@ export default function CashFlowHub() {
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                 <span style={{ fontWeight: 800, fontSize: "0.95rem", color: "var(--text-primary)" }}>
-                  Mis Deudas Personales & Pasivos
+                  Mis Deudas & Préstamos
                 </span>
                 <span
                   style={{
@@ -3117,11 +3118,24 @@ export default function CashFlowHub() {
                     border: `1px solid ${isLight ? "rgba(244, 63, 94, 0.25)" : "rgba(244, 63, 94, 0.3)"}`,
                   }}
                 >
-                  {(debts || []).filter(d => (d.remainingAmount || 0) > 0).length} activa(s)
+                  {(debts || []).filter(d => d.debtType !== "receivable" && (d.remainingAmount || 0) > 0).length} pasivo(s)
+                </span>
+                <span
+                  style={{
+                    fontSize: "0.68rem",
+                    fontWeight: 700,
+                    padding: "2px 8px",
+                    borderRadius: 8,
+                    background: isLight ? "rgba(16, 185, 129, 0.12)" : "rgba(16, 185, 129, 0.2)",
+                    color: isLight ? "#047857" : "#34d399",
+                    border: `1px solid ${isLight ? "rgba(16, 185, 129, 0.25)" : "rgba(16, 185, 129, 0.3)"}`,
+                  }}
+                >
+                  {(debts || []).filter(d => d.debtType === "receivable" && (d.remainingAmount || 0) > 0).length} por cobrar
                 </span>
               </div>
               <p style={{ margin: "2px 0 0", fontSize: "0.74rem", color: "var(--text-muted)" }}>
-                Gestión de compromisos con concepto obligatorio y seguimiento de cómo se pagan
+                Gestión de deudas por pagar (pasivos) y préstamos a tu favor (cuentas por cobrar a terceros)
               </p>
             </div>
           </div>
@@ -3157,8 +3171,9 @@ export default function CashFlowHub() {
           <div style={{ marginTop: 14 }}>
             <DebtsSection
               debts={debts || []}
-              onOpenDebtModal={(debt = null) => {
+              onOpenDebtModal={(debt = null, debtType = "payable") => {
                 setDebtToEdit(debt);
+                setDefaultDebtType(debt?.debtType || debtType || "payable");
                 setDebtModalOpen(true);
               }}
               onOpenPaymentModal={(debt) => {
@@ -3304,8 +3319,10 @@ export default function CashFlowHub() {
           onClose={() => {
             setDebtModalOpen(false);
             setDebtToEdit(null);
+            setDefaultDebtType("payable");
           }}
           debtToEdit={debtToEdit}
+          defaultDebtType={defaultDebtType}
           onSaveDebt={(debtData) => {
             if (debtToEdit?.id) {
               updateDebt(debtToEdit.id, debtData);
