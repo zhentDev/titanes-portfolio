@@ -617,15 +617,20 @@ def register_mobile_transaction(
         tx_type = "debit"
         signed_amount = -amount_val
 
-    # 2b. Auto-correct entity if notification text clearly belongs to another bank
-    if any(k in search_context for k in ["rappicuenta", "rappipay", "rappi"]):
-        if "rappi" not in normalize_text(payload.entity):
-            logger.info(f"[Webhook] Auto-correcting entity from '{payload.entity}' to 'RappiPay' based on notification text.")
-            payload.entity = "RappiPay"
-    elif any(k in search_context for k in ["nubank", "cuenta nu", "tarjeta nu"]):
-        if "nu" not in normalize_text(payload.entity):
-            logger.info(f"[Webhook] Auto-correcting entity from '{payload.entity}' to 'Nu Colombia' based on notification text.")
-            payload.entity = "Nu Colombia"
+    # 2b. Auto-correct entity only if NOT a destination bank mention (e.g. 'le enviaste a X en su cuenta de RAPPIPAY' is from Nu, NOT RappiPay!)
+    is_destination_mention = any(
+        phrase in search_context
+        for phrase in ["en su cuenta de", "a la cuenta de", "hacia la cuenta", "le enviaste a", "cuenta destino"]
+    )
+    if not is_destination_mention:
+        if any(k in search_context for k in ["rappicuenta", "rappipay", "rappi"]):
+            if "rappi" not in normalize_text(payload.entity):
+                logger.info(f"[Webhook] Auto-correcting entity from '{payload.entity}' to 'RappiPay' based on notification text.")
+                payload.entity = "RappiPay"
+        elif any(k in search_context for k in ["nubank", "cuenta nu", "tarjeta nu"]):
+            if "nu" not in normalize_text(payload.entity):
+                logger.info(f"[Webhook] Auto-correcting entity from '{payload.entity}' to 'Nu Colombia' based on notification text.")
+                payload.entity = "Nu Colombia"
     elif "finandina" in search_context:
         # Finandina notifica por SMS (remitente 890809), p.ej.:
         # "Banco Finandina te informa que recibiste $350.000 con exito a la llave Bre-B ..."
