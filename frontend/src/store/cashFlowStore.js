@@ -252,6 +252,28 @@ export const useCashFlowStore = create(
             };
           }
 
+          const is70kPrinter =
+            e.id === "cf_tx_mb_1793020231371_461300" ||
+            (Number(e.amount) === 70000 &&
+              ((e.description || "").toLowerCase().includes("rappi") ||
+                (e.description || "").toLowerCase().includes("impresora")));
+          if (is70kPrinter) {
+            return {
+              ...e,
+              period: "2026-11",
+              type: "credit",
+              budgetItemId: "wealth_impresora",
+              budgetItemName: "Ahorro Impresora 3D",
+              budgetItemType: "wealth",
+              description: "Ingreso / Ahorro Impresora 3D (Cajita Impresora)",
+              paymentSource: {
+                type: "fixed_pocket",
+                targetId: "acc_1789616855068",
+                targetName: "Cajita Impresora (RappiPay)",
+              },
+            };
+          }
+
           const is150kRappiOrEmergency =
             Number(e.amount) === 150000 &&
             ((e.description || "").toLowerCase().includes("rappicuenta") ||

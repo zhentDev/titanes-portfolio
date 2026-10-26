@@ -863,7 +863,12 @@ def register_mobile_transaction(
     try:
         cf = load_cash_flow_db(effective_uid)
         active_period = cf.get("activePeriod") or tx_date[:7]
-        is_payroll = any(k in normalize_text(account.get("name")) for k in ["nomina", "principal", "ahorros", "debito"])
+        acc_name_norm = normalize_text(account.get("name") or "")
+        is_payroll = (
+            account.get("id") == "acc_nu_debito"
+            or ("nomina" in acc_name_norm and "cajita" not in acc_name_norm)
+            or account.get("accountCategory") == "payroll"
+        )
 
         if is_cc_payment:
             # 8a. Match credit card and automatically release used limit

@@ -485,6 +485,9 @@ export default function CashFlowHub() {
         const srcType = tx.paymentSource?.type;
         const targetName = (tx.paymentSource?.targetName || "").toLowerCase();
         const desc = (tx.description || tx.budgetItemName || "").toLowerCase();
+        if (targetName.includes("rappi") || targetName.includes("impresora") || desc.includes("impresora")) {
+          return false;
+        }
         return (
           srcType === "payroll" ||
           targetName.includes("nu") ||
