@@ -4,7 +4,7 @@ import { fetchColInflationHistory, fetchFxHistory, fetchRateTrackerAlerts, apply
 import { useFixedIncomeStore } from "../../store/fixedIncomeStore";
 import { BANK_PRESETS, computeMissingMonthlyYieldTransactions, getBankPreset, svgToDataUri } from "../../utils/bankPresets";
 import { toastConfirm } from "../../utils/toastAlerts";
-import { calculateAccountYield } from "../../utils/yieldCalculator";
+import { calculateAccountYield, getCDTAccruedYield } from "../../utils/yieldCalculator";
 import FixedIncomeModal from "./FixedIncomeModal";
 import FixedIncomeProjectionChart from "./FixedIncomeProjectionChart";
 import StatementImporterModal from "./StatementImporterModal";
@@ -477,8 +477,8 @@ export default function FixedIncomeHub() {
       const today = new Date();
       const daysElapsed = Math.max(0, Math.floor((today - startDate) / (1000 * 60 * 60 * 24)));
 
-      // Rendimiento acumulado devengado en base 360
-      const accruedGain = capitalVal * (Math.pow(1 + rateDecimal, daysElapsed / 360) - 1) * reteFuenteMultiplier;
+      // Rendimiento acumulado devengado
+      const accruedGain = getCDTAccruedYield(cdt);
       cdtsExtraYield += accruedGain;
 
       const dailyRate = (Math.pow(1 + rateDecimal, 1 / 360) - 1) * reteFuenteMultiplier;
@@ -1854,15 +1854,9 @@ export default function FixedIncomeHub() {
             return sum + (a.balance || 0);
           }, 0);
 
-          // Rendimientos devengados de CDTs activos a la fecha de hoy (base bancaria 360)
+          // Rendimientos devengados de CDTs activos a la fecha de hoy
           const activeCDTsAccruedYield = activeEntityCDTs.reduce((sum, cdt) => {
-            const rateDecimal = (cdt.interestRateEA || 0) / 100;
-            const reteMul = 1 - (cdt.reteFuentePct || 4) / 100;
-            const startD = new Date(cdt.startDate);
-            const nowD = new Date();
-            const daysEl = Math.max(0, Math.floor((nowD - startD) / (1000 * 60 * 60 * 24)));
-            const gain = (cdt.capital || 0) * (Math.pow(1 + rateDecimal, daysEl / 360) - 1) * reteMul;
-            return sum + gain;
+            return sum + getCDTAccruedYield(cdt);
           }, 0);
 
           const activeCDTsCapitalTotal = activeEntityCDTs.reduce((sum, c) => sum + (c.capital || 0), 0);
@@ -3751,12 +3745,7 @@ export default function FixedIncomeHub() {
                                     }}
                                   >
                                     {(() => {
-                                      const rateDecimal = (cdt.interestRateEA || 0) / 100;
-                                      const reteMul = 1 - (cdt.reteFuentePct || 4) / 100;
-                                      const startD = new Date(cdt.startDate);
-                                      const nowD = new Date();
-                                      const daysEl = Math.max(0, Math.floor((nowD - startD) / (1000 * 60 * 60 * 24)));
-                                      const gain = (cdt.capital || 0) * (Math.pow(1 + rateDecimal, daysEl / 360) - 1) * reteMul;
+                                      const gain = getCDTAccruedYield(cdt);
                                       return `+$${gain.toLocaleString("es-CO", { maximumFractionDigits: 0 })}`;
                                     })()}
                                   </td>
@@ -4150,12 +4139,7 @@ export default function FixedIncomeHub() {
                 const transactionalBal = entTransactionalAccounts.reduce((sum, a) => sum + (Number(a.balance) || 0), 0);
 
                 const cdtTotalWithYield = entCdts.reduce((sum, cdt) => {
-                  const rateDecimal = (cdt.interestRateEA || 0) / 100;
-                  const reteMul = 1 - (cdt.reteFuentePct || 4) / 100;
-                  const startD = new Date(cdt.startDate);
-                  const nowD = new Date();
-                  const daysEl = Math.max(0, Math.floor((nowD - startD) / (1000 * 60 * 60 * 24)));
-                  const gain = (cdt.capital || 0) * (Math.pow(1 + rateDecimal, daysEl / 360) - 1) * reteMul;
+                  const gain = getCDTAccruedYield(cdt);
                   return sum + (Number(cdt.capital) || 0) + gain;
                 }, 0);
 

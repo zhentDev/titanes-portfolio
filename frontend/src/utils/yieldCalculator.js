@@ -95,8 +95,8 @@ export function calculateAccountYield(account, transactions = [], historicalRate
       { from: "2025-03-10", to: "2025-05-08", rateEA: 9.5, notes: "9.5% E.A." },
       { from: "2025-05-09", to: "2025-08-11", rateEA: 9.25, notes: "9.25% E.A." },
       { from: "2025-08-12", to: "2026-02-05", rateEA: 8.25, notes: "8.25% E.A." },
-      { from: "2026-02-06", to: "2026-04-08", rateEA: 8.75, notes: "8.75% E.A." },
-      { from: "2026-04-09", to: "2099-12-31", rateEA: 9.30, notes: "9.30% E.A." },
+      { from: "2026-02-06", to: "2026-10-05", rateEA: 9.25, notes: "9.25% E.A." },
+      { from: "2026-10-06", to: "2099-12-31", rateEA: 9.35, notes: "9.35% E.A." },
     ];
   }
 
@@ -183,9 +183,15 @@ export function calculateAccountYield(account, transactions = [], historicalRate
     const isMatured = cdt.status === "matured" || maturityD < today;
     const daysElapsed = Math.max(0, Math.min(termDays, Math.floor((today - startD) / (1000 * 60 * 60 * 24))));
 
-    // Base 360 commercial standard
-    const accruedYield = capital * (Math.pow(1 + rateDecimal, daysElapsed / 360) - 1) * reteMul;
-    const finalProfit = capital * (Math.pow(1 + rateDecimal, termDays / 360) - 1) * reteMul;
+    // Base 365 exact calendar day convention for Nu Colombia & modern fintech CDTs, base 360 for traditional commercial
+    const dayBase = cdt.dayBase || (cdt.entityId === "ent_nu" || (cdt.name || "").toLowerCase().includes("nu") ? 365 : 360);
+    const calculatedAccrued = capital * (Math.pow(1 + rateDecimal, daysElapsed / dayBase) - 1) * reteMul;
+    const accruedYield = (cdt.accruedYield !== undefined && cdt.accruedYield !== null)
+      ? Number(cdt.accruedYield)
+      : (cdt.currentBalance !== undefined && cdt.currentBalance !== null)
+        ? Math.max(0, Number(cdt.currentBalance) - capital)
+        : calculatedAccrued;
+    const finalProfit = capital * (Math.pow(1 + rateDecimal, termDays / dayBase) - 1) * reteMul;
 
     if (isMatured) {
       maturedCDTsTotalCapital += capital;
@@ -395,13 +401,11 @@ export function calculateAccountYield(account, transactions = [], historicalRate
     account.balance !== undefined &&
     account.balance !== null &&
     !isNaN(Number(account.balance)) &&
-    Number(account.balance) > 0;
+    Number(account.balance) >= 0;
 
-  // Liquid available balance discounting active CDT capital if balance includes CDTs, or using balance directly if already liquid
+  // Liquid available balance: account.balance represents the liquid available balance (Disponible siempre) in the pocket.
   const liquidTotal = hasAuthoritativeBalance
-    ? (Number(account.balance) >= activeCDTsCapital
-        ? Number(account.balance) - activeCDTsCapital
-        : Number(account.balance))
+    ? Number(account.balance)
     : Math.max(0, grossPocketBalance - activeCDTsCapital);
 
   // Available cash in hand: if monthly disbursement, current in-progress month's yields are not yet in hand
@@ -455,4 +459,25 @@ export function calculateAccountYield(account, transactions = [], historicalRate
 
     periodBreakdown,
   };
+}
+
+export function getCDTAccruedYield(cdt, asOfDate = new Date()) {
+  if (!cdt) return 0;
+  if (cdt.accruedYield !== undefined && cdt.accruedYield !== null) {
+    return Number(cdt.accruedYield);
+  }
+  const capital = Number(cdt.capital || 0);
+  if (cdt.currentBalance !== undefined && cdt.currentBalance !== null) {
+    return Math.max(0, Number(cdt.currentBalance) - capital);
+  }
+  const rateDecimal = Number(cdt.interestRateEA || 0) / 100;
+  const reteMul = 1 - Number(cdt.reteFuentePct || 4) / 100;
+  const startD = new Date(cdt.startDate || new Date().toISOString().slice(0, 10));
+  startD.setHours(0, 0, 0, 0);
+  const refDate = new Date(asOfDate);
+  refDate.setHours(0, 0, 0, 0);
+  const termDays = Number(cdt.termDays || 180);
+  const daysElapsed = Math.max(0, Math.min(termDays, Math.floor((refDate - startD) / (1000 * 60 * 60 * 24))));
+  const dayBase = cdt.dayBase || (cdt.entityId === "ent_nu" || (cdt.name || "").toLowerCase().includes("nu") ? 365 : 360);
+  return capital * (Math.pow(1 + rateDecimal, daysElapsed / dayBase) - 1) * reteMul;
 }
