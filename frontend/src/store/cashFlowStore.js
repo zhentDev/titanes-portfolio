@@ -175,8 +175,24 @@ export const useCashFlowStore = create(
         const mergedCreditPurchases = unionById(source?.creditPurchases, cachedLocal?.creditPurchases);
         const mergedCreditCardPayments = unionById(source?.creditCardPayments, cachedLocal?.creditCardPayments);
         const deletedExpenseIds = new Set(cachedLocal?.deletedExpenseIds || []);
-        const rawMergedExpenses = unionById(source?.expensesLog, cachedLocal?.expensesLog);
-        const mergedExpensesLog = rawMergedExpenses.filter((e) => !deletedExpenseIds.has(e?.id));
+        // Remote expensesLog is authoritative when available from server.
+        // Never resurrect stale deleted transactions from cachedLocal unless they are genuine offline drafts.
+        const isTestExpense = (e) => {
+          const desc = ((e?.description || '') + ' ' + (e?.budgetItemName || '')).toLowerCase();
+          return desc.includes('test abono') || desc.includes('test sobregiro') || desc.includes('reversión test') || desc.includes('reversion test');
+        };
+
+        const rawServerExpenses = Array.isArray(source?.expensesLog) ? source.expensesLog : [];
+        const localDrafts = (cachedLocal?.expensesLog || []).filter(
+          (e) => e && e.id && e._isLocalOfflineDraft && !rawServerExpenses.some((se) => se.id === e.id)
+        );
+        const baseExpenses = Array.isArray(source?.expensesLog)
+          ? [...rawServerExpenses, ...localDrafts]
+          : (cachedLocal?.expensesLog || []);
+
+        const mergedExpensesLog = baseExpenses.filter(
+          (e) => e && e.id && !deletedExpenseIds.has(e.id) && !isTestExpense(e)
+        );
         
         // Auto-corrección: si el movimiento de $37,000 (Plan móvil) quedó por error asignado al Fondo de Emergencia,
         // restaurarlo al rubro correspondiente de Servicios Públicos: Plan móvil; y vincular la transferencia real de $350k a Finandina.
@@ -478,7 +494,11 @@ export const useCashFlowStore = create(
           };
         });
         get().syncStateWithBackend();
-        toast.success(`Gasto real "${tx.description}" registrado en ${tx.paymentSource?.targetName || "Nómina"}`, { icon: "💸" });
+        if (tx.type === "credit") {
+          toast.success(`Ingreso "${tx.description}" registrado en ${tx.paymentSource?.targetName || "Cuenta"}`, { icon: "📥" });
+        } else {
+          toast.success(`Gasto real "${tx.description}" registrado en ${tx.paymentSource?.targetName || "Nómina"}`, { icon: "💸" });
+        }
       },
 
       updateExpenseTransaction: (updatedTx) => {

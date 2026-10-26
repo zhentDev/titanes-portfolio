@@ -3305,7 +3305,18 @@ export default function CashFlowHub() {
         creditCards={creditCards}
         fixedIncomeAccounts={fixedAccounts}
         editTransaction={expenseToEdit}
-        onSaveExpenseTransaction={addExpenseTransaction}
+        onSaveExpenseTransaction={(tx) => {
+          addExpenseTransaction(tx);
+          if (tx.type === "credit" && tx.paymentSource?.targetId && creditAccountFromCashFlow) {
+            creditAccountFromCashFlow({
+              accountId: tx.paymentSource.targetId,
+              amount: tx.amount,
+              date: tx.date,
+              description: tx.description,
+              movementId: tx.id,
+            });
+          }
+        }}
         onUpdateExpenseTransaction={updateExpenseTransaction}
       />
 

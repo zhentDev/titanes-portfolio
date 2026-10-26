@@ -37,6 +37,7 @@ export const useFixedIncomeStore = create(
       accounts: DEFAULT_ACCOUNTS,
       cdts: DEFAULT_CDTS,
       transactions: [],
+      deletedTxIds: [],
       historicalRates: { entities: {} },
       preferredCurrency: "COP", // 'COP' | 'USD'
       projectionTimeline: "ALL", // '1M' | '3M' | '6M' | '1Y' | '3Y' | '5Y' | 'ALL'
@@ -79,19 +80,28 @@ export const useFixedIncomeStore = create(
           });
           const finalCDTs = Array.from(cdtMap.values());
 
-          // 3. Transactions (lossless union: keeps all unique IDs from remote and local)
-          const txMap = new Map();
-          (res?.transactions || []).forEach((t) => { if (t && t.id) txMap.set(t.id, t); });
-          let localHadExtraTx = false;
-          (localState.transactions || []).forEach((t) => {
-            if (t && t.id && !txMap.has(t.id)) {
-              txMap.set(t.id, t);
-              localHadExtraTx = true;
-            }
-          });
-          let finalTransactions = Array.from(txMap.values()).sort(
-            (a, b) => (b.date || "").localeCompare(a.date || "") || (b.createdAt || "").localeCompare(a.createdAt || "")
+          // 3. Transactions: Remote is authoritative when online.
+          // Never resurrect stale transactions from localStorage unless flagged as offline drafts.
+          const isTestTx = (t) => {
+            const desc = (t?.description || "").toLowerCase();
+            return desc.includes("test abono") || desc.includes("test sobregiro") || desc.includes("reversión test");
+          };
+          const deletedTxSet = new Set(localState.deletedTxIds || []);
+
+          let rawTransactions = Array.isArray(res?.transactions)
+            ? res.transactions
+            : (localState.transactions || []);
+
+          // Preserve any true offline drafts created while without internet
+          const offlineDrafts = (localState.transactions || []).filter(
+            (t) => t && t.id && t._isLocalOfflineDraft && !rawTransactions.some((rt) => rt.id === t.id)
           );
+
+          let finalTransactions = [...rawTransactions, ...offlineDrafts]
+            .filter((t) => t && t.id && !deletedTxSet.has(t.id) && !isTestTx(t))
+            .sort(
+              (a, b) => (b.date || "").localeCompare(a.date || "") || (b.createdAt || "").localeCompare(a.createdAt || "")
+            );
 
           // 4. Accounts
           const accMap = new Map();
@@ -130,18 +140,7 @@ export const useFixedIncomeStore = create(
                 }
                 return a;
               });
-              localHadExtraTx = true;
             }
-          }
-
-          // If local had new transactions that remote lacked, push them upstream
-          if (localHadExtraTx && finalTransactions.length > (res?.transactions?.length || 0)) {
-            syncFixedIncomeStateApi({
-              entities: finalEntities,
-              accounts: finalAccounts,
-              cdts: finalCDTs,
-              transactions: finalTransactions,
-            }).catch((e) => console.warn("[FixedIncome] Background sync of merged tx failed:", e));
           }
 
           // Normalize Plenti Bolsillo a la vista, Finandina FlexiDigital+ pocket, and Daviplata Principal
@@ -560,8 +559,9 @@ export const useFixedIncomeStore = create(
       },
 
       deleteTransaction: async (txId) => {
+        const nextDeleted = [...new Set([...(get().deletedTxIds || []), txId])];
         const updatedTx = (get().transactions || []).filter((t) => t.id !== txId);
-        set({ transactions: updatedTx });
+        set({ transactions: updatedTx, deletedTxIds: nextDeleted });
         try {
           await syncFixedIncomeStateApi({
             entities: get().entities,
@@ -600,8 +600,9 @@ export const useFixedIncomeStore = create(
 
       deleteTransactions: async (txIds) => {
         const idSet = new Set(txIds);
+        const nextDeleted = [...new Set([...(get().deletedTxIds || []), ...txIds])];
         const updatedTx = (get().transactions || []).filter((t) => !idSet.has(t.id));
-        set({ transactions: updatedTx });
+        set({ transactions: updatedTx, deletedTxIds: nextDeleted });
         try {
           await syncFixedIncomeStateApi({
             entities: get().entities,
@@ -820,6 +821,7 @@ export const useFixedIncomeStore = create(
           accounts: [],
           cdts: [],
           transactions: [],
+      deletedTxIds: [],
           historicalRates: { entities: {} },
           isInitialized: false,
         });
