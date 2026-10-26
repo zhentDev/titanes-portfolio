@@ -86,10 +86,10 @@ export default function ExpensesLogSection({
       .filter((tx) => !tx.period || tx.period === activePeriod)
       .map((tx) => {
         const isIncome = tx.type === "credit" || tx.budgetItemType === "income";
-        const isWealth = tx.budgetItemType === "wealth" || tx.budgetItemId?.startsWith("wealth_");
+        const isWealth = (tx.budgetItemType === "wealth" || tx.budgetItemId?.startsWith("wealth_")) && !isIncome;
         return {
           ...tx,
-          itemType: isWealth ? "wealth_saving" : isIncome ? "income" : "expense",
+          itemType: isIncome ? "income" : isWealth ? "wealth_saving" : "expense",
         };
       });
   }, [expensesLog, activePeriod]);

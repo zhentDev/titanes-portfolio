@@ -252,25 +252,40 @@ export const useCashFlowStore = create(
             };
           }
 
-          const is70kPrinter =
-            e.id === "cf_tx_mb_1793020231371_461300" ||
-            (Number(e.amount) === 70000 &&
-              ((e.description || "").toLowerCase().includes("rappi") ||
-                (e.description || "").toLowerCase().includes("impresora")));
-          if (is70kPrinter) {
+          // Entrada de dinero por venta de pieza 3D recibida en RappiCuenta
+          if (e.id === "cf_tx_mb_1793020231371_461300" || (Number(e.amount) === 70000 && e.description?.toLowerCase().includes("chopper"))) {
             return {
               ...e,
               period: "2026-11",
               type: "credit",
-              budgetItemId: "wealth_impresora",
-              budgetItemName: "Ahorro Impresora 3D",
-              budgetItemType: "wealth",
-              description: "Ingreso / Ahorro Impresora 3D (Cajita Impresora)",
+              budgetItemId: null,
+              budgetItemName: "Venta Impresión 3D (Emprendimiento)",
+              budgetItemType: "income",
+              description: "Venta Impresión 3D: Base para celular Tony Chopper (Johan)",
               paymentSource: {
-                type: "fixed_pocket",
-                targetId: "acc_1789616855068",
-                targetName: "Cajita Impresora (RappiPay)",
+                type: "savings",
+                targetId: "acc_rappi_principal",
+                targetName: "Cuenta RappiPay (Principal)",
               },
+            };
+          }
+          // Salida / traslado hacia la Cajita Impresora (Aporte a ahorro)
+          if (e.id === "cf_tx_int_1793021051631_out") {
+            return {
+              ...e,
+              period: "2026-11",
+              type: "debit",
+              budgetItemId: "wealth_impresora",
+              budgetItemName: "Meta Impresora 3D",
+              budgetItemType: "wealth",
+              description: "Aporte a Ahorro: Cajita Impresora (Ganancia Tony Chopper)",
+              paymentSource: {
+                type: "savings",
+                targetId: "acc_rappi_principal",
+                targetName: "Cuenta RappiPay (Principal)",
+              },
+              destinationAccountId: "acc_1789616855068",
+              destinationAccountName: "Cajita Impresora (RappiPay)",
             };
           }
 
