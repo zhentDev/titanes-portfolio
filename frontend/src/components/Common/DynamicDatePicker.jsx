@@ -56,12 +56,14 @@ export default function DynamicDatePicker({
   min,
   max,
   align = "left",
+  direction = "auto",
   showPresets = true,
   className = "",
   style = {},
   id,
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [openUpwards, setOpenUpwards] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [typedText, setTypedText] = useState(value || "");
 
@@ -72,6 +74,33 @@ export default function DynamicDatePicker({
 
   const containerRef = useRef(null);
   const inputRef = useRef(null);
+
+  // Auto-flip positioning (opens upwards if clipped near bottom)
+  useEffect(() => {
+    if (isOpen && containerRef.current) {
+      if (direction === "up") {
+        setOpenUpwards(true);
+      } else if (direction === "down") {
+        setOpenUpwards(false);
+      } else {
+        const rect = containerRef.current.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        let parent = containerRef.current.parentElement;
+        let parentSpaceBelow = spaceBelow;
+        while (parent && parent !== document.body) {
+          const s = window.getComputedStyle(parent);
+          if (/(auto|scroll|hidden)/.test(s.overflow + s.overflowY)) {
+            const parentRect = parent.getBoundingClientRect();
+            parentSpaceBelow = Math.min(parentSpaceBelow, parentRect.bottom - rect.bottom);
+            break;
+          }
+          parent = parent.parentElement;
+        }
+        const shouldFlip = (parentSpaceBelow < 330 || spaceBelow < 340) && rect.top > 200;
+        setOpenUpwards(shouldFlip);
+      }
+    }
+  }, [isOpen, direction]);
 
   // Sync typed text when value changes from outside
   useEffect(() => {
@@ -335,7 +364,7 @@ export default function DynamicDatePicker({
 
       {/* Floating Glassmorphism Popover */}
       {isOpen && (
-        <div className={`dynamic-datepicker-popover ${align === "right" ? "align-right" : ""}`}>
+        <div className={`dynamic-datepicker-popover ${align === "right" ? "align-right" : ""} ${openUpwards ? "open-upwards" : ""}`}>
           {/* Header Navigation */}
           <div className="datepicker-header-nav">
             <button type="button" className="datepicker-nav-btn" onClick={prevMonth} title="Mes anterior">

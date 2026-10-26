@@ -1602,6 +1602,7 @@ export default function FixedIncomeModal({
                     value={txDate}
                     onChange={(iso) => setTxDate(iso)}
                     align="right"
+                    direction="auto"
                   />
                 </div>
 

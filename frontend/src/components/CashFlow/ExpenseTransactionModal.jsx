@@ -601,6 +601,7 @@ export default function ExpenseTransactionModal({
                 value={date}
                 onChange={(d) => setDate(d)}
                 placeholder="Seleccionar fecha..."
+                direction="auto"
               />
             </div>
 
