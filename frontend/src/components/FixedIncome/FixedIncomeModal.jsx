@@ -70,6 +70,7 @@ export default function FixedIncomeModal({
   // Transaction / Manual Movement State
   const [txAccountId, setTxAccountId] = useState("");
   const [txDate, setTxDate] = useState(new Date().toISOString().slice(0, 10));
+  const [txTime, setTxTime] = useState(new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }));
   const [txDescription, setTxDescription] = useState("");
   const [txType, setTxType] = useState("credit"); // 'credit' | 'debit'
   const [txAmount, setTxAmount] = useState("");
@@ -336,6 +337,10 @@ export default function FixedIncomeModal({
     } else if (initialTab === "transaction" || editItem.accountId) {
       setTxAccountId(editItem.accountId || accounts[0]?.id || "");
       setTxDate(editItem.date || new Date().toISOString().slice(0, 10));
+      setTxTime(
+        editItem.time ||
+        (editItem.createdAt ? editItem.createdAt.slice(11, 16) : new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }))
+      );
       setTxDescription(editItem.description || "");
       setTxType(editItem.type || "credit");
       setTxAmount(editItem.amount ? String(Math.abs(Number(editItem.amount))) : "");
@@ -367,6 +372,7 @@ export default function FixedIncomeModal({
         id: editItem.id,
         accountId: txAccountId,
         date: txDate,
+        time: txTime ? (txTime.length === 5 ? `${txTime}:00` : txTime) : null,
         description: txDescription.trim() || defaultDesc,
         amount: signedAmount,
         type: txType,
@@ -395,6 +401,7 @@ export default function FixedIncomeModal({
       await addTransaction({
         accountId: txAccountId,
         date: txDate,
+        time: txTime ? (txTime.length === 5 ? `${txTime}:00` : txTime) : null,
         description: txDescription.trim() || defaultDesc,
         amount: signedAmount,
         type: txType,
@@ -1574,7 +1581,7 @@ export default function FixedIncomeModal({
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 0.8fr", gap: 10 }}>
                 <div>
                   <label className="fi-form-label">
                     Monto ({accounts.find((a) => a.id === txAccountId)?.currency || "COP"})
@@ -1589,12 +1596,35 @@ export default function FixedIncomeModal({
 
                 <div>
                   <label className="fi-form-label">
-                    Fecha del Movimiento
+                    Fecha
                   </label>
                   <DynamicDatePicker
                     value={txDate}
                     onChange={(iso) => setTxDate(iso)}
                     align="right"
+                  />
+                </div>
+
+                <div>
+                  <label className="fi-form-label">
+                    Hora
+                  </label>
+                  <input
+                    type="time"
+                    step="1"
+                    value={txTime}
+                    onChange={(e) => setTxTime(e.target.value)}
+                    style={{
+                      width: "100%",
+                      boxSizing: "border-box",
+                      background: isLight ? "#ffffff" : "rgba(13, 18, 38, 0.7)",
+                      border: isLight ? "1px solid rgba(0, 0, 0, 0.15)" : "1px solid rgba(255, 255, 255, 0.1)",
+                      borderRadius: "8px",
+                      padding: "8px 10px",
+                      color: isLight ? "#0f172a" : "#f8fafc",
+                      fontSize: "0.85rem",
+                      height: "38px",
+                    }}
                   />
                 </div>
               </div>

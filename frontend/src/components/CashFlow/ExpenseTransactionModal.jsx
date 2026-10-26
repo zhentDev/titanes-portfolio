@@ -54,6 +54,9 @@ export default function ExpenseTransactionModal({
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState(0);
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [time, setTime] = useState(
+    new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+  );
 
   // Loan / Receivable State (Expenses only)
   const [isLoan, setIsLoan] = useState(false);
@@ -103,6 +106,10 @@ export default function ExpenseTransactionModal({
         setDescription(editTransaction.description || "");
         setAmount(Number(editTransaction.amount) || 0);
         setDate(editTransaction.date || new Date().toISOString().split("T")[0]);
+        setTime(
+          editTransaction.time ||
+          (editTransaction.createdAt ? editTransaction.createdAt.slice(11, 16) : new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }))
+        );
         setIsLoan(Boolean(editTransaction.isLoan));
         setLoanRecipient(editTransaction.loanRecipient || "");
         setLoanAmount(
@@ -241,6 +248,7 @@ export default function ExpenseTransactionModal({
         amount: Number(amount),
         currency,
         date,
+        time: time ? (time.length === 5 ? `${time}:00` : time) : null,
         type: "credit",
         paymentSource: {
           type: isTargetPayroll ? "payroll" : "fixed_pocket",
@@ -270,6 +278,7 @@ export default function ExpenseTransactionModal({
         amount: Number(amount),
         currency,
         date,
+        time: time ? (time.length === 5 ? `${time}:00` : time) : null,
         type: "debit",
         paymentSource: buildPaymentSource(),
         isLoan: Boolean(isLoan),
@@ -566,15 +575,15 @@ export default function ExpenseTransactionModal({
             />
           </div>
 
-          {/* Amount & Date */}
-          <div className="cashflow-form-row">
+          {/* Amount, Date & Time */}
+          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 0.8fr", gap: 10 }}>
             <div>
               <label style={{ display: "block", fontSize: "0.76rem", color: isLight ? "#334155" : "#94a3b8", marginBottom: 5, fontWeight: 600 }}>
                 {movementNature === "income"
-                  ? `Monto del Ingreso (${currency})`
+                  ? `Monto (${currency})`
                   : isWealthItem
-                  ? `Monto Invertido / Transferido (${currency})`
-                  : `Monto Gastado (${currency})`}
+                  ? `Monto (${currency})`
+                  : `Monto (${currency})`}
               </label>
               <CurrencyInput
                 value={amount}
@@ -586,12 +595,35 @@ export default function ExpenseTransactionModal({
 
             <div>
               <label style={{ display: "block", fontSize: "0.76rem", color: isLight ? "#334155" : "#94a3b8", marginBottom: 5, fontWeight: 600 }}>
-                Fecha del Movimiento
+                Fecha
               </label>
               <DynamicDatePicker
                 value={date}
                 onChange={(d) => setDate(d)}
                 placeholder="Seleccionar fecha..."
+              />
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: "0.76rem", color: isLight ? "#334155" : "#94a3b8", marginBottom: 5, fontWeight: 600 }}>
+                Hora
+              </label>
+              <input
+                type="time"
+                step="1"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  background: isLight ? "#ffffff" : "rgba(13, 18, 38, 0.7)",
+                  border: isLight ? "1px solid rgba(0, 0, 0, 0.15)" : "1px solid rgba(255, 255, 255, 0.1)",
+                  borderRadius: "8px",
+                  padding: "8px 10px",
+                  color: isLight ? "#0f172a" : "#f8fafc",
+                  fontSize: "0.85rem",
+                  height: "38px",
+                }}
               />
             </div>
           </div>
