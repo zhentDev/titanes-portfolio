@@ -86,7 +86,15 @@ export const useFixedIncomeStore = create(
             const desc = (t?.description || "").toLowerCase();
             return desc.includes("test abono") || desc.includes("test sobregiro") || desc.includes("reversión test");
           };
-          const deletedTxSet = new Set(localState.deletedTxIds || []);
+          const isZombieOrOrphanTx = (t) => {
+            if (!t || !t.id) return true;
+            return t.id === "tx_int_deuda_mike_transfer_in" || t.id === "tx_deuda_mike_20261024_01";
+          };
+          const deletedTxSet = new Set([
+            ...(localState.deletedTxIds || []),
+            "tx_int_deuda_mike_transfer_in",
+            "tx_deuda_mike_20261024_01",
+          ]);
 
           let rawTransactions = Array.isArray(res?.transactions)
             ? res.transactions
@@ -98,7 +106,7 @@ export const useFixedIncomeStore = create(
           );
 
           let finalTransactions = [...rawTransactions, ...offlineDrafts]
-            .filter((t) => t && t.id && !deletedTxSet.has(t.id) && !isTestTx(t))
+            .filter((t) => t && t.id && !deletedTxSet.has(t.id) && !isTestTx(t) && !isZombieOrOrphanTx(t))
             .sort(
               (a, b) => (b.date || "").localeCompare(a.date || "") || (b.createdAt || "").localeCompare(a.createdAt || "")
             );
