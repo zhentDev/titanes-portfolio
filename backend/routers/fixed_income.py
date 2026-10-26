@@ -94,6 +94,35 @@ def get_user_fixed_income_file(user_id: str | None = None) -> Path:
     return user_dir / f"{uid}_fixed_income.json"
 
 
+def is_test_transaction(t: dict[str, Any]) -> bool:
+    """Detect and permanently purge test transactions."""
+    if not isinstance(t, dict):
+        return False
+    tid = str(t.get("id") or "")
+    desc = str(t.get("description") or "").lower()
+    
+    test_ids = {
+        "tx_rappi_in_70k_20261025",
+        "cf_tx_rappi_in_70k_20261025",
+        "tx_mb_1792779105825_b126cb",
+        "tx_mb_1792779105705_02d984",
+        "tx_mb_1792779066231_fe0b80",
+        "tx_mb_1792779105584_9c8939",
+        "tx_mb_1792779105486_13e341",
+        "tx_mb_1792779066108_8b1857",
+        "tx_mb_1792779066008_235589",
+        "tx_mb_1792778966456_3dfb3e",
+        "tx_mb_1792778966351_d93090",
+    }
+    if tid in test_ids:
+        return True
+    if any(k in desc for k in ["test abono", "test sobregiro", "reversión test", "reversion test"]):
+        return True
+    if "cascada: 100% completado $2,000" in desc or "cascada: $227,484" in desc:
+        return True
+    return False
+
+
 def load_fixed_income_db(user_id: str | None = None) -> dict[str, Any]:
     """
     Load fixed income data with Database as primary source of truth (DuckDB / Postgres)
@@ -643,15 +672,15 @@ def sync_full_state(payload: SyncStateModel, request: Request):
         db["cdts"] = list(existing_cdts.values())
 
     if payload.transactions is not None:
-        existing_tx = {t["id"]: t for t in db.get("transactions", []) if isinstance(t, dict) and t.get("id")}
-        # Prune deliberately deleted transactions if any
-        if payload.deletedTxIds:
-            del_set = set(payload.deletedTxIds)
-            existing_tx = {tid: t for tid, t in existing_tx.items() if tid not in del_set}
+        del_set = set(payload.deletedTxIds or [])
+        existing_tx = {
+            t["id"]: t for t in db.get("transactions", [])
+            if isinstance(t, dict) and t.get("id") and t["id"] not in del_set and not is_test_transaction(t)
+        }
         # Merge incoming transactions
         for t in payload.transactions:
             if isinstance(t, dict) and t.get("id"):
-                if not payload.deletedTxIds or t["id"] not in set(payload.deletedTxIds):
+                if t["id"] not in del_set and not is_test_transaction(t):
                     existing_tx[t["id"]] = t
         db["transactions"] = sorted(
             list(existing_tx.values()),

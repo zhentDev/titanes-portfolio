@@ -47,6 +47,12 @@ export default function RealCashLiquidityCard({
   // 2. Real Outflows executed from Payroll (Debit) Account (Dinero que YA salió de la cuenta)
   const executedExpensesFromPayroll = (expensesLog || [])
     .filter((tx) => {
+      // Must be an OUTFLOW / DEBIT (never credit or income)
+      if (tx.type === "credit" || tx.budgetItemType === "income") return false;
+
+      // Ignore parent split transactions if children splits exist
+      if ((expensesLog || []).some((c) => c.splitParentId === tx.id)) return false;
+
       // Evita doble conteo porque ya suma en executedCardPaymentsFromPayroll
       if (
         tx.isCreditCardPayoff ||
@@ -56,10 +62,21 @@ export default function RealCashLiquidityCard({
       ) {
         return false;
       }
+
       const srcType = tx.paymentSource?.type;
+      const targetId = tx.paymentSource?.targetId;
+      const targetName = (tx.paymentSource?.targetName || "").toLowerCase();
+
+      // Skip expenses explicitly belonging to other accounts (Rappi, credit cards, pockets)
+      if (targetId && targetId !== "acc_nu_debito" && (targetId.startsWith("acc_rappi") || targetId.startsWith("cc_"))) {
+        return false;
+      }
+      if (srcType === "credit_card" || targetName.includes("rappi")) return false;
+
       return (
         srcType === "payroll" ||
         srcType === "debit" ||
+        targetId === "acc_nu_debito" ||
         (!srcType && tx.budgetItemType === "needs")
       );
     })
