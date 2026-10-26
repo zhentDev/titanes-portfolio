@@ -291,16 +291,26 @@ export const useCashFlowStore = create(
             const hasPayment = (d.paymentsLog || []).some((p) => Number(p.amount) === 210000);
             return {
               ...d,
+              notes: d.notes && !d.notes.includes("Un solo pago") ? d.notes : "Pagos directos a Mike (3 cuotas de $210.000).",
+              paymentMethod: "Transferencia directa a Mike",
               remainingAmount: 420000,
               paymentsLog: hasPayment
-                ? d.paymentsLog
+                ? d.paymentsLog.map((p) =>
+                    p.id === "pay_mike_20261024_01"
+                      ? {
+                          ...p,
+                          paymentMethod: "Transferencia directa (salida de Cajita Deudas)",
+                          note: "Pago cuota 1/3 enviado directamente a Mike ($210.000)",
+                        }
+                      : p
+                  )
                 : [
                     {
                       id: "pay_mike_20261024_01",
                       amount: 210000,
                       date: "2026-10-24",
-                      paymentMethod: "Transferencia desde Cajita / Cuenta (Deudas)",
-                      note: "Abono cuota mensual transferida a la cajita para Mike",
+                      paymentMethod: "Transferencia directa (salida de Cajita Deudas)",
+                      note: "Pago cuota 1/3 enviado directamente a Mike ($210.000)",
                       createdAt: "2026-10-24T20:45:00.000Z",
                     },
                     ...(d.paymentsLog || []),
