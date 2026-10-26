@@ -216,6 +216,7 @@ class CashFlowSyncPayload(BaseModel):
     creditCards: list[dict] | None = None
     creditPurchases: list[dict] | None = None
     expensesLog: list[dict] | None = None
+    deletedExpenseIds: list[str] | None = None
     creditCardPayments: list[dict] | None = None
     debts: list[dict] | None = None
     periodsData: dict | None = None
@@ -291,11 +292,16 @@ def sync_cash_flow_state(payload: CashFlowSyncPayload, request: Request):
     if payload.creditPurchases is not None:
         db["creditPurchases"] = [dump_val(x) for x in payload.creditPurchases]
     if payload.expensesLog is not None:
-        db["expensesLog"] = [dump_val(x) for x in payload.expensesLog]
+        merged_expenses = merge_lists_by_id(db.get("expensesLog", []), payload.expensesLog)
+        del_exp_set = set(payload.deletedExpenseIds or [])
+        db["expensesLog"] = [x for x in merged_expenses if x.get("id") not in del_exp_set]
+    elif payload.deletedExpenseIds:
+        del_exp_set = set(payload.deletedExpenseIds)
+        db["expensesLog"] = [x for x in db.get("expensesLog", []) if x.get("id") not in del_exp_set]
     if payload.creditCardPayments is not None:
-        db["creditCardPayments"] = [dump_val(x) for x in payload.creditCardPayments]
+        db["creditCardPayments"] = merge_lists_by_id(db.get("creditCardPayments", []), payload.creditCardPayments)
     if payload.debts is not None:
-        db["debts"] = [dump_val(x) for x in payload.debts]
+        db["debts"] = merge_lists_by_id(db.get("debts", []), payload.debts)
     if payload.periodsData is not None:
         existing_periods = db.get("periodsData") or {}
         incoming_periods = dump_val(payload.periodsData) or {}

@@ -437,6 +437,7 @@ export const useCashFlowStore = create(
               creditPurchases: currentState.creditPurchases,
               creditCardPayments: currentState.creditCardPayments,
               expensesLog: currentState.expensesLog,
+              deletedExpenseIds: currentState.deletedExpenseIds || [],
               debts: currentState.debts || [],
               inflows: currentState.inflows,
               needs: currentState.needs,
