@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import "./InteractiveControls.css";
 
 const MONTH_NAMES = [
@@ -63,7 +64,7 @@ export default function DynamicDatePicker({
   id,
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [openUpwards, setOpenUpwards] = useState(false);
+  const [popoverCoords, setPopoverCoords] = useState(null);
   const [isFocused, setIsFocused] = useState(false);
   const [typedText, setTypedText] = useState(value || "");
 
@@ -73,34 +74,51 @@ export default function DynamicDatePicker({
   const [viewMonth, setViewMonth] = useState(initialDate.getMonth());
 
   const containerRef = useRef(null);
+  const popoverRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Auto-flip positioning (opens upwards if clipped near bottom)
+  // Dynamic coordinates calculation with Viewport Clamping & Smart Direction
   useEffect(() => {
-    if (isOpen && containerRef.current) {
-      if (direction === "up") {
-        setOpenUpwards(true);
-      } else if (direction === "down") {
-        setOpenUpwards(false);
-      } else {
-        const rect = containerRef.current.getBoundingClientRect();
-        const spaceBelow = window.innerHeight - rect.bottom;
-        let parent = containerRef.current.parentElement;
-        let parentSpaceBelow = spaceBelow;
-        while (parent && parent !== document.body) {
-          const s = window.getComputedStyle(parent);
-          if (/(auto|scroll|hidden)/.test(s.overflow + s.overflowY)) {
-            const parentRect = parent.getBoundingClientRect();
-            parentSpaceBelow = Math.min(parentSpaceBelow, parentRect.bottom - rect.bottom);
-            break;
-          }
-          parent = parent.parentElement;
-        }
-        const shouldFlip = (parentSpaceBelow < 330 || spaceBelow < 340) && rect.top > 200;
-        setOpenUpwards(shouldFlip);
+    if (!isOpen || !containerRef.current) return;
+
+    const updateCoords = () => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const popoverWidth = Math.min(320, window.innerWidth - 24);
+      const popoverHeight = 360;
+      const padding = 12;
+
+      // Vertical space detection
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const shouldOpenUp =
+        direction === "up" ||
+        (direction !== "down" && spaceBelow < popoverHeight && spaceAbove > spaceBelow);
+
+      // Horizontal alignment & clamp within viewport
+      let left = align === "right" ? rect.right - popoverWidth : rect.left;
+      if (left + popoverWidth > window.innerWidth - padding) {
+        left = window.innerWidth - popoverWidth - padding;
       }
-    }
-  }, [isOpen, direction]);
+      if (left < padding) left = padding;
+
+      setPopoverCoords({
+        top: shouldOpenUp ? undefined : rect.bottom + 6,
+        bottom: shouldOpenUp ? window.innerHeight - rect.top + 6 : undefined,
+        left,
+        width: popoverWidth,
+        openUpwards: shouldOpenUp,
+      });
+    };
+
+    updateCoords();
+    window.addEventListener("resize", updateCoords);
+    window.addEventListener("scroll", updateCoords, true);
+    return () => {
+      window.removeEventListener("resize", updateCoords);
+      window.removeEventListener("scroll", updateCoords, true);
+    };
+  }, [isOpen, direction, align]);
 
   // Sync typed text when value changes from outside
   useEffect(() => {
@@ -115,7 +133,12 @@ export default function DynamicDatePicker({
   // Outside click listener & Escape key
   useEffect(() => {
     const handleOutsideClick = (e) => {
-      if (containerRef.current && !containerRef.current.contains(e.target)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target) &&
+        popoverRef.current &&
+        !popoverRef.current.contains(e.target)
+      ) {
         setIsOpen(false);
       }
     };
@@ -128,10 +151,12 @@ export default function DynamicDatePicker({
 
     if (isOpen) {
       document.addEventListener("mousedown", handleOutsideClick);
+      document.addEventListener("touchstart", handleOutsideClick);
       document.addEventListener("keydown", handleKeyDown);
     }
     return () => {
       document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("touchstart", handleOutsideClick);
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [isOpen]);
@@ -362,9 +387,21 @@ export default function DynamicDatePicker({
         </button>
       </div>
 
-      {/* Floating Glassmorphism Popover */}
-      {isOpen && (
-        <div className={`dynamic-datepicker-popover ${align === "right" ? "align-right" : ""} ${openUpwards ? "open-upwards" : ""}`}>
+      {/* Floating Glassmorphism Popover rendered via Portal outside any modal clipping */}
+      {isOpen && popoverCoords && typeof document !== "undefined" && createPortal(
+        <div
+          ref={popoverRef}
+          className={`dynamic-datepicker-popover ${popoverCoords.openUpwards ? "open-upwards" : ""}`}
+          style={{
+            position: "fixed",
+            top: popoverCoords.top,
+            bottom: popoverCoords.bottom,
+            left: popoverCoords.left,
+            width: popoverCoords.width,
+            zIndex: 999999,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
           {/* Header Navigation */}
           <div className="datepicker-header-nav">
             <button type="button" className="datepicker-nav-btn" onClick={prevMonth} title="Mes anterior">
@@ -459,7 +496,8 @@ export default function DynamicDatePicker({
               </button>
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
