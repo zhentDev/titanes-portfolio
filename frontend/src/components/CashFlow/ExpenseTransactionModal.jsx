@@ -63,6 +63,10 @@ export default function ExpenseTransactionModal({
   const [loanRecipient, setLoanRecipient] = useState("");
   const [loanAmount, setLoanAmount] = useState(0);
   const [loanDueDate, setLoanDueDate] = useState("");
+  const [isSplit, setIsSplit] = useState(false);
+  const [userIncluded, setUserIncluded] = useState(true);
+  const [participants, setParticipants] = useState([]);
+  const [newParticipantInput, setNewParticipantInput] = useState("");
 
   // Payment Source (Expenses only)
   const [sourceType, setSourceType] = useState("payroll");
@@ -118,6 +122,13 @@ export default function ExpenseTransactionModal({
             : Number(editTransaction.amount) || 0
         );
         setLoanDueDate(editTransaction.loanDueDate || "");
+        setIsSplit(Boolean(editTransaction.isSplit || (Array.isArray(editTransaction.participants) && editTransaction.participants.length > 0)));
+        setUserIncluded(editTransaction.userIncluded !== undefined ? Boolean(editTransaction.userIncluded) : true);
+        setParticipants(
+          Array.isArray(editTransaction.participants) && editTransaction.participants.length > 0
+            ? editTransaction.participants
+            : []
+        );
 
         if (isTxIncome) {
           const matchedTarget =
@@ -148,6 +159,10 @@ export default function ExpenseTransactionModal({
         setLoanRecipient("");
         setLoanAmount(0);
         setLoanDueDate("");
+        setIsSplit(false);
+        setUserIncluded(true);
+        setParticipants([]);
+        setNewParticipantInput("");
         if (budgetItems.length > 0) {
           const firstItem = budgetItems.find((b) => b.id === selectedBudgetItemId) || budgetItems[0];
           if (firstItem) {
@@ -176,10 +191,16 @@ export default function ExpenseTransactionModal({
   const selectedBudgetItem = budgetItems.find((b) => b.id === selectedBudgetItemId) || budgetItems[0];
   const isWealthItem = selectedBudgetItem?.pillarType === "wealth";
 
-  const userPersonalCost = Math.max(
-    0,
-    (Number(amount) || 0) - (isLoan ? Number(loanAmount) || 0 : 0)
-  );
+  const externalCount = participants.length;
+  const totalSharesCount = externalCount + (userIncluded ? 1 : 0);
+  const totalNum = Number(amount) || 0;
+  const sharePerPerson = isSplit && totalSharesCount > 0 ? Math.round(totalNum / totalSharesCount) : totalNum;
+  const userShareCalculated = isSplit && userIncluded ? Math.max(0, totalNum - (sharePerPerson * externalCount)) : 0;
+  const finalReceivable = isSplit ? Math.max(0, totalNum - userShareCalculated) : (Number(loanAmount) || totalNum);
+
+  const userPersonalCost = isLoan && isSplit
+    ? userShareCalculated
+    : Math.max(0, (Number(amount) || 0) - (isLoan ? Number(loanAmount) || 0 : 0));
 
   const buildPaymentSource = () => {
     if (sourceType === "credit_card") {
@@ -282,10 +303,31 @@ export default function ExpenseTransactionModal({
         type: "debit",
         paymentSource: buildPaymentSource(),
         isLoan: Boolean(isLoan),
-        loanRecipient: isLoan ? loanRecipient.trim() : null,
-        loanAmount: isLoan ? (Number(loanAmount) > 0 ? Number(loanAmount) : Number(amount)) : null,
+        loanRecipient: isLoan
+          ? isSplit && participants.length > 0
+            ? participants.map((p) => p.name).join(", ")
+            : (loanRecipient || "Amigo/Familiar").trim()
+          : null,
+        loanAmount: isLoan
+          ? isSplit
+            ? finalReceivable
+            : (Number(loanAmount) > 0 ? Number(loanAmount) : Number(amount))
+          : null,
         loanDueDate: isLoan && loanDueDate ? loanDueDate : null,
         loanStatus: isLoan ? editTransaction?.loanStatus || "pending" : null,
+        isSplit: Boolean(isLoan && isSplit),
+        userIncluded: Boolean(isLoan && isSplit && userIncluded),
+        userShare: isLoan && isSplit ? userShareCalculated : 0,
+        participants: isLoan && isSplit
+          ? participants.map((p) => ({
+              ...p,
+              share: sharePerPerson,
+              paid: Boolean(p.paid),
+            }))
+          : (editTransaction?.participants || []),
+        remainingLoan: isLoan && isSplit
+          ? (editTransaction?.remainingLoan !== undefined ? editTransaction.remainingLoan : finalReceivable)
+          : (editTransaction?.remainingLoan !== undefined ? editTransaction.remainingLoan : (Number(loanAmount) || Number(amount))),
         createdAt: editTransaction?.createdAt || new Date().toISOString(),
       };
 
@@ -682,78 +724,298 @@ export default function ExpenseTransactionModal({
               </label>
 
               {isLoan && (
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: 12,
-                    marginTop: 10,
-                    paddingTop: 10,
-                    borderTop: "1px solid rgba(245, 158, 11, 0.2)",
-                  }}
-                >
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.72rem", color: "#fcd34d", marginBottom: 4, fontWeight: 600 }}>
-                      ¿A quién le prestaste? (Deudor)
-                    </label>
-                    <input
-                      type="text"
-                      value={loanRecipient}
-                      onChange={(e) => setLoanRecipient(e.target.value)}
-                      placeholder="ej. Camilo, Mamá, Compañero..."
-                      style={{
-                        width: "100%",
-                        boxSizing: "border-box",
-                        background: isLight ? "#ffffff" : "rgba(13, 18, 38, 0.8)",
-                        border: "1px solid rgba(245, 158, 11, 0.4)",
-                        borderRadius: "6px",
-                        padding: "6px 10px",
-                        color: isLight ? "#0f172a" : "#f8fafc",
-                        fontSize: "0.82rem",
-                      }}
-                      required={isLoan}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.72rem", color: "#fcd34d", marginBottom: 4, fontWeight: 600 }}>
-                      Monto a Cobrar / Prestado ({currency})
-                    </label>
-                    <CurrencyInput
-                      value={loanAmount}
-                      onChange={(val) => setLoanAmount(val)}
-                      currency={currency}
-                      placeholder="Monto prestado"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {isLoan && (
-                <div
-                  style={{
-                    marginTop: 10,
-                    background: "rgba(0, 0, 0, 0.35)",
-                    borderRadius: "8px",
-                    padding: "8px 12px",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    fontSize: "0.76rem",
-                  }}
-                >
-                  <span style={{ color: "#cbd5e1" }}>💰 Tu Consumo Personal Real:</span>
-                  <strong
+                <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(245, 158, 11, 0.25)" }}>
+                  {/* Switch: Dividir en partes iguales (Gasto compartido / Vaca) */}
+                  <div
                     style={{
-                      color: userPersonalCost > 0 ? "#38bdf8" : "#10b981",
-                      fontFamily: "JetBrains Mono, monospace",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "8px 12px",
+                      borderRadius: 8,
+                      background: isSplit
+                        ? (isLight ? "rgba(59, 130, 246, 0.1)" : "rgba(59, 130, 246, 0.2)")
+                        : (isLight ? "rgba(0, 0, 0, 0.03)" : "rgba(255, 255, 255, 0.03)"),
+                      border: isSplit
+                        ? `1.5px solid ${isLight ? "#3b82f6" : "#60a5fa"}`
+                        : `1px solid ${isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.08)"}`,
+                      marginBottom: 10,
+                      cursor: "pointer",
+                    }}
+                    onClick={() => setIsSplit(!isSplit)}
+                  >
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700, fontSize: "0.82rem", color: isSplit ? (isLight ? "#1d4ed8" : "#93c5fd") : "var(--text-primary)" }}>
+                        <span>👥</span> Dividir en partes iguales (Gasto compartido / Vaca)
+                      </div>
+                      <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 2 }}>
+                        Divide el monto en cuotas iguales entre todos los participantes
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={isSplit}
+                      onChange={(e) => setIsSplit(e.target.checked)}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{ width: 18, height: 18, cursor: "pointer", accentColor: "#3b82f6" }}
+                    />
+                  </div>
+
+                  {isSplit ? (
+                    /* ── Group split UI ── */
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      {/* Switch: Yo participé en este gasto */}
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "8px 12px",
+                          borderRadius: 8,
+                          background: userIncluded
+                            ? (isLight ? "rgba(59, 130, 246, 0.08)" : "rgba(59, 130, 246, 0.15)")
+                            : (isLight ? "rgba(0, 0, 0, 0.02)" : "rgba(255, 255, 255, 0.02)"),
+                          border: userIncluded
+                            ? `1px solid ${isLight ? "#3b82f6" : "#60a5fa"}`
+                            : `1px solid ${isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.06)"}`,
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: "0.78rem", color: userIncluded ? (isLight ? "#1d4ed8" : "#93c5fd") : "var(--text-primary)" }}>
+                            🙋‍♂️ Yo participé en este gasto
+                          </div>
+                          <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                            Mi cuota se deduce de la deuda por cobrar y se descuenta de mi sobre como consumo propio
+                          </div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={userIncluded}
+                          onChange={(e) => setUserIncluded(e.target.checked)}
+                          style={{ width: 18, height: 18, cursor: "pointer", accentColor: "#3b82f6" }}
+                        />
+                      </div>
+
+                      {/* Participant input & quick presets */}
+                      <div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                          <label style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                            Participantes que deben pagar ({participants.length}):
+                          </label>
+                          <div style={{ display: "flex", gap: 4 }}>
+                            <span style={{ fontSize: "0.66rem", color: "var(--text-muted)", alignSelf: "center" }}>Rápido:</span>
+                            {[2, 3, 4, 5].map((cnt) => (
+                              <button
+                                key={cnt}
+                                type="button"
+                                onClick={() => {
+                                  const list = [];
+                                  for (let i = 1; i <= cnt; i++) {
+                                    list.push({ id: `part_${Date.now()}_${i}`, name: `Invitado ${i}`, paid: false });
+                                  }
+                                  setParticipants(list);
+                                }}
+                                style={{
+                                  padding: "1px 6px",
+                                  fontSize: "0.66rem",
+                                  borderRadius: 4,
+                                  border: `1px solid ${isLight ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.15)"}`,
+                                  background: "var(--bg-surface)",
+                                  color: "var(--text-secondary)",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                {cnt}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <input
+                            type="text"
+                            placeholder="Nombre del participante (ej. Andrés, Camilo, Diana...)"
+                            value={newParticipantInput}
+                            onChange={(e) => setNewParticipantInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                if (newParticipantInput.trim()) {
+                                  setParticipants([...participants, { id: `part_${Date.now()}`, name: newParticipantInput.trim(), paid: false }]);
+                                  setNewParticipantInput("");
+                                }
+                              }
+                            }}
+                            style={{
+                              flex: 1,
+                              background: isLight ? "#ffffff" : "rgba(13, 18, 38, 0.8)",
+                              border: "1px solid var(--border)",
+                              borderRadius: 6,
+                              padding: "6px 10px",
+                              fontSize: "0.8rem",
+                              color: "var(--text-primary)",
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (newParticipantInput.trim()) {
+                                setParticipants([...participants, { id: `part_${Date.now()}`, name: newParticipantInput.trim(), paid: false }]);
+                                setNewParticipantInput("");
+                              }
+                            }}
+                            style={{
+                              padding: "6px 12px",
+                              borderRadius: 6,
+                              border: "none",
+                              background: "#3b82f6",
+                              color: "#ffffff",
+                              fontWeight: 700,
+                              fontSize: "0.74rem",
+                              cursor: "pointer",
+                            }}
+                          >
+                            + Agregar
+                          </button>
+                        </div>
+
+                        {/* Chips of added participants */}
+                        {participants.length > 0 && (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                            {participants.map((p, idx) => (
+                              <span
+                                key={p.id || idx}
+                                style={{
+                                  background: isLight ? "#ffffff" : "var(--bg-surface)",
+                                  border: `1px solid ${isLight ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.12)"}`,
+                                  borderRadius: 6,
+                                  padding: "3px 8px",
+                                  fontSize: "0.72rem",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 6,
+                                  color: "var(--text-primary)",
+                                }}
+                              >
+                                <strong>{p.name}</strong> ({formatMoney(sharePerPerson, currency)})
+                                <button
+                                  type="button"
+                                  onClick={() => setParticipants(participants.filter((x, i) => i !== idx))}
+                                  style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.7rem", padding: 0 }}
+                                >
+                                  ✕
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Split calculations summary */}
+                      <div
+                        style={{
+                          background: isLight ? "rgba(245, 158, 11, 0.08)" : "rgba(245, 158, 11, 0.12)",
+                          border: `1px solid ${isLight ? "rgba(245, 158, 11, 0.25)" : "rgba(245, 158, 11, 0.2)"}`,
+                          borderRadius: 8,
+                          padding: "10px 12px",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          fontSize: "0.74rem",
+                          flexWrap: "wrap",
+                          gap: 6,
+                        }}
+                      >
+                        <div>
+                          <span style={{ color: "var(--text-muted)" }}>Cuota por persona: </span>
+                          <strong style={{ color: "var(--text-primary)" }}>{formatMoney(sharePerPerson, currency)}</strong>
+                          <span style={{ color: "var(--text-muted)", fontSize: "0.68rem" }}> ({totalSharesCount} personas)</span>
+                        </div>
+                        {userIncluded && (
+                          <div>
+                            <span style={{ color: isLight ? "#1d4ed8" : "#93c5fd" }}>Tu parte (consumo): </span>
+                            <strong style={{ color: isLight ? "#1d4ed8" : "#93c5fd" }}>{formatMoney(userShareCalculated, currency)}</strong>
+                          </div>
+                        )}
+                        <div>
+                          <span style={{ color: isLight ? "#b45309" : "#fcd34d" }}>Por cobrar: </span>
+                          <strong style={{ color: isLight ? "#b45309" : "#fcd34d" }}>{formatMoney(finalReceivable, currency)}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* ── Standard 1:1 Loan UI ── */
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: 12,
+                      }}
+                    >
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.72rem", color: isLight ? "#92400e" : "#fcd34d", marginBottom: 4, fontWeight: 600 }}>
+                          ¿A quién le prestaste? (Deudor)
+                        </label>
+                        <input
+                          type="text"
+                          value={loanRecipient}
+                          onChange={(e) => setLoanRecipient(e.target.value)}
+                          placeholder="ej. Camilo, Mamá, Compañero..."
+                          style={{
+                            width: "100%",
+                            boxSizing: "border-box",
+                            background: isLight ? "#ffffff" : "rgba(13, 18, 38, 0.8)",
+                            border: "1px solid rgba(245, 158, 11, 0.4)",
+                            borderRadius: "6px",
+                            padding: "6px 10px",
+                            color: isLight ? "#0f172a" : "#f8fafc",
+                            fontSize: "0.82rem",
+                          }}
+                          required={isLoan}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.72rem", color: isLight ? "#92400e" : "#fcd34d", marginBottom: 4, fontWeight: 600 }}>
+                          Monto a Cobrar / Prestado ({currency})
+                        </label>
+                        <CurrencyInput
+                          value={loanAmount}
+                          onChange={(val) => setLoanAmount(val)}
+                          currency={currency}
+                          placeholder="Monto prestado"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tu Consumo Personal Real */}
+                  <div
+                    style={{
+                      marginTop: 10,
+                      background: isLight ? "rgba(0, 0, 0, 0.04)" : "rgba(0, 0, 0, 0.35)",
+                      borderRadius: "8px",
+                      padding: "8px 12px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      fontSize: "0.76rem",
+                      border: `1px solid ${isLight ? "rgba(0,0,0,0.06)" : "transparent"}`,
                     }}
                   >
-                    {formatMoney(userPersonalCost, currency)}
-                    {userPersonalCost === 0
-                      ? " (100% Préstamo - No afecta tu sobre)"
-                      : " (Se descuenta de tu sobre)"}
-                  </strong>
+                    <span style={{ color: "var(--text-muted)" }}>💰 Tu Consumo Personal Real:</span>
+                    <strong
+                      style={{
+                        color: userPersonalCost > 0 ? (isLight ? "#0284c7" : "#38bdf8") : "#10b981",
+                        fontFamily: "JetBrains Mono, monospace",
+                      }}
+                    >
+                      {formatMoney(userPersonalCost, currency)}
+                      {userPersonalCost === 0
+                        ? " (100% Préstamo - No afecta tu sobre)"
+                        : " (Se descuenta de tu sobre)"}
+                    </strong>
+                  </div>
                 </div>
               )}
             </div>
