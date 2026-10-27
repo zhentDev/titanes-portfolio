@@ -291,12 +291,27 @@ def sync_cash_flow_state(payload: CashFlowSyncPayload, request: Request):
         db["creditCards"] = [dump_val(x) for x in payload.creditCards]
     if payload.creditPurchases is not None:
         db["creditPurchases"] = [dump_val(x) for x in payload.creditPurchases]
+    # Persistent tombstone tracking for deleted transactions
+    del_exp_set = set(db.get("deletedExpenseIds") or [])
+    if payload.deletedExpenseIds:
+        del_exp_set.update(payload.deletedExpenseIds)
+    db["deletedExpenseIds"] = list(del_exp_set)
+
     if payload.expensesLog is not None:
-        merged_expenses = merge_lists_by_id(db.get("expensesLog", []), payload.expensesLog)
-        del_exp_set = set(payload.deletedExpenseIds or [])
-        db["expensesLog"] = [x for x in merged_expenses if x.get("id") not in del_exp_set]
-    elif payload.deletedExpenseIds:
-        del_exp_set = set(payload.deletedExpenseIds)
+        # Authoritative client sync: do NOT merge old deleted transactions back.
+        incoming_dumped = [dump_val(x) for x in payload.expensesLog]
+        seen_ids = set()
+        clean_expenses = []
+        for item in incoming_dumped:
+            if isinstance(item, dict):
+                iid = item.get("id")
+                if iid:
+                    if iid in del_exp_set or iid in seen_ids:
+                        continue
+                    seen_ids.add(iid)
+                clean_expenses.append(item)
+        db["expensesLog"] = clean_expenses
+    elif del_exp_set:
         db["expensesLog"] = [x for x in db.get("expensesLog", []) if x.get("id") not in del_exp_set]
     if payload.creditCardPayments is not None:
         db["creditCardPayments"] = merge_lists_by_id(db.get("creditCardPayments", []), payload.creditCardPayments)
@@ -313,13 +328,16 @@ def sync_cash_flow_state(payload: CashFlowSyncPayload, request: Request):
 
 @router.delete("/cash-flow/expense/{expense_id}")
 def delete_expense_item(expense_id: str, request: Request):
-    """Directly delete an expense log entry from database."""
+    """Directly delete an expense log entry from database with permanent tombstone persistence."""
     user = get_optional_current_user(request)
     user_id = user["sub"] if user else None
     db = load_cash_flow_db(user_id)
+    del_exp_set = set(db.get("deletedExpenseIds") or [])
+    del_exp_set.add(expense_id)
+    db["deletedExpenseIds"] = list(del_exp_set)
     db["expensesLog"] = [x for x in db.get("expensesLog", []) if x.get("id") != expense_id]
     save_cash_flow_db(db, user_id)
-    return {"status": "ok", "deletedId": expense_id}
+    return {"status": "ok", "deletedId": expense_id, "deletedExpenseIds": db["deletedExpenseIds"]}
 
 
 @router.post("/cash-flow/debt")

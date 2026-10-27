@@ -175,7 +175,29 @@ export const useCashFlowStore = create(
         const mergedCreditCards = Array.isArray(source?.creditCards) && source.creditCards.length > 0 ? source.creditCards : (cachedLocal?.creditCards || []);
         const mergedCreditPurchases = unionById(source?.creditPurchases, cachedLocal?.creditPurchases);
         const mergedCreditCardPayments = unionById(source?.creditCardPayments, cachedLocal?.creditCardPayments);
-        const deletedExpenseIds = new Set(cachedLocal?.deletedExpenseIds || []);
+        // Permanent tombstones for deleted transactions: combine backend and local storage
+        const KNOWN_PHANTOM_EXPENSE_IDS = [
+          "cf_tx_plenti_broker_funding_200k_202611",
+          "cf_tx_mb_rappi_emergency_150k_202611",
+          "cf_tx_cajita_viaje_150k_202611",
+          "tx_1792909650611",
+          "tx_1792909650611_split_0_1792909698846",
+          "tx_1792909650611_split_1_1792909698846",
+          "exp_transfer_mike_cajita_202611",
+          "exp_transfer_mike_cajita_202611_split_0",
+          "exp_transfer_mike_cajita_202611_split_1",
+          "exp_transfer_mike_cajita_202611_split_wealth_60k",
+          "exp_transfer_mike_cajita_202611_split_0_1792908328343",
+          "exp_transfer_mike_cajita_202611_split_1_1792908328343",
+        ];
+        const combinedDeletedIds = [
+          ...new Set([
+            ...KNOWN_PHANTOM_EXPENSE_IDS,
+            ...(source?.deletedExpenseIds || []),
+            ...(cachedLocal?.deletedExpenseIds || [])
+          ])
+        ];
+        const deletedExpenseIds = new Set(combinedDeletedIds);
         // Remote expensesLog is authoritative when available from server.
         // Never resurrect stale deleted transactions from cachedLocal unless they are genuine offline drafts.
         const isTestExpense = (e) => {
@@ -397,6 +419,7 @@ export const useCashFlowStore = create(
           creditPurchases: mergedCreditPurchases,
           creditCardPayments: mergedCreditCardPayments,
           expensesLog: sanitizedExpensesLog,
+          deletedExpenseIds: combinedDeletedIds,
           debts: mergedDebts,
           inflows: mergedInflows,
           needs: mergedNeeds,

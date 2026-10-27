@@ -237,9 +237,26 @@ export default function ExpensesLogSection({
   // Only outflows actually executed from Payroll (Debit) account affect Saldo en Nómina.
   // Outflows from Cajitas (fixed_pocket), Credit Cards, or external savings do not touch Nómina.
   const isPayrollOutflow = (item) => {
-    const srcType = item.paymentSource?.type || item.sourceType;
-    return !srcType || srcType === "payroll" || srcType === "debit";
+    const ps = item.paymentSource || {};
+    const srcType = ps.type || item.sourceType;
+    const targetId = ps.targetId;
+    if (targetId && targetId !== "acc_nu_debito" && targetId !== "nu" && targetId !== "payroll") {
+      return false;
+    }
+    return srcType === "payroll" || (!srcType && (!targetId || targetId === "acc_nu_debito"));
   };
+
+  const matchedPayrollAccount = useMemo(() => {
+    return (fixedIncomeAccounts || []).find(
+      (a) =>
+        (payrollAccount?.id && a.id === payrollAccount.id) ||
+        a.accountCategory === "payroll" ||
+        (a.name || "").toLowerCase().includes("nomina") ||
+        (a.name || "").toLowerCase().includes("nómina") ||
+        (a.name || "").toLowerCase().includes("nu débito") ||
+        (a.name || "").toLowerCase().includes("nu debito")
+    );
+  }, [fixedIncomeAccounts, payrollAccount]);
 
   const totalSpentInPeriod = standaloneExpenses
     .filter((tx) => tx.itemType === "expense")
@@ -265,10 +282,20 @@ export default function ExpensesLogSection({
 
   const totalPaidToCardsFromPayroll = periodPayments
     .filter((p) => isPayrollOutflow(p))
-    .reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
+    .reduce((acc, p) => {
+      // If payment had deductions covered by high-yield savings (Cajitas), don't double-charge Nómina
+      const savingsDeduction = (p.budgetDeductions || [])
+        .filter((d) => d.isEmergencySavingsDeduction || d.budgetItemType === "wealth" || d.budgetItemId?.startsWith("wealth_"))
+        .reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
+      return acc + Math.max(0, (Number(p.amount) || 0) - savingsDeduction);
+    }, 0);
 
   const payrollNetBalance =
     totalIncomeInPeriod - totalSpentFromPayroll - totalSavedFromPayroll - totalPaidToCardsFromPayroll;
+
+  const payrollAvailableBalance = matchedPayrollAccount && matchedPayrollAccount.balance !== undefined
+    ? Number(matchedPayrollAccount.balance) || 0
+    : payrollNetBalance;
 
   const payrollCount = useMemo(() => {
     return combinedActivities.filter(
@@ -352,19 +379,22 @@ export default function ExpensesLogSection({
               style={{
                 minWidth: "135px",
                 textAlign: "left",
-                background: "rgba(16, 185, 129, 0.08)",
-                border: "1px solid rgba(16, 185, 129, 0.35)",
+                background: isLight ? "rgba(16, 185, 129, 0.08)" : "rgba(16, 185, 129, 0.12)",
+                border: isLight ? "1px solid rgba(16, 185, 129, 0.35)" : "1px solid rgba(16, 185, 129, 0.4)",
                 borderRadius: "10px",
                 padding: "4px 10px",
               }}
             >
               <span style={{ fontSize: "0.72rem", color: "#10b981", display: "flex", alignItems: "center", gap: 4, fontWeight: 700 }}>
                 <span>🏦</span> Saldo en Nómina
+                <InfoTooltip
+                  text={`Saldo disponible real en cuenta Nu Débito (${formatMoney(payrollAvailableBalance, currency)}). Flujo neto de nómina registrado en el período: ${payrollNetBalance >= 0 ? '+' : ''}${formatMoney(payrollNetBalance, currency)}.`}
+                />
               </span>
-              <strong style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.15rem", color: payrollNetBalance >= 0 ? "#10b981" : "#f43f5e" }}>
-                {payrollNetBalance >= 0
-                  ? `+${formatMoney(payrollNetBalance, currency)}`
-                  : `-${formatMoney(Math.abs(payrollNetBalance), currency)}`}
+              <strong style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.15rem", color: payrollAvailableBalance >= 0 ? "#10b981" : "#f43f5e" }}>
+                {payrollAvailableBalance >= 0
+                  ? `+${formatMoney(payrollAvailableBalance, currency)}`
+                  : `-${formatMoney(Math.abs(payrollAvailableBalance), currency)}`}
               </strong>
             </div>
 
