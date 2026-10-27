@@ -792,14 +792,46 @@ input.floating-input-field:focus {
   width: 100%;
   margin: auto;
   max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
   background: rgba(15, 23, 42, 0.96);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 18px;
   box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.85), 0 0 40px rgba(0, 229, 255, 0.08);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   animation: modalPanelScaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-modal-panel::-webkit-scrollbar {
+  width: 6px;
+}
+.glass-modal-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+.glass-modal-panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+[data-theme="light"] .glass-modal-panel::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 640px) {
+  .glass-modal-overlay {
+    padding: 12px 8px;
+    align-items: flex-start;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .glass-modal-panel {
+    max-height: calc(100dvh - 24px);
+    border-radius: 14px;
+    margin: 8px auto;
+  }
 }
 
 @keyframes modalPanelScaleIn {

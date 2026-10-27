@@ -804,15 +804,35 @@
   min-width: 0;
 }
 
-.cashflow-modal-footer {
+.cashflow-modal-footer,
+.cashflow-modal-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+  position: sticky;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 12px 0 6px 0;
+  margin-top: 14px;
+  z-index: 20;
 }
 
-[data-theme="light"] .cashflow-modal-footer {
+[data-theme="light"] .cashflow-modal-footer,
+[data-theme="light"] .cashflow-modal-actions {
   border-top: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+@media (max-width: 640px) {
+  .cashflow-modal-footer,
+  .cashflow-modal-actions {
+    gap: 8px;
+    padding: 10px 0 4px 0;
+  }
 }
 
 /* ── Base Dark Theme Rules for Additional Sections ─────────────────── */

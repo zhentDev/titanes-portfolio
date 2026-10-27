@@ -881,7 +881,7 @@ export default function ExpenseTransactionModal({
 
                         {/* Chips of added participants */}
                         {participants.length > 0 && (
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8, maxHeight: "150px", overflowY: "auto", padding: "2px" }}>
                             {participants.map((p, idx) => (
                               <span
                                 key={p.id || idx}
