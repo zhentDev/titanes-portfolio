@@ -113,6 +113,7 @@ export default function LoanSettlementModal({
   // --- SPLIT CALCULATIONS WITH PARTIAL / CUSTOM BONIFICACIÓN SUPPORT ---
   const externalParticipants = useMemo(() => participants.filter((p) => !p.isUser), [participants]);
   const externalCount = externalParticipants.length;
+  const totalSharesCount = externalCount + (userIncluded ? 1 : 0);
   const totalAmountToSplit = originalTxAmount > 0 ? originalTxAmount : baseLoanAmount;
 
   // Count participants with custom assigned share vs automatic
