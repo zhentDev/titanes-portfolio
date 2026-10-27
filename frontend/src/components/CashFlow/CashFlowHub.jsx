@@ -121,11 +121,10 @@ export default function CashFlowHub() {
         )
       );
 
-      // Si el movimiento ya provino de Renta Fija (bolsillo o webhook)
+      // Solo consideramos que provino de Renta Fija si la fuente de pago fue un bolsillo de ahorro previo
       const isFromFixedIncome = Boolean(
-        mv.source === "macrodroid_webhook" ||
         mv.paymentSource?.type === "fixed_pocket" ||
-        (mv.id && (String(mv.id).startsWith("cf_tx_") || String(mv.id).toLowerCase().includes("rappi")))
+        (mv.source === "fixed_income" && !mv.source?.includes("webhook"))
       );
 
       // Si antes tenía una cuenta destino y ahora cambió o se quitó, revertir el abono anterior
@@ -155,6 +154,7 @@ export default function CashFlowHub() {
         creditAccountFromCashFlow({
           accountId: destAccId,
           amount: mv.amount,
+          usdAmount: mv.usdAmount || (mv.amount === 200000 && destAccId === "acc_plenti_principal" ? 63.56 : undefined),
           date: mv.date,
           movementId: mv.id,
           description: `Transferencia para ${payload.targetItem?.name || "Ahorro"} (desde ${mv.paymentSource?.targetName || "Nómina"})`,

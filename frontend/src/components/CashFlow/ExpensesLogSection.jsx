@@ -184,7 +184,13 @@ export default function ExpensesLogSection({
     if (filterSource === "only_loans") return combinedActivities.filter((i) => i.isLoan);
     if (filterSource === "only_expenses") return combinedActivities.filter((i) => i.itemType === "expense" && !i.isLoan);
     if (filterSource === "only_incomes") return combinedActivities.filter((i) => i.itemType === "income");
-    if (filterSource === "only_wealth") return combinedActivities.filter((i) => i.itemType === "wealth_saving");
+    if (filterSource === "only_wealth") {
+      return combinedActivities.filter(
+        (i) =>
+          i.itemType === "wealth_saving" ||
+          (i.itemType === "card_payment" && (i.budgetDeductions || []).some((d) => d.budgetItemType === "wealth" || d.budgetItemId?.startsWith("wealth_")))
+      );
+    }
     if (filterSource === "only_payments") return combinedActivities.filter((i) => i.itemType === "card_payment");
     if (filterSource === "payroll") {
       return combinedActivities.filter(
@@ -315,7 +321,7 @@ export default function ExpensesLogSection({
     { id: "only_incomes", label: `📥 Ingresos (${standaloneExpenses.filter(i => i.itemType === "income").length})`, group: "nature" },
     { id: "only_payments", label: `💵 Abonos a Tarjetas (${periodPayments.length})`, group: "nature" },
     { id: "only_loans", label: `🤝 Préstamos por Cobrar ${pendingLoans.length > 0 ? `(${pendingLoans.length})` : ""}`, group: "nature" },
-    { id: "only_wealth", label: `💎 Aportes CDTs/Ahorro (${standaloneExpenses.filter(i => i.itemType === "wealth_saving").length})`, group: "nature" },
+    { id: "only_wealth", label: `💎 Aportes CDTs/Ahorro (${combinedActivities.filter(i => i.itemType === "wealth_saving" || (i.itemType === "card_payment" && (i.budgetDeductions || []).some(d => d.budgetItemType === "wealth" || d.budgetItemId?.startsWith("wealth_")))).length})`, group: "nature" },
     { id: "payroll", label: `🏦 Nómina (${payrollCount})`, group: "source" },
     { id: "credit_card", label: `💳 Tarjeta de Crédito (${creditCardCount})`, group: "source" },
     { id: "fixed_pocket", label: `📦 Cuentas de Ahorro / Renta Fija (${pocketCount})`, group: "source" },
@@ -567,7 +573,27 @@ export default function ExpensesLogSection({
                           >
                             ⚠️ Desvío de Ahorro (Emergencia)
                           </span>
-                        ) : (
+                        ) : null}
+                        {isCard && (item.budgetDeductions || []).some((d) => d.budgetItemType === "wealth" || d.budgetItemId?.startsWith("wealth_")) && (
+                          <span
+                            style={{
+                              background: "rgba(56, 189, 248, 0.15)",
+                              border: "1px solid rgba(56, 189, 248, 0.4)",
+                              padding: "2px 6px",
+                              borderRadius: "6px",
+                              fontSize: "0.68rem",
+                              color: "#38bdf8",
+                              fontWeight: 700,
+                            }}
+                            title="Este pago incluye deducción de metas de ahorro / inversión"
+                          >
+                            💎 Deducción Ahorro: ${(item.budgetDeductions || [])
+                              .filter((d) => d.budgetItemType === "wealth" || d.budgetItemId?.startsWith("wealth_"))
+                              .reduce((s, d) => s + Number(d.amount || 0), 0)
+                              .toLocaleString("es-CO")} COP
+                          </span>
+                        )}
+                        {!hasWealthEmergency && (
                           <span
                             style={{
                               background: "rgba(16, 185, 129, 0.12)",

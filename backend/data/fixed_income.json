@@ -305,7 +305,7 @@
       "type": "savings",
       "accountCategory": "digital_wallet",
       "currency": "USD",
-      "balance": 0,
+      "balance": 63.56,
       "interestRateEA": 0,
       "isTaxExempt": false,
       "createdAt": 1786777950000
@@ -677,6 +677,22 @@
     }
   ],
   "transactions": [
+    {
+      "id": "tx_cf_cf_tx_mb_1792899122345_fe1ee8",
+      "accountId": "acc_plenti_principal",
+      "accountName": "Cuenta Plenti (Principal)",
+      "entityId": "ent_1786777900826",
+      "entityName": "Plenti (Ahorros)",
+      "date": "2026-10-24",
+      "time": "22:32:02",
+      "description": "Fondeo desde Nómina Nu ($200.000 COP ➔ 63.56 USD)",
+      "amount": 63.56,
+      "currency": "USD",
+      "type": "credit",
+      "category": "Transferencia desde Flujo de Caja",
+      "source": "cashflow_assignment",
+      "createdAt": "2026-10-24T22:32:02.345Z"
+    },
     {
       "id": "tx_rappi_compra_150k_20261024",
       "accountId": "acc_rappi_principal",

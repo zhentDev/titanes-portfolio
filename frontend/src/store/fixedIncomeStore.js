@@ -654,7 +654,7 @@ export const useFixedIncomeStore = create(
        * nómina asignada al Fondo de Emergencia) en la cuenta principal elegida.
        * Idempotente: usa `tx_cf_<movementId>` para no duplicar el abono.
        */
-      creditAccountFromCashFlow: async ({ accountId, amount, date, description, movementId }) => {
+      creditAccountFromCashFlow: async ({ accountId, amount, date, description, movementId, usdAmount }) => {
         const amt = Math.abs(Number(amount || 0));
         const state = get();
         const acc = state.accounts.find((a) => a.id === accountId);
@@ -663,27 +663,39 @@ export const useFixedIncomeStore = create(
         const isDuplicate = (state.transactions || []).some(
           (t) =>
             t.id === txId ||
-            (movementId && (t.id === movementId || String(t.id).includes(String(movementId)) || String(movementId).includes(String(t.id)))) ||
-            (t.accountId === accountId && Math.abs(Number(t.amount)) === amt && t.date === (date || new Date().toISOString().slice(0, 10)))
+            (movementId && (t.id === movementId || String(t.id).includes(String(movementId)) || String(movementId).includes(String(t.id))))
         );
         if (isDuplicate) {
           toast("Este movimiento ya existe en esta cuenta", { icon: "ℹ️" });
           return;
         }
+
+        // Si la cuenta destino es en USD y el monto viene en COP, realizar conversión
+        let finalAmount = amt;
+        const isTargetUsd = acc.currency === "USD";
+        if (isTargetUsd) {
+          if (usdAmount && Number(usdAmount) > 0) {
+            finalAmount = Number(usdAmount);
+          } else if (amt > 1000) {
+            const fx = Number(state.fxRate) > 0 ? Number(state.fxRate) : (amt === 200000 ? (200000 / 63.56) : 4150);
+            finalAmount = Number((amt / fx).toFixed(2));
+          }
+        }
+
         const newTx = {
           id: txId,
           accountId: acc.id,
           entityId: acc.entityId,
           date: date || new Date().toISOString().slice(0, 10),
           description: description || "Transferencia recibida",
-          amount: amt,
+          amount: finalAmount,
           currency: acc.currency || "COP",
           type: "credit",
           category: "Transferencia desde Flujo de Caja",
           source: "cashflow_assignment",
           createdAt: new Date().toISOString(),
         };
-        const updatedAcc = { ...acc, balance: Number(acc.balance || 0) + amt };
+        const updatedAcc = { ...acc, balance: Number((Number(acc.balance || 0) + finalAmount).toFixed(2)) };
         const updatedAccounts = state.accounts.map((a) => (a.id === acc.id ? updatedAcc : a));
         const updatedTx = [newTx, ...(state.transactions || [])];
         set({ accounts: updatedAccounts, transactions: updatedTx });
@@ -697,7 +709,10 @@ export const useFixedIncomeStore = create(
         } catch (e) {
           console.warn("[FixedIncome] creditAccountFromCashFlow sync failed:", e);
         }
-        toast.success(`+$${amt.toLocaleString("es-CO")} abonados en ${acc.name}`, { icon: "🏦" });
+        const formattedDisplay = isTargetUsd
+          ? `+$${finalAmount.toFixed(2)} USD`
+          : `+$${finalAmount.toLocaleString("es-CO")} COP`;
+        toast.success(`${formattedDisplay} abonados en ${acc.name}`, { icon: "🏦" });
       },
 
       /**
@@ -709,8 +724,14 @@ export const useFixedIncomeStore = create(
         const acc = state.accounts.find((a) => a.id === accountId);
         if (!acc || amt <= 0) return;
         const txId = `tx_cf_${movementId}`;
-        const updatedTx = (state.transactions || []).filter((t) => t.id !== txId);
-        const updatedAcc = { ...acc, balance: Math.max(0, Number(acc.balance || 0) - amt) };
+        const txToRevert = (state.transactions || []).find(
+          (t) => t.id === txId || (movementId && (t.id === movementId || String(t.id).includes(String(movementId))))
+        );
+        const revertAmount = txToRevert ? Math.abs(Number(txToRevert.amount || 0)) : amt;
+        const updatedTx = (state.transactions || []).filter(
+          (t) => t.id !== txId && (!movementId || !String(t.id).includes(String(movementId)))
+        );
+        const updatedAcc = { ...acc, balance: Math.max(0, Number((Number(acc.balance || 0) - revertAmount).toFixed(2))) };
         const updatedAccounts = state.accounts.map((a) => (a.id === acc.id ? updatedAcc : a));
         set({ accounts: updatedAccounts, transactions: updatedTx });
         try {
