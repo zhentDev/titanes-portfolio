@@ -73,7 +73,10 @@ export default function LoanSettlementModal({
   });
   const [newParticipantName, setNewParticipantName] = useState("");
   const [settlingParticipant, setSettlingParticipant] = useState(null); // participant being checked off
-  const [participantSettlementStep, setParticipantSettlementStep] = useState("ask_registered"); // 'ask_registered' | 'choose_account'
+  const [participantSettlementStep, setParticipantSettlementStep] = useState("ask_amount"); // 'ask_amount' | 'ask_registered' | 'choose_account'
+  const [editingParticipantId, setEditingParticipantId] = useState(null);
+  const [customShareInput, setCustomShareInput] = useState(0);
+  const [settlingAmount, setSettlingAmount] = useState(0);
 
   // --- DIRECT SETTLEMENT STATE ---
   const [settlementAmount, setSettlementAmount] = useState(currentPendingBalance);
@@ -107,25 +110,50 @@ export default function LoanSettlementModal({
     }
   }, [transaction]);
 
-  // --- SPLIT CALCULATIONS ---
-  const externalCount = participants.filter((p) => !p.isUser).length;
-  const totalSharesCount = externalCount + (userIncluded ? 1 : 0);
+  // --- SPLIT CALCULATIONS WITH PARTIAL / CUSTOM BONIFICACIÓN SUPPORT ---
+  const externalParticipants = useMemo(() => participants.filter((p) => !p.isUser), [participants]);
+  const externalCount = externalParticipants.length;
   const totalAmountToSplit = originalTxAmount > 0 ? originalTxAmount : baseLoanAmount;
 
-  // Individual equal share amount
-  const sharePerPerson = totalSharesCount > 0 ? Math.round(totalAmountToSplit / totalSharesCount) : totalAmountToSplit;
-  // User's own personal share (deducted from debt)
-  const userShare = userIncluded ? Math.max(0, totalAmountToSplit - sharePerPerson * externalCount) : 0;
-  // Total amount owed by other participants
-  const totalReceivableFromOthers = Math.max(0, totalAmountToSplit - userShare);
+  // Count participants with custom assigned share vs automatic
+  const customAssignedTotal = externalParticipants
+    .filter((p) => p.customShare !== undefined && p.customShare !== null && p.customShare !== "")
+    .reduce((sum, p) => sum + (Number(p.customShare) || 0), 0);
+  const nonCustomCount = externalParticipants.filter(
+    (p) => p.customShare === undefined || p.customShare === null || p.customShare === ""
+  ).length + (userIncluded ? 1 : 0);
 
-  // Status of paid participants
-  const paidParticipants = useMemo(() => participants.filter((p) => !p.isUser && p.paid), [participants]);
+  const remainingToDistribute = Math.max(0, totalAmountToSplit - customAssignedTotal);
+  const sharePerPerson = nonCustomCount > 0 ? Math.round(remainingToDistribute / nonCustomCount) : 0;
+
+  // Helper getters for any participant
+  const getParticipantShare = (p) => {
+    if (p.customShare !== undefined && p.customShare !== null && p.customShare !== "") {
+      return Number(p.customShare) || 0;
+    }
+    return Number(p.share) > 0 ? Number(p.share) : sharePerPerson;
+  };
+
+  const getParticipantPaid = (p) => {
+    const s = getParticipantShare(p);
+    return Number(p.paidAmount) || (p.paid ? s : 0);
+  };
+
+  const getParticipantPending = (p) => {
+    return Math.max(0, getParticipantShare(p) - getParticipantPaid(p));
+  };
+
+  // User's personal share and receivable totals
+  const totalReceivableFromOthers = externalParticipants.reduce((sum, p) => sum + getParticipantShare(p), 0);
+  const userShare = userIncluded ? Math.max(0, totalAmountToSplit - totalReceivableFromOthers) : 0;
+
   const totalPaidByOthers = useMemo(() => {
-    return paidParticipants.reduce((acc, p) => acc + (Number(p.share) || sharePerPerson), 0);
-  }, [paidParticipants, sharePerPerson]);
+    return externalParticipants.reduce((acc, p) => acc + getParticipantPaid(p), 0);
+  }, [externalParticipants, sharePerPerson, participants]);
+
   const pendingReceivableFromOthers = Math.max(0, totalReceivableFromOthers - totalPaidByOthers);
-  const isAllExternalPaid = externalCount > 0 && paidParticipants.length === externalCount;
+  const isAllExternalPaid = externalCount > 0 && externalParticipants.every((p) => getParticipantPending(p) === 0);
+  const paidParticipants = useMemo(() => externalParticipants.filter((p) => getParticipantPending(p) === 0), [externalParticipants, participants]);
 
   // Direct settlement helpers
   const remainingAfterThisDirect = Math.max(0, currentPendingBalance - (Number(settlementAmount) || 0));
@@ -173,10 +201,14 @@ export default function LoanSettlementModal({
 
   // Save Split Configuration to Store & Backend
   const handleSaveSplitConfig = () => {
-    const updatedParticipants = participants.map((p) => ({
-      ...p,
-      share: sharePerPerson,
-    }));
+    const updatedParticipants = participants.map((p) => {
+      const effShare = getParticipantShare(p);
+      return {
+        ...p,
+        share: effShare,
+        customShare: p.customShare !== undefined && p.customShare !== null && p.customShare !== "" ? Number(p.customShare) : null,
+      };
+    });
 
     if (onUpdateSplit) {
       onUpdateSplit(transaction.id, {
@@ -186,24 +218,51 @@ export default function LoanSettlementModal({
         loanRecipient: updatedParticipants.map((p) => p.name).join(", "),
         loanAmount: totalReceivableFromOthers,
         remainingLoan: pendingReceivableFromOthers,
-        loanStatus: isAllExternalPaid ? "settled" : paidParticipants.length > 0 ? "partially_settled" : "pending",
+        loanStatus: isAllExternalPaid ? "settled" : totalPaidByOthers > 0 ? "partially_settled" : "pending",
         participants: updatedParticipants,
       });
     }
     onClose();
   };
 
-  // Check off a participant: trigger settlement
+  // Custom share handlers
+  const handleStartEditCustomShare = (p) => {
+    setEditingParticipantId(p.id);
+    setCustomShareInput(getParticipantShare(p));
+  };
+
+  const handleSaveCustomShare = (pId) => {
+    const val = Number(customShareInput);
+    setParticipants((prev) =>
+      prev.map((p) => (p.id === pId ? { ...p, customShare: val > 0 ? val : null } : p))
+    );
+    setEditingParticipantId(null);
+    toast.success("Cuota personalizada actualizada", { icon: "✏️" });
+  };
+
+  const handleResetCustomShare = (pId) => {
+    setParticipants((prev) =>
+      prev.map((p) => (p.id === pId ? { ...p, customShare: null } : p))
+    );
+    setEditingParticipantId(null);
+    toast.success("Restablecido a reparto equitativo", { icon: "🔄" });
+  };
+
+  // Check off or partially settle a participant
   const handleOpenParticipantCheck = async (participant) => {
-    if (participant.paid) {
-      // Already paid -> offer to revert
+    const effShare = getParticipantShare(participant);
+    const paidSoFar = getParticipantPaid(participant);
+    const pendingToPay = Math.max(0, effShare - paidSoFar);
+
+    if (participant.paid || (pendingToPay === 0 && effShare > 0)) {
+      // Already fully paid -> offer to revert
       const ok = await toastConfirm(`¿Deseas desmarcar el pago de ${participant.name}?`);
       if (ok) {
         if (onRevertParticipant) {
           onRevertParticipant(transaction.id, participant.id);
         }
         setParticipants((prev) =>
-          prev.map((p) => (p.id === participant.id ? { ...p, paid: false, paidAt: null, targetName: null } : p))
+          prev.map((p) => (p.id === participant.id ? { ...p, paid: false, paidAmount: 0, paidAt: null, targetName: null, alreadyRegistered: null } : p))
         );
       }
       return;
@@ -211,12 +270,15 @@ export default function LoanSettlementModal({
 
     setSettlingParticipant({
       ...participant,
-      share: sharePerPerson,
+      effectiveShare: effShare,
+      pendingToPay,
+      paidSoFar,
     });
-    setParticipantSettlementStep("ask_registered");
+    setSettlingAmount(pendingToPay);
+    setParticipantSettlementStep("ask_amount");
   };
 
-  // Confirm Participant Payment
+  // Confirm Participant Payment (Full or Partial / Bonificación)
   const handleConfirmParticipantPayment = (alreadyRegistered) => {
     if (!settlingParticipant) return;
 
@@ -240,20 +302,27 @@ export default function LoanSettlementModal({
       }
     }
 
-    const shareToPay = Number(settlingParticipant.share) > 0 ? Number(settlingParticipant.share) : sharePerPerson;
+    const effShare = settlingParticipant.effectiveShare || getParticipantShare(settlingParticipant);
+    const prevPaid = settlingParticipant.paidSoFar || getParticipantPaid(settlingParticipant);
+    const amountToPay = Number(settlingAmount) > 0 ? Number(settlingAmount) : Math.max(0, effShare - prevPaid);
+    const newTotalPaid = prevPaid + amountToPay;
+    const isNowFullyPaid = newTotalPaid >= effShare;
 
     if (onConfirmSettlement) {
       onConfirmSettlement(transaction.id, {
         participantId: settlingParticipant.id,
         participantName: settlingParticipant.name,
-        amount: shareToPay,
+        amount: amountToPay,
         date: settlementDate,
         targetType: alreadyRegistered ? "already_registered" : targetType,
         targetId,
         targetName,
         recipient: settlingParticipant.name,
         alreadyRegistered: Boolean(alreadyRegistered),
-        note: `Pago cuota de ${settlingParticipant.name} (Gasto compartido: ${transaction.description || "Préstamo"})`,
+        isPartial: !isNowFullyPaid,
+        note: !isNowFullyPaid
+          ? `Abono parcial / bonificación de ${settlingParticipant.name} ($${Math.round(amountToPay).toLocaleString("es-CO")}) por ${transaction.description || "Gasto compartido"}`
+          : `Pago cuota de ${settlingParticipant.name} (Gasto compartido: ${transaction.description || "Préstamo"})`,
         currency,
       });
     }
@@ -264,7 +333,8 @@ export default function LoanSettlementModal({
         p.id === settlingParticipant.id
           ? {
               ...p,
-              paid: true,
+              paid: isNowFullyPaid,
+              paidAmount: newTotalPaid,
               paidAt: settlementDate,
               targetName,
               alreadyRegistered: Boolean(alreadyRegistered),
@@ -593,11 +663,17 @@ export default function LoanSettlementModal({
               </div>
 
               {/* Participants Interactive List */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: "240px", overflowY: "auto", paddingRight: 2 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: "320px", overflowY: "auto", paddingRight: 2 }}>
                 {participants.map((p, index) => {
                   if (p.isUser) return null;
-                  const isPaid = Boolean(p.paid);
+                  const effShare = getParticipantShare(p);
+                  const paidSoFar = getParticipantPaid(p);
+                  const pendingToPay = getParticipantPending(p);
+                  const isPaid = pendingToPay === 0 && effShare > 0;
+                  const isPartial = paidSoFar > 0 && pendingToPay > 0;
+                  const hasCustomShare = p.customShare !== undefined && p.customShare !== null && p.customShare !== "";
                   const isCurrentlySettling = settlingParticipant?.id === p.id;
+                  const isEditingCustomShare = editingParticipantId === p.id;
 
                   return (
                     <div
@@ -610,28 +686,34 @@ export default function LoanSettlementModal({
                         borderRadius: 10,
                         background: isPaid
                           ? (isLight ? "rgba(16, 185, 129, 0.08)" : "rgba(16, 185, 129, 0.15)")
+                          : isPartial
+                          ? (isLight ? "rgba(245, 158, 11, 0.08)" : "rgba(245, 158, 11, 0.15)")
                           : (isLight ? "rgba(0, 0, 0, 0.02)" : "rgba(255, 255, 255, 0.03)"),
                         border: isPaid
                           ? `1px solid ${isLight ? "rgba(16, 185, 129, 0.3)" : "rgba(16, 185, 129, 0.35)"}`
+                          : isPartial
+                          ? `1px solid ${isLight ? "rgba(245, 158, 11, 0.35)" : "rgba(245, 158, 11, 0.4)"}`
                           : `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.08)"}`,
                         transition: "all 0.15s ease",
                       }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
                         {/* Checkbox & Participant Name */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 160 }}>
                           <button
                             type="button"
                             onClick={() => handleOpenParticipantCheck(p)}
                             style={{
-                              width: 24,
-                              height: 24,
-                              borderRadius: 6,
+                              width: 26,
+                              height: 26,
+                              borderRadius: 7,
                               border: isPaid
                                 ? "none"
+                                : isPartial
+                                ? `2px solid ${isLight ? "#d97706" : "#fbbf24"}`
                                 : `2px solid ${isLight ? "#94a3b8" : "#64748b"}`,
-                              background: isPaid ? "#10b981" : "transparent",
-                              color: "#ffffff",
+                              background: isPaid ? "#10b981" : isPartial ? (isLight ? "rgba(245, 158, 11, 0.15)" : "rgba(245, 158, 11, 0.25)") : "transparent",
+                              color: isPaid ? "#ffffff" : (isLight ? "#d97706" : "#fbbf24"),
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
@@ -641,34 +723,41 @@ export default function LoanSettlementModal({
                               transition: "all 0.15s ease",
                               flexShrink: 0,
                             }}
-                            title={isPaid ? "Clic para desmarcar pago" : "Marcar como pagado"}
+                            title={isPaid ? "Clic para desmarcar pago" : isPartial ? "Abono parcial registrado - Clic para abonar restante o desmarcar" : "Marcar como pagado o abonar"}
                           >
-                            {isPaid && "✓"}
+                            {isPaid ? "✓" : isPartial ? "½" : ""}
                           </button>
 
                           <div>
-                            <div style={{ fontWeight: 700, fontSize: "0.84rem", color: isPaid ? (isLight ? "#047857" : "#34d399") : "var(--text-primary)" }}>
-                              {p.name}
+                            <div style={{ fontWeight: 700, fontSize: "0.84rem", color: isPaid ? (isLight ? "#047857" : "#34d399") : isPartial ? (isLight ? "#b45309" : "#fbbf24") : "var(--text-primary)", display: "flex", alignItems: "center", gap: 6 }}>
+                              <span>{p.name}</span>
+                              {hasCustomShare && (
+                                <span style={{ fontSize: "0.62rem", padding: "1px 5px", borderRadius: 4, background: isLight ? "rgba(59, 130, 246, 0.1)" : "rgba(59, 130, 246, 0.2)", color: isLight ? "#1d4ed8" : "#93c5fd", fontWeight: 700 }}>
+                                  Cuota Personalizada
+                                </span>
+                              )}
                             </div>
                             <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
                               {isPaid
-                                ? `✓ Cobrado • ${p.targetName || "Cuenta"} ${p.paidAt ? `(${p.paidAt.slice(0, 10)})` : ""}`
+                                ? `✓ Cobrado 100% • ${p.targetName || "Cuenta"} ${p.paidAt ? `(${p.paidAt.slice(0, 10)})` : ""}`
+                                : isPartial
+                                ? `Abonado: ${formatMoney(paidSoFar)} • Pendiente: ${formatMoney(pendingToPay)}`
                                 : `Pendiente de cobro`}
                             </div>
                           </div>
                         </div>
 
                         {/* Amount & Actions */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                           <span
                             className="mono"
                             style={{
                               fontSize: "0.92rem",
                               fontWeight: 800,
-                              color: isPaid ? "#10b981" : (isLight ? "#b45309" : "#fcd34d"),
+                              color: isPaid ? "#10b981" : isPartial ? (isLight ? "#b45309" : "#fbbf24") : (isLight ? "#1e293b" : "#f1f5f9"),
                             }}
                           >
-                            {formatMoney(sharePerPerson)}
+                            {isPartial ? `${formatMoney(paidSoFar)} / ` : ""}{formatMoney(effShare)}
                           </span>
 
                           {!isPaid ? (
@@ -678,15 +767,17 @@ export default function LoanSettlementModal({
                               style={{
                                 padding: "4px 8px",
                                 borderRadius: 6,
-                                border: `1px solid ${isLight ? "#059669" : "#10b981"}`,
-                                background: isLight ? "rgba(16, 185, 129, 0.1)" : "rgba(16, 185, 129, 0.18)",
-                                color: isLight ? "#047857" : "#6ee7b7",
+                                border: `1px solid ${isPartial ? (isLight ? "#d97706" : "#f59e0b") : (isLight ? "#059669" : "#10b981")}`,
+                                background: isPartial
+                                  ? (isLight ? "rgba(245, 158, 11, 0.12)" : "rgba(245, 158, 11, 0.2)")
+                                  : (isLight ? "rgba(16, 185, 129, 0.1)" : "rgba(16, 185, 129, 0.18)"),
+                                color: isPartial ? (isLight ? "#b45309" : "#fbbf24") : (isLight ? "#047857" : "#6ee7b7"),
                                 fontSize: "0.72rem",
                                 fontWeight: 700,
                                 cursor: "pointer",
                               }}
                             >
-                              Cobrar
+                              {isPartial ? "Abonar restante" : "Cobrar"}
                             </button>
                           ) : (
                             <button
@@ -708,6 +799,25 @@ export default function LoanSettlementModal({
                             </button>
                           )}
 
+                          {!isPaid && !isEditingCustomShare && (
+                            <button
+                              type="button"
+                              onClick={() => handleStartEditCustomShare(p)}
+                              style={{
+                                padding: "3px 6px",
+                                borderRadius: 6,
+                                border: `1px solid var(--border)`,
+                                background: "var(--bg-surface)",
+                                color: "var(--text-secondary)",
+                                fontSize: "0.68rem",
+                                cursor: "pointer",
+                              }}
+                              title="Asignar cuota fija o bonificación a este participante"
+                            >
+                              ✏️ Cuota
+                            </button>
+                          )}
+
                           <button
                             type="button"
                             onClick={() => handleRemoveParticipant(p.id)}
@@ -726,6 +836,90 @@ export default function LoanSettlementModal({
                         </div>
                       </div>
 
+                      {/* ── Sub-panel: Inline Custom Share / Bonificación Editor ── */}
+                      {isEditingCustomShare && (
+                        <div
+                          style={{
+                            marginTop: 4,
+                            padding: "8px 10px",
+                            borderRadius: 8,
+                            background: isLight ? "#ffffff" : "rgba(30, 41, 59, 0.8)",
+                            border: `1.5px solid ${isLight ? "#3b82f6" : "#60a5fa"}`,
+                            boxShadow: isLight ? "0 2px 8px rgba(0,0,0,0.05)" : "0 4px 12px rgba(0,0,0,0.3)",
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                            <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                              Personalizar Cuota o Bonificación para <strong>{p.name}</strong>:
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setEditingParticipantId(null)}
+                              style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.72rem" }}
+                            >
+                              ✕
+                            </button>
+                          </div>
+
+                          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                            <div style={{ flex: 1 }}>
+                              <CurrencyInput
+                                value={customShareInput}
+                                onChange={setCustomShareInput}
+                                currency={currency}
+                                style={{
+                                  width: "100%",
+                                  background: "var(--bg-surface)",
+                                  border: "1px solid var(--border)",
+                                  borderRadius: 6,
+                                  padding: "6px 8px",
+                                  fontSize: "0.8rem",
+                                  color: "var(--text-primary)",
+                                  fontWeight: 700,
+                                }}
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleSaveCustomShare(p.id)}
+                              style={{
+                                padding: "6px 10px",
+                                borderRadius: 6,
+                                border: "none",
+                                background: isLight ? "#3b82f6" : "#2563eb",
+                                color: "#ffffff",
+                                fontSize: "0.72rem",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                              }}
+                            >
+                              Guardar
+                            </button>
+                            {hasCustomShare && (
+                              <button
+                                type="button"
+                                onClick={() => handleResetCustomShare(p.id)}
+                                style={{
+                                  padding: "6px 8px",
+                                  borderRadius: 6,
+                                  border: `1px solid var(--border)`,
+                                  background: "var(--bg-surface)",
+                                  color: "var(--text-secondary)",
+                                  fontSize: "0.7rem",
+                                  cursor: "pointer",
+                                }}
+                                title="Volver a división en partes iguales"
+                              >
+                                Restablecer
+                              </button>
+                            )}
+                          </div>
+                          <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 4 }}>
+                            Define cuánto debe pagar esta persona. Si tiene una bonificación o descuento, puedes ingresar el valor reducido.
+                          </div>
+                        </div>
+                      )}
+
                       {/* ── Sub-panel: Inline verification for checking off participant ── */}
                       {isCurrentlySettling && (
                         <div
@@ -733,78 +927,217 @@ export default function LoanSettlementModal({
                             marginTop: 6,
                             padding: "10px 12px",
                             borderRadius: 8,
-                            background: isLight ? "#ffffff" : "rgba(13, 18, 38, 0.8)",
+                            background: isLight ? "#ffffff" : "rgba(13, 18, 38, 0.9)",
                             border: `1.5px solid ${isLight ? "#3b82f6" : "#60a5fa"}`,
-                            boxShadow: isLight ? "0 4px 12px rgba(0,0,0,0.06)" : "0 4px 16px rgba(0,0,0,0.4)",
+                            boxShadow: isLight ? "0 4px 14px rgba(0,0,0,0.08)" : "0 4px 18px rgba(0,0,0,0.5)",
                           }}
                         >
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-primary)" }}>
-                              ¿El abono de <strong>{p.name}</strong> ({formatMoney(sharePerPerson)}) ya se encuentra registrado?
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setSettlingParticipant(null)}
-                              style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.74rem" }}
-                            >
-                              ✕
-                            </button>
-                          </div>
+                          {/* Step 1: Confirm / Adjust Settlement Amount (Allows Partial Payment & Bonificación) */}
+                          {participantSettlementStep === "ask_amount" && (
+                            <div>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                                <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "var(--text-primary)" }}>
+                                  🤝 Cobro / Abono: <strong>{p.name}</strong>
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setSettlingParticipant(null)}
+                                  style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.74rem" }}
+                                >
+                                  ✕
+                                </button>
+                              </div>
 
-                          {participantSettlementStep === "ask_registered" && (
-                            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                              <button
-                                type="button"
-                                onClick={() => handleConfirmParticipantPayment(true)}
-                                style={{
-                                  flex: 1,
-                                  padding: "8px 10px",
-                                  borderRadius: 8,
-                                  border: "none",
-                                  background: isLight ? "#059669" : "#10b981",
-                                  color: "#ffffff",
-                                  fontSize: "0.74rem",
-                                  fontWeight: 700,
-                                  cursor: "pointer",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  gap: 5,
-                                }}
-                                title="No creará movimientos de ingreso duplicados"
-                              >
-                                <span>✓</span> Sí, ya está registrado
-                              </button>
+                              <div style={{ display: "flex", gap: 10, background: isLight ? "rgba(0,0,0,0.03)" : "rgba(255,255,255,0.04)", padding: "6px 10px", borderRadius: 6, marginBottom: 8, fontSize: "0.72rem" }}>
+                                <div><span style={{ color: "var(--text-muted)" }}>Cuota total: </span><strong>{formatMoney(effShare)}</strong></div>
+                                {paidSoFar > 0 && <div><span style={{ color: "var(--text-muted)" }}>Ya abonado: </span><strong style={{ color: "#10b981" }}>{formatMoney(paidSoFar)}</strong></div>}
+                                <div><span style={{ color: "var(--text-muted)" }}>Pendiente: </span><strong style={{ color: isLight ? "#b45309" : "#fbbf24" }}>{formatMoney(pendingToPay)}</strong></div>
+                              </div>
 
-                              <button
-                                type="button"
-                                onClick={() => setParticipantSettlementStep("choose_account")}
-                                style={{
-                                  flex: 1,
-                                  padding: "8px 10px",
-                                  borderRadius: 8,
-                                  border: `1.5px solid ${isLight ? "#3b82f6" : "#60a5fa"}`,
-                                  background: isLight ? "rgba(59, 130, 246, 0.1)" : "rgba(59, 130, 246, 0.2)",
-                                  color: isLight ? "#1d4ed8" : "#93c5fd",
-                                  fontSize: "0.74rem",
-                                  fontWeight: 700,
-                                  cursor: "pointer",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  gap: 5,
-                                }}
-                                title="Permite registrar a qué cuenta ingresó el dinero"
-                              >
-                                <span>📥</span> No, registrar ingreso ahora
-                              </button>
+                              <label style={{ fontSize: "0.72rem", color: "var(--text-secondary)", fontWeight: 700, display: "block", marginBottom: 4 }}>
+                                Monto a abonar en este movimiento (permite pago parcial o bonificación):
+                              </label>
+
+                              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                                <div style={{ flex: 1 }}>
+                                  <CurrencyInput
+                                    value={settlingAmount}
+                                    onChange={setSettlingAmount}
+                                    currency={currency}
+                                    style={{
+                                      width: "100%",
+                                      background: "var(--bg-surface)",
+                                      border: "1px solid var(--border)",
+                                      borderRadius: 6,
+                                      padding: "6px 8px",
+                                      fontSize: "0.86rem",
+                                      color: "var(--text-primary)",
+                                      fontWeight: 800,
+                                    }}
+                                  />
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setSettlingAmount(pendingToPay)}
+                                  style={{
+                                    padding: "6px 8px",
+                                    borderRadius: 6,
+                                    border: `1px solid var(--border)`,
+                                    background: "var(--bg-surface)",
+                                    color: "var(--text-secondary)",
+                                    fontSize: "0.68rem",
+                                    fontWeight: 700,
+                                    cursor: "pointer",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                  title="Llenar con el total pendiente"
+                                >
+                                  Total ({formatMoney(pendingToPay)})
+                                </button>
+                                {pendingToPay > 1000 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setSettlingAmount(Math.round(pendingToPay / 2))}
+                                    style={{
+                                      padding: "6px 8px",
+                                      borderRadius: 6,
+                                      border: `1px solid var(--border)`,
+                                      background: "var(--bg-surface)",
+                                      color: "var(--text-secondary)",
+                                      fontSize: "0.68rem",
+                                      fontWeight: 700,
+                                      cursor: "pointer",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                    title="Abonar el 50%"
+                                  >
+                                    50% ({formatMoney(Math.round(pendingToPay / 2))})
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* Partial indicator */}
+                              <div style={{ marginTop: 6, fontSize: "0.7rem", fontWeight: 600 }}>
+                                {Number(settlingAmount) < pendingToPay ? (
+                                  <span style={{ color: isLight ? "#b45309" : "#fbbf24" }}>
+                                    ⚠️ Abono parcial: Quedarán pendientes {formatMoney(Math.max(0, pendingToPay - Number(settlingAmount)))} por cobrar.
+                                  </span>
+                                ) : (
+                                  <span style={{ color: "#10b981" }}>
+                                    ✓ Liquidación completa: La cuota de {p.name} quedará 100% saldada.
+                                  </span>
+                                )}
+                              </div>
+
+                              <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+                                <button
+                                  type="button"
+                                  disabled={Number(settlingAmount) <= 0}
+                                  onClick={() => setParticipantSettlementStep("ask_registered")}
+                                  style={{
+                                    flex: 1,
+                                    padding: "8px 12px",
+                                    borderRadius: 8,
+                                    border: "none",
+                                    background: isLight ? "#3b82f6" : "#2563eb",
+                                    color: "#ffffff",
+                                    fontSize: "0.76rem",
+                                    fontWeight: 700,
+                                    cursor: Number(settlingAmount) > 0 ? "pointer" : "not-allowed",
+                                    opacity: Number(settlingAmount) > 0 ? 1 : 0.6,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: 6,
+                                  }}
+                                >
+                                  Continuar al Registro Bancario ➔
+                                </button>
+                              </div>
                             </div>
                           )}
 
+                          {/* Step 2: Ask if already registered in bank movements */}
+                          {participantSettlementStep === "ask_registered" && (
+                            <div>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                                <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                                  ¿El abono de <strong>{p.name}</strong> por <strong>{formatMoney(settlingAmount || pendingToPay)}</strong> ya se encuentra registrado?
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setSettlingParticipant(null)}
+                                  style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.74rem" }}
+                                >
+                                  ✕
+                                </button>
+                              </div>
+
+                              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleConfirmParticipantPayment(true)}
+                                  style={{
+                                    flex: 1,
+                                    padding: "8px 10px",
+                                    borderRadius: 8,
+                                    border: "none",
+                                    background: isLight ? "#059669" : "#10b981",
+                                    color: "#ffffff",
+                                    fontSize: "0.74rem",
+                                    fontWeight: 700,
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: 5,
+                                  }}
+                                  title="No creará movimientos de ingreso duplicados"
+                                >
+                                  <span>✓</span> Sí, ya está registrado
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => setParticipantSettlementStep("choose_account")}
+                                  style={{
+                                    flex: 1,
+                                    padding: "8px 10px",
+                                    borderRadius: 8,
+                                    border: `1.5px solid ${isLight ? "#3b82f6" : "#60a5fa"}`,
+                                    background: isLight ? "rgba(59, 130, 246, 0.1)" : "rgba(59, 130, 246, 0.2)",
+                                    color: isLight ? "#1d4ed8" : "#93c5fd",
+                                    fontSize: "0.74rem",
+                                    fontWeight: 700,
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: 5,
+                                  }}
+                                  title="Permite registrar a qué cuenta ingresó el dinero"
+                                >
+                                  <span>📥</span> No, registrar ingreso ahora
+                                </button>
+                              </div>
+
+                              <div style={{ marginTop: 6, textAlign: "center" }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setParticipantSettlementStep("ask_amount")}
+                                  style={{ background: "transparent", border: "none", color: "var(--text-muted)", fontSize: "0.68rem", cursor: "pointer", textDecoration: "underline" }}
+                                >
+                                  ← Modificar monto del abono
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Step 3: Choose Destination Account */}
                           {participantSettlementStep === "choose_account" && (
-                            <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
+                            <div style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 8 }}>
                               <label style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700 }}>
-                                Selecciona a qué cuenta ingresó el abono de {p.name}:
+                                Selecciona a qué cuenta ingresó el abono de {p.name} ({formatMoney(settlingAmount || pendingToPay)}):
                               </label>
 
                               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
@@ -897,7 +1230,7 @@ export default function LoanSettlementModal({
                                     cursor: "pointer",
                                   }}
                                 >
-                                  Confirmar Ingreso a {targetType === "credit_card" ? "Tarjeta" : targetType === "fixed_pocket" ? "Ahorro" : targetType === "cash" ? "Efectivo" : "Nómina"}
+                                  Confirmar Ingreso de {formatMoney(settlingAmount || pendingToPay)} a {targetType === "credit_card" ? "Tarjeta" : targetType === "fixed_pocket" ? "Ahorro" : targetType === "cash" ? "Efectivo" : "Nómina"}
                                 </button>
 
                                 <button

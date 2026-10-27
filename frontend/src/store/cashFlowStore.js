@@ -220,6 +220,21 @@ export const useCashFlowStore = create(
         // Auto-corrección: si el movimiento de $37,000 (Plan móvil) quedó por error asignado al Fondo de Emergencia,
         // restaurarlo al rubro correspondiente de Servicios Públicos: Plan móvil; y vincular la transferencia real de $350k a Finandina.
         const mappedExpenses = mergedExpensesLog.map((e) => {
+          // Sanitización definitiva: Compra SURTIMAYORISTA AVENIDA ($8.667 COP) que aparecía como $8,66 por error de coma decimal
+          if (
+            e.id === 'cf_tx_mb_1792938659603_0ff700' ||
+            (Number(e.amount) < 10 && (e.date === '2026-10-25' || (e.description || '').toLowerCase().includes('bancario') || (e.description || '').toLowerCase().includes('surtimayorista')))
+          ) {
+            return {
+              ...e,
+              amount: 8667,
+              description: 'Compra en SURTIMAYORISTA AVENIDA',
+              budgetItemId: 'need_groceries',
+              budgetItemName: 'Alimentación & Supermercado',
+              budgetItemType: 'needs',
+            };
+          }
+
           // Si el movimiento de Mike quedó con período previo 2026-10, moverlo al período activo real 2026-11
           if ((e.id?.includes("mike") || (e.description || "").toLowerCase().includes("mike")) && e.period === "2026-10") {
             return {
@@ -1445,9 +1460,14 @@ export const useCashFlowStore = create(
               if (Array.isArray(tx.participants) && settlementData.participantId) {
                 updatedParticipants = tx.participants.map((p) => {
                   if (p.id === settlementData.participantId) {
+                    const prevPaid = Number(p.paidAmount) || (p.paid ? (Number(p.customShare) || Number(p.share) || newSettledAmount) : 0);
+                    const totalPaid = prevPaid + newSettledAmount;
+                    const participantShare = Number(p.customShare) || Number(p.share) || totalPaid;
+                    const isFullyPaid = totalPaid >= participantShare;
                     return {
                       ...p,
-                      paid: true,
+                      paid: isFullyPaid,
+                      paidAmount: totalPaid,
                       paidAt: settlementData.date || new Date().toISOString(),
                       targetName: settlementData.alreadyRegistered ? "Registrado previamente" : (settlementData.targetName || "Cuenta"),
                       alreadyRegistered: Boolean(settlementData.alreadyRegistered),
@@ -1587,7 +1607,7 @@ export const useCashFlowStore = create(
             if (tx.id === txId && Array.isArray(tx.participants)) {
               const updatedParticipants = tx.participants.map((p) => {
                 if (p.id === participantId) {
-                  return { ...p, paid: false, paidAt: null, targetName: null, alreadyRegistered: null };
+                  return { ...p, paid: false, paidAmount: 0, paidAt: null, targetName: null, alreadyRegistered: null };
                 }
                 return p;
               });

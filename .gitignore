@@ -25,6 +25,7 @@ backend/*.db
 backend/data/remote_render_*_backup.json
 
 # Environment & AI tools
+scripts/
 .env
 .aider*
 .continue/

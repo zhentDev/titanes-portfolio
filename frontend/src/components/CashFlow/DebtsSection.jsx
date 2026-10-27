@@ -765,17 +765,22 @@ export default function DebtsSection({
                                 alignItems: "center",
                                 padding: "6px 10px",
                                 borderRadius: 6,
-                                background: p.paid ? (isLight ? "rgba(16, 185, 129, 0.08)" : "rgba(16, 185, 129, 0.15)") : "var(--bg-card)",
-                                border: `1px solid ${p.paid ? "#10b981" : "var(--border)"}`,
+                                background: p.paid
+                                  ? (isLight ? "rgba(16, 185, 129, 0.08)" : "rgba(16, 185, 129, 0.15)")
+                                  : p.paidAmount > 0
+                                  ? (isLight ? "rgba(245, 158, 11, 0.08)" : "rgba(245, 158, 11, 0.15)")
+                                  : "var(--bg-card)",
+                                border: `1px solid ${p.paid ? "#10b981" : p.paidAmount > 0 ? (isLight ? "#d97706" : "#fbbf24") : "var(--border)"}`,
                                 fontSize: "0.72rem",
                               }}
                             >
                               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                <span>{p.paid ? "✅" : "⏳"}</span>
+                                <span>{p.paid ? "✅" : p.paidAmount > 0 ? "🌗" : "⏳"}</span>
                                 <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{p.name}</span>
                               </div>
-                              <span style={{ fontWeight: 700, color: p.paid ? "#10b981" : (isLight ? "#b45309" : "#fcd34d") }}>
-                                {formatCashFlowMoney(p.share || 0, currency, fxRate)}
+                              <span style={{ fontWeight: 700, color: p.paid ? "#10b981" : p.paidAmount > 0 ? (isLight ? "#b45309" : "#fbbf24") : (isLight ? "#b45309" : "#fcd34d") }}>
+                                {p.paidAmount > 0 && !p.paid ? `${formatCashFlowMoney(p.paidAmount, currency, fxRate)} / ` : ""}
+                                {formatCashFlowMoney(p.customShare || p.share || 0, currency, fxRate)}
                               </span>
                             </div>
                           ))}
