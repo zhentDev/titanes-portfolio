@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import GlassModalWrapper from "../Common/GlassModalWrapper";
+import InfoTooltip from "../Common/InfoTooltip";
 import { useTheme } from "../../context/ThemeContext";
 import { parseLocalNumber, formatCashFlowMoney } from "../../utils/cashFlowFormatters";
 import { useCashFlowStore } from "../../store/cashFlowStore";
@@ -134,6 +135,25 @@ export default function AssignMovementModal({
     const desc = (movement?.description || "").toLowerCase();
     const found = (creditCards || []).find((c) => desc.includes(c.name.toLowerCase()));
     return found ? found.id : (creditCards[0]?.id || "");
+  });
+
+  const allTransferAccounts = useMemo(() => {
+    const list = [...(fixedIncomeAccounts || [])];
+    if (!list.some((a) => a.id === "acc_cash_wallet" || (a.name || "").toLowerCase().includes("efectivo"))) {
+      list.unshift({
+        id: "acc_cash_wallet",
+        name: "Efectivo (Billetera)",
+        accountCategory: "cash",
+        balance: 26000,
+        currency: "COP",
+      });
+    }
+    return list;
+  }, [fixedIncomeAccounts]);
+
+  const [selectedTransferAccId, setSelectedTransferAccId] = useState(() => {
+    const cashAcc = (fixedIncomeAccounts || []).find((a) => a.accountCategory === "cash" || (a.name || "").toLowerCase().includes("efectivo"));
+    return cashAcc ? cashAcc.id : "acc_cash_wallet";
   });
 
   const totalSplitAssigned = useMemo(() => {
@@ -498,6 +518,16 @@ export default function AssignMovementModal({
           targetName: chosenSource.name,
         },
       });
+    } else if (activeTab === "internal_transfer") {
+      const destAcc = allTransferAccounts.find((a) => a.id === selectedTransferAccId) || allTransferAccounts[0];
+      onReclassify({
+        movementId: movement.id,
+        destinationType: "internal_transfer",
+        targetId: destAcc?.id,
+        targetItem: destAcc,
+        destinationAccount: destAcc,
+        paymentSource: movement.paymentSource,
+      });
     } else if (activeTab === "debt") {
       const debt = debts.find((d) => d.id === selectedDebtId);
       if (!debt) return;
@@ -551,6 +581,7 @@ export default function AssignMovementModal({
 
   const isConfirmDisabled =
     (activeTab === "budget_envelope" && !selectedEnvelopeId) ||
+    (activeTab === "internal_transfer" && !selectedTransferAccId) ||
     (activeTab === "debt" && !selectedDebtId) ||
     (activeTab === "credit_card" && !selectedCardId) ||
     (activeTab === "multi_envelope" && (splitRemaining !== 0 || totalSplitAssigned <= 0));
@@ -742,6 +773,29 @@ export default function AssignMovementModal({
             }}
           >
             <span>💳</span> Tarjeta
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("internal_transfer")}
+            style={{
+              padding: "8px 6px",
+              borderRadius: "9px",
+              border: "none",
+              background: activeTab === "internal_transfer" ? (isLight ? "#ffffff" : "rgba(30, 41, 59, 0.95)") : "transparent",
+              color: activeTab === "internal_transfer" ? "#10b981" : "var(--text-muted)",
+              fontWeight: activeTab === "internal_transfer" ? 700 : 500,
+              fontSize: "0.76rem",
+              cursor: "pointer",
+              boxShadow: activeTab === "internal_transfer" ? (isLight ? "0 2px 6px rgba(0,0,0,0.08)" : "0 2px 8px rgba(0,0,0,0.3)") : "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 4,
+              transition: "all 0.15s ease",
+            }}
+          >
+            <span>🔄</span> Transferir / Efectivo
           </button>
 
           <button
@@ -2203,6 +2257,74 @@ export default function AssignMovementModal({
                 })}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Tab: Internal Transfer / Cash Withdrawal */}
+        {activeTab === "internal_transfer" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <h4 style={{ margin: 0, fontSize: "0.95rem", color: "var(--text-primary)", fontWeight: 700 }}>
+                🔄 Transferencia entre Cuentas Propias / Retiro a Efectivo
+              </h4>
+              <InfoTooltip
+                customContent={{
+                  title: "Transferencias Propias y Retiros a Efectivo",
+                  tag: "Sin Consumo de Presupuesto",
+                  tagColor: "#10b981",
+                  explanation: "Cuando transfieres plata a tu Nequi, Daviplata o retiras efectivo de un cajero para tu bolsillo, el dinero no es un gasto; sigue siendo tuyo. Al marcarlo aquí, el valor se traslada a la cuenta o billetera destino sin descontar tus sobres mensuales de gastos.",
+                  rule: "Luego, cuando compres algo en la calle, registra ese gasto específico seleccionando '💵 Efectivo (Billetera)' como cuenta de origen."
+                }}
+              />
+            </div>
+            <p style={{ fontSize: "0.76rem", color: "var(--text-muted)", margin: 0 }}>
+              Selecciona la cuenta propia o billetera donde ingresó o tienes disponible este dinero:
+            </p>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10, marginTop: 4 }}>
+              {allTransferAccounts.map((acc) => {
+                const isSelected = selectedTransferAccId === acc.id;
+                const isCash = acc.accountCategory === "cash" || (acc.name || "").toLowerCase().includes("efectivo");
+                return (
+                  <div
+                    key={acc.id}
+                    onClick={() => setSelectedTransferAccId(acc.id)}
+                    style={{
+                      padding: "14px 16px",
+                      borderRadius: "12px",
+                      border: isSelected
+                        ? `2px solid ${isCash ? "#10b981" : "#0284c7"}`
+                        : (isLight ? "1px solid rgba(0,0,0,0.08)" : "1px solid var(--border)"),
+                      background: isSelected
+                        ? isCash
+                          ? (isLight ? "rgba(16, 185, 129, 0.08)" : "rgba(16, 185, 129, 0.15)")
+                          : (isLight ? "rgba(2, 132, 199, 0.08)" : "rgba(2, 132, 199, 0.15)")
+                        : (isLight ? "#ffffff" : "var(--bg-surface)"),
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: "1.4rem" }}>{isCash ? "💵" : acc.accountCategory === "digital_wallet" ? "📱" : "🏦"}</span>
+                      <div>
+                        <strong style={{ fontSize: "0.88rem", color: "var(--text-primary)", display: "block" }}>
+                          {acc.name}
+                        </strong>
+                        <span style={{ fontSize: "0.72rem", color: isCash ? "#10b981" : "var(--text-muted)" }}>
+                          {isCash ? "Billetera Física (Efectivo disponible)" : `Saldo: ${formatMoney(acc.balance || 0, currency)}`}
+                        </span>
+                      </div>
+                    </div>
+                    {isSelected && (
+                      <span style={{ color: isCash ? "#10b981" : "#0284c7", fontWeight: 800, fontSize: "1.1rem" }}>✓</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 

@@ -963,6 +963,35 @@ export const useCashFlowStore = create(
         if (!expense) return;
         const amount = Number(expense.amount) || 0;
 
+        // 0c. Destination: Internal Transfer / Cash Withdrawal (Transferencia entre cuentas propias o Retiro a Efectivo)
+        if (destinationType === "internal_transfer") {
+          const destAcc = targetItem || destinationAccount;
+          const updatedExpenses = (state.expensesLog || []).map((e) => {
+            if (e.id !== movementId) return e;
+            return {
+              ...e,
+              description: `Transferencia a ${destAcc?.name || 'Cuenta Destino'}`,
+              budgetItemId: null,
+              budgetItemName: `Transferencia / Retiro a ${destAcc?.name || 'Cuenta'}`,
+              budgetItemType: "transfer",
+              isInternalTransfer: true,
+              destinationAccountId: destAcc?.id,
+              destinationAccountName: destAcc?.name,
+            };
+          });
+
+          set({ expensesLog: updatedExpenses });
+          try {
+            localStorage.setItem(
+              "titanes_cash_flow_store_v2",
+              JSON.stringify({ ...state, expensesLog: updatedExpenses })
+            );
+          } catch {}
+          get().syncStateWithBackend();
+          toast.success(`Movimiento clasificado como transferencia / retiro a ${destAcc?.name || 'cuenta'} 🔄`);
+          return;
+        }
+
         // 0b. Destination: Credit Card Purchase (Compra con Tarjeta de Crédito)
         if (destinationType === "credit_card_purchase") {
           const cid = targetId || cardId;

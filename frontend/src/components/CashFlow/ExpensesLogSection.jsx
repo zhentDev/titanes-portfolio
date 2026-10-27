@@ -3,6 +3,7 @@ import { formatCashFlowMoney } from "../../utils/cashFlowFormatters";
 import GlassModalWrapper from "../Common/GlassModalWrapper";
 import LoanSettlementModal from "./LoanSettlementModal";
 import AssignMovementModal from "./AssignMovementModal";
+import InfoTooltip from "../Common/InfoTooltip";
 import { toastConfirm } from "../../utils/toastAlerts";
 import { useTheme } from "../../context/ThemeContext";
 import "./CashFlow.css";
@@ -381,6 +382,15 @@ export default function ExpensesLogSection({
               >
                 <span style={{ fontSize: "0.72rem", color: "#f59e0b", display: "flex", alignItems: "center", gap: 4, fontWeight: 700 }}>
                   <span>💵</span> Efectivo (Billetera)
+                  <InfoTooltip
+                    customContent={{
+                      title: "Efectivo en Billetera Física",
+                      tag: "Control de Efectivo",
+                      tagColor: "#f59e0b",
+                      explanation: "Representa el dinero físico que tienes en mano o retiraste de cajeros/Nequi. Cuando compres en la calle, registra ese gasto desde '💵 Efectivo (Billetera)' para que se descuente solo lo que gastaste físicamente y tu saldo quede cuadrado.",
+                      rule: "Los retiros a efectivo aumentan este saldo; las compras en efectivo lo reducen."
+                    }}
+                  />
                 </span>
                 <strong style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.15rem", color: "#f59e0b" }}>
                   +{formatMoney(cashWalletBalance, currency)}

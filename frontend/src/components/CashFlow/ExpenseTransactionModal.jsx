@@ -3,6 +3,7 @@ import CurrencyInput from "../Common/CurrencyInput";
 import CascadingCategorySelector from "../Common/CascadingCategorySelector";
 import DynamicDatePicker from "../Common/DynamicDatePicker";
 import GlassModalWrapper from "../Common/GlassModalWrapper";
+import InfoTooltip from "../Common/InfoTooltip";
 import { useTheme } from "../../context/ThemeContext";
 import { getCurrentPeriod } from "../../utils/periodUtils";
 import "./CashFlow.css";
@@ -212,6 +213,16 @@ export default function ExpenseTransactionModal({
           ? `${card.name} (${cardInstallments} ${cardInstallments === 1 ? "cuota 0%" : "cuotas 0% MSI"})`
           : "Tarjeta de Crédito",
         installments: cardInstallments,
+      };
+    }
+    if (sourceType === "cash") {
+      const cashAcc = fixedIncomeAccounts.find(
+        (a) => a.accountCategory === "cash" || (a.name || "").toLowerCase().includes("efectivo") || (a.name || "").toLowerCase().includes("billetera")
+      );
+      return {
+        type: "cash",
+        targetId: cashAcc ? cashAcc.id : "acc_cash_wallet",
+        targetName: cashAcc ? cashAcc.name : "Efectivo (Billetera)",
       };
     }
     if (sourceType === "fixed_pocket") {
@@ -1029,17 +1040,28 @@ export default function ExpenseTransactionModal({
                   : "1px solid rgba(255, 255, 255, 0.06)",
               }}
             >
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "0.76rem",
-                  color: isLight ? "#1e293b" : "#94a3b8",
-                  marginBottom: 6,
-                  fontWeight: 700,
-                }}
-              >
-                🏦 ¿De dónde salió la plata? (Cuenta Origen)
-              </label>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "0.76rem",
+                    color: isLight ? "#1e293b" : "#94a3b8",
+                    margin: 0,
+                    fontWeight: 700,
+                  }}
+                >
+                  🏦 ¿De dónde salió la plata? (Cuenta Origen)
+                </label>
+                <InfoTooltip
+                  customContent={{
+                    title: "Cuenta Origen del Gasto",
+                    tag: "Guía de Registro",
+                    tagColor: "#10b981",
+                    explanation: "Indica qué cuenta pagó este gasto real. Si sacaste plata de un cajero o pasaste a Nequi y luego compraste algo en la calle, selecciona '💵 Efectivo (Billetera)' para que se descuente únicamente lo que gastaste físicamente.",
+                    rule: "Los retiros de cajero o transferencias entre cuentas propias NO son gastos; el dinero sigue siendo tuyo en tu billetera."
+                  }}
+                />
+              </div>
               <div
                 style={{
                   display: "grid",
@@ -1194,6 +1216,43 @@ export default function ExpenseTransactionModal({
                   }}
                 >
                   🚀 Inversión / Broker
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSourceType("cash")}
+                  style={{
+                    padding: "6px 8px",
+                    borderRadius: "8px",
+                    background:
+                      sourceType === "cash"
+                        ? isLight
+                          ? "rgba(16, 185, 129, 0.12)"
+                          : "rgba(16, 185, 129, 0.2)"
+                        : isLight
+                        ? "#ffffff"
+                        : "rgba(255,255,255,0.04)",
+                    border:
+                      sourceType === "cash"
+                        ? "1px solid #10b981"
+                        : isLight
+                        ? "1px solid rgba(0,0,0,0.12)"
+                        : "1px solid rgba(255,255,255,0.06)",
+                    color:
+                      sourceType === "cash"
+                        ? isLight
+                          ? "#047857"
+                          : "#34d399"
+                        : isLight
+                        ? "#475569"
+                        : "#94a3b8",
+                    fontSize: "0.74rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    textAlign: "center",
+                  }}
+                >
+                  💵 Efectivo (Billetera)
                 </button>
               </div>
 
