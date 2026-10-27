@@ -225,19 +225,23 @@ def resolve_entity(db: dict[str, Any], entity_query: str) -> dict[str, Any]:
     return new_entity
 
 
-def clean_account_query(query: str) -> str:
-    """Clean selection strings from interactive dialogs (strip emojis, balances, bank prefixes)."""
+def clean_account_query(query: str | None) -> str:
+    """Robustly cleans account query from dialog strings, stripping emojis, bank prefixes, and trailing balance/cupo notes."""
     if not query:
         return ""
-    # Strip common leading emojis and icons
-    s = re.sub(r"^[^\w\s]+", "", query).strip()
-    # Remove trailing balance like ($119,257) or ($0)
-    s = re.sub(r"\s*\(\$[\d\.,]+\)\s*$", "", s).strip()
-    # Remove bank prefix like "Nu - " or "Rappi: "
+    s = str(query).strip()
+    # 1. Strip common leading emojis and icons (e.g. ⭐, 💳, 📦, ❌)
+    s = re.sub(r"^[\W_]+", "", s).strip()
+    # 2. Remove trailing parenthetical balances, limits, or cupo notes
+    # (e.g. '(Cupo libre: $470,300)', '($1,475,511)', '($0)', '($296,484)')
+    s = re.sub(r"\s*\([^)]*(?:\$|\d|cupo|saldo)[^)]*\)\s*$", "", s, flags=re.IGNORECASE).strip()
+    # 3. Strip bank prefix like 'Nu - Cajita' or 'Nu: Cajita' safely without corrupting interior colons
     if " - " in s:
-        s = s.split(" - ", 1)[1].strip()
-    elif ": " in s:
-        s = s.split(": ", 1)[1].strip()
+        parts = s.split(" - ", 1)
+        if len(parts) > 1 and len(parts[1].strip()) > 1:
+            s = parts[1].strip()
+    elif re.match(r"^[A-Za-z0-9\s]+:\s+", s):
+        s = re.sub(r"^[A-Za-z0-9\s]+:\s+", "", s).strip()
     return s.strip()
 
 
@@ -791,22 +795,35 @@ def register_mobile_transaction(
     # 6. Create Transaction Object & Clean Description
     tx_id = f"tx_mb_{int(now_colombia.timestamp() * 1000)}_{uuid.uuid4().hex[:6]}"
     clean_desc = payload.description.strip()
-    generic_bad_descriptions = ["tu app", "app", "movimientos", "el detalle", "fue exitoso", "revisa en tus movimientos", "gasto", "gasto bancario", "movimiento"]
+    generic_bad_descriptions = [
+        "tu app", "app", "movimientos", "el detalle", "fue exitoso", "revisa en tus movimientos",
+        "gasto", "gasto bancario", "movimiento", "los detalles de tu compra", "tus transacciones",
+        "detalles de tu compra", "consulta los detalles"
+    ]
+
+    # Smart commerce extraction for Nu Colombia ("Compra por $627.626 en [Comercio]...") and Bancolombia/Rappi
+    m_nu_compra = re.search(r"compra\s+(?:por\s+[\$\d\.,\s]+?)?\s*en\s+([A-Za-z0-9\*\.\-_\s]+?)(?:\.|\.\.\.|\,|$|consulta|los detalles)", payload.raw_text or "", re.IGNORECASE)
 
     if is_cc_payment:
         clean_desc = f"Pago {detected_card_name or 'Tarjeta de Crédito'}"
     elif is_cc_purchase:
         m_en = re.search(r"compra en\s+([A-Za-z0-9\*\.\-_\s]+?)\s+(?:por|\.|\.\.\.|\,|$)", payload.raw_text or "", re.IGNORECASE)
         m_aprob = re.search(r"en\s+([A-Za-z0-9\*\.\-_\s]+?)\s+por", payload.raw_text or "", re.IGNORECASE)
-        if m_en and len(m_en.group(1).strip()) > 1:
+        if m_nu_compra and len(m_nu_compra.group(1).strip()) > 1 and not any(b in m_nu_compra.group(1).lower() for b in generic_bad_descriptions):
+            clean_desc = f"Compra en {m_nu_compra.group(1).strip()}"
+        elif m_en and len(m_en.group(1).strip()) > 1 and not any(b in m_en.group(1).lower() for b in generic_bad_descriptions):
             clean_desc = f"Compra en {m_en.group(1).strip()}"
         elif m_aprob and len(m_aprob.group(1).strip()) > 1:
             clean_desc = f"Compra en {m_aprob.group(1).strip()}"
-        elif clean_desc and not any(b in clean_desc.lower() for b in ["aprobada", "terminada en", "gasto", "movimiento"]):
+        elif clean_desc and not any(b in clean_desc.lower() for b in generic_bad_descriptions + ["aprobada", "terminada en", "gasto", "movimiento"]):
             clean_desc = f"Compra {clean_desc}"
         else:
             clean_desc = f"Compra {matched_cc['name'] if matched_cc else 'Tarjeta Crédito'}"
     elif any(b in clean_desc.lower() for b in generic_bad_descriptions) or not clean_desc:
+        if m_nu_compra and len(m_nu_compra.group(1).strip()) > 1 and not any(b in m_nu_compra.group(1).lower() for b in generic_bad_descriptions):
+            clean_desc = f"Compra en {m_nu_compra.group(1).strip()}"
+        else:
+            pass
         m_en = re.search(r"\ben\s+([A-Za-z0-9\s\.\-_]+?)(?:\s+por|\.|\.\.\.|\,|$)", payload.raw_text or "", re.IGNORECASE)
         m_via = re.search(r"a través de\s+([A-Za-z0-9\-\s]+?)(?:fue exitoso|\.|\.\.\.|$)", payload.raw_text or "", re.IGNORECASE)
         m_sender = re.search(r'(?:Nu\s*-\s*)?(?:Banco\s+)?([A-Za-z0-9\s]+?)\s+te\s+envi[oó]', payload.raw_text or "", re.IGNORECASE)
