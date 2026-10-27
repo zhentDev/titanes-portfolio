@@ -1066,14 +1066,16 @@ export default function ExpensesLogSection({
                               : "📤 Salida"}
                           </span>
                         )}
-                        {item.budgetItemName && (
+                        {item.budgetItemName && item.budgetItemName.toLowerCase().trim() !== (item.description || "").toLowerCase().trim() && (
                           <span
                             style={{
-                              background: "rgba(128, 128, 128, 0.1)",
+                              background: isLight ? "rgba(0, 0, 0, 0.05)" : "rgba(128, 128, 128, 0.1)",
+                              border: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.06)",
                               padding: "2px 8px",
                               borderRadius: "6px",
                               fontSize: "0.72rem",
-                              color: "var(--text-muted)",
+                              color: isLight ? "#475569" : "var(--text-muted)",
+                              fontWeight: 600,
                             }}
                           >
                             {item.budgetItemName}
@@ -1086,19 +1088,19 @@ export default function ExpensesLogSection({
                     {isLoan && !isSettled && (
                       <span
                         style={{
-                          background: "rgba(245, 158, 11, 0.2)",
-                          border: "1px solid #f59e0b",
+                          background: isLight ? "rgba(245, 158, 11, 0.12)" : "rgba(245, 158, 11, 0.2)",
+                          border: isLight ? "1px solid rgba(217, 119, 6, 0.4)" : "1px solid #f59e0b",
                           padding: "2px 8px",
                           borderRadius: "6px",
                           fontSize: "0.72rem",
-                          color: "#fcd34d",
+                          color: isLight ? "#92400e" : "#fcd34d",
                           fontWeight: 700,
                           display: "inline-flex",
                           alignItems: "center",
                           gap: 4,
                         }}
                       >
-                        🤝 Préstamo a: {item.loanRecipient || "Amigo"} ({formatMoney(item.loanAmount || item.amount)})
+                        <span>🤝</span> Préstamo a: <strong style={{ color: isLight ? "#78350f" : "#fef08a" }}>{item.loanRecipient || "Amigo"}</strong> ({formatMoney(item.loanAmount || item.amount)})
                       </span>
                     )}
 
@@ -1199,9 +1201,9 @@ export default function ExpensesLogSection({
                       type="button"
                       onClick={() => setSettlingTransaction(item)}
                       style={{
-                        background: "rgba(16, 185, 129, 0.18)",
-                        border: "1px solid #10b981",
-                        color: "#10b981",
+                        background: isLight ? "rgba(16, 185, 129, 0.12)" : "rgba(16, 185, 129, 0.18)",
+                        border: isLight ? "1.5px solid #059669" : "1px solid #10b981",
+                        color: isLight ? "#047857" : "#10b981",
                         borderRadius: "8px",
                         padding: "5px 10px",
                         fontSize: "0.76rem",
@@ -1211,9 +1213,11 @@ export default function ExpensesLogSection({
                         alignItems: "center",
                         gap: 5,
                         transition: "all 0.15s ease",
+                        boxShadow: isLight ? "0 1px 2px rgba(0,0,0,0.04)" : "none",
                       }}
+                      title="Registrar devolución o cobro de este préstamo"
                     >
-                      <span>✅</span> Cobrado
+                      <span>📥</span> Registrar Cobro
                     </button>
                   )}
 

@@ -1,3 +1,4 @@
+import { useTheme } from "../../context/ThemeContext";
 import React, { useState, useEffect, useMemo } from "react";
 import CurrencyInput from "../Common/CurrencyInput";
 import CustomSelectDropdown from "../Common/CustomSelectDropdown";
@@ -430,7 +431,7 @@ export default function CashFlowAllocationModal({
   };
 
   return (
-    <GlassModalWrapper isOpen={isOpen} onClose={onClose} maxWidth={600}>
+    <GlassModalWrapper isOpen={isOpen} onClose={onClose} maxWidth={640}>
       <div
         style={{
           minHeight: "530px",
@@ -485,7 +486,7 @@ export default function CashFlowAllocationModal({
 
           {/* Pillar Selector Tabs */}
           {!isEditing && (
-            <div style={{ display: "flex", gap: 6, marginTop: 12, background: "rgba(13, 18, 38, 0.7)", padding: 4, borderRadius: 12, border: "1px solid rgba(255, 255, 255, 0.08)" }}>
+            <div style={{ display: "flex", gap: 6, marginTop: 12, background: isLight ? "#f1f5f9" : "rgba(13, 18, 38, 0.7)", padding: 4, borderRadius: 12, border: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.08)" }}>
               <button
                 type="button"
                 className={`cashflow-rule-tab-btn ${activeTab === "inflow" ? "active" : ""}`}
@@ -527,8 +528,8 @@ export default function CashFlowAllocationModal({
               marginTop: 12,
               padding: "10px 14px",
               borderRadius: 12,
-              background: "rgba(15, 23, 42, 0.8)",
-              border: `1px solid ${getPillarColor()}44`,
+              background: isLight ? "rgba(240, 249, 255, 0.85)" : "rgba(15, 23, 42, 0.8)",
+              border: isLight ? "1px solid rgba(2, 132, 199, 0.2)" : `1px solid ${getPillarColor()}44`,
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
@@ -536,14 +537,14 @@ export default function CashFlowAllocationModal({
             }}
           >
             <div>
-              <span style={{ color: "#94a3b8" }}>% Ahorro Efectivo: </span>
-              <strong style={{ color: "#38bdf8", fontFamily: "JetBrains Mono, monospace" }}>
+              <span style={{ color: isLight ? "#475569" : "#94a3b8" }}>% Ahorro Efectivo: </span>
+              <strong style={{ color: isLight ? "#0284c7" : "#38bdf8", fontFamily: "JetBrains Mono, monospace" }}>
                 {liveMetrics.savingsRate}%
               </strong>
             </div>
             <div>
-              <span style={{ color: "#94a3b8" }}>Libertad Financiada: </span>
-              <strong style={{ color: "#10b981", fontFamily: "JetBrains Mono, monospace" }}>
+              <span style={{ color: isLight ? "#475569" : "#94a3b8" }}>Libertad Financiada: </span>
+              <strong style={{ color: isLight ? "#059669" : "#10b981", fontFamily: "JetBrains Mono, monospace" }}>
                 +{liveMetrics.daysOfFreedom} días/mes
               </strong>
             </div>
@@ -556,7 +557,7 @@ export default function CashFlowAllocationModal({
             {/* Row 1: Name + Quick Chips */}
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
-                <label style={{ fontSize: "0.76rem", color: "#94a3b8", fontWeight: 700 }}>
+                <label style={{ fontSize: "0.76rem", color: isLight ? "#334155" : "#94a3b8", fontWeight: 700 }}>
                   Concepto / Nombre del Ítem
                 </label>
                 {activeTab === "inflow" && !isAutoSynced && (
@@ -602,23 +603,34 @@ export default function CashFlowAllocationModal({
                   </div>
                 )}
               </div>
-              <div className="currency-input-container">
-                <input
-                  type="text"
-                  className="currency-native-input"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="ej. Salario Empresa, Arriendo Apto, Horas Extras..."
-                  required
-                  autoFocus
-                />
-              </div>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="ej. Meta Impresora 3D, Salario Empresa, Arriendo Apto..."
+                required
+                autoFocus
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  padding: "9px 12px",
+                  borderRadius: "10px",
+                  background: isLight ? "#ffffff" : "rgba(15, 23, 42, 0.85)",
+                  border: isLight ? "1px solid rgba(0, 0, 0, 0.16)" : "1px solid rgba(255, 255, 255, 0.1)",
+                  color: isLight ? "#0f172a" : "#f8fafc",
+                  fontSize: "0.92rem",
+                  fontWeight: 600,
+                  outline: "none",
+                  boxShadow: isLight ? "inset 0 1px 2px rgba(0,0,0,0.03)" : "inset 0 2px 4px rgba(0,0,0,0.3)",
+                  transition: "border-color 0.2s ease, box-shadow 0.2s ease",
+                }}
+              />
             </div>
 
             {/* Row 2: Category + Amount */}
             <div className="cashflow-form-row" style={{ position: "relative", zIndex: 30 }}>
               <div>
-                <label style={{ display: "block", fontSize: "0.76rem", color: "#94a3b8", marginBottom: 5, fontWeight: 600 }}>
+                <label style={{ display: "block", fontSize: "0.76rem", color: isLight ? "#334155" : "#94a3b8", marginBottom: 5, fontWeight: 600 }}>
                   Categoría {isAutoSynced && "(Bloqueada)"}
                 </label>
                 <CustomSelectDropdown
@@ -633,7 +645,7 @@ export default function CashFlowAllocationModal({
 
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
-                  <label style={{ fontSize: "0.76rem", color: "#94a3b8", fontWeight: 600 }}>
+                  <label style={{ fontSize: "0.76rem", color: isLight ? "#334155" : "#94a3b8", fontWeight: 600 }}>
                     {activeTab === "wealth" ? "Aporte Mensual" : "Monto"} ({currency})
                   </label>
                   {activeTab === "inflow" && (category === "salary" || category === "freelance") && currency === "COP" && onOpenPayrollModal && (
@@ -679,8 +691,8 @@ export default function CashFlowAllocationModal({
             </div>
 
             {/* Row 3: Payment Source / Origen de Fondos (Where does the money come from / go to) */}
-            <div style={{ background: "rgba(13, 18, 38, 0.6)", padding: "12px 14px", borderRadius: "12px", border: "1px solid rgba(255, 255, 255, 0.06)" }}>
-              <label style={{ display: "block", fontSize: "0.76rem", color: "#94a3b8", marginBottom: 6, fontWeight: 700 }}>
+            <div style={{ background: isLight ? "rgba(241, 245, 249, 0.75)" : "rgba(13, 18, 38, 0.6)", padding: "12px 14px", borderRadius: "12px", border: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.06)", boxShadow: isLight ? "0 1px 3px rgba(0,0,0,0.03)" : "none" }}>
+              <label style={{ display: "block", fontSize: "0.76rem", color: isLight ? "#334155" : "#94a3b8", marginBottom: 6, fontWeight: 700 }}>
                 🏦 Fuente de Fondos / Método de Pago
               </label>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 6, marginBottom: 8 }}>
@@ -690,9 +702,13 @@ export default function CashFlowAllocationModal({
                   style={{
                     padding: "6px 8px",
                     borderRadius: "8px",
-                    background: sourceType === "payroll" ? "rgba(130, 10, 209, 0.2)" : "rgba(255,255,255,0.04)",
-                    border: sourceType === "payroll" ? "1px solid #820ad1" : "1px solid rgba(255,255,255,0.06)",
-                    color: sourceType === "payroll" ? "#c084fc" : "#94a3b8",
+                    background: sourceType === "payroll"
+                      ? (isLight ? "rgba(130, 10, 209, 0.12)" : "rgba(130, 10, 209, 0.2)")
+                      : (isLight ? "#ffffff" : "rgba(255,255,255,0.04)"),
+                    border: sourceType === "payroll"
+                      ? "1.5px solid #820ad1"
+                      : (isLight ? "1px solid rgba(0,0,0,0.12)" : "1px solid rgba(255,255,255,0.06)"),
+                    color: sourceType === "payroll" ? (isLight ? "#7007b3" : "#c084fc") : (isLight ? "#475569" : "#94a3b8"),
                     fontSize: "0.74rem",
                     fontWeight: 600,
                     cursor: "pointer",
@@ -708,9 +724,13 @@ export default function CashFlowAllocationModal({
                   style={{
                     padding: "6px 8px",
                     borderRadius: "8px",
-                    background: sourceType === "credit_card" ? "rgba(244, 63, 94, 0.2)" : "rgba(255,255,255,0.04)",
-                    border: sourceType === "credit_card" ? "1px solid #f43f5e" : "1px solid rgba(255,255,255,0.06)",
-                    color: sourceType === "credit_card" ? "#f43f5e" : "#94a3b8",
+                    background: sourceType === "credit_card"
+                      ? (isLight ? "rgba(244, 63, 94, 0.12)" : "rgba(244, 63, 94, 0.2)")
+                      : (isLight ? "#ffffff" : "rgba(255,255,255,0.04)"),
+                    border: sourceType === "credit_card"
+                      ? "1.5px solid #f43f5e"
+                      : (isLight ? "1px solid rgba(0,0,0,0.12)" : "1px solid rgba(255,255,255,0.06)"),
+                    color: sourceType === "credit_card" ? (isLight ? "#e11d48" : "#f43f5e") : (isLight ? "#475569" : "#94a3b8"),
                     fontSize: "0.74rem",
                     fontWeight: 600,
                     cursor: "pointer",
@@ -726,9 +746,13 @@ export default function CashFlowAllocationModal({
                   style={{
                     padding: "6px 8px",
                     borderRadius: "8px",
-                    background: sourceType === "fixed_pocket" ? "rgba(56, 189, 248, 0.2)" : "rgba(255,255,255,0.04)",
-                    border: sourceType === "fixed_pocket" ? "1px solid #38bdf8" : "1px solid rgba(255,255,255,0.06)",
-                    color: sourceType === "fixed_pocket" ? "#38bdf8" : "#94a3b8",
+                    background: sourceType === "fixed_pocket"
+                      ? (isLight ? "rgba(2, 132, 199, 0.12)" : "rgba(56, 189, 248, 0.2)")
+                      : (isLight ? "#ffffff" : "rgba(255,255,255,0.04)"),
+                    border: sourceType === "fixed_pocket"
+                      ? (isLight ? "1.5px solid #0284c7" : "1.5px solid #38bdf8")
+                      : (isLight ? "1px solid rgba(0,0,0,0.12)" : "1px solid rgba(255,255,255,0.06)"),
+                    color: sourceType === "fixed_pocket" ? (isLight ? "#0284c7" : "#38bdf8") : (isLight ? "#475569" : "#94a3b8"),
                     fontSize: "0.74rem",
                     fontWeight: 600,
                     cursor: "pointer",
@@ -744,9 +768,13 @@ export default function CashFlowAllocationModal({
                   style={{
                     padding: "6px 8px",
                     borderRadius: "8px",
-                    background: sourceType === "investment_cash" ? "rgba(168, 85, 247, 0.2)" : "rgba(255,255,255,0.04)",
-                    border: sourceType === "investment_cash" ? "1px solid #a855f7" : "1px solid rgba(255,255,255,0.06)",
-                    color: sourceType === "investment_cash" ? "#a855f7" : "#94a3b8",
+                    background: sourceType === "investment_cash"
+                      ? (isLight ? "rgba(168, 85, 247, 0.12)" : "rgba(168, 85, 247, 0.2)")
+                      : (isLight ? "#ffffff" : "rgba(255,255,255,0.04)"),
+                    border: sourceType === "investment_cash"
+                      ? "1.5px solid #a855f7"
+                      : (isLight ? "1px solid rgba(0,0,0,0.12)" : "1px solid rgba(255,255,255,0.06)"),
+                    color: sourceType === "investment_cash" ? (isLight ? "#9333ea" : "#a855f7") : (isLight ? "#475569" : "#94a3b8"),
                     fontSize: "0.74rem",
                     fontWeight: 600,
                     cursor: "pointer",
@@ -765,7 +793,7 @@ export default function CashFlowAllocationModal({
                     <select
                       value={selectedCardId}
                       onChange={(e) => setSelectedCardId(e.target.value)}
-                      style={{ width: "100%", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "6px", padding: "6px 8px", color: "#fff", fontSize: "0.78rem" }}
+                      style={{ width: "100%", background: isLight ? "#ffffff" : "rgba(15, 23, 42, 0.9)", border: isLight ? "1px solid rgba(0,0,0,0.16)" : "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "7px 10px", color: isLight ? "#0f172a" : "#f8fafc", fontSize: "0.82rem", fontWeight: 600, outline: "none" }}
                     >
                       {creditCards.map((c) => (
                         <option key={c.id} value={c.id}>
@@ -780,7 +808,7 @@ export default function CashFlowAllocationModal({
                     <select
                       value={cardInstallments}
                       onChange={(e) => setCardInstallments(Number(e.target.value))}
-                      style={{ width: "100%", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "6px", padding: "6px 8px", color: "#fff", fontSize: "0.78rem" }}
+                      style={{ width: "100%", background: isLight ? "#ffffff" : "rgba(15, 23, 42, 0.9)", border: isLight ? "1px solid rgba(0,0,0,0.16)" : "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "7px 10px", color: isLight ? "#0f172a" : "#f8fafc", fontSize: "0.82rem", fontWeight: 600, outline: "none" }}
                     >
                       <option value={1}>1 Cuota (0% Sin Interés)</option>
                       <option value={2}>2 Cuotas Sin Interés (0% MSI)</option>
@@ -849,7 +877,7 @@ export default function CashFlowAllocationModal({
                   <select
                     value={selectedPocketId}
                     onChange={(e) => setSelectedPocketId(e.target.value)}
-                    style={{ width: "100%", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "6px", padding: "6px 8px", color: "#fff", fontSize: "0.78rem" }}
+                    style={{ width: "100%", background: isLight ? "#ffffff" : "rgba(15, 23, 42, 0.9)", border: isLight ? "1px solid rgba(0,0,0,0.16)" : "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "7px 10px", color: isLight ? "#0f172a" : "#f8fafc", fontSize: "0.82rem", fontWeight: 600, outline: "none" }}
                   >
                     {fixedIncomeAccounts.map((acc) => (
                       <option key={acc.id} value={acc.id}>
@@ -865,7 +893,7 @@ export default function CashFlowAllocationModal({
             {activeTab === "inflow" && (
               <div className="cashflow-form-row" style={{ position: "relative", zIndex: 20 }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", color: "#94a3b8", marginBottom: 5, fontWeight: 600 }}>
+                  <label style={{ display: "block", fontSize: "0.76rem", color: isLight ? "#334155" : "#94a3b8", marginBottom: 5, fontWeight: 600 }}>
                     Tipo de Frecuencia
                   </label>
                   <CustomSelectDropdown
@@ -913,7 +941,7 @@ export default function CashFlowAllocationModal({
             {/* One-Time Payment Status (When frequency === 'one_time') */}
             {activeTab === "inflow" && isOneTime && !isAutoSynced && (
               <div style={{ position: "relative", zIndex: 10, display: "flex", gap: 12, alignItems: "center", background: "rgba(0, 229, 255, 0.06)", border: "1px solid rgba(0, 229, 255, 0.2)", borderRadius: "10px", padding: "8px 12px" }}>
-                <span style={{ fontSize: "0.76rem", color: "#94a3b8", fontWeight: 600 }}>
+                <span style={{ fontSize: "0.76rem", color: isLight ? "#334155" : "#94a3b8", fontWeight: 600 }}>
                   Estado del Pago:
                 </span>
                 <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: "0.78rem", color: paymentStatus === "pending" ? "#fbbf24" : "#94a3b8" }}>
@@ -944,7 +972,7 @@ export default function CashFlowAllocationModal({
             {/* Conditional Fields for Needs */}
             {activeTab === "needs" && (
               <div style={{ position: "relative", zIndex: 20 }}>
-                <label style={{ display: "block", fontSize: "0.76rem", color: "#94a3b8", marginBottom: 5, fontWeight: 600 }}>
+                <label style={{ display: "block", fontSize: "0.76rem", color: isLight ? "#334155" : "#94a3b8", marginBottom: 5, fontWeight: 600 }}>
                   Día de Vencimiento en el Mes (Opcional)
                 </label>
                 <DynamicDatePicker
@@ -959,7 +987,7 @@ export default function CashFlowAllocationModal({
             {activeTab === "wealth" && (
               <div className="cashflow-form-row" style={{ position: "relative", zIndex: 20 }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", color: "#94a3b8", marginBottom: 5, fontWeight: 600 }}>
+                  <label style={{ display: "block", fontSize: "0.76rem", color: isLight ? "#334155" : "#94a3b8", marginBottom: 5, fontWeight: 600 }}>
                     Saldo Actual Acumulado ({currency})
                   </label>
                   <CurrencyInput
@@ -971,7 +999,7 @@ export default function CashFlowAllocationModal({
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", color: "#94a3b8", marginBottom: 5, fontWeight: 600 }}>
+                  <label style={{ display: "block", fontSize: "0.76rem", color: isLight ? "#334155" : "#94a3b8", marginBottom: 5, fontWeight: 600 }}>
                     Meta Total Objetivo ({currency})
                   </label>
                   <CurrencyInput
@@ -987,7 +1015,7 @@ export default function CashFlowAllocationModal({
             {/* Conditional Fields for Wants */}
             {activeTab === "wants" && (
               <div style={{ position: "relative", zIndex: 20 }}>
-                <label style={{ display: "block", fontSize: "0.76rem", color: "#94a3b8", marginBottom: 5, fontWeight: 600 }}>
+                <label style={{ display: "block", fontSize: "0.76rem", color: isLight ? "#334155" : "#94a3b8", marginBottom: 5, fontWeight: 600 }}>
                   Prioridad de Presupuesto
                 </label>
                 <CustomSelectDropdown
@@ -1005,8 +1033,8 @@ export default function CashFlowAllocationModal({
             {/* Desglose Detallado de Conceptos / Sub-ítems */}
             <div
               style={{
-                background: "rgba(255, 255, 255, 0.03)",
-                border: "1px solid var(--border)",
+                background: isLight ? "rgba(248, 250, 252, 0.9)" : "rgba(255, 255, 255, 0.03)",
+                border: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid var(--border)",
                 borderRadius: "12px",
                 padding: "14px 16px",
                 marginTop: 6,

@@ -252,25 +252,8 @@ export const useCashFlowStore = create(
             };
           }
 
-          // Entrada de dinero por venta de pieza 3D recibida en RappiCuenta
-          if (e.id === "cf_tx_mb_1793020231371_461300" || (Number(e.amount) === 70000 && e.description?.toLowerCase().includes("chopper"))) {
-            return {
-              ...e,
-              period: "2026-11",
-              type: "credit",
-              budgetItemId: null,
-              budgetItemName: "Venta Impresión 3D (Emprendimiento)",
-              budgetItemType: "income",
-              description: "Venta Impresión 3D: Base para celular Tony Chopper (Johan)",
-              paymentSource: {
-                type: "savings",
-                targetId: "acc_rappi_principal",
-                targetName: "Cuenta RappiPay (Principal)",
-              },
-            };
-          }
           // Salida / traslado hacia la Cajita Impresora (Aporte a ahorro)
-          if (e.id === "cf_tx_int_1793021051631_out") {
+          if (e.id === "cf_tx_int_1793021051631_out" || (e.description?.toLowerCase().includes("impresora") && (e.type === "debit" || !e.type))) {
             return {
               ...e,
               period: "2026-11",
@@ -286,6 +269,24 @@ export const useCashFlowStore = create(
               },
               destinationAccountId: "acc_1789616855068",
               destinationAccountName: "Cajita Impresora (RappiPay)",
+            };
+          }
+
+          // Entrada de dinero por venta de pieza 3D recibida en RappiCuenta
+          if (e.id === "cf_tx_mb_1793020231371_461300" || (Number(e.amount) === 70000 && e.id !== "cf_tx_int_1793021051631_out" && !e.description?.toLowerCase().includes("impresora") && e.description?.toLowerCase().includes("chopper"))) {
+            return {
+              ...e,
+              period: "2026-11",
+              type: "credit",
+              budgetItemId: null,
+              budgetItemName: "Venta Impresión 3D (Emprendimiento)",
+              budgetItemType: "income",
+              description: "Venta Impresión 3D: Base para celular Tony Chopper (Johan)",
+              paymentSource: {
+                type: "savings",
+                targetId: "acc_rappi_principal",
+                targetName: "Cuenta RappiPay (Principal)",
+              },
             };
           }
 

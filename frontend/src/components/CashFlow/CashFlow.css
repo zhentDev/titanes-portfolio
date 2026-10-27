@@ -794,8 +794,14 @@
 
 .cashflow-form-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cashflow-form-row > * {
+  min-width: 0;
 }
 
 .cashflow-modal-footer {
