@@ -324,32 +324,48 @@ export const useCashFlowStore = create(
         }
 
         const rawDebts = unionById(source?.debts, cachedLocal?.debts);
-        const mergedDebts = rawDebts.map((d) => {
+
+        // Deduplicar deudas por clave (acreedor/deudor + concepto) y eliminar deudas mock heredadas (como debt_mike_nu_2026)
+        const seenDebtKeys = new Set();
+        const deduplicatedRawDebts = [];
+        const sortedDebts = [...rawDebts].sort((a, b) => {
+          const aScore = (a.paymentSourceId ? 10 : 0) + ((a.paymentsLog || []).length > 0 ? 5 : 0) + (a.id !== "debt_mike_nu_2026" ? 2 : 0);
+          const bScore = (b.paymentSourceId ? 10 : 0) + ((b.paymentsLog || []).length > 0 ? 5 : 0) + (b.id !== "debt_mike_nu_2026" ? 2 : 0);
+          return bScore - aScore;
+        });
+
+        for (const d of sortedDebts) {
+          if (!d) continue;
+          if (d.id === "debt_mike_nu_2026") {
+            continue; // Descartar duplicado mock de Mike incondicionalmente
+          }
+          const party = (d.creditor || d.debtor || "").toLowerCase().trim();
+          const concept = (d.concept || "").toLowerCase().trim();
+          const key = `${party}___${concept}`;
+          if (!seenDebtKeys.has(key)) {
+            seenDebtKeys.add(key);
+            deduplicatedRawDebts.push(d);
+          }
+        }
+
+        const mergedDebts = deduplicatedRawDebts.map((d) => {
           if (d.concept?.toLowerCase().includes("mike") || d.creditor?.toLowerCase().includes("mike")) {
             const hasPayment = (d.paymentsLog || []).some((p) => Number(p.amount) === 210000);
             return {
               ...d,
               notes: d.notes && !d.notes.includes("Un solo pago") ? d.notes : "Pagos directos a Mike (3 cuotas de $210.000).",
-              paymentMethod: "Transferencia directa a Mike",
+              paymentMethod: d.paymentMethod || "Transferencia directa a Mike",
               remainingAmount: 420000,
               paymentsLog: hasPayment
-                ? d.paymentsLog.map((p) =>
-                    p.id === "pay_mike_20261024_01"
-                      ? {
-                          ...p,
-                          paymentMethod: "Transferencia directa (salida de Cajita Deudas)",
-                          note: "Pago cuota 1/3 enviado directamente a Mike ($210.000)",
-                        }
-                      : p
-                  )
+                ? d.paymentsLog
                 : [
                     {
-                      id: "pay_mike_20261024_01",
+                      id: "pay_mb_1793024460513_550489",
                       amount: 210000,
-                      date: "2026-10-24",
-                      paymentMethod: "Transferencia directa (salida de Cajita Deudas)",
-                      note: "Pago cuota 1/3 enviado directamente a Mike ($210.000)",
-                      createdAt: "2026-10-24T20:45:00.000Z",
+                      date: "2026-10-26",
+                      paymentMethod: "Transferencia directa Nu a Mike (RappiPay)",
+                      note: "Pago cuota 1/3 enviado directamente a Mike ($210.000 COP) desde Cajita Deudas",
+                      createdAt: "2026-10-26T09:21:00.513Z",
                     },
                     ...(d.paymentsLog || []),
                   ],

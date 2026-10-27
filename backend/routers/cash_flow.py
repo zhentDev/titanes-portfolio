@@ -301,7 +301,7 @@ def sync_cash_flow_state(payload: CashFlowSyncPayload, request: Request):
     if payload.creditCardPayments is not None:
         db["creditCardPayments"] = merge_lists_by_id(db.get("creditCardPayments", []), payload.creditCardPayments)
     if payload.debts is not None:
-        db["debts"] = merge_lists_by_id(db.get("debts", []), payload.debts)
+        db["debts"] = [dump_val(x) for x in payload.debts if dump_val(x).get("id") != "debt_mike_nu_2026"]
     if payload.periodsData is not None:
         existing_periods = db.get("periodsData") or {}
         incoming_periods = dump_val(payload.periodsData) or {}

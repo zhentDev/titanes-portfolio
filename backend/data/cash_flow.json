@@ -1097,34 +1097,6 @@
   "creditPurchases": [],
   "debts": [
     {
-      "id": "debt_mike_nu_2026",
-      "debtType": "payable",
-      "concept": "Deuda con Mike",
-      "creditor": "Mike",
-      "debtor": "Mike",
-      "totalAmount": 630000,
-      "remainingAmount": 420000,
-      "installmentAmount": 210000,
-      "paymentMethod": "Transferencia desde Cajita / Cuenta (Deudas)",
-      "paymentSourceId": null,
-      "paymentFrequency": "monthly",
-      "dueDate": "2026-11-25",
-      "nextPaymentDate": "2026-11-25",
-      "status": "active",
-      "notes": "Cuota mensual de .000 pagada desde la Cajita Deudas",
-      "paymentsLog": [
-        {
-          "id": "pay_mike_20261024_01",
-          "amount": 210000,
-          "date": "2026-10-24",
-          "paymentMethod": "Transferencia desde Cajita / Cuenta (Deudas)",
-          "note": "Abono cuota mensual transferida a la cajita para Mike",
-          "createdAt": "2026-10-24T20:45:00.000Z"
-        }
-      ],
-      "createdAt": "2026-10-24T18:00:00.000Z"
-    },
-    {
       "id": "debt_1792784275907_r2b4",
       "concept": "Cálculo de: Declaración de renta.",
       "creditor": "Maye",
