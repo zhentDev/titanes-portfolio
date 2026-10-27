@@ -346,7 +346,22 @@ export const useCashFlowStore = create(
           }
         }
 
-        const rawDebts = unionById(source?.debts, cachedLocal?.debts);
+        const KNOWN_PHANTOM_DEBT_IDS = [
+          "debt_mike_nu_2026",
+          "debt_loan_carlos_2026",
+        ];
+        const combinedDeletedDebtIds = [
+          ...new Set([
+            ...KNOWN_PHANTOM_DEBT_IDS,
+            ...(source?.deletedDebtIds || []),
+            ...(cachedLocal?.deletedDebtIds || [])
+          ])
+        ];
+        const deletedDebtIds = new Set(combinedDeletedDebtIds);
+
+        const rawDebts = (Array.isArray(source?.debts) ? source.debts : (cachedLocal?.debts || [])).filter(
+          (d) => d && d.id && !deletedDebtIds.has(d.id)
+        );
 
         // Deduplicar deudas por clave (acreedor/deudor + concepto) y eliminar deudas mock heredadas (como debt_mike_nu_2026)
         const seenDebtKeys = new Set();
@@ -421,6 +436,7 @@ export const useCashFlowStore = create(
           expensesLog: sanitizedExpensesLog,
           deletedExpenseIds: combinedDeletedIds,
           debts: mergedDebts,
+          deletedDebtIds: combinedDeletedDebtIds,
           inflows: mergedInflows,
           needs: mergedNeeds,
           wants: mergedWants,
@@ -480,6 +496,7 @@ export const useCashFlowStore = create(
               expensesLog: currentState.expensesLog,
               deletedExpenseIds: currentState.deletedExpenseIds || [],
               debts: currentState.debts || [],
+              deletedDebtIds: currentState.deletedDebtIds || [],
               inflows: currentState.inflows,
               needs: currentState.needs,
               wants: currentState.wants,
@@ -1280,10 +1297,14 @@ export const useCashFlowStore = create(
       deleteDebt: (id) => {
         set((state) => {
           const updatedDebts = (state.debts || []).filter((d) => d.id !== id);
+          const nextDeletedDebtIds = [...new Set([...(state.deletedDebtIds || []), id])];
           try {
-            localStorage.setItem("titanes_cash_flow_store_v2", JSON.stringify({ ...state, debts: updatedDebts }));
+            localStorage.setItem(
+              "titanes_cash_flow_store_v2",
+              JSON.stringify({ ...state, debts: updatedDebts, deletedDebtIds: nextDeletedDebtIds })
+            );
           } catch {}
-          return { debts: updatedDebts };
+          return { debts: updatedDebts, deletedDebtIds: nextDeletedDebtIds };
         });
         get().syncStateWithBackend();
         deleteDebtApi(id).catch(() => {});

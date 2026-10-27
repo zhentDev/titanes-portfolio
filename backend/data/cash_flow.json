@@ -11,10 +11,26 @@
   "emergencyFundTargetMonths": 6,
   "inflows": [
     {
+      "id": "in_cash_1792906472012",
+      "name": "Cobro Préstamo (Efectivo Físico): Farra Amigos del trabajo de Julian",
+      "category": "reimbursement",
+      "amount": 100000,
+      "currency": "COP",
+      "isPassive": false,
+      "frequency": "one_time",
+      "period": "2026-11",
+      "paymentSource": {
+        "type": "cash",
+        "targetName": "Efectivo / Billetera"
+      },
+      "icon": "💵",
+      "createdAt": "2026-10-25T05:34:32.012Z"
+    },
+    {
       "id": "in_salary",
       "name": "Salario Neto (Nómina)",
       "category": "salary",
-      "amount": 3662854,
+      "amount": 3496000,
       "currency": "COP",
       "isPassive": false,
       "frequency": "monthly",
@@ -29,7 +45,7 @@
       "id": "in_fixed_yield",
       "name": "Ingreso por Renta Fija",
       "category": "passive_fixed",
-      "amount": 23898,
+      "amount": 29379,
       "currency": "COP",
       "isPassive": true,
       "isAutoSynced": true,
@@ -46,7 +62,7 @@
       "id": "in_stock_div",
       "name": "Ingreso por Renta Variable",
       "category": "passive_equity",
-      "amount": 40962,
+      "amount": 35746,
       "currency": "COP",
       "isPassive": true,
       "isAutoSynced": true,
@@ -58,23 +74,6 @@
       },
       "icon": "📈",
       "createdAt": "2026-09-19T16:57:44.254Z"
-    },
-    {
-      "id": "in_reimb_presea_100k_cash",
-      "name": "Reintegro Préstamo (Efectivo Físico): Amigos Presea Rooftop",
-      "category": "reimbursement",
-      "amount": 100000.0,
-      "currency": "COP",
-      "isPassive": false,
-      "frequency": "one_time",
-      "period": "2026-11",
-      "paymentSource": {
-        "type": "cash",
-        "targetId": "acc_efectivo_fisico",
-        "targetName": "Efectivo Físico (Billetera)"
-      },
-      "icon": "💵",
-      "createdAt": "2026-10-24T23:30:00.000Z"
     }
   ],
   "needs": [
@@ -137,9 +136,9 @@
     },
     {
       "id": "need_health_transport",
-      "name": "Salud, EPS, Gym & Transporte",
+      "name": "Salud, EPS & Transporte",
       "category": "health_transport",
-      "amount": 233000,
+      "amount": 150000,
       "currency": "COP",
       "dueDate": null,
       "paymentSource": {
@@ -175,9 +174,9 @@
     },
     {
       "id": "want_subs",
-      "name": "Suscripciones (Netflix, Spotify, Streaming)",
+      "name": "Suscripciones (Netflix, Spotify, Gym)",
       "category": "subscriptions",
-      "amount": 67000,
+      "amount": 150000,
       "currency": "COP",
       "paymentSource": {
         "type": "payroll",
@@ -221,7 +220,7 @@
       "category": "emergency_fund",
       "targetAmount": 15000000,
       "monthlyContribution": 500000,
-      "currentBalance": 1070000,
+      "currentBalance": 2222546,
       "currency": "COP",
       "linkedModule": "fixed_income",
       "paymentSource": {
@@ -230,7 +229,7 @@
       },
       "icon": "🛡️",
       "createdAt": "2026-09-19T16:57:44.254Z",
-      "sourceAccountName": "Fondo de emergencia"
+      "sourceAccountName": "Bolsillo de Ahorro — Fondo de Emergencia (FlexiDigital +), Fondo de emergencia"
     },
     {
       "id": "wealth_tech_etf",
@@ -238,7 +237,7 @@
       "category": "equity_investment",
       "targetAmount": 30000000,
       "monthlyContribution": 500000,
-      "currentBalance": 24577458,
+      "currentBalance": 21447768,
       "currency": "COP",
       "linkedModule": "variable_income",
       "paymentSource": {
@@ -254,7 +253,7 @@
       "category": "fixed_savings",
       "targetAmount": 15000000,
       "monthlyContribution": 300000,
-      "currentBalance": 8321737,
+      "currentBalance": 7837573,
       "currency": "COP",
       "linkedModule": "fixed_income",
       "paymentSource": {
@@ -283,51 +282,428 @@
   ],
   "expensesLog": [
     {
-      "id": "cf_tx_cajita_viaje_150k_202611",
+      "id": "cf_tx_mb_1793135853228_123ad8",
+      "period": "2026-11",
+      "budgetItemId": null,
+      "budgetItemName": "Compra en D1",
+      "budgetItemType": "wants",
+      "description": "Compra en D1",
+      "amount": 1000.0,
+      "currency": "COP",
+      "date": "2026-10-27",
+      "time": "16:17:33",
+      "type": "debit",
+      "paymentSource": {
+        "type": "credit_card",
+        "targetId": "cc_nu",
+        "targetName": "Tarjeta Nu Mastercard"
+      },
+      "createdAt": "2026-10-27T16:17:33.228502-05:00"
+    },
+    {
+      "id": "cf_tx_mb_1792944694475_3448d5",
+      "period": "2026-11",
+      "budgetItemId": "want_leisure",
+      "budgetItemName": "Ocio, Hobbies & Suscripciones",
+      "budgetItemType": "wants",
+      "description": "Compra en Microsoft*Xbox",
+      "amount": 31392,
+      "currency": "COP",
+      "date": "2026-10-25",
+      "time": "11:11:34",
+      "type": "debit",
+      "cascaded": false,
+      "shortfall": 0,
+      "fallbackAccountName": null,
+      "paymentSource": {
+        "type": "credit_card",
+        "targetId": "card_nu_credito",
+        "targetName": "Tarjeta Nu Mastercard (3887)"
+      },
+      "createdAt": "2026-10-25T11:11:34.475447-05:00"
+    },
+    {
+      "id": "cf_tx_mb_1792938659603_0ff700",
+      "period": "2026-11",
+      "budgetItemId": "need_groceries",
+      "budgetItemName": "Alimentación & Supermercado",
+      "budgetItemType": "needs",
+      "description": "Gasto bancario",
+      "amount": 8667,
+      "currency": "COP",
+      "date": "2026-10-25",
+      "time": "09:30:59",
+      "type": "debit",
+      "cascaded": false,
+      "shortfall": 0,
+      "fallbackAccountName": null,
+      "paymentSource": {
+        "type": "payroll",
+        "targetName": "Nu Colombia (Cuenta Nu Débito)"
+      },
+      "createdAt": "2026-10-25T09:30:59.603920-05:00",
+      "itemType": "expense",
+      "isLoan": false,
+      "loanRecipient": null,
+      "loanAmount": null,
+      "loanDueDate": null,
+      "loanStatus": null,
+      "subItemId": null,
+      "subItemName": null,
+      "isDebtPayment": false,
+      "debtId": null,
+      "destinationAccountId": null,
+      "destinationAccountName": null
+    },
+    {
+      "id": "cf_tx_mb_1792938543570_167912",
+      "period": "2026-11",
+      "budgetItemId": "need_utilities",
+      "budgetItemName": "Servicios Públicos, Luz & Fibra Óptica",
+      "budgetItemType": "needs",
+      "description": "THE********* SAS**",
+      "amount": 9800,
+      "currency": "COP",
+      "date": "2026-10-25",
+      "time": "09:29:03",
+      "type": "debit",
+      "cascaded": false,
+      "shortfall": 0,
+      "fallbackAccountName": null,
+      "paymentSource": {
+        "type": "payroll",
+        "targetId": "acc_nu_debito",
+        "targetName": "Cuenta Nu Débito (Nómina)"
+      },
+      "createdAt": "2026-10-25T09:29:03.570137-05:00",
+      "subItemId": null,
+      "subItemName": null,
+      "isDebtPayment": false,
+      "debtId": null,
+      "destinationAccountId": null,
+      "destinationAccountName": null
+    },
+    {
+      "id": "tx_1792909650611",
+      "period": "2026-11",
+      "budgetItemId": null,
+      "budgetItemName": "Arriendo / Vivienda & Admin",
+      "budgetItemType": "split_distribution",
+      "description": "Arriendo / Vivienda & Admin (Distribuido en 2 rubros)",
+      "amount": 210000,
+      "currency": "COP",
+      "date": "2026-10-24",
+      "paymentSource": {
+        "type": "payroll",
+        "targetName": "Nu Colombia (Cuenta Nu Débito)"
+      },
+      "isLoan": false,
+      "loanRecipient": null,
+      "loanAmount": null,
+      "loanDueDate": null,
+      "loanStatus": null,
+      "createdAt": "2026-10-25T06:27:30.611Z",
+      "isDistributed": true,
+      "isDebt": false,
+      "budgetDeductions": [
+        {
+          "budgetItemId": "wealth_travel_goal",
+          "budgetItemName": "Meta Viaje / Estudio",
+          "budgetItemType": "wealth",
+          "amount": 150000,
+          "subItemId": null,
+          "subItemName": null,
+          "isEmergencySavingsDeduction": true
+        },
+        {
+          "budgetItemId": "wealth_tech_etf",
+          "budgetItemName": "Portafolio Renta Variable (Al día / Tiempo Real)",
+          "budgetItemType": "wealth",
+          "amount": 60000,
+          "subItemId": null,
+          "subItemName": null,
+          "isEmergencySavingsDeduction": true
+        }
+      ]
+    },
+    {
+      "id": "tx_1792909650611_split_0_1792909698846",
+      "splitParentId": "tx_1792909650611",
+      "isSplitChild": true,
+      "isSplitDeductionChild": true,
       "period": "2026-11",
       "date": "2026-10-24",
+      "time": null,
       "amount": 150000,
       "currency": "COP",
       "type": "debit",
       "budgetItemId": "wealth_travel_goal",
       "budgetItemName": "Meta Viaje / Estudio",
       "budgetItemType": "wealth",
-      "description": "Aporte a Cajita Viaje Nu (Meta Viaje / Estudio)",
-      "destinationAccountId": "acc_viaje",
-      "destinationAccountName": "Cajita Viaje (9.35% E.A.)",
+      "subItemId": null,
+      "subItemName": null,
+      "description": "Arriendo / Vivienda & Admin (Meta Viaje / Estudio)",
+      "paymentSource": {
+        "type": "payroll",
+        "targetName": "Nu Colombia (Cuenta Nu Débito)"
+      },
+      "creditCardPaymentId": null,
+      "isCreditCardPayoff": false,
+      "cardId": null,
+      "isEmergencySavingsDeduction": false,
+      "itemType": "wealth_saving",
+      "destinationAccountId": null,
+      "destinationAccountName": null,
+      "createdAt": "2026-10-25T06:28:18.846Z"
+    },
+    {
+      "id": "tx_1792909650611_split_1_1792909698846",
+      "splitParentId": "tx_1792909650611",
+      "isSplitChild": true,
+      "isSplitDeductionChild": true,
+      "period": "2026-11",
+      "date": "2026-10-24",
+      "time": null,
+      "amount": 60000,
+      "currency": "COP",
+      "type": "debit",
+      "budgetItemId": "wealth_tech_etf",
+      "budgetItemName": "Portafolio Renta Variable (Al día / Tiempo Real)",
+      "budgetItemType": "wealth",
+      "subItemId": null,
+      "subItemName": null,
+      "description": "Arriendo / Vivienda & Admin (Portafolio Renta Variable (Al día / Tiempo Real))",
+      "paymentSource": {
+        "type": "payroll",
+        "targetName": "Nu Colombia (Cuenta Nu Débito)"
+      },
+      "creditCardPaymentId": null,
+      "isCreditCardPayoff": false,
+      "cardId": null,
+      "isEmergencySavingsDeduction": false,
+      "itemType": "wealth_saving",
+      "destinationAccountId": null,
+      "destinationAccountName": null,
+      "createdAt": "2026-10-25T06:28:18.846Z"
+    },
+    {
+      "id": "cf_tx_mb_1792899122345_fe1ee8",
+      "period": "2026-11",
+      "budgetItemId": "wealth_tech_etf",
+      "budgetItemName": "Portafolio Renta Variable (Al día / Tiempo Real)",
+      "budgetItemType": "wealth",
+      "description": "Ple*****",
+      "amount": 200000,
+      "currency": "COP",
+      "date": "2026-10-24",
+      "time": "22:32:02",
+      "type": "debit",
+      "cascaded": false,
+      "shortfall": 0,
+      "fallbackAccountName": null,
       "paymentSource": {
         "type": "payroll",
         "targetId": "acc_nu_debito",
         "targetName": "Cuenta Nu Débito (Nómina)"
       },
-      "createdAt": "2026-10-24T21:00:00.000Z"
+      "createdAt": "2026-10-24T22:32:02.345052-05:00",
+      "subItemId": null,
+      "subItemName": null,
+      "isDebtPayment": false,
+      "debtId": null,
+      "destinationAccountId": "acc_plenti_principal",
+      "destinationAccountName": "Cuenta Plenti (Principal)"
     },
     {
-      "id": "cf_tx_mb_rappi_emergency_150k_202611",
+      "id": "cf_tx_mb_1792897901768_72d7aa",
       "period": "2026-11",
-      "date": "2026-10-24",
-      "amount": 150000,
-      "currency": "COP",
-      "type": "debit",
       "budgetItemId": "wealth_emergency",
       "budgetItemName": "Fondo de Emergencia (6 Meses)",
       "budgetItemType": "wealth",
       "description": "Compra en tu RappiCuenta",
-      "destinationAccountId": "acc_rappi_principal",
-      "destinationAccountName": "Cuenta RappiPay (Principal)",
+      "amount": 150000,
+      "currency": "COP",
+      "date": "2026-10-24",
+      "time": "22:11:41",
+      "type": "debit",
+      "cascaded": false,
+      "shortfall": 0,
+      "fallbackAccountName": null,
       "paymentSource": {
-        "type": "fixed_pocket",
+        "type": "payroll",
         "targetId": "acc_rappi_principal",
         "targetName": "Cuenta RappiPay (Principal)"
       },
-      "createdAt": "2026-10-24T22:00:00.000Z"
+      "createdAt": "2026-10-24T22:11:41.768901-05:00",
+      "subItemId": null,
+      "subItemName": null,
+      "isDebtPayment": false,
+      "debtId": null,
+      "destinationAccountId": "acc_rappi_principal",
+      "destinationAccountName": "Cuenta RappiPay (Principal)"
+    },
+    {
+      "id": "cf_tx_mb_1792883226110_dcf681",
+      "period": "2026-11",
+      "budgetItemId": "need_health_transport",
+      "budgetItemName": "Salud, EPS & Transporte",
+      "budgetItemType": "needs",
+      "description": "MAY****** GON******* ROS****",
+      "amount": 9700,
+      "currency": "COP",
+      "date": "2026-10-24",
+      "time": "18:07:06",
+      "type": "debit",
+      "cascaded": false,
+      "shortfall": 0,
+      "fallbackAccountName": null,
+      "paymentSource": {
+        "type": "payroll",
+        "targetId": "acc_nu_debito",
+        "targetName": "Cuenta Nu Débito (Nómina)"
+      },
+      "createdAt": "2026-10-24T18:07:06.110099-05:00",
+      "subItemId": null,
+      "subItemName": null,
+      "isDebtPayment": false,
+      "debtId": null,
+      "destinationAccountId": null,
+      "destinationAccountName": null
+    },
+    {
+      "id": "pay_conv_1792863163027_gx31h_split_0_1792875528218",
+      "period": "2026-11",
+      "date": "2026-10-24",
+      "time": null,
+      "amount": 119000,
+      "currency": "COP",
+      "type": "debit",
+      "budgetItemId": "want_subs",
+      "budgetItemName": "Suscripciones (Netflix, Spotify, Gym)",
+      "budgetItemType": "wants",
+      "subItemId": null,
+      "subItemName": null,
+      "description": "💳 Pago RappiCard Visa (MSI) (Descontado de Suscripciones (Netflix, Spotify, Gym))",
+      "paymentSource": {
+        "type": "payroll",
+        "targetName": "Nu Colombia (Cuenta Nu Débito)"
+      },
+      "creditCardPaymentId": "ccpay_split_1792875528218",
+      "isCreditCardPayoff": true,
+      "itemType": "expense",
+      "destinationAccountId": null,
+      "destinationAccountName": null,
+      "createdAt": "2026-10-24T20:58:48.218Z"
+    },
+    {
+      "id": "pay_conv_1792863163027_gx31h_split_1_1792875528218",
+      "period": "2026-11",
+      "date": "2026-10-24",
+      "time": null,
+      "amount": 124826,
+      "currency": "COP",
+      "type": "debit",
+      "budgetItemId": "want_leisure",
+      "budgetItemName": "Ocio, Hobbies & Compras",
+      "budgetItemType": "wants",
+      "subItemId": null,
+      "subItemName": null,
+      "description": "💳 Pago RappiCard Visa (MSI) (Descontado de Ocio, Hobbies & Compras)",
+      "paymentSource": {
+        "type": "payroll",
+        "targetName": "Nu Colombia (Cuenta Nu Débito)"
+      },
+      "creditCardPaymentId": "ccpay_split_1792875528218",
+      "isCreditCardPayoff": true,
+      "itemType": "expense",
+      "destinationAccountId": null,
+      "destinationAccountName": null,
+      "createdAt": "2026-10-24T20:58:48.218Z"
+    },
+    {
+      "id": "pay_conv_1792863163027_gx31h_split_2_1792875528218",
+      "period": "2026-11",
+      "date": "2026-10-24",
+      "time": null,
+      "amount": 300000,
+      "currency": "COP",
+      "type": "debit",
+      "budgetItemId": "wealth_high_yield",
+      "budgetItemName": "Ahorro Alto Rendimiento (Nu / Plenti / CDTs)",
+      "budgetItemType": "wealth",
+      "subItemId": null,
+      "subItemName": null,
+      "description": "💳 Pago RappiCard Visa (MSI) (Descontado de Ahorro Alto Rendimiento (Nu / Plenti / CDTs))",
+      "paymentSource": {
+        "type": "payroll",
+        "targetName": "Nu Colombia (Cuenta Nu Débito)"
+      },
+      "creditCardPaymentId": "ccpay_split_1792875528218",
+      "isCreditCardPayoff": true,
+      "itemType": "wealth_saving",
+      "destinationAccountId": null,
+      "destinationAccountName": null,
+      "createdAt": "2026-10-24T20:58:48.218Z"
+    },
+    {
+      "id": "pay_conv_1792863163027_gx31h_split_3_1792875528218",
+      "period": "2026-11",
+      "date": "2026-10-24",
+      "time": null,
+      "amount": 48724,
+      "currency": "COP",
+      "type": "debit",
+      "budgetItemId": "wealth_tech_etf",
+      "budgetItemName": "Portafolio Renta Variable (Al día / Tiempo Real)",
+      "budgetItemType": "wealth",
+      "subItemId": null,
+      "subItemName": null,
+      "description": "💳 Pago RappiCard Visa (MSI) (Descontado de Portafolio Renta Variable (Al día / Tiempo Real))",
+      "paymentSource": {
+        "type": "payroll",
+        "targetName": "Nu Colombia (Cuenta Nu Débito)"
+      },
+      "creditCardPaymentId": "ccpay_split_1792875528218",
+      "isCreditCardPayoff": true,
+      "itemType": "wealth_saving",
+      "destinationAccountId": null,
+      "destinationAccountName": null,
+      "createdAt": "2026-10-24T20:58:48.218Z"
+    },
+    {
+      "id": "cf_tx_mb_1792872529797_05e6c7",
+      "period": "2026-11",
+      "budgetItemId": "need_groceries",
+      "budgetItemName": "Alimentación & Supermercado",
+      "budgetItemType": "needs",
+      "description": "COF**** GYM**",
+      "amount": 17500,
+      "currency": "COP",
+      "date": "2026-10-24",
+      "time": "15:08:49",
+      "type": "debit",
+      "cascaded": false,
+      "shortfall": 0,
+      "fallbackAccountName": null,
+      "paymentSource": {
+        "type": "payroll",
+        "targetId": "acc_nu_debito",
+        "targetName": "Cuenta Nu Débito (Nómina)"
+      },
+      "createdAt": "2026-10-24T15:08:49.797409-05:00",
+      "subItemId": null,
+      "subItemName": null,
+      "isDebtPayment": false,
+      "debtId": null,
+      "destinationAccountId": null,
+      "destinationAccountName": null
     },
     {
       "id": "cf_tx_mb_1792827342417_1d3bf5",
       "period": "2026-11",
       "date": "2026-10-24",
       "time": "02:35:42",
-      "amount": 75174.0,
+      "amount": 75174,
       "currency": "COP",
       "type": "debit",
       "budgetItemId": "want_leisure",
@@ -346,26 +722,32 @@
       "period": "2026-11",
       "date": "2026-10-24",
       "time": "01:52:40",
-      "amount": 67901.0,
+      "amount": 67901,
       "currency": "COP",
       "type": "debit",
-      "budgetItemId": "want_leisure",
-      "budgetItemName": "Ocio, Hobbies & Compras",
-      "budgetItemType": "wants",
+      "budgetItemId": "need_utilities",
+      "budgetItemName": "Servicios Públicos, Luz & Fibra Óptica",
+      "budgetItemType": "needs",
       "description": "Envío Col******* Tel***************** S (PEXTO COLOMBIA SAS)",
       "paymentSource": {
         "type": "payroll",
         "targetId": "acc_nu_debito",
         "targetName": "Cuenta Nu Débito (Nómina)"
       },
-      "createdAt": "2026-10-24T01:52:40.708230-05:00"
+      "createdAt": "2026-10-24T01:52:40.708230-05:00",
+      "subItemId": null,
+      "subItemName": null,
+      "isDebtPayment": false,
+      "debtId": null,
+      "destinationAccountId": null,
+      "destinationAccountName": null
     },
     {
       "id": "cf_tx_mb_1792824204973_2fd09c",
       "period": "2026-11",
       "date": "2026-10-24",
       "time": "01:43:24",
-      "amount": 265000.0,
+      "amount": 265000,
       "currency": "COP",
       "type": "debit",
       "budgetItemId": "want_dining",
@@ -374,35 +756,46 @@
       "description": "Salida en PRESEA ROOFTOP (Tarjeta Débito Nu)",
       "paymentSource": {
         "type": "payroll",
-        "targetId": "acc_nu_debito",
-        "targetName": "Cuenta Nu Débito (Nómina)"
+        "targetName": "Nu Colombia (Cuenta Nu Débito)"
       },
       "createdAt": "2026-10-24T01:43:24.973417-05:00",
       "isLoan": true,
-      "loanRecipient": "Amigos (Salida Presea Rooftop)",
-      "loanAmount": 265000.0,
+      "loanRecipient": "Farra Amigos del trabajo de Julian",
+      "loanAmount": 235500,
       "loanStatus": "partially_settled",
-      "totalSettled": 100000.0,
-      "remainingLoan": 165000.0,
+      "itemType": "expense",
+      "loanDueDate": null,
+      "totalSettled": 100000,
+      "remainingLoan": 135500,
       "settlements": [
         {
-          "id": "stl_presea_100k_cash",
-          "amount": 100000.0,
-          "date": "2026-10-24",
+          "id": "stl_1792906472012",
+          "amount": 100000,
+          "date": "2026-10-25",
           "targetType": "cash",
-          "targetId": "acc_efectivo_fisico",
-          "targetName": "Efectivo Físico (Billetera)",
-          "note": "Abono recibido en efectivo ($100.000 COP) de los $265.000 prestados en Presea Rooftop",
-          "settledAt": "2026-10-24T23:30:00.000Z"
+          "targetId": "cash_wallet",
+          "targetName": "Efectivo / Billetera (Cash físico)",
+          "note": "",
+          "settledAt": "2026-10-25T05:34:32.012Z"
         }
-      ]
+      ],
+      "settlementDetails": {
+        "id": "stl_1792906472012",
+        "amount": 100000,
+        "date": "2026-10-25",
+        "targetType": "cash",
+        "targetId": "cash_wallet",
+        "targetName": "Efectivo / Billetera (Cash físico)",
+        "note": "",
+        "settledAt": "2026-10-25T05:34:32.012Z"
+      }
     },
     {
       "id": "cf_tx_mb_1792810591520_fdef77",
       "period": "2026-11",
       "date": "2026-10-23",
       "time": "21:56:31",
-      "amount": 14000.0,
+      "amount": 14000,
       "currency": "COP",
       "type": "debit",
       "budgetItemId": "want_dining",
@@ -421,7 +814,7 @@
       "period": "2026-11",
       "date": "2026-10-23",
       "time": "21:38:33",
-      "amount": 10000.0,
+      "amount": 10000,
       "currency": "COP",
       "type": "debit",
       "budgetItemId": "want_dining",
@@ -440,7 +833,7 @@
       "period": "2026-11",
       "date": "2026-10-23",
       "time": "18:45:42",
-      "amount": 350000.0,
+      "amount": 350000,
       "currency": "COP",
       "type": "debit",
       "budgetItemId": "wealth_emergency",
@@ -461,7 +854,7 @@
       "period": "2026-11",
       "date": "2026-10-23",
       "time": "17:44:04",
-      "amount": 36991.0,
+      "amount": 36991,
       "currency": "COP",
       "type": "debit",
       "budgetItemId": "need_utilities",
@@ -482,7 +875,7 @@
       "period": "2026-11",
       "date": "2026-10-23",
       "time": "17:08:48",
-      "amount": 473950.0,
+      "amount": 473950,
       "currency": "COP",
       "type": "debit",
       "budgetItemId": "need_housing",
@@ -501,7 +894,7 @@
       "period": "2026-11",
       "date": "2026-10-23",
       "time": "16:59:52",
-      "amount": 190000.0,
+      "amount": 190000,
       "currency": "COP",
       "type": "debit",
       "budgetItemId": null,
@@ -522,7 +915,7 @@
       "period": "2026-11",
       "date": "2026-10-23",
       "time": "15:51:26",
-      "amount": 13000.0,
+      "amount": 13000,
       "currency": "COP",
       "type": "debit",
       "budgetItemId": "need_groceries",
@@ -541,7 +934,7 @@
       "period": "2026-11",
       "date": "2026-10-23",
       "time": "13:15:38",
-      "amount": 3496000.0,
+      "amount": 3496000,
       "currency": "COP",
       "type": "credit",
       "budgetItemId": "in_salary",
@@ -556,102 +949,92 @@
       "createdAt": "2026-10-23T13:15:38.792630-05:00"
     },
     {
-      "id": "cf_tx_plenti_broker_funding_200k_202611",
+      "id": "cf_tx_mb_1793020231371_461300",
       "period": "2026-11",
-      "date": "2026-10-24",
-      "amount": 200000,
-      "currency": "COP",
-      "type": "debit",
-      "budgetItemId": "wealth_tech_etf",
-      "budgetItemName": "Portafolio Renta Variable (Al día / Tiempo Real)",
-      "budgetItemType": "wealth",
-      "description": "Compra USD en Plenti (Fondeo Broker) - $63,56 USD",
-      "destinationAccountId": "acc_1786777955489",
-      "destinationAccountName": "Bolsillo a la vista (Plenti USD)",
-      "usdAmount": 63.56,
-      "paymentSource": {
-        "type": "payroll",
-        "targetId": "acc_nu_debito",
-        "targetName": "Cuenta Nu Débito (Nómina)"
-      },
-      "createdAt": "2026-10-24T22:50:00.000Z"
-    },
-    {
-      "id": "exp_transfer_mike_cajita_202611",
-      "period": "2026-11",
-      "date": "2026-10-24",
-      "time": "15:45:00",
-      "amount": 210000,
-      "currency": "COP",
-      "type": "debit",
-      "isDistributed": true,
-      "isDebt": true,
       "budgetItemId": null,
-      "budgetItemType": "split_distribution",
-      "description": "💰 Transferencia a Cajita (Abono Deuda con Mike) (Distribuido en 2 rubros)",
+      "budgetItemName": "Ingreso: Transferencia Recibida",
+      "budgetItemType": "income",
+      "description": "Transferencia recibida RappiCuenta",
+      "amount": 70000,
+      "currency": "COP",
+      "date": "2026-10-25",
+      "time": "08:10:31",
+      "type": "credit",
+      "cascaded": false,
+      "shortfall": 0,
+      "fallbackAccountName": null,
       "paymentSource": {
         "type": "payroll",
-        "targetId": "acc_nu_debito",
-        "targetName": "Cuenta Nu Débito (Nómina)"
+        "targetId": "acc_rappi_principal",
+        "targetName": "Cuenta RappiPay (Principal)"
       },
-      "budgetDeductions": [
-        {
-          "budgetItemId": "need_debts_mike",
-          "budgetItemName": "Deudas / Compromisos (Mike)",
-          "budgetItemType": "needs",
-          "amount": 150000
-        },
-        {
-          "budgetItemId": "wealth_tech_etf",
-          "budgetItemName": "Portafolio Renta Variable (Al día / Tiempo Real)",
-          "budgetItemType": "wealth",
-          "amount": 60000,
-          "isEmergencySavingsDeduction": true
-        }
-      ],
-      "createdAt": "2026-10-24T20:45:00.000Z"
+      "createdAt": "2026-10-26T08:10:31.371487-05:00"
     },
     {
-      "id": "exp_transfer_mike_cajita_202611_split_0",
-      "splitParentId": "exp_transfer_mike_cajita_202611",
-      "isSplitChild": true,
-      "isSplitDeductionChild": true,
+      "id": "tx_1793019721410",
       "period": "2026-11",
-      "date": "2026-10-24",
-      "amount": 150000,
-      "currency": "COP",
-      "type": "debit",
-      "budgetItemId": "need_debts_mike",
-      "budgetItemName": "Deudas / Compromisos (Mike)",
+      "budgetItemId": "need_housing",
+      "budgetItemName": "Arriendo / Vivienda & Admin",
       "budgetItemType": "needs",
-      "description": "💰 Transferencia a Cajita (Abono Deuda con Mike) (Deudas / Compromisos (Mike))",
+      "description": "Arriendo / Vivienda & Admin",
+      "amount": 20000,
+      "currency": "COP",
+      "date": "2026-10-25",
       "paymentSource": {
         "type": "payroll",
-        "targetId": "acc_nu_debito",
-        "targetName": "Cuenta Nu Débito (Nómina)"
+        "targetName": "Nu Colombia (Cuenta Nu Débito)"
       },
-      "createdAt": "2026-10-24T20:45:00.000Z"
+      "isLoan": true,
+      "loanRecipient": "Pan :v",
+      "loanAmount": 20000,
+      "loanDueDate": null,
+      "loanStatus": "pending",
+      "createdAt": "2026-10-26T13:02:01.410Z"
     },
     {
-      "id": "exp_transfer_mike_cajita_202611_split_1",
-      "splitParentId": "exp_transfer_mike_cajita_202611",
-      "isSplitChild": true,
-      "isSplitDeductionChild": true,
+      "id": "tx_1793019639815",
       "period": "2026-11",
-      "date": "2026-10-24",
-      "amount": 60000,
+      "budgetItemId": "need_housing",
+      "budgetItemName": "Arriendo / Vivienda & Admin",
+      "budgetItemType": "needs",
+      "description": "Arriendo / Vivienda & Admin",
+      "amount": 129700,
       "currency": "COP",
+      "date": "2026-10-25",
+      "paymentSource": {
+        "type": "credit_card",
+        "targetId": "cc_rappi",
+        "targetName": "RappiCard Visa (MSI) (1 cuota 0%)",
+        "installments": 1
+      },
+      "isLoan": true,
+      "loanRecipient": "Invitados regalo Campo",
+      "loanAmount": 129700,
+      "loanDueDate": null,
+      "loanStatus": "pending",
+      "createdAt": "2026-10-26T13:00:39.815Z"
+    },
+    {
+      "id": "cf_tx_mb_1792953469335_6753df",
+      "period": "2026-11",
+      "budgetItemId": null,
+      "budgetItemName": "RES********** MOR*******",
+      "budgetItemType": "needs",
+      "description": "RES********** MOR*******",
+      "amount": 56000,
+      "currency": "COP",
+      "date": "2026-10-25",
+      "time": "13:37:49",
       "type": "debit",
-      "budgetItemId": "wealth_tech_etf",
-      "budgetItemName": "Portafolio Renta Variable (Al día / Tiempo Real)",
-      "budgetItemType": "wealth",
-      "description": "💰 Transferencia a Cajita (Abono Deuda con Mike) (Portafolio Renta Variable (Al día / Tiempo Real))",
+      "cascaded": false,
+      "shortfall": 0,
+      "fallbackAccountName": null,
       "paymentSource": {
         "type": "payroll",
         "targetId": "acc_nu_debito",
         "targetName": "Cuenta Nu Débito (Nómina)"
       },
-      "createdAt": "2026-10-24T20:45:00.000Z"
+      "createdAt": "2026-10-25T13:37:49.335465-05:00"
     }
   ],
   "creditCards": [
@@ -662,7 +1045,7 @@
       "color": "#820ad1",
       "icon": "💜",
       "totalLimit": 200000,
-      "usedLimit": 0,
+      "usedLimit": 32392.0,
       "closingDay": 15,
       "paymentDay": 2,
       "rateEA": 24.5,
@@ -677,7 +1060,7 @@
       "color": "#ff441f",
       "icon": "🧡",
       "totalLimit": 600000,
-      "usedLimit": 589850,
+      "usedLimit": 129700,
       "closingDay": 20,
       "paymentDay": 1,
       "rateEA": 24,
@@ -688,11 +1071,52 @@
   ],
   "creditCardPayments": [
     {
+      "id": "pay_split_1792875528218_ykk7e",
+      "period": "2026-11",
+      "cardId": "cc_rappi",
+      "cardName": "RappiCard Visa (MSI)",
+      "amount": 592550,
+      "currency": "COP",
+      "date": "2026-10-24",
+      "description": "Pago RappiCard Visa (MSI) (Distribuido en 4 rubros)",
+      "sourceType": "payroll",
+      "sourceAccountId": null,
+      "sourceAccount": "Nu Colombia (Cuenta Nu Débito)",
+      "notes": "Distribuido desde: Pago RappiCard Visa (MSI) (Asignado manualmente)",
+      "budgetDeductions": [
+        {
+          "budgetItemId": "want_subs",
+          "budgetItemName": "Suscripciones (Netflix, Spotify, Gym)",
+          "budgetItemType": "wants",
+          "amount": 119000
+        },
+        {
+          "budgetItemId": "want_leisure",
+          "budgetItemName": "Ocio, Hobbies & Compras",
+          "budgetItemType": "wants",
+          "amount": 124826
+        },
+        {
+          "budgetItemId": "wealth_high_yield",
+          "budgetItemName": "Ahorro Alto Rendimiento (Nu / Plenti / CDTs)",
+          "budgetItemType": "wealth",
+          "amount": 300000
+        },
+        {
+          "budgetItemId": "wealth_tech_etf",
+          "budgetItemName": "Portafolio Renta Variable (Al día / Tiempo Real)",
+          "budgetItemType": "wealth",
+          "amount": 48724
+        }
+      ],
+      "createdAt": "2026-10-24T20:58:48.218Z"
+    },
+    {
       "id": "pay_tx_mb_1792789337918_65be26",
       "period": "2026-11",
       "cardId": "cc_nu",
       "cardName": "Tarjeta Nu Mastercard",
-      "amount": 192806.0,
+      "amount": 192806,
       "currency": "COP",
       "date": "2026-10-23",
       "time": "16:02:17",
@@ -766,9 +1190,9 @@
         },
         {
           "id": "need_health_transport",
-          "name": "Salud, EPS, Gym & Transporte",
+          "name": "Salud, EPS & Transporte",
           "category": "health_transport",
-          "amount": 233000,
+          "amount": 150000,
           "currency": "COP",
           "dueDate": null,
           "paymentSource": {
@@ -779,13 +1203,7 @@
           "createdAt": "2026-09-19T16:57:44.254Z",
           "isOneTime": false,
           "targetPeriod": null,
-          "subItems": [
-            {
-              "id": "sub_1792692847730_r6mr",
-              "name": "GYM",
-              "amount": 83000
-            }
-          ]
+          "subItems": []
         }
       ],
       "wants": [
@@ -804,9 +1222,9 @@
         },
         {
           "id": "want_subs",
-          "name": "Suscripciones (Netflix, Spotify, Streaming)",
+          "name": "Suscripciones (Netflix, Spotify, Gym)",
           "category": "subscriptions",
-          "amount": 67000,
+          "amount": 150000,
           "currency": "COP",
           "paymentSource": {
             "type": "payroll",
@@ -817,6 +1235,11 @@
           "isOneTime": false,
           "targetPeriod": null,
           "subItems": [
+            {
+              "id": "sub_1792692847730_r6mr",
+              "name": "GYM",
+              "amount": 83000
+            },
             {
               "id": "sub_1792692859280_9ohl",
               "name": "Gemini + YT Primium",
@@ -850,7 +1273,7 @@
           "id": "in_salary",
           "name": "Salario Neto (Nómina)",
           "category": "salary",
-          "amount": 3662854,
+          "amount": 3496000,
           "currency": "COP",
           "isPassive": false,
           "frequency": "monthly",
@@ -943,9 +1366,9 @@
         },
         {
           "id": "need_health_transport",
-          "name": "Salud, EPS, Gym & Transporte",
+          "name": "Salud, EPS & Transporte",
           "category": "health_transport",
-          "amount": 233000,
+          "amount": 320000,
           "currency": "COP",
           "dueDate": null,
           "paymentSource": {
@@ -953,14 +1376,7 @@
             "targetName": "Cuenta Nu Débito"
           },
           "icon": "🏥",
-          "createdAt": "2026-09-19T16:57:44.254Z",
-          "subItems": [
-            {
-              "id": "sub_1792692847730_r6mr",
-              "name": "GYM",
-              "amount": 83000
-            }
-          ]
+          "createdAt": "2026-09-19T16:57:44.254Z"
         }
       ],
       "wants": [
@@ -979,19 +1395,30 @@
         },
         {
           "id": "want_subs",
-          "name": "Suscripciones (Netflix, Spotify, Streaming)",
+          "name": "Suscripciones (Netflix, Spotify, Gym)",
           "category": "subscriptions",
-          "amount": 67000,
+          "amount": 150000,
           "currency": "COP",
           "paymentSource": {
-            "type": "credit_card",
-            "targetId": "cc_rappi",
-            "targetName": "RappiCard (1 cuota)",
-            "installments": 1
+            "type": "payroll",
+            "targetName": "Nu Colombia (Cuenta Nu Débito)"
           },
           "icon": "🍿",
           "createdAt": "2026-09-19T16:57:44.254Z",
-          "subItems": []
+          "isOneTime": false,
+          "targetPeriod": null,
+          "subItems": [
+            {
+              "id": "sub_1792692847730_r6mr",
+              "name": "GYM",
+              "amount": 83000
+            },
+            {
+              "id": "sub_1792692859280_9ohl",
+              "name": "Gemini + YT Primium",
+              "amount": 31000
+            }
+          ]
         },
         {
           "id": "want_leisure",
@@ -1094,14 +1521,52 @@
     "targetCycle": "next_month",
     "paymentFrequency": "monthly"
   },
-  "creditPurchases": [],
+  "creditPurchases": [
+    {
+      "id": "cp_tx_mb_1793135853228_123ad8",
+      "cardId": "cc_nu",
+      "description": "Compra en D1",
+      "amount": 1000.0,
+      "installmentsCount": 1,
+      "startPeriod": "2026-11",
+      "monthlyInstallment": 1000.0,
+      "date": "2026-10-27",
+      "createdAt": "2026-10-27T16:17:33.228502-05:00"
+    }
+  ],
   "debts": [
+    {
+      "id": "debt_1792861678786_npzu",
+      "concept": "Deuda con Mike",
+      "creditor": "Mike",
+      "totalAmount": 630000,
+      "remainingAmount": 420000,
+      "paymentMethod": "Transferencia desde Cajita / Cuenta",
+      "paymentSourceId": "acc_1792861307242",
+      "paymentFrequency": "monthly",
+      "installmentAmount": 210000,
+      "dueDate": null,
+      "nextPaymentDate": "2026-11-25",
+      "status": "active",
+      "notes": "Un solo pago, ahorrando 3 cuotas.",
+      "paymentsLog": [
+        {
+          "id": "pay_mike_20261024_01",
+          "amount": 210000,
+          "date": "2026-10-24",
+          "paymentMethod": "Transferencia desde Cajita / Cuenta (Deudas)",
+          "note": "Abono cuota mensual transferida a la cajita para Mike",
+          "createdAt": "2026-10-24T20:45:00.000Z"
+        }
+      ],
+      "createdAt": "2026-10-24T17:07:58.786Z"
+    },
     {
       "id": "debt_1792784275907_r2b4",
       "concept": "Cálculo de: Declaración de renta.",
       "creditor": "Maye",
       "totalAmount": 190000,
-      "remainingAmount": 0.0,
+      "remainingAmount": 0,
       "paymentMethod": "Nómina / Débito directa",
       "paymentSourceId": null,
       "paymentFrequency": "one_time",
@@ -1112,25 +1577,6 @@
       "notes": "",
       "paymentsLog": [],
       "createdAt": "2026-10-23T19:37:55.907Z"
-    },
-    {
-      "id": "debt_loan_carlos_2026",
-      "debtType": "receivable",
-      "concept": "Préstamo personal",
-      "creditor": "Carlos Gómez",
-      "debtor": "Carlos Gómez",
-      "totalAmount": 500000,
-      "remainingAmount": 500000,
-      "installmentAmount": 0,
-      "paymentMethod": "Transferencia a Cajita / Cuenta",
-      "paymentSourceId": null,
-      "paymentFrequency": "one_time",
-      "dueDate": "2026-11-15",
-      "nextPaymentDate": "2026-11-15",
-      "status": "active",
-      "notes": "Acuerdo de pago el 15 de noviembre tras pago quincenal",
-      "paymentsLog": [],
-      "createdAt": "2026-10-24T19:00:00.000Z"
     }
   ]
 }

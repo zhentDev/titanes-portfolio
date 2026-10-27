@@ -217,6 +217,7 @@ class CashFlowSyncPayload(BaseModel):
     creditPurchases: list[dict] | None = None
     expensesLog: list[dict] | None = None
     deletedExpenseIds: list[str] | None = None
+    deletedDebtIds: list[str] | None = None
     creditCardPayments: list[dict] | None = None
     debts: list[dict] | None = None
     periodsData: dict | None = None
@@ -315,8 +316,17 @@ def sync_cash_flow_state(payload: CashFlowSyncPayload, request: Request):
         db["expensesLog"] = [x for x in db.get("expensesLog", []) if x.get("id") not in del_exp_set]
     if payload.creditCardPayments is not None:
         db["creditCardPayments"] = merge_lists_by_id(db.get("creditCardPayments", []), payload.creditCardPayments)
+
+    # Persistent tombstone tracking for deleted debts
+    del_debt_set = set(db.get("deletedDebtIds") or [])
+    if payload.deletedDebtIds:
+        del_debt_set.update(payload.deletedDebtIds)
+    db["deletedDebtIds"] = list(del_debt_set)
+
     if payload.debts is not None:
-        db["debts"] = [dump_val(x) for x in payload.debts if dump_val(x).get("id") != "debt_mike_nu_2026"]
+        db["debts"] = [dump_val(x) for x in payload.debts if dump_val(x).get("id") != "debt_mike_nu_2026" and dump_val(x).get("id") not in del_debt_set]
+    elif del_debt_set:
+        db["debts"] = [x for x in db.get("debts", []) if x.get("id") not in del_debt_set]
     if payload.periodsData is not None:
         existing_periods = db.get("periodsData") or {}
         incoming_periods = dump_val(payload.periodsData) or {}
@@ -366,13 +376,16 @@ def create_or_update_debt(item: dict, request: Request):
 
 @router.delete("/cash-flow/debt/{debt_id}")
 def delete_debt(debt_id: str, request: Request):
-    """Delete a personal debt."""
+    """Delete a personal debt with permanent tombstone persistence."""
     user = get_optional_current_user(request)
     user_id = user["sub"] if user else None
     db = load_cash_flow_db(user_id)
+    del_debt_set = set(db.get("deletedDebtIds") or [])
+    del_debt_set.add(debt_id)
+    db["deletedDebtIds"] = list(del_debt_set)
     db["debts"] = [x for x in db.get("debts", []) if x.get("id") != debt_id]
     save_cash_flow_db(db, user_id)
-    return {"status": "ok", "deletedId": debt_id}
+    return {"status": "ok", "deletedId": debt_id, "deletedDebtIds": db["deletedDebtIds"]}
 
 
 @router.post("/cash-flow/debt/{debt_id}/notify-telegram")
