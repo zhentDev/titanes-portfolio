@@ -5,6 +5,7 @@ import { BANK_PRESETS } from "../../utils/bankPresets";
 import { getSfcRateForBank, SFC_USURY_RATE_EA } from "../../utils/sfcCreditRates";
 import { formatCashFlowMoney } from "../../utils/cashFlowFormatters";
 import toast from "react-hot-toast";
+import { toastConfirm } from "../../utils/toastAlerts";
 import "./CashFlow.css";
 
 export default function CreditCardConfigModal({
@@ -314,8 +315,9 @@ export default function CreditCardConfigModal({
                 type="button"
                 className="cashflow-action-btn delete"
                 style={{ marginRight: "auto" }}
-                onClick={() => {
-                  if (window.confirm(`¿Estás seguro de eliminar la tarjeta ${cardToEdit.name}?`)) {
+                onClick={async () => {
+                  const ok = await toastConfirm(`¿Estás seguro de eliminar la tarjeta ${cardToEdit.name}?`);
+                  if (ok) {
                     onDeleteCard(cardToEdit.id);
                     onClose();
                   }

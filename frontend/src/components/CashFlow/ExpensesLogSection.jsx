@@ -4,7 +4,7 @@ import GlassModalWrapper from "../Common/GlassModalWrapper";
 import LoanSettlementModal from "./LoanSettlementModal";
 import AssignMovementModal from "./AssignMovementModal";
 import InfoTooltip from "../Common/InfoTooltip";
-import { toastConfirm } from "../../utils/toastAlerts";
+import { toastConfirm, toastPrompt } from "../../utils/toastAlerts";
 import { useTheme } from "../../context/ThemeContext";
 import "./CashFlow.css";
 
@@ -1225,10 +1225,10 @@ export default function ExpensesLogSection({
                         <span>•</span>
                         <button
                           type="button"
-                          onClick={() => {
-                            const recipient = window.prompt("¿A quién le prestaste este monto o parte de él?", "Amigo / Familiar");
-                            if (recipient !== null) {
-                              onToggleExpenseLoan(item.id, true, recipient.trim() || "Amigo/Familiar", item.amount);
+                          onClick={async () => {
+                            const recipient = await toastPrompt("¿A quién le prestaste este monto o parte de él?", "Amigo / Familiar");
+                            if (recipient !== null && recipient.trim()) {
+                              onToggleExpenseLoan(item.id, true, recipient.trim(), item.amount);
                             }
                           }}
                           style={{

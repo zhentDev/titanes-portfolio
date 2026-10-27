@@ -5,6 +5,7 @@ import GlassModalWrapper from "../Common/GlassModalWrapper";
 import { formatCashFlowMoney } from "../../utils/cashFlowFormatters";
 import { useTheme } from "../../context/ThemeContext";
 import { toast } from "react-hot-toast";
+import { toastConfirm } from "../../utils/toastAlerts";
 import "./CashFlow.css";
 
 export default function LoanSettlementModal({
@@ -193,10 +194,11 @@ export default function LoanSettlementModal({
   };
 
   // Check off a participant: trigger settlement
-  const handleOpenParticipantCheck = (participant) => {
+  const handleOpenParticipantCheck = async (participant) => {
     if (participant.paid) {
       // Already paid -> offer to revert
-      if (window.confirm(`¿Deseas desmarcar el pago de ${participant.name}?`)) {
+      const ok = await toastConfirm(`¿Deseas desmarcar el pago de ${participant.name}?`);
+      if (ok) {
         if (onRevertParticipant) {
           onRevertParticipant(transaction.id, participant.id);
         }

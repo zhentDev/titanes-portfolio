@@ -3,6 +3,7 @@ import { useTheme } from "../../context/ThemeContext";
 import { formatCashFlowMoney } from "../../utils/cashFlowFormatters";
 import { notifyDebtTelegramApi, checkDebtRemindersApi } from "../../api/client";
 import { toast } from "react-hot-toast";
+import { toastConfirm } from "../../utils/toastAlerts";
 import "./CashFlow.css";
 
 export default function DebtsSection({
@@ -711,9 +712,10 @@ export default function DebtsSection({
 
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={async () => {
                           const actionText = isReceivable ? "el préstamo por cobrar" : "la deuda";
-                          if (window.confirm(`¿Seguro que deseas eliminar ${actionText} "${debt.concept}"?`)) {
+                          const ok = await toastConfirm(`¿Seguro que deseas eliminar ${actionText} "${debt.concept || debt.debtorName || debt.creditorName || ''}"?`);
+                          if (ok) {
                             onDeleteDebt(debt.id);
                           }
                         }}
