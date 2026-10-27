@@ -343,7 +343,7 @@ export default function ExpenseTransactionModal({
 
   return (
     <GlassModalWrapper isOpen={isOpen} onClose={onClose} maxWidth={560}>
-      <div style={{ padding: "20px 24px" }}>
+      <div className="expense-modal-content-container">
         {/* Header */}
         <div className="cashflow-modal-header" style={{ paddingBottom: 10 }}>
           <h3 className="cashflow-modal-title">
@@ -618,8 +618,8 @@ export default function ExpenseTransactionModal({
           </div>
 
           {/* Amount, Date & Time */}
-          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 0.8fr", gap: 10 }}>
-            <div>
+          <div className="expense-modal-amount-grid">
+            <div className="expense-modal-amount-col">
               <label style={{ display: "block", fontSize: "0.76rem", color: isLight ? "#334155" : "#94a3b8", marginBottom: 5, fontWeight: 600 }}>
                 {movementNature === "income"
                   ? `Monto (${currency})`
@@ -946,11 +946,7 @@ export default function ExpenseTransactionModal({
                   ) : (
                     /* ── Standard 1:1 Loan UI ── */
                     <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
-                        gap: 12,
-                      }}
+                      className="expense-modal-loan-grid"
                     >
                       <div>
                         <label style={{ display: "block", fontSize: "0.72rem", color: isLight ? "#92400e" : "#fcd34d", marginBottom: 4, fontWeight: 600 }}>

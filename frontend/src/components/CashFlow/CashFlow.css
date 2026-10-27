@@ -1057,3 +1057,135 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
+
+/* ── Responsive Expenses Log Rows ────────────────────────────────────────── */
+.expense-log-row-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.15s ease;
+}
+
+.expense-log-row-left {
+  min-width: 0;
+  flex: 1;
+  margin-right: 12px;
+}
+
+.expense-log-row-title {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+.expense-log-row-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.expense-log-amount-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.expense-log-action-btns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+@media (max-width: 640px) {
+  .expense-log-row-card {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    padding: 12px 14px !important;
+  }
+
+  .expense-log-row-left {
+    width: 100% !important;
+    margin-right: 0 !important;
+  }
+
+  .expense-log-row-right {
+    width: 100% !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding-top: 10px !important;
+    border-top: 1px dashed var(--border) !important;
+  }
+
+  [data-theme="light"] .expense-log-row-right {
+    border-top: 1px dashed rgba(0, 0, 0, 0.1) !important;
+  }
+
+  .expense-log-amount-actions {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex: 1 !important;
+    gap: 8px !important;
+  }
+}
+
+/* ── Responsive Transaction Modal Layout ────────────────────────────────── */
+.expense-modal-content-container {
+  padding: 20px 24px;
+}
+
+.expense-modal-amount-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 0.8fr;
+  gap: 10px;
+}
+
+.expense-modal-amount-col {
+  /* standard in 3 columns */
+}
+
+.expense-modal-loan-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .expense-modal-content-container {
+    padding: 14px 14px !important;
+  }
+
+  .expense-modal-amount-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  .expense-modal-amount-col {
+    grid-column: span 2 !important;
+  }
+
+  .expense-modal-loan-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+}
+
+.loan-split-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .loan-split-metrics-grid {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+}

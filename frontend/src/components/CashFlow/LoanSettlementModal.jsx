@@ -314,7 +314,7 @@ export default function LoanSettlementModal({
 
   return (
     <GlassModalWrapper isOpen={isOpen} onClose={onClose} maxWidth={560}>
-      <div style={{ padding: "20px 24px" }}>
+      <div className="expense-modal-content-container">
         {/* Modal Header */}
         <div className="cashflow-modal-header" style={{ paddingBottom: 12 }}>
           <div>
@@ -467,7 +467,7 @@ export default function LoanSettlementModal({
                 padding: "12px 16px",
               }}
             >
-              <div style={{ display: "grid", gridTemplateColumns: userIncluded ? "1fr 1fr 1fr" : "1fr 1fr", gap: 10, textAlign: "center" }}>
+              <div className="loan-split-metrics-grid" style={{ display: "grid", gridTemplateColumns: userIncluded ? "repeat(auto-fit, minmax(130px, 1fr))" : "1fr 1fr", gap: 10, textAlign: "center" }}>
                 <div>
                   <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>
                     Total Gasto

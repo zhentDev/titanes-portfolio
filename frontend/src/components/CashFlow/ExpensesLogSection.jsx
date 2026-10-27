@@ -541,11 +541,11 @@ export default function ExpensesLogSection({
                     transition: "all 0.15s ease",
                   }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-                    <div style={{ minWidth: 0, flex: 1, marginRight: 10 }}>
+                  <div className="expense-log-row-card" style={{ width: "100%" }}>
+                    <div className="expense-log-row-left">
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                         <span style={{ fontSize: "1rem" }}>{isDebt ? "🤝" : (hasWealthEmergency ? "⚠️ 💳" : isCard ? "💳" : "📋")}</span>
-                        <strong style={{ fontSize: "0.9rem", color: "var(--text-primary)", wordBreak: "break-word" }}>
+                        <strong className="expense-log-row-title">
                           {isCard ? `${item.cardName} • ${item.description || "Abono a tarjeta"}` : item.description}
                         </strong>
                         <span
@@ -652,44 +652,48 @@ export default function ExpensesLogSection({
                       </div>
                     </div>
 
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, textAlign: "right" }}>
-                      <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.05rem", fontWeight: 800, color: hasWealthEmergency ? "#f59e0b" : "#10b981" }}>
-                        -{formatMoney(item.amount, currency)}
-                      </span>
-                      {onEditTransaction && (
-                        <button
-                          type="button"
-                          onClick={() => onEditTransaction(item)}
-                          style={{
-                            background: "transparent",
-                            border: "none",
-                            color: "#38bdf8",
-                            cursor: "pointer",
-                            padding: "4px",
-                            fontSize: "0.85rem",
-                          }}
-                          title="Editar este pago de tarjeta"
-                        >
-                          ✏️
-                        </button>
-                      )}
-                      {(isCard ? onDeletePayment : onDeleteTransaction) && (
-                        <button
-                          type="button"
-                          onClick={() => isCard ? handleDeleteCardPayment(item) : handleDeleteTransaction(item)}
-                          style={{
-                            background: "transparent",
-                            border: "none",
-                            color: "var(--text-muted)",
-                            cursor: "pointer",
-                            padding: "4px",
-                            fontSize: "0.85rem",
-                          }}
-                          title={isCard ? "Revertir este pago de tarjeta" : "Eliminar este movimiento distribuido"}
-                        >
-                          🗑️
-                        </button>
-                      )}
+                    <div className="expense-log-row-right">
+                      <div className="expense-log-amount-actions">
+                        <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.05rem", fontWeight: 800, color: hasWealthEmergency ? "#f59e0b" : "#10b981" }}>
+                          -{formatMoney(item.amount, currency)}
+                        </span>
+                        <div className="expense-log-action-btns">
+                          {onEditTransaction && (
+                            <button
+                              type="button"
+                              onClick={() => onEditTransaction(item)}
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                color: "#38bdf8",
+                                cursor: "pointer",
+                                padding: "4px",
+                                fontSize: "0.85rem",
+                              }}
+                              title="Editar este pago de tarjeta"
+                            >
+                              ✏️
+                            </button>
+                          )}
+                          {(isCard ? onDeletePayment : onDeleteTransaction) && (
+                            <button
+                              type="button"
+                              onClick={() => isCard ? handleDeleteCardPayment(item) : handleDeleteTransaction(item)}
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                color: "var(--text-muted)",
+                                cursor: "pointer",
+                                padding: "4px",
+                                fontSize: "0.85rem",
+                              }}
+                              title={isCard ? "Revertir este pago de tarjeta" : "Eliminar este movimiento distribuido"}
+                            >
+                              🗑️
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -839,10 +843,8 @@ export default function ExpensesLogSection({
               return (
                 <div
                   key={item.id}
+                  className="expense-log-row-card"
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
                     background: cardBg,
                     border: cardBorder,
                     borderRadius: "12px",
@@ -850,7 +852,7 @@ export default function ExpensesLogSection({
                     transition: "all 0.15s ease",
                   }}
                 >
-                  <div style={{ minWidth: 0, flex: 1, marginRight: 10 }}>
+                  <div className="expense-log-row-left">
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                       <span style={{ fontSize: "1rem" }}>{isCardPayoffEmergency ? "⚠️ 💳" : "💎"}</span>
                       <strong style={{ fontSize: "0.9rem", color: "var(--text-primary)", wordBreak: "break-word" }}>
@@ -940,44 +942,48 @@ export default function ExpensesLogSection({
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, textAlign: "right" }}>
-                    <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.05rem", fontWeight: 800, color: mainColor }}>
-                      -{formatMoney(item.amount, currency)}
-                    </span>
-                    {onEditTransaction && (
-                      <button
-                        type="button"
-                        onClick={() => onEditTransaction(item)}
-                        style={{
-                          background: "transparent",
-                          border: "none",
-                          color: mainColor,
-                          cursor: "pointer",
-                          padding: "4px",
-                          fontSize: "0.85rem",
-                        }}
-                        title="Editar este aporte o movimiento"
-                      >
-                        ✏️
-                      </button>
-                    )}
-                    {onDeleteTransaction && (
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteTransaction(item)}
-                        style={{
-                          background: "transparent",
-                          border: "none",
-                          color: "#64748b",
-                          cursor: "pointer",
-                          padding: "4px",
-                          fontSize: "0.85rem",
-                        }}
-                        title="Eliminar este movimiento"
-                      >
-                        🗑️
-                      </button>
-                    )}
+                  <div className="expense-log-row-right">
+                    <div className="expense-log-amount-actions">
+                      <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.05rem", fontWeight: 800, color: mainColor }}>
+                        -{formatMoney(item.amount, currency)}
+                      </span>
+                      <div className="expense-log-action-btns">
+                        {onEditTransaction && (
+                          <button
+                            type="button"
+                            onClick={() => onEditTransaction(item)}
+                            style={{
+                              background: "transparent",
+                              border: "none",
+                              color: mainColor,
+                              cursor: "pointer",
+                              padding: "4px",
+                              fontSize: "0.85rem",
+                            }}
+                            title="Editar este aporte o movimiento"
+                          >
+                            ✏️
+                          </button>
+                        )}
+                        {onDeleteTransaction && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteTransaction(item)}
+                            style={{
+                              background: "transparent",
+                              border: "none",
+                              color: "#64748b",
+                              cursor: "pointer",
+                              padding: "4px",
+                              fontSize: "0.85rem",
+                            }}
+                            title="Eliminar este movimiento"
+                          >
+                            🗑️
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               );
@@ -1000,10 +1006,8 @@ export default function ExpensesLogSection({
             return (
               <div
                 key={item.id}
+                className="expense-log-row-card"
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
                   background: isLoan
                     ? isSettled
                       ? "rgba(16, 185, 129, 0.06)"
@@ -1023,9 +1027,9 @@ export default function ExpensesLogSection({
                   transition: "all 0.15s ease",
                 }}
               >
-                <div style={{ minWidth: 0, flex: 1, marginRight: 10 }}>
+                <div className="expense-log-row-left">
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <strong style={{ fontSize: "0.9rem", color: "var(--text-primary)", wordBreak: "break-word" }}>
+                    <strong className="expense-log-row-title">
                       {item.description}
                     </strong>
 
@@ -1232,7 +1236,7 @@ export default function ExpensesLogSection({
                   </div>
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, textAlign: "right" }}>
+                <div className="expense-log-row-right">
                   {/* Mark as Settled Button */}
                   {isLoan && !isSettled && (
                     <button
@@ -1252,6 +1256,7 @@ export default function ExpensesLogSection({
                         gap: 5,
                         transition: "all 0.15s ease",
                         boxShadow: isLight ? "0 1px 2px rgba(0,0,0,0.04)" : "none",
+                        flexShrink: 0,
                       }}
                       title="Registrar devolución o cobro de este préstamo"
                     >
@@ -1259,56 +1264,60 @@ export default function ExpensesLogSection({
                     </button>
                   )}
 
-                  <span
-                    style={{
-                      fontFamily: "JetBrains Mono, monospace",
-                      fontSize: "1.05rem",
-                      fontWeight: 800,
-                      color: isLoan && !isSettled
-                        ? "#f59e0b"
-                        : isIncome
-                        ? "#10b981"
-                        : "#f43f5e",
-                    }}
-                  >
-                    {isIncome ? `+${formatMoney(item.amount, currency)}` : `-${formatMoney(item.amount, currency)}`}
-                  </span>
-
-                  {onEditTransaction && (
-                    <button
-                      type="button"
-                      onClick={() => onEditTransaction(item)}
+                  <div className="expense-log-amount-actions">
+                    <span
                       style={{
-                        background: "transparent",
-                        border: "none",
-                        color: "#38bdf8",
-                        cursor: "pointer",
-                        padding: "4px",
-                        fontSize: "0.85rem",
+                        fontFamily: "JetBrains Mono, monospace",
+                        fontSize: "1.05rem",
+                        fontWeight: 800,
+                        color: isLoan && !isSettled
+                          ? "#f59e0b"
+                          : isIncome
+                          ? "#10b981"
+                          : "#f43f5e",
                       }}
-                      title="Editar este gasto o préstamo"
                     >
-                      ✏️
-                    </button>
-                  )}
+                      {isIncome ? `+${formatMoney(item.amount, currency)}` : `-${formatMoney(item.amount, currency)}`}
+                    </span>
 
-                  {onDeleteTransaction && (
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteTransaction(item)}
-                      style={{
-                        background: "transparent",
-                        border: "none",
-                        color: "#64748b",
-                        cursor: "pointer",
-                        padding: "4px",
-                        fontSize: "0.85rem",
-                      }}
-                      title="Eliminar este gasto"
-                    >
-                      🗑️
-                    </button>
-                  )}
+                    <div className="expense-log-action-btns">
+                      {onEditTransaction && (
+                        <button
+                          type="button"
+                          onClick={() => onEditTransaction(item)}
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            color: "#38bdf8",
+                            cursor: "pointer",
+                            padding: "4px",
+                            fontSize: "0.85rem",
+                          }}
+                          title="Editar este gasto o préstamo"
+                        >
+                          ✏️
+                        </button>
+                      )}
+
+                      {onDeleteTransaction && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTransaction(item)}
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            color: "#64748b",
+                            cursor: "pointer",
+                            padding: "4px",
+                            fontSize: "0.85rem",
+                          }}
+                          title="Eliminar este gasto"
+                        >
+                          🗑️
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             );

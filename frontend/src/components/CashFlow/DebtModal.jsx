@@ -265,7 +265,7 @@ export default function DebtModal({
           </div>
 
           {/* 2. Deudor / Acreedor */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div className="expense-modal-loan-grid" style={{ display: "grid", gap: 10 }}>
             <div>
               <label style={{ fontSize: "0.78rem", fontWeight: 700, display: "block", marginBottom: 5 }}>
                 {isReceivable ? "👤 ¿Quién te debe? (Deudor)" : "👤 Acreedor / Prestamista"}
@@ -315,7 +315,7 @@ export default function DebtModal({
           </div>
 
           {/* 3. Montos: Total & Saldo Restante */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div className="expense-modal-loan-grid" style={{ display: "grid", gap: 10 }}>
             <div>
               <label style={{ fontSize: "0.78rem", fontWeight: 700, display: "block", marginBottom: 5 }}>
                 {isReceivable ? "Monto Prestado Total" : "Monto Inicial Total"} ({currency})
@@ -573,7 +573,7 @@ export default function DebtModal({
             >
               {isReceivable ? "📥 ¿Dónde esperas recibir el dinero?" : "🔄 ¿Cómo la pagas? (Forma de Pago)"}
             </label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div className="expense-modal-loan-grid" style={{ display: "grid", gap: 10 }}>
               <div>
                 <select
                   value={paymentMethod}
