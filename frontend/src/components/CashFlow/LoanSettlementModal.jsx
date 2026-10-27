@@ -386,7 +386,7 @@ export default function LoanSettlementModal({
   };
 
   return (
-    <GlassModalWrapper isOpen={isOpen} onClose={onClose} maxWidth={560}>
+    <GlassModalWrapper isOpen={isOpen} onClose={onClose} maxWidth={720}>
       <div className="expense-modal-content-container">
         {/* Modal Header */}
         <div className="cashflow-modal-header" style={{ paddingBottom: 12 }}>
@@ -921,337 +921,294 @@ export default function LoanSettlementModal({
                         </div>
                       )}
 
-                      {/* ── Sub-panel: Inline verification for checking off participant ── */}
+                      {/* ── Sub-panel: Inline verification for checking off participant (Cash, Bank, Card, Savings) ── */}
                       {isCurrentlySettling && (
                         <div
                           style={{
-                            marginTop: 6,
-                            padding: "10px 12px",
-                            borderRadius: 8,
-                            background: isLight ? "#ffffff" : "rgba(13, 18, 38, 0.9)",
+                            marginTop: 8,
+                            padding: "14px 16px",
+                            borderRadius: 12,
+                            background: isLight ? "#ffffff" : "rgba(15, 23, 42, 0.95)",
                             border: `1.5px solid ${isLight ? "#3b82f6" : "#60a5fa"}`,
-                            boxShadow: isLight ? "0 4px 14px rgba(0,0,0,0.08)" : "0 4px 18px rgba(0,0,0,0.5)",
+                            boxShadow: isLight ? "0 6px 20px rgba(0,0,0,0.08)" : "0 8px 24px rgba(0,0,0,0.6)",
                           }}
                         >
-                          {/* Step 1: Confirm / Adjust Settlement Amount (Allows Partial Payment & Bonificación) */}
-                          {participantSettlementStep === "ask_amount" && (
-                            <div>
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                                <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "var(--text-primary)" }}>
-                                  🤝 Cobro / Abono: <strong>{p.name}</strong>
+                          {/* Header */}
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <span style={{ fontSize: "1.1rem" }}>🤝</span>
+                              <div>
+                                <span style={{ fontSize: "0.86rem", fontWeight: 800, color: "var(--text-primary)" }}>
+                                  Registrar Cobro / Abono: <strong>{p.name}</strong>
                                 </span>
-                                <button
-                                  type="button"
-                                  onClick={() => setSettlingParticipant(null)}
-                                  style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.74rem" }}
-                                >
-                                  ✕
-                                </button>
-                              </div>
-
-                              <div style={{ display: "flex", gap: 10, background: isLight ? "rgba(0,0,0,0.03)" : "rgba(255,255,255,0.04)", padding: "6px 10px", borderRadius: 6, marginBottom: 8, fontSize: "0.72rem" }}>
-                                <div><span style={{ color: "var(--text-muted)" }}>Cuota total: </span><strong>{formatMoney(effShare)}</strong></div>
-                                {paidSoFar > 0 && <div><span style={{ color: "var(--text-muted)" }}>Ya abonado: </span><strong style={{ color: "#10b981" }}>{formatMoney(paidSoFar)}</strong></div>}
-                                <div><span style={{ color: "var(--text-muted)" }}>Pendiente: </span><strong style={{ color: isLight ? "#b45309" : "#fbbf24" }}>{formatMoney(pendingToPay)}</strong></div>
-                              </div>
-
-                              <label style={{ fontSize: "0.72rem", color: "var(--text-secondary)", fontWeight: 700, display: "block", marginBottom: 4 }}>
-                                Monto a abonar en este movimiento (permite pago parcial o bonificación):
-                              </label>
-
-                              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                                <div style={{ flex: 1 }}>
-                                  <CurrencyInput
-                                    value={settlingAmount}
-                                    onChange={setSettlingAmount}
-                                    currency={currency}
-                                    style={{
-                                      width: "100%",
-                                      background: "var(--bg-surface)",
-                                      border: "1px solid var(--border)",
-                                      borderRadius: 6,
-                                      padding: "6px 8px",
-                                      fontSize: "0.86rem",
-                                      color: "var(--text-primary)",
-                                      fontWeight: 800,
-                                    }}
-                                  />
+                                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
+                                  Cuota total: <strong>{formatMoney(effShare)}</strong>
+                                  {paidSoFar > 0 && <> • Ya abonado: <strong style={{ color: "#10b981" }}>{formatMoney(paidSoFar)}</strong></>}
+                                  {" "}• Pendiente: <strong style={{ color: isLight ? "#b45309" : "#fbbf24" }}>{formatMoney(pendingToPay)}</strong>
                                 </div>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setSettlingParticipant(null)}
+                              style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.85rem", padding: "4px 8px" }}
+                              title="Cancelar cobro"
+                            >
+                              ✕
+                            </button>
+                          </div>
+
+                          {/* Section 1: Monto a abonar */}
+                          <div style={{ marginBottom: 12 }}>
+                            <label style={{ fontSize: "0.74rem", color: "var(--text-secondary)", fontWeight: 700, display: "block", marginBottom: 4 }}>
+                              Monto a abonar en este movimiento (permite pago parcial o bonificación):
+                            </label>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                              <CurrencyInput
+                                value={settlingAmount}
+                                onChange={setSettlingAmount}
+                                currency={currency}
+                                style={{
+                                  width: "100%",
+                                  background: "var(--bg-surface)",
+                                  border: `1.5px solid ${isLight ? "rgba(0,0,0,0.15)" : "rgba(255,255,255,0.15)"}`,
+                                  borderRadius: 8,
+                                  padding: "8px 12px",
+                                  fontSize: "0.95rem",
+                                  color: "var(--text-primary)",
+                                  fontWeight: 800,
+                                }}
+                              />
+                              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                                 <button
                                   type="button"
                                   onClick={() => setSettlingAmount(pendingToPay)}
                                   style={{
-                                    padding: "6px 8px",
+                                    padding: "4px 10px",
                                     borderRadius: 6,
                                     border: `1px solid var(--border)`,
                                     background: "var(--bg-surface)",
                                     color: "var(--text-secondary)",
-                                    fontSize: "0.68rem",
+                                    fontSize: "0.72rem",
                                     fontWeight: 700,
                                     cursor: "pointer",
-                                    whiteSpace: "nowrap",
                                   }}
-                                  title="Llenar con el total pendiente"
                                 >
-                                  Total ({formatMoney(pendingToPay)})
+                                  Total pendiente ({formatMoney(pendingToPay)})
                                 </button>
                                 {pendingToPay > 1000 && (
                                   <button
                                     type="button"
                                     onClick={() => setSettlingAmount(Math.round(pendingToPay / 2))}
                                     style={{
-                                      padding: "6px 8px",
+                                      padding: "4px 10px",
                                       borderRadius: 6,
                                       border: `1px solid var(--border)`,
                                       background: "var(--bg-surface)",
                                       color: "var(--text-secondary)",
-                                      fontSize: "0.68rem",
+                                      fontSize: "0.72rem",
                                       fontWeight: 700,
                                       cursor: "pointer",
-                                      whiteSpace: "nowrap",
                                     }}
-                                    title="Abonar el 50%"
                                   >
                                     50% ({formatMoney(Math.round(pendingToPay / 2))})
                                   </button>
                                 )}
                               </div>
-
-                              {/* Partial indicator */}
-                              <div style={{ marginTop: 6, fontSize: "0.7rem", fontWeight: 600 }}>
-                                {Number(settlingAmount) < pendingToPay ? (
-                                  <span style={{ color: isLight ? "#b45309" : "#fbbf24" }}>
-                                    ⚠️ Abono parcial: Quedarán pendientes {formatMoney(Math.max(0, pendingToPay - Number(settlingAmount)))} por cobrar.
-                                  </span>
-                                ) : (
-                                  <span style={{ color: "#10b981" }}>
-                                    ✓ Liquidación completa: La cuota de {p.name} quedará 100% saldada.
-                                  </span>
-                                )}
-                              </div>
-
-                              <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-                                <button
-                                  type="button"
-                                  disabled={Number(settlingAmount) <= 0}
-                                  onClick={() => setParticipantSettlementStep("ask_registered")}
-                                  style={{
-                                    flex: 1,
-                                    padding: "8px 12px",
-                                    borderRadius: 8,
-                                    border: "none",
-                                    background: isLight ? "#3b82f6" : "#2563eb",
-                                    color: "#ffffff",
-                                    fontSize: "0.76rem",
-                                    fontWeight: 700,
-                                    cursor: Number(settlingAmount) > 0 ? "pointer" : "not-allowed",
-                                    opacity: Number(settlingAmount) > 0 ? 1 : 0.6,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    gap: 6,
-                                  }}
-                                >
-                                  Continuar al Registro Bancario ➔
-                                </button>
-                              </div>
                             </div>
-                          )}
 
-                          {/* Step 2: Ask if already registered in bank movements */}
-                          {participantSettlementStep === "ask_registered" && (
-                            <div>
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                                <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-primary)" }}>
-                                  ¿El abono de <strong>{p.name}</strong> por <strong>{formatMoney(settlingAmount || pendingToPay)}</strong> ya se encuentra registrado?
+                            {/* Partial indicator */}
+                            <div style={{ marginTop: 6, fontSize: "0.72rem", fontWeight: 600 }}>
+                              {Number(settlingAmount) < pendingToPay ? (
+                                <span style={{ color: isLight ? "#b45309" : "#fbbf24" }}>
+                                  ⚠️ Abono parcial: Quedarán pendientes {formatMoney(Math.max(0, pendingToPay - Number(settlingAmount)))} por cobrar más adelante.
                                 </span>
-                                <button
-                                  type="button"
-                                  onClick={() => setSettlingParticipant(null)}
-                                  style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.74rem" }}
-                                >
-                                  ✕
-                                </button>
-                              </div>
-
-                              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                                <button
-                                  type="button"
-                                  onClick={() => handleConfirmParticipantPayment(true)}
-                                  style={{
-                                    flex: 1,
-                                    padding: "8px 10px",
-                                    borderRadius: 8,
-                                    border: "none",
-                                    background: isLight ? "#059669" : "#10b981",
-                                    color: "#ffffff",
-                                    fontSize: "0.74rem",
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    gap: 5,
-                                  }}
-                                  title="No creará movimientos de ingreso duplicados"
-                                >
-                                  <span>✓</span> Sí, ya está registrado
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => setParticipantSettlementStep("choose_account")}
-                                  style={{
-                                    flex: 1,
-                                    padding: "8px 10px",
-                                    borderRadius: 8,
-                                    border: `1.5px solid ${isLight ? "#3b82f6" : "#60a5fa"}`,
-                                    background: isLight ? "rgba(59, 130, 246, 0.1)" : "rgba(59, 130, 246, 0.2)",
-                                    color: isLight ? "#1d4ed8" : "#93c5fd",
-                                    fontSize: "0.74rem",
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    gap: 5,
-                                  }}
-                                  title="Permite registrar a qué cuenta ingresó el dinero"
-                                >
-                                  <span>📥</span> No, registrar ingreso ahora
-                                </button>
-                              </div>
-
-                              <div style={{ marginTop: 6, textAlign: "center" }}>
-                                <button
-                                  type="button"
-                                  onClick={() => setParticipantSettlementStep("ask_amount")}
-                                  style={{ background: "transparent", border: "none", color: "var(--text-muted)", fontSize: "0.68rem", cursor: "pointer", textDecoration: "underline" }}
-                                >
-                                  ← Modificar monto del abono
-                                </button>
-                              </div>
+                              ) : (
+                                <span style={{ color: "#10b981" }}>
+                                  ✓ Liquidación completa: La cuota de {p.name} quedará 100% saldada.
+                                </span>
+                              )}
                             </div>
-                          )}
+                          </div>
 
-                          {/* Step 3: Choose Destination Account */}
-                          {participantSettlementStep === "choose_account" && (
-                            <div style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 8 }}>
-                              <label style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700 }}>
-                                Selecciona a qué cuenta ingresó el abono de {p.name} ({formatMoney(settlingAmount || pendingToPay)}):
-                              </label>
+                          {/* Section 2: ¿Dónde recibiste el dinero? */}
+                          <div style={{ marginBottom: 12 }}>
+                            <label style={{ fontSize: "0.74rem", color: "var(--text-secondary)", fontWeight: 700, display: "block", marginBottom: 6 }}>
+                              ¿Dónde o cómo recibiste este pago?
+                            </label>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 6 }}>
+                              {/* Option 1: Cash / Efectivo */}
+                              <button
+                                type="button"
+                                onClick={() => setTargetType("cash")}
+                                style={{
+                                  padding: "8px 10px",
+                                  borderRadius: 8,
+                                  border: targetType === "cash" ? "2px solid #f59e0b" : "1px solid var(--border)",
+                                  background: targetType === "cash" ? (isLight ? "rgba(245, 158, 11, 0.15)" : "rgba(245, 158, 11, 0.25)") : "var(--bg-surface)",
+                                  color: targetType === "cash" ? (isLight ? "#b45309" : "#fcd34d") : "var(--text-secondary)",
+                                  fontSize: "0.74rem",
+                                  fontWeight: 700,
+                                  cursor: "pointer",
+                                  textAlign: "left",
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: 2,
+                                }}
+                              >
+                                <span style={{ fontSize: "0.82rem" }}>💵 Efectivo Físico</span>
+                                <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>Billetera / En mano</span>
+                              </button>
 
-                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                                <button
-                                  type="button"
-                                  onClick={() => setTargetType("payroll")}
-                                  style={{
-                                    padding: "6px 8px",
-                                    borderRadius: 6,
-                                    border: targetType === "payroll" ? "1.5px solid #a855f7" : "1px solid var(--border)",
-                                    background: targetType === "payroll" ? (isLight ? "rgba(168, 85, 247, 0.15)" : "rgba(168, 85, 247, 0.25)") : "var(--bg-surface)",
-                                    color: targetType === "payroll" ? (isLight ? "#7e22ce" : "#d8b4fe") : "var(--text-secondary)",
-                                    fontSize: "0.72rem",
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                    textAlign: "left",
-                                  }}
-                                >
-                                  💼 Cuenta Nu Débito (Nómina)
-                                </button>
+                              {/* Option 2: Payroll / Cuenta Nu */}
+                              <button
+                                type="button"
+                                onClick={() => setTargetType("payroll")}
+                                style={{
+                                  padding: "8px 10px",
+                                  borderRadius: 8,
+                                  border: targetType === "payroll" ? "2px solid #a855f7" : "1px solid var(--border)",
+                                  background: targetType === "payroll" ? (isLight ? "rgba(168, 85, 247, 0.15)" : "rgba(168, 85, 247, 0.25)") : "var(--bg-surface)",
+                                  color: targetType === "payroll" ? (isLight ? "#7e22ce" : "#d8b4fe") : "var(--text-secondary)",
+                                  fontSize: "0.74rem",
+                                  fontWeight: 700,
+                                  cursor: "pointer",
+                                  textAlign: "left",
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: 2,
+                                }}
+                              >
+                                <span style={{ fontSize: "0.82rem" }}>💼 Cuenta Nu (Nómina)</span>
+                                <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>Transferencia bancaria</span>
+                              </button>
 
-                                <button
-                                  type="button"
-                                  onClick={() => setTargetType("credit_card")}
-                                  style={{
-                                    padding: "6px 8px",
-                                    borderRadius: 6,
-                                    border: targetType === "credit_card" ? "1.5px solid #10b981" : "1px solid var(--border)",
-                                    background: targetType === "credit_card" ? (isLight ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.25)") : "var(--bg-surface)",
-                                    color: targetType === "credit_card" ? (isLight ? "#047857" : "#6ee7b7") : "var(--text-secondary)",
-                                    fontSize: "0.72rem",
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                    textAlign: "left",
-                                  }}
-                                >
-                                  💳 Tarjeta de Crédito (Reduce deuda)
-                                </button>
+                              {/* Option 3: Credit Card */}
+                              <button
+                                type="button"
+                                onClick={() => setTargetType("credit_card")}
+                                style={{
+                                  padding: "8px 10px",
+                                  borderRadius: 8,
+                                  border: targetType === "credit_card" ? "2px solid #10b981" : "1px solid var(--border)",
+                                  background: targetType === "credit_card" ? (isLight ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.25)") : "var(--bg-surface)",
+                                  color: targetType === "credit_card" ? (isLight ? "#047857" : "#6ee7b7") : "var(--text-secondary)",
+                                  fontSize: "0.74rem",
+                                  fontWeight: 700,
+                                  cursor: "pointer",
+                                  textAlign: "left",
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: 2,
+                                }}
+                              >
+                                <span style={{ fontSize: "0.82rem" }}>💳 Tarjeta de Crédito</span>
+                                <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>Restaura cupo</span>
+                              </button>
 
-                                <button
-                                  type="button"
-                                  onClick={() => setTargetType("fixed_pocket")}
-                                  style={{
-                                    padding: "6px 8px",
-                                    borderRadius: 6,
-                                    border: targetType === "fixed_pocket" ? "1.5px solid #00e5ff" : "1px solid var(--border)",
-                                    background: targetType === "fixed_pocket" ? (isLight ? "rgba(0, 229, 255, 0.15)" : "rgba(0, 229, 255, 0.25)") : "var(--bg-surface)",
-                                    color: targetType === "fixed_pocket" ? (isLight ? "#0284c7" : "#00e5ff") : "var(--text-secondary)",
-                                    fontSize: "0.72rem",
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                    textAlign: "left",
-                                  }}
-                                >
-                                  🏦 Cajitas Nu / Ahorro
-                                </button>
+                              {/* Option 4: Cajitas / Ahorro */}
+                              <button
+                                type="button"
+                                onClick={() => setTargetType("fixed_pocket")}
+                                style={{
+                                  padding: "8px 10px",
+                                  borderRadius: 8,
+                                  border: targetType === "fixed_pocket" ? "2px solid #00e5ff" : "1px solid var(--border)",
+                                  background: targetType === "fixed_pocket" ? (isLight ? "rgba(0, 229, 255, 0.15)" : "rgba(0, 229, 255, 0.25)") : "var(--bg-surface)",
+                                  color: targetType === "fixed_pocket" ? (isLight ? "#0284c7" : "#00e5ff") : "var(--text-secondary)",
+                                  fontSize: "0.74rem",
+                                  fontWeight: 700,
+                                  cursor: "pointer",
+                                  textAlign: "left",
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: 2,
+                                }}
+                              >
+                                <span style={{ fontSize: "0.82rem" }}>🏦 Cajitas / Ahorro</span>
+                                <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>Rendimiento Nu</span>
+                              </button>
 
-                                <button
-                                  type="button"
-                                  onClick={() => setTargetType("cash")}
-                                  style={{
-                                    padding: "6px 8px",
-                                    borderRadius: 6,
-                                    border: targetType === "cash" ? "1.5px solid #f59e0b" : "1px solid var(--border)",
-                                    background: targetType === "cash" ? (isLight ? "rgba(245, 158, 11, 0.15)" : "rgba(245, 158, 11, 0.25)") : "var(--bg-surface)",
-                                    color: targetType === "cash" ? (isLight ? "#b45309" : "#fcd34d") : "var(--text-secondary)",
-                                    fontSize: "0.72rem",
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                    textAlign: "left",
-                                  }}
-                                >
-                                  💵 Efectivo Físico
-                                </button>
-                              </div>
-
-                              <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-                                <button
-                                  type="button"
-                                  onClick={() => handleConfirmParticipantPayment(false)}
-                                  style={{
-                                    flex: 1,
-                                    padding: "7px 10px",
-                                    borderRadius: 8,
-                                    border: "none",
-                                    background: "#10b981",
-                                    color: "#ffffff",
-                                    fontSize: "0.74rem",
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                  }}
-                                >
-                                  Confirmar Ingreso de {formatMoney(settlingAmount || pendingToPay)} a {targetType === "credit_card" ? "Tarjeta" : targetType === "fixed_pocket" ? "Ahorro" : targetType === "cash" ? "Efectivo" : "Nómina"}
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => setParticipantSettlementStep("ask_registered")}
-                                  style={{
-                                    padding: "7px 10px",
-                                    borderRadius: 8,
-                                    border: "1px solid var(--border)",
-                                    background: "var(--bg-surface)",
-                                    color: "var(--text-muted)",
-                                    fontSize: "0.74rem",
-                                    cursor: "pointer",
-                                  }}
-                                >
-                                  Atrás
-                                </button>
-                              </div>
+                              {/* Option 5: Already Registered */}
+                              <button
+                                type="button"
+                                onClick={() => setTargetType("already_registered")}
+                                style={{
+                                  padding: "8px 10px",
+                                  borderRadius: 8,
+                                  border: targetType === "already_registered" ? "2px solid #64748b" : "1px solid var(--border)",
+                                  background: targetType === "already_registered" ? (isLight ? "rgba(100, 116, 139, 0.15)" : "rgba(100, 116, 139, 0.25)") : "var(--bg-surface)",
+                                  color: targetType === "already_registered" ? (isLight ? "#334155" : "#cbd5e1") : "var(--text-secondary)",
+                                  fontSize: "0.74rem",
+                                  fontWeight: 700,
+                                  cursor: "pointer",
+                                  textAlign: "left",
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: 2,
+                                }}
+                              >
+                                <span style={{ fontSize: "0.82rem" }}>✓ Ya Registrado</span>
+                                <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>En extracto (sin duplicar)</span>
+                              </button>
                             </div>
-                          )}
+                          </div>
+
+                          {/* Section 3: Fecha & Botón de Confirmación */}
+                          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 10 }}>
+                            <div style={{ width: 135 }}>
+                              <input
+                                type="date"
+                                value={settlementDate}
+                                onChange={(e) => setSettlementDate(e.target.value)}
+                                style={{
+                                  width: "100%",
+                                  background: "var(--bg-surface)",
+                                  border: "1px solid var(--border)",
+                                  borderRadius: 8,
+                                  padding: "8px 10px",
+                                  fontSize: "0.78rem",
+                                  color: "var(--text-primary)",
+                                }}
+                              />
+                            </div>
+
+                            <button
+                              type="button"
+                              disabled={Number(settlingAmount) <= 0}
+                              onClick={() => handleConfirmParticipantPayment(targetType === "already_registered")}
+                              style={{
+                                flex: 1,
+                                minWidth: 200,
+                                padding: "10px 16px",
+                                borderRadius: 8,
+                                border: "none",
+                                background: isLight ? "#059669" : "#10b981",
+                                color: "#ffffff",
+                                fontSize: "0.82rem",
+                                fontWeight: 800,
+                                cursor: Number(settlingAmount) > 0 ? "pointer" : "not-allowed",
+                                opacity: Number(settlingAmount) > 0 ? 1 : 0.6,
+                                boxShadow: "0 2px 8px rgba(16, 185, 129, 0.3)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: 6,
+                              }}
+                            >
+                              <span>✓</span> Confirmar Abono de {formatMoney(settlingAmount)} {
+                                targetType === "cash"
+                                  ? "en Efectivo Físico 💵"
+                                  : targetType === "payroll"
+                                  ? "a Cuenta Nu Débito 💼"
+                                  : targetType === "credit_card"
+                                  ? "a Tarjeta de Crédito 💳"
+                                  : targetType === "fixed_pocket"
+                                  ? "a Cajita / Ahorro 🏦"
+                                  : "(Ya Registrado en Extracto) ✓"
+                              }
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>

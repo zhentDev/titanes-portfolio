@@ -92,7 +92,7 @@ export default function CreditPurchaseModal({
   };
 
   return (
-    <GlassModalWrapper isOpen={isOpen} onClose={onClose} maxWidth={560}>
+    <GlassModalWrapper isOpen={isOpen} onClose={onClose} maxWidth={640}>
       <div style={{ padding: "20px 24px" }}>
         {/* Header */}
         <div className="cashflow-modal-header" style={{ paddingBottom: 12 }}>
