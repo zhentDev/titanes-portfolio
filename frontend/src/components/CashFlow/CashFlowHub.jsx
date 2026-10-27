@@ -83,6 +83,8 @@ export default function CashFlowHub() {
     deleteWealth,
     recordSalaryAdjustment,
     settleLoanTransaction,
+    updateExpenseLoanSplit,
+    revertParticipantPayment,
     toggleExpenseLoan,
     convertExpenseToCardPayment,
     reclassifyMovement,
@@ -2958,6 +2960,8 @@ export default function CashFlowHub() {
               onDeleteTransaction={deleteExpenseTransaction}
               onDeletePayment={deleteCreditCardPayment}
               onConfirmSettlement={settleLoanTransaction}
+              onUpdateSplit={updateExpenseLoanSplit}
+              onRevertParticipant={revertParticipantPayment}
               onToggleExpenseLoan={toggleExpenseLoan}
               onConvertExpenseToCardPayment={convertExpenseToCardPayment}
               onReclassifyMovement={handleReclassifyMovement}
@@ -3355,6 +3359,8 @@ export default function CashFlowHub() {
           creditCards={creditCards}
           fixedIncomeAccounts={fixedAccounts}
           onConfirmSettlement={settleLoanTransaction}
+          onUpdateSplit={updateExpenseLoanSplit}
+          onRevertParticipant={revertParticipantPayment}
         />
       )}
 

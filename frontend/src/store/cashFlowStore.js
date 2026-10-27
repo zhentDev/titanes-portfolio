@@ -26,6 +26,7 @@ import {
   syncCashFlowStateApi,
 } from "../api/client";
 import { getCurrentPeriod } from "../utils/periodUtils";
+import { useFixedIncomeStore } from "./fixedIncomeStore";
 
 let syncDebounceTimer = null;
 
@@ -1335,7 +1336,7 @@ export const useCashFlowStore = create(
         );
       },
 
-      // ── Loan Settlement & Reimbursement (Full or Partial) ──────────────
+      // ── Loan Settlement & Reimbursement (Full, Partial or Split Participant) ──────────────
       settleLoanTransaction: (txId, settlementData) => {
         set((state) => {
           let updatedCards = state.creditCards;
@@ -1354,6 +1355,9 @@ export const useCashFlowStore = create(
 
               const newSettlementRecord = {
                 id: `stl_${Date.now()}`,
+                participantId: settlementData.participantId || null,
+                participantName: settlementData.participantName || null,
+                alreadyRegistered: Boolean(settlementData.alreadyRegistered),
                 amount: newSettledAmount,
                 date: settlementData.date,
                 targetType: settlementData.targetType,
@@ -1363,11 +1367,34 @@ export const useCashFlowStore = create(
                 settledAt: new Date().toISOString(),
               };
 
+              // If this is a split loan and a specific participant was settled:
+              let updatedParticipants = tx.participants;
+              if (Array.isArray(tx.participants) && settlementData.participantId) {
+                updatedParticipants = tx.participants.map((p) => {
+                  if (p.id === settlementData.participantId) {
+                    return {
+                      ...p,
+                      paid: true,
+                      paidAt: settlementData.date || new Date().toISOString(),
+                      targetName: settlementData.alreadyRegistered ? "Registrado previamente" : (settlementData.targetName || "Cuenta"),
+                      alreadyRegistered: Boolean(settlementData.alreadyRegistered),
+                    };
+                  }
+                  return p;
+                });
+              }
+
+              // Check if all external participants have paid
+              const allExternalPaid = Array.isArray(updatedParticipants) && updatedParticipants.length > 0
+                ? updatedParticipants.filter((p) => !p.isUser).every((p) => p.paid)
+                : remaining === 0;
+
               return {
                 ...tx,
-                loanStatus: remaining === 0 ? "settled" : "partially_settled",
+                participants: updatedParticipants,
+                loanStatus: allExternalPaid || remaining === 0 ? "settled" : "partially_settled",
                 totalSettled: totalSettledSoFar,
-                remainingLoan: remaining,
+                remainingLoan: allExternalPaid ? 0 : remaining,
                 settlements: [newSettlementRecord, ...currentSettlements],
                 settlementDetails: newSettlementRecord,
               };
@@ -1375,63 +1402,65 @@ export const useCashFlowStore = create(
             return tx;
           });
 
-          // 2. Route the returned money to target destination
-          if (settlementData.targetType === "credit_card" && settlementData.targetId) {
-            // Apply payment to credit card -> reduces debt and frees credit limit
-            updatedCards = state.creditCards.map((c) => {
-              if (c.id === settlementData.targetId) {
-                const curUsed = Number(c.usedLimit) || 0;
-                return { ...c, usedLimit: Math.max(0, curUsed - Number(settlementData.amount)) };
-              }
-              return c;
-            });
+          // 2. Route the returned money to target destination ONLY IF not already registered!
+          if (!settlementData.alreadyRegistered) {
+            if (settlementData.targetType === "credit_card" && settlementData.targetId) {
+              // Apply payment to credit card -> reduces debt and frees credit limit
+              updatedCards = state.creditCards.map((c) => {
+                if (c.id === settlementData.targetId) {
+                  const curUsed = Number(c.usedLimit) || 0;
+                  return { ...c, usedLimit: Math.max(0, curUsed - Number(settlementData.amount)) };
+                }
+                return c;
+              });
 
-            const newPayment = {
-              id: `pay_loan_${Date.now()}`,
-              cardId: settlementData.targetId,
-              cardName: settlementData.targetName,
-              amount: Number(settlementData.amount),
-              currency: settlementData.currency || state.currency,
-              date: settlementData.date,
-              period: state.activePeriod,
-              sourceType: "loan_reimbursement",
-              sourceAccount: `Cobro Préstamo: ${settlementData.recipient || "Amigo/Familiar"}`,
-              description: `Reintegro ${settlementData.note ? `(${settlementData.note})` : `préstamo ${settlementData.description || ""}`}`,
-              createdAt: new Date().toISOString(),
-            };
-            updatedPayments = [newPayment, ...updatedPayments];
-          } else if (settlementData.targetType === "payroll") {
-            // Inflow return to payroll account
-            const reimbursementInflow = {
-              id: `in_reimb_${Date.now()}`,
-              name: `Reintegro Préstamo: ${settlementData.recipient || "Tercero"}`,
-              category: "reimbursement",
-              amount: Number(settlementData.amount),
-              currency: settlementData.currency || state.currency,
-              isPassive: false,
-              frequency: "one_time",
-              period: state.activePeriod,
-              paymentSource: { type: "payroll", targetName: state.payrollAccount?.name || "Nu Colombia" },
-              icon: "🤝",
-              createdAt: new Date().toISOString(),
-            };
-            updatedInflows = [reimbursementInflow, ...updatedInflows];
-          } else if (settlementData.targetType === "cash") {
-            // Cash inflow to wallet
-            const cashInflow = {
-              id: `in_cash_${Date.now()}`,
-              name: `Cobro Préstamo (Efectivo Físico): ${settlementData.recipient || "Tercero"}`,
-              category: "reimbursement",
-              amount: Number(settlementData.amount),
-              currency: settlementData.currency || state.currency,
-              isPassive: false,
-              frequency: "one_time",
-              period: state.activePeriod,
-              paymentSource: { type: "cash", targetName: "Efectivo / Billetera" },
-              icon: "💵",
-              createdAt: new Date().toISOString(),
-            };
-            updatedInflows = [cashInflow, ...updatedInflows];
+              const newPayment = {
+                id: `pay_loan_${Date.now()}`,
+                cardId: settlementData.targetId,
+                cardName: settlementData.targetName,
+                amount: Number(settlementData.amount),
+                currency: settlementData.currency || state.currency,
+                date: settlementData.date,
+                period: state.activePeriod,
+                sourceType: "loan_reimbursement",
+                sourceAccount: `Cobro Préstamo: ${settlementData.recipient || "Amigo/Familiar"}`,
+                description: `Reintegro ${settlementData.note ? `(${settlementData.note})` : `préstamo ${settlementData.description || ""}`}`,
+                createdAt: new Date().toISOString(),
+              };
+              updatedPayments = [newPayment, ...updatedPayments];
+            } else if (settlementData.targetType === "payroll") {
+              // Inflow return to payroll account
+              const reimbursementInflow = {
+                id: `in_reimb_${Date.now()}`,
+                name: `Reintegro Préstamo: ${settlementData.recipient || "Tercero"}`,
+                category: "reimbursement",
+                amount: Number(settlementData.amount),
+                currency: settlementData.currency || state.currency,
+                isPassive: false,
+                frequency: "one_time",
+                period: state.activePeriod,
+                paymentSource: { type: "payroll", targetName: state.payrollAccount?.name || "Nu Colombia" },
+                icon: "🤝",
+                createdAt: new Date().toISOString(),
+              };
+              updatedInflows = [reimbursementInflow, ...updatedInflows];
+            } else if (settlementData.targetType === "cash") {
+              // Cash inflow to wallet
+              const cashInflow = {
+                id: `in_cash_${Date.now()}`,
+                name: `Cobro Préstamo (Efectivo Físico): ${settlementData.recipient || "Tercero"}`,
+                category: "reimbursement",
+                amount: Number(settlementData.amount),
+                currency: settlementData.currency || state.currency,
+                isPassive: false,
+                frequency: "one_time",
+                period: state.activePeriod,
+                paymentSource: { type: "cash", targetName: "Efectivo / Billetera" },
+                icon: "💵",
+                createdAt: new Date().toISOString(),
+              };
+              updatedInflows = [cashInflow, ...updatedInflows];
+            }
           }
 
           return {
@@ -1442,8 +1471,74 @@ export const useCashFlowStore = create(
           };
         });
 
+        if (!settlementData.alreadyRegistered && settlementData.targetType === "fixed_pocket" && settlementData.targetId) {
+          try {
+            useFixedIncomeStore.getState().creditAccountFromCashFlow({
+              accountId: settlementData.targetId,
+              amount: Number(settlementData.amount),
+              date: settlementData.date,
+              description: `Cobro Préstamo: ${settlementData.recipient || "Tercero"}`,
+            });
+          } catch (e) {
+            console.warn("Could not credit fixed income pocket:", e);
+          }
+        }
+
         get().syncStateWithBackend();
-        toast.success(`¡Cobro registrado! $${Math.round(settlementData.amount).toLocaleString("es-CO")} retornados a ${settlementData.targetName}`, { icon: "🎉" });
+        const msg = settlementData.alreadyRegistered
+          ? `¡Pago de ${settlementData.recipient || "participante"} liquidado! (Sin duplicar ingresos)`
+          : `¡Cobro registrado! $${Math.round(settlementData.amount).toLocaleString("es-CO")} retornados a ${settlementData.targetName}`;
+        toast.success(msg, { icon: "🎉" });
+      },
+
+      updateExpenseLoanSplit: (txId, splitConfig) => {
+        set((state) => {
+          const updatedExpensesLog = (state.expensesLog || []).map((tx) => {
+            if (tx.id === txId) {
+              return {
+                ...tx,
+                ...splitConfig,
+              };
+            }
+            return tx;
+          });
+          return { expensesLog: updatedExpensesLog };
+        });
+        get().syncStateWithBackend();
+        toast.success("Configuración de división guardada", { icon: "👥" });
+      },
+
+      revertParticipantPayment: (txId, participantId) => {
+        set((state) => {
+          const updatedExpensesLog = (state.expensesLog || []).map((tx) => {
+            if (tx.id === txId && Array.isArray(tx.participants)) {
+              const updatedParticipants = tx.participants.map((p) => {
+                if (p.id === participantId) {
+                  return { ...p, paid: false, paidAt: null, targetName: null, alreadyRegistered: null };
+                }
+                return p;
+              });
+              const anyPaid = updatedParticipants.some((p) => !p.isUser && p.paid);
+              const allExternalPaid = updatedParticipants.filter((p) => !p.isUser).every((p) => p.paid);
+              const baseLoanAmount = Number(tx.loanAmount) > 0 ? Number(tx.loanAmount) : Number(tx.amount) || 0;
+              const currentSettlements = Array.isArray(tx.settlements) ? tx.settlements.filter((s) => s.participantId !== participantId) : [];
+              const prevSettledTotal = currentSettlements.reduce((acc, s) => acc + (Number(s.amount) || 0), 0);
+              const remaining = Math.max(0, baseLoanAmount - prevSettledTotal);
+
+              return {
+                ...tx,
+                participants: updatedParticipants,
+                settlements: currentSettlements,
+                remainingLoan: allExternalPaid ? 0 : remaining,
+                loanStatus: allExternalPaid ? "settled" : anyPaid ? "partially_settled" : "pending",
+              };
+            }
+            return tx;
+          });
+          return { expensesLog: updatedExpensesLog };
+        });
+        get().syncStateWithBackend();
+        toast("Pago de participante desmarcado", { icon: "↩️" });
       },
 
       toggleExpenseLoan: (txId, isLoan, loanRecipient, loanAmount) => {

@@ -515,6 +515,26 @@ export default function DebtsSection({
                         👤 {isReceivable ? "Deudor:" : "Acreedor:"}{" "}
                         <strong>{debt.debtor || debt.creditor}</strong>
                       </span>
+                      {debt.isGroupSplit && (
+                        <span
+                          style={{
+                            background: isLight ? "rgba(59, 130, 246, 0.12)" : "rgba(59, 130, 246, 0.2)",
+                            color: isLight ? "#1d4ed8" : "#93c5fd",
+                            padding: "2px 7px",
+                            borderRadius: 6,
+                            fontWeight: 700,
+                            fontSize: "0.7rem",
+                            border: "1px solid rgba(59, 130, 246, 0.3)",
+                          }}
+                        >
+                          👥 Gasto Compartido ({(debt.participants || []).filter(p => p.paid).length}/{(debt.participants || []).length} cobrados)
+                        </span>
+                      )}
+                      {debt.isGroupSplit && debt.userIncluded && (
+                        <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                          • Tu parte: {formatCashFlowMoney(debt.userShare || 0, currency, fxRate)}
+                        </span>
+                      )}
                       <span>•</span>
                       <span
                         style={{
@@ -725,6 +745,39 @@ export default function DebtsSection({
                     {debt.notes && (
                       <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: 10, fontStyle: "italic" }}>
                         💬 Notas / Acuerdos: {debt.notes}
+                      </div>
+                    )}
+
+                    {debt.isGroupSplit && Array.isArray(debt.participants) && debt.participants.length > 0 && (
+                      <div style={{ marginBottom: 12, background: "var(--bg-surface)", padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)" }}>
+                        <div style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: 6 }}>
+                          👥 Participantes y Estado de Cuotas:
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 6 }}>
+                          {debt.participants.map((p, idx) => (
+                            <div
+                              key={p.id || idx}
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                padding: "6px 10px",
+                                borderRadius: 6,
+                                background: p.paid ? (isLight ? "rgba(16, 185, 129, 0.08)" : "rgba(16, 185, 129, 0.15)") : "var(--bg-card)",
+                                border: `1px solid ${p.paid ? "#10b981" : "var(--border)"}`,
+                                fontSize: "0.72rem",
+                              }}
+                            >
+                              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                <span>{p.paid ? "✅" : "⏳"}</span>
+                                <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{p.name}</span>
+                              </div>
+                              <span style={{ fontWeight: 700, color: p.paid ? "#10b981" : (isLight ? "#b45309" : "#fcd34d") }}>
+                                {formatCashFlowMoney(p.share || 0, currency, fxRate)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
 

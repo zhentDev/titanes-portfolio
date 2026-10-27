@@ -25,6 +25,8 @@ export default function ExpensesLogSection({
   onDeleteTransaction,
   onDeletePayment,
   onConfirmSettlement,
+  onUpdateSplit,
+  onRevertParticipant,
   onToggleExpenseLoan,
   onConvertExpenseToCardPayment,
   onReclassifyMovement,
@@ -1085,8 +1087,39 @@ export default function ExpensesLogSection({
                     )}
 
                     {/* Loan Badges */}
-                    {isLoan && !isSettled && (
+                    {isLoan && !isSettled && (item.isSplit || (item.participants || []).length > 0) && (
                       <span
+                        onClick={() => setSettlingTransaction(item)}
+                        style={{
+                          background: isLight ? "rgba(59, 130, 246, 0.12)" : "rgba(59, 130, 246, 0.2)",
+                          border: isLight ? "1px solid rgba(37, 99, 235, 0.4)" : "1px solid #3b82f6",
+                          padding: "2px 8px",
+                          borderRadius: "6px",
+                          fontSize: "0.72rem",
+                          color: isLight ? "#1d4ed8" : "#93c5fd",
+                          fontWeight: 700,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 5,
+                          cursor: "pointer",
+                        }}
+                        title="Clic para ver o gestionar participantes y cobros"
+                      >
+                        <span>👥</span> Gasto Compartido ({item.participants?.filter((p) => !p.isUser && p.paid).length || 0}/{(item.participants || []).filter((p) => !p.isUser).length} cobrados)
+                        {item.userIncluded && (
+                          <span style={{ opacity: 0.85, fontWeight: 500 }}>
+                            • Tu parte: {formatMoney(item.userShare || 0)}
+                          </span>
+                        )}
+                        <span>
+                          • Por cobrar: <strong style={{ color: isLight ? "#1e40af" : "#bfdbfe" }}>{formatMoney(item.remainingLoan !== undefined ? item.remainingLoan : (item.loanAmount || item.amount))}</strong>
+                        </span>
+                      </span>
+                    )}
+
+                    {isLoan && !isSettled && !item.isSplit && (!item.participants || item.participants.length === 0) && (
+                      <span
+                        onClick={() => setSettlingTransaction(item)}
                         style={{
                           background: isLight ? "rgba(245, 158, 11, 0.12)" : "rgba(245, 158, 11, 0.2)",
                           border: isLight ? "1px solid rgba(217, 119, 6, 0.4)" : "1px solid #f59e0b",
@@ -1098,7 +1131,9 @@ export default function ExpensesLogSection({
                           display: "inline-flex",
                           alignItems: "center",
                           gap: 4,
+                          cursor: "pointer",
                         }}
+                        title="Clic para registrar cobro o dividir en partes iguales"
                       >
                         <span>🤝</span> Préstamo a: <strong style={{ color: isLight ? "#78350f" : "#fef08a" }}>{item.loanRecipient || "Amigo"}</strong> ({formatMoney(item.loanAmount || item.amount)})
                       </span>
@@ -1106,20 +1141,23 @@ export default function ExpensesLogSection({
 
                     {isLoan && isSettled && (
                       <span
+                        onClick={() => setSettlingTransaction(item)}
                         style={{
-                          background: "rgba(16, 185, 129, 0.2)",
-                          border: "1px solid #10b981",
+                          background: isLight ? "rgba(16, 185, 129, 0.12)" : "rgba(16, 185, 129, 0.2)",
+                          border: `1px solid ${isLight ? "#059669" : "#10b981"}`,
                           padding: "2px 8px",
                           borderRadius: "6px",
                           fontSize: "0.72rem",
-                          color: "#6ee7b7",
+                          color: isLight ? "#047857" : "#6ee7b7",
                           fontWeight: 700,
                           display: "inline-flex",
                           alignItems: "center",
                           gap: 4,
+                          cursor: "pointer",
                         }}
+                        title="Ver detalle de liquidación"
                       >
-                        ✔️ Cobrado • Retornado a: {item.settlementDetails?.targetName || "Cuenta"}
+                        ✔️ {item.isSplit ? "Gasto Compartido 100% Cobrado" : `Cobrado • Retornado a: ${item.settlementDetails?.targetName || "Cuenta"}`}
                       </span>
                     )}
                   </div>
@@ -1217,7 +1255,7 @@ export default function ExpensesLogSection({
                       }}
                       title="Registrar devolución o cobro de este préstamo"
                     >
-                      <span>📥</span> Registrar Cobro
+                      <span>📥</span> {item.isSplit || (item.participants || []).length > 0 ? "Gestionar Cobros" : "Registrar Cobro"}
                     </button>
                   )}
 
@@ -1290,6 +1328,8 @@ export default function ExpensesLogSection({
           creditCards={creditCards}
           fixedIncomeAccounts={fixedIncomeAccounts}
           onConfirmSettlement={onConfirmSettlement}
+          onUpdateSplit={onUpdateSplit}
+          onRevertParticipant={onRevertParticipant}
         />
       )}
 

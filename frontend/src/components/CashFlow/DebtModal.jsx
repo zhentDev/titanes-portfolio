@@ -29,6 +29,10 @@ export default function DebtModal({
   const [nextPaymentDate, setNextPaymentDate] = useState("");
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState("active");
+  const [isGroupSplit, setIsGroupSplit] = useState(false);
+  const [userIncluded, setUserIncluded] = useState(true);
+  const [participants, setParticipants] = useState([]);
+  const [newParticipantInput, setNewParticipantInput] = useState("");
 
   useEffect(() => {
     if (debtToEdit) {
@@ -44,6 +48,9 @@ export default function DebtModal({
       setNextPaymentDate(debtToEdit.dueDate || debtToEdit.nextPaymentDate || "");
       setNotes(debtToEdit.notes || "");
       setStatus(debtToEdit.status || "active");
+      setIsGroupSplit(Boolean(debtToEdit.isGroupSplit));
+      setUserIncluded(debtToEdit.userIncluded !== undefined ? Boolean(debtToEdit.userIncluded) : true);
+      setParticipants(Array.isArray(debtToEdit.participants) ? debtToEdit.participants : []);
     } else {
       const initType = defaultDebtType || "payable";
       setDebtType(initType);
@@ -59,6 +66,9 @@ export default function DebtModal({
       setNextPaymentDate(new Date().toISOString().slice(0, 10));
       setNotes("");
       setStatus("active");
+      setIsGroupSplit(false);
+      setUserIncluded(true);
+      setParticipants([]);
     }
   }, [debtToEdit, isOpen, defaultDebtType]);
 
@@ -75,14 +85,24 @@ export default function DebtModal({
     const tot = Math.abs(Number(totalAmount) || 0);
     const rem = remainingAmount !== "" ? Math.abs(Number(remainingAmount)) : tot;
 
+    const externalCount = participants.length;
+    const totalSharesCount = externalCount + (userIncluded ? 1 : 0);
+    const sharePerPerson = isGroupSplit && totalSharesCount > 0 ? Math.round(tot / totalSharesCount) : tot;
+    const userShare = isGroupSplit && userIncluded ? Math.max(0, tot - (sharePerPerson * externalCount)) : 0;
+    const receivableFromOthers = isGroupSplit ? Math.max(0, tot - userShare) : rem;
+
     onSaveDebt({
       ...(debtToEdit || {}),
       debtType,
       concept: concept.trim(),
-      creditor: creditor.trim() || (isReceivable ? "Deudor" : "Acreedor / Particular"),
-      debtor: creditor.trim() || (isReceivable ? "Deudor" : "Acreedor / Particular"),
+      creditor: creditor.trim() || (isGroupSplit && participants.length > 0 ? participants.map(p => p.name).join(", ") : (isReceivable ? "Deudor" : "Acreedor / Particular")),
+      debtor: creditor.trim() || (isGroupSplit && participants.length > 0 ? participants.map(p => p.name).join(", ") : (isReceivable ? "Deudor" : "Acreedor / Particular")),
       totalAmount: tot,
-      remainingAmount: rem,
+      remainingAmount: isGroupSplit ? receivableFromOthers : rem,
+      isGroupSplit,
+      userIncluded,
+      userShare,
+      participants: isGroupSplit ? participants.map(p => ({ ...p, share: sharePerPerson })) : [],
       paymentMethod,
       paymentSourceId: paymentSourceId || null,
       paymentFrequency,
@@ -354,6 +374,180 @@ export default function DebtModal({
               />
             </div>
           </div>
+
+          {/* 3.5. Group Split Option (Vaca / Compartido) */}
+          {isReceivable && (
+            <div
+              style={{
+                background: isLight ? "rgba(59, 130, 246, 0.05)" : "rgba(59, 130, 246, 0.1)",
+                border: `1px solid ${isLight ? "rgba(59, 130, 246, 0.25)" : "rgba(59, 130, 246, 0.3)"}`,
+                borderRadius: 10,
+                padding: "12px",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <span style={{ fontWeight: 700, fontSize: "0.82rem", color: isLight ? "#1d4ed8" : "#93c5fd" }}>
+                    👥 Dividir en partes iguales (Gasto compartido / Vaca)
+                  </span>
+                  <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
+                    Divide el monto total entre varias personas automáticamente
+                  </div>
+                </div>
+                <label style={{ position: "relative", display: "inline-block", width: 40, height: 22, cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={isGroupSplit}
+                    onChange={(e) => setIsGroupSplit(e.target.checked)}
+                    style={{ opacity: 0, width: 0, height: 0 }}
+                  />
+                  <span
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      background: isGroupSplit ? "#3b82f6" : (isLight ? "#cbd5e1" : "#475569"),
+                      borderRadius: 22,
+                      transition: "0.2s",
+                    }}
+                  >
+                    <span
+                      style={{
+                        position: "absolute",
+                        height: 16,
+                        width: 16,
+                        left: isGroupSplit ? 20 : 3,
+                        bottom: 3,
+                        background: "#fff",
+                        borderRadius: "50%",
+                        transition: "0.2s",
+                      }}
+                    />
+                  </span>
+                </label>
+              </div>
+
+              {isGroupSplit && (
+                <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+                  {/* Switch Yo Participé */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "8px 10px",
+                      borderRadius: 8,
+                      background: userIncluded ? (isLight ? "rgba(59, 130, 246, 0.1)" : "rgba(59, 130, 246, 0.2)") : "transparent",
+                      border: `1px solid ${userIncluded ? "#3b82f6" : "var(--border)"}`,
+                    }}
+                  >
+                    <div>
+                      <span style={{ fontSize: "0.78rem", fontWeight: 700, color: userIncluded ? (isLight ? "#1d4ed8" : "#93c5fd") : "var(--text-primary)" }}>
+                        🙋‍♂️ Yo participé en este gasto
+                      </span>
+                      <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                        Mi cuota se deduce de la deuda por cobrar y queda como gasto personal
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={userIncluded}
+                      onChange={(e) => setUserIncluded(e.target.checked)}
+                      style={{ cursor: "pointer", width: 18, height: 18 }}
+                    />
+                  </div>
+
+                  {/* Add participant */}
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input
+                      type="text"
+                      placeholder="Nombre del participante (ej. Andrés, Camilo...)"
+                      value={newParticipantInput}
+                      onChange={(e) => setNewParticipantInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (newParticipantInput.trim()) {
+                            setParticipants([...participants, { id: `part_${Date.now()}`, name: newParticipantInput.trim(), paid: false }]);
+                            setNewParticipantInput("");
+                          }
+                        }
+                      }}
+                      style={{
+                        flex: 1,
+                        background: "var(--bg-surface)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 6,
+                        padding: "6px 10px",
+                        fontSize: "0.78rem",
+                        color: "var(--text-primary)",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (newParticipantInput.trim()) {
+                          setParticipants([...participants, { id: `part_${Date.now()}`, name: newParticipantInput.trim(), paid: false }]);
+                          setNewParticipantInput("");
+                        }
+                      }}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 6,
+                        border: "none",
+                        background: "#3b82f6",
+                        color: "#fff",
+                        fontWeight: 700,
+                        fontSize: "0.74rem",
+                        cursor: "pointer",
+                      }}
+                    >
+                      + Agregar
+                    </button>
+                  </div>
+
+                  {/* Participants Chips */}
+                  {participants.length > 0 && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {participants.map((p, idx) => (
+                        <span
+                          key={p.id || idx}
+                          style={{
+                            background: "var(--bg-surface)",
+                            border: "1px solid var(--border)",
+                            borderRadius: 6,
+                            padding: "3px 8px",
+                            fontSize: "0.72rem",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 5,
+                            color: "var(--text-primary)",
+                          }}
+                        >
+                          {p.name}
+                          <button
+                            type="button"
+                            onClick={() => setParticipants(participants.filter((x, i) => i !== idx))}
+                            style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.7rem", padding: 0 }}
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Calculations Preview */}
+                  {Number(totalAmount) > 0 && participants.length > 0 && (
+                    <div style={{ background: "var(--bg-surface)", borderRadius: 6, padding: "8px 10px", fontSize: "0.72rem", border: "1px solid var(--border)", display: "flex", justifyContent: "space-between" }}>
+                      <span>Cuota por persona: <strong>${Math.round(Number(totalAmount) / (participants.length + (userIncluded ? 1 : 0))).toLocaleString("es-CO")}</strong></span>
+                      {userIncluded && <span style={{ color: isLight ? "#1d4ed8" : "#93c5fd" }}>Tu parte: <strong>-${Math.round(Number(totalAmount) / (participants.length + 1)).toLocaleString("es-CO")}</strong></span>}
+                      <span style={{ color: "#10b981", fontWeight: 700 }}>Por cobrar: ${Math.round((Number(totalAmount) / (participants.length + (userIncluded ? 1 : 0))) * participants.length).toLocaleString("es-CO")}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* 4. ¿Cómo se paga o dónde entra? */}
           <div
