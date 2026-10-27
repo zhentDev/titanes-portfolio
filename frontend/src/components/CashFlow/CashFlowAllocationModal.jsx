@@ -101,6 +101,8 @@ export default function CashFlowAllocationModal({
   totalWantsCurrent = 0,
   totalWealthCurrent = 0,
 }) {
+  const { theme } = useTheme();
+  const isLight = theme === "light";
   const currentPeriod = activePeriod || getCurrentPeriod();
   const [activeTab, setActiveTab] = useState(initialType);
   const [name, setName] = useState("");
