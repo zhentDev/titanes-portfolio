@@ -26,6 +26,7 @@ import {
   syncCashFlowStateApi,
 } from "../api/client";
 import { getCurrentPeriod } from "../utils/periodUtils";
+import { sortMovementsByDateTimeDesc } from "../utils/cashFlowFormatters";
 import { useFixedIncomeStore } from "./fixedIncomeStore";
 
 let syncDebounceTimer = null;
@@ -460,6 +461,8 @@ export const useCashFlowStore = create(
             sanitizedExpensesLog.push(exp);
           }
         }
+        // Always sort expenses strictly by date and time from most recent to oldest
+        sanitizedExpensesLog = sortMovementsByDateTimeDesc(sanitizedExpensesLog);
 
         const KNOWN_PHANTOM_DEBT_IDS = [
           "debt_mike_nu_2026",
@@ -833,7 +836,7 @@ export const useCashFlowStore = create(
           }
 
           return {
-            expensesLog: [tx, ...(state.expensesLog || [])],
+            expensesLog: sortMovementsByDateTimeDesc([tx, ...(state.expensesLog || [])]),
             creditCards: updatedCards,
             creditPurchases: updatedPurchases,
           };
@@ -925,7 +928,7 @@ export const useCashFlowStore = create(
           );
 
           return {
-            expensesLog: updatedLog,
+            expensesLog: sortMovementsByDateTimeDesc(updatedLog),
             creditCards: updatedCards,
             creditPurchases: updatedPurchases,
           };
@@ -2040,7 +2043,7 @@ export const useCashFlowStore = create(
           let updatedInflows = state.inflows || [];
 
           // 1. Update the transaction in expensesLog with settlement history
-          const updatedExpensesLog = (state.expensesLog || []).map((tx) => {
+          let updatedExpensesLog = (state.expensesLog || []).map((tx) => {
             if (tx.id === txId) {
               const currentSettlements = Array.isArray(tx.settlements) ? tx.settlements : [];
               const prevSettledTotal = currentSettlements.reduce((acc, s) => acc + (Number(s.amount) || 0), 0);
@@ -2149,18 +2152,40 @@ export const useCashFlowStore = create(
               // Cash inflow to wallet
               const cashInflow = {
                 id: `in_cash_${Date.now()}`,
-                name: `Cobro Préstamo (Efectivo Físico): ${settlementData.recipient || "Tercero"}`,
+                name: `Cobro Préstamo (Efectivo Físico): ${settlementData.recipient || settlementData.participantName || "Tercero"}`,
                 category: "reimbursement",
                 amount: Number(settlementData.amount),
                 currency: settlementData.currency || state.currency,
                 isPassive: false,
                 frequency: "one_time",
                 period: state.activePeriod,
-                paymentSource: { type: "cash", targetName: "Efectivo / Billetera" },
+                paymentSource: { type: "cash", targetId: "acc_cash_wallet", targetName: "Efectivo (Billetera)" },
                 icon: "💵",
                 createdAt: new Date().toISOString(),
               };
               updatedInflows = [cashInflow, ...updatedInflows];
+
+              const cashIncomeTx = {
+                id: `cf_tx_reimb_${Date.now()}`,
+                period: state.activePeriod,
+                date: settlementData.date || new Date().toISOString().slice(0, 10),
+                time: new Date().toTimeString().slice(0, 8),
+                amount: Number(settlementData.amount),
+                currency: settlementData.currency || state.currency,
+                type: "credit",
+                budgetItemId: null,
+                budgetItemName: "Cobro de Préstamo / Reintegro",
+                budgetItemType: "income",
+                description: `Cobro de Préstamo en Efectivo (${settlementData.recipient || settlementData.participantName || "Tercero"})`,
+                paymentSource: {
+                  type: "cash",
+                  targetId: "acc_cash_wallet",
+                  targetName: "Efectivo (Billetera)",
+                },
+                isDebtCollection: true,
+                createdAt: new Date().toISOString(),
+              };
+              updatedExpensesLog = [cashIncomeTx, ...updatedExpensesLog];
             } else if (settlementData.targetType === "nequi" || settlementData.targetType === "digital_wallet") {
               const isNequi = settlementData.targetType === "nequi" || (settlementData.targetName || "").toLowerCase().includes("nequi");
               const walletInflow = {

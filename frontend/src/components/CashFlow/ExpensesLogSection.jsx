@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { formatCashFlowMoney } from "../../utils/cashFlowFormatters";
+import { formatCashFlowMoney, sortMovementsByDateTimeDesc } from "../../utils/cashFlowFormatters";
 import GlassModalWrapper from "../Common/GlassModalWrapper";
 import LoanSettlementModal from "./LoanSettlementModal";
 import AssignMovementModal from "./AssignMovementModal";
@@ -172,29 +172,10 @@ export default function ExpensesLogSection({
   }, [creditCardPayments, expensesLog, activePeriod]);
 
   // Combined sorted activity feed: Standalone movements + Card Payments (no duplicate split children)
+  // Always strictly sorted by date & time from most recent to oldest
   const combinedActivities = useMemo(() => {
     const combined = [...standaloneExpenses, ...periodPayments];
-    return combined.sort((a, b) => {
-      const getTimestamp = (item) => {
-        if (item.createdAt) {
-          const t = new Date(item.createdAt).getTime();
-          if (!isNaN(t)) return t;
-        }
-        if (item.date) {
-          const timePart = item.time ? (item.time.length === 5 ? `${item.time}:00` : item.time) : "00:00:00";
-          const t = new Date(`${item.date}T${timePart}`).getTime();
-          if (!isNaN(t)) return t;
-        }
-        return 0;
-      };
-
-      const diff = getTimestamp(b) - getTimestamp(a);
-      if (diff !== 0) return diff;
-
-      const dateA = a.date || a.createdAt || "";
-      const dateB = b.date || b.createdAt || "";
-      return dateB.localeCompare(dateA);
-    });
+    return sortMovementsByDateTimeDesc(combined);
   }, [standaloneExpenses, periodPayments]);
 
   const pendingLoans = useMemo(() => {
@@ -389,7 +370,74 @@ export default function ExpensesLogSection({
       (a) => a.accountCategory === "cash" || (a.name || "").toLowerCase().includes("efectivo") || (a.name || "").toLowerCase().includes("billetera")
     );
   }, [fixedIncomeAccounts]);
-  const cashWalletBalance = Number(cashWalletAccount?.balance || 0);
+
+  const cashWalletBalance = useMemo(() => {
+    // 1. Cash Inflows:
+    // a) Retiros o transferencias desde bancos/nómina hacia Efectivo (Billetera)
+    const cashWithdrawals = standaloneExpenses
+      .filter((tx) => {
+        if (tx.itemType === "income") return false;
+        return (
+          tx.destinationAccountId === "acc_cash_wallet" ||
+          tx.destinationAccountId === "acc_efectivo_fisico" ||
+          (tx.destinationAccountName || "").toLowerCase().includes("efectivo") ||
+          (tx.budgetItemName || "").toLowerCase().includes("retiro a efectivo") ||
+          (tx.description || "").toLowerCase().includes("retiro a efectivo")
+        );
+      })
+      .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+
+    // b) Ingresos y cobros directos en efectivo
+    const cashIncomes = standaloneExpenses
+      .filter((tx) => {
+        if (tx.itemType !== "income") return false;
+        const srcType = tx.paymentSource?.type;
+        const targetName = (tx.paymentSource?.targetName || "").toLowerCase();
+        return srcType === "cash" || targetName.includes("efectivo") || targetName.includes("billetera");
+      })
+      .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+
+    // c) Cobros en efectivo registrados en settlements de préstamos
+    let cashSettlements = 0;
+    standaloneExpenses.forEach((tx) => {
+      if (Array.isArray(tx.settlements)) {
+        tx.settlements.forEach((s) => {
+          const isCash =
+            s.targetType === "cash" ||
+            s.targetId === "acc_cash_wallet" ||
+            s.targetId === "acc_efectivo_fisico" ||
+            (s.targetName || "").toLowerCase().includes("efectivo") ||
+            (s.paymentMethod || "").toLowerCase().includes("efectivo");
+          if (isCash) {
+            cashSettlements += Number(s.amount) || 0;
+          }
+        });
+      }
+    });
+
+    // 2. Cash Outflows (gastos pagados en efectivo físico)
+    const cashExpenses = standaloneExpenses
+      .filter((tx) => {
+        if (tx.itemType === "income") return false;
+        const isTransfer =
+          tx.destinationAccountId === "acc_cash_wallet" ||
+          tx.destinationAccountId === "acc_efectivo_fisico" ||
+          (tx.destinationAccountName || "").toLowerCase().includes("efectivo");
+        if (isTransfer) return false;
+
+        const srcType = tx.paymentSource?.type;
+        const targetName = (tx.paymentSource?.targetName || "").toLowerCase();
+        return srcType === "cash" || targetName.includes("efectivo") || targetName.includes("billetera");
+      })
+      .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+
+    // Si ya existe un movimiento de ingreso en efectivo para los cobros, no duplicar con cashSettlements
+    const totalCashIn = cashWithdrawals + Math.max(cashIncomes, cashSettlements);
+    const dynamicNet = Math.max(0, totalCashIn - cashExpenses);
+
+    const staticBase = Number(cashWalletAccount?.balance || 0);
+    return dynamicNet > 0 ? dynamicNet : staticBase;
+  }, [standaloneExpenses, cashWalletAccount]);
 
   const cashCount = useMemo(() => {
     return combinedActivities.filter(
@@ -454,7 +502,7 @@ export default function ExpensesLogSection({
             </div>
 
             {/* Saldo Actual en Efectivo Físico (Billetera) */}
-            {cashWalletAccount && (
+            {(cashWalletAccount || cashWalletBalance > 0 || cashCount > 0) && (
               <div
                 style={{
                   minWidth: "135px",
@@ -472,8 +520,8 @@ export default function ExpensesLogSection({
                       title: "Efectivo en Billetera Física",
                       tag: "Control de Efectivo",
                       tagColor: "#f59e0b",
-                      explanation: "Representa el dinero físico que tienes en mano o retiraste de cajeros/Nequi. Cuando compres en la calle, registra ese gasto desde '💵 Efectivo (Billetera)' para que se descuente solo lo que gastaste físicamente y tu saldo quede cuadrado.",
-                      rule: "Los retiros a efectivo aumentan este saldo; las compras en efectivo lo reducen."
+                      explanation: "Representa el dinero físico en mano o en tu billetera. Incluye retiros a efectivo y cobros de préstamos recibidos en efectivo físico, descontando las compras pagadas en efectivo.",
+                      rule: "Retiros y cobros de préstamos en efectivo aumentan este saldo; gastos en efectivo lo reducen."
                     }}
                   />
                 </span>

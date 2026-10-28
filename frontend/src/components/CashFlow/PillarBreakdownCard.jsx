@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import toast from "react-hot-toast";
 import { useTheme } from "../../context/ThemeContext";
-import { formatCashFlowMoney, calculateEffectiveExpense } from "../../utils/cashFlowFormatters";
+import { formatCashFlowMoney, calculateEffectiveExpense, sortMovementsByDateTimeDesc } from "../../utils/cashFlowFormatters";
 import { toastConfirm } from "../../utils/toastAlerts";
 import "./CashFlow.css";
 
@@ -276,21 +276,23 @@ export default function PillarBreakdownCard({
                 item.category === "passive_equity")
             );
 
-            // Filter real transactions belonging to this budget envelope
-            const itemTransactions = (expensesLog || []).filter((tx) => {
-              if (tx.budgetItemId && tx.budgetItemId === item.id) return true;
-              if (tx.budgetItemName && tx.budgetItemName.toLowerCase() === (item.name || "").toLowerCase()) return true;
-              if (type === "inflow") {
-                const isCredit = tx.type === "credit" || tx.budgetItemType === "income";
-                if (!isCredit) return false;
-                const isSalaryItem = item.category === "salary" || (item.name || "").toLowerCase().includes("salario") || (item.name || "").toLowerCase().includes("nómina");
-                if (isSalaryItem) {
-                  const isPayrollTx = tx.paymentSource?.type === "payroll" || (tx.description || "").toLowerCase().includes("nomina") || (tx.description || "").toLowerCase().includes("salario");
-                  return isPayrollTx;
+            // Filter real transactions belonging to this budget envelope, sorted by date & time descending
+            const itemTransactions = sortMovementsByDateTimeDesc(
+              (expensesLog || []).filter((tx) => {
+                if (tx.budgetItemId && tx.budgetItemId === item.id) return true;
+                if (tx.budgetItemName && tx.budgetItemName.toLowerCase() === (item.name || "").toLowerCase()) return true;
+                if (type === "inflow") {
+                  const isCredit = tx.type === "credit" || tx.budgetItemType === "income";
+                  if (!isCredit) return false;
+                  const isSalaryItem = item.category === "salary" || (item.name || "").toLowerCase().includes("salario") || (item.name || "").toLowerCase().includes("nómina");
+                  if (isSalaryItem) {
+                    const isPayrollTx = tx.paymentSource?.type === "payroll" || (tx.description || "").toLowerCase().includes("nomina") || (tx.description || "").toLowerCase().includes("salario");
+                    return isPayrollTx;
+                  }
                 }
-              }
-              return false;
-            });
+                return false;
+              })
+            );
             let totalGrossAmount = 0;
             let spentAmount = 0;
             let totalRepaidAmount = 0;

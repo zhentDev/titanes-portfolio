@@ -169,3 +169,57 @@ export function calculateEffectiveExpense(tx, debts = []) {
     isLoanExpense: true,
   };
 }
+
+/**
+ * Universal movement / expense sorter by Date and Time (from most recent to oldest).
+ * Prioritizes actual movement date (YYYY-MM-DD) and time (HH:MM:SS).
+ * Falls back cleanly to createdAt if same-day or as tie-breaker.
+ */
+export function sortMovementsByDateTimeDesc(items = []) {
+  if (!Array.isArray(items)) return [];
+  return [...items].sort((a, b) => {
+    if (!a && !b) return 0;
+    if (!a) return 1;
+    if (!b) return -1;
+
+    // 1. Primary: Movement Date (YYYY-MM-DD)
+    const dateA = a.date || (a.createdAt ? a.createdAt.slice(0, 10) : "");
+    const dateB = b.date || (b.createdAt ? b.createdAt.slice(0, 10) : "");
+    if (dateA !== dateB) {
+      return dateB.localeCompare(dateA); // Newest date first
+    }
+
+    // 2. Secondary: Movement Time (HH:MM:SS)
+    const getTimeNorm = (item, baseDate) => {
+      let t = item.time || "";
+      // If no explicit time property, but createdAt belongs to the exact same date, borrow the time
+      if (!t && item.createdAt && baseDate && item.createdAt.slice(0, 10) === baseDate) {
+        const tMatch = item.createdAt.match(/T(\d{2}:\d{2}(?::\d{2})?)/);
+        if (tMatch) t = tMatch[1];
+      }
+      if (!t) return "00:00:00";
+      const parts = t.split(":");
+      const h = (parts[0] || "00").padStart(2, "0");
+      const m = (parts[1] || "00").padStart(2, "0");
+      const s = (parts[2] || "00").slice(0, 2).padStart(2, "0");
+      return `${h}:${m}:${s}`;
+    };
+
+    const timeA = getTimeNorm(a, dateA);
+    const timeB = getTimeNorm(b, dateB);
+    if (timeA !== timeB) {
+      return timeB.localeCompare(timeA); // Newest time first
+    }
+
+    // 3. Tertiary tie-breaker: Record creation timestamp
+    const createdA = a.createdAt || "";
+    const createdB = b.createdAt || "";
+    if (createdA !== createdB) {
+      return createdB.localeCompare(createdA);
+    }
+
+    // 4. Final tie-breaker: ID
+    return String(b.id || "").localeCompare(String(a.id || ""));
+  });
+}
+
