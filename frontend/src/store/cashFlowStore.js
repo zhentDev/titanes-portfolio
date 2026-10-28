@@ -1633,6 +1633,131 @@ export const useCashFlowStore = create(
         );
       },
 
+      deleteDebtPayment: (debtId, paymentId) => {
+        let isReceivable = false;
+        let deletedPaymentAmount = 0;
+        let concept = "";
+
+        set((state) => {
+          const currentDebts = state.debts || [];
+          const debt = currentDebts.find((d) => d.id === debtId || d.linkedExpenseId === debtId);
+          isReceivable = debt ? debt.debtType === "receivable" : true;
+          concept = debt ? (debt.concept || debt.debtor || "Deuda") : "Cobro / Abono";
+
+          let targetPayment = debt ? (debt.paymentsLog || []).find((p) => p.id === paymentId) : null;
+          deletedPaymentAmount = Number(targetPayment?.amount || 0);
+
+          let updatedExpensesLog = state.expensesLog || [];
+          let updatedInflows = state.inflows || [];
+
+          // Target expense ID: either debt.linkedExpenseId, or debtId itself, or find expense containing this settlement
+          const targetExpenseId = debt?.linkedExpenseId || debtId;
+          const targetExpense = updatedExpensesLog.find(
+            (e) => e.id === targetExpenseId || (Array.isArray(e.settlements) && e.settlements.some((s) => s.id === paymentId))
+          );
+
+          if (targetExpense) {
+            const currentSettlements = Array.isArray(targetExpense.settlements) ? targetExpense.settlements : [];
+            const deletedSettlement = currentSettlements.find((s) => s.id === paymentId);
+            if (deletedSettlement && !deletedPaymentAmount) {
+              deletedPaymentAmount = Number(deletedSettlement.amount || 0);
+            }
+
+            const remainingSettlements = currentSettlements.filter((s) => s.id !== paymentId);
+
+            // Revert participant paid status if associated
+            let updatedParticipants = targetExpense.participants;
+            if (Array.isArray(targetExpense.participants) && deletedSettlement?.participantId) {
+              updatedParticipants = targetExpense.participants.map((p) => {
+                if (p.id === deletedSettlement.participantId) {
+                  const newPaid = Math.max(0, (Number(p.paidAmount) || 0) - Number(deletedSettlement.amount || 0));
+                  return {
+                    ...p,
+                    paid: false,
+                    paidAmount: newPaid > 0 ? newPaid : null,
+                  };
+                }
+                return p;
+              });
+            }
+
+            const totalSettledSoFar = remainingSettlements.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+            const totalLoan = Number(targetExpense.loanAmount) > 0 ? Number(targetExpense.loanAmount) : Number(targetExpense.amount) || 0;
+            const newRemaining = Math.max(0, totalLoan - totalSettledSoFar);
+
+            updatedExpensesLog = updatedExpensesLog.map((e) => {
+              if (e.id === targetExpense.id) {
+                return {
+                  ...e,
+                  loanStatus: newRemaining <= 0 ? "settled" : totalSettledSoFar > 0 ? "partially_settled" : "pending",
+                  remainingLoan: newRemaining,
+                  totalSettled: totalSettledSoFar,
+                  settlements: remainingSettlements,
+                  participants: updatedParticipants,
+                };
+              }
+              return e;
+            });
+          }
+
+          // Clean up any generated income movement
+          updatedExpensesLog = updatedExpensesLog.filter((tx) => {
+            if (tx.id === paymentId || tx.id === `inc_loan_${paymentId}` || tx.settlementId === paymentId) return false;
+            return true;
+          });
+
+          updatedInflows = updatedInflows.filter((inf) => {
+            if (inf.id === paymentId || inf.id === `in_reimb_${paymentId}` || inf.settlementId === paymentId) return false;
+            return true;
+          });
+
+          // Update standalone or linked debts
+          const updatedDebtsList = currentDebts.map((d) => {
+            if (d.id !== debt?.id && d.linkedExpenseId !== targetExpense?.id) return d;
+            const updatedPaymentsLog = (d.paymentsLog || []).filter((p) => p.id !== paymentId);
+            const totalPaidNow = updatedPaymentsLog.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+            const totalDebtAmt = Number(d.totalAmount) || 0;
+            const newRemaining = Math.max(0, totalDebtAmt - totalPaidNow);
+            return {
+              ...d,
+              paymentsLog: updatedPaymentsLog,
+              remainingAmount: newRemaining,
+              status: newRemaining <= 0 ? "paid" : "active",
+            };
+          });
+
+          const finalDebts = syncExpenseLoansToDebts(updatedExpensesLog, updatedDebtsList);
+
+          try {
+            localStorage.setItem(
+              "titanes_cash_flow_store_v2",
+              JSON.stringify({
+                ...state,
+                debts: finalDebts,
+                expensesLog: updatedExpensesLog,
+                inflows: updatedInflows,
+              })
+            );
+          } catch {}
+
+          return {
+            debts: finalDebts,
+            expensesLog: updatedExpensesLog,
+            inflows: updatedInflows,
+          };
+        });
+
+        get().syncStateWithBackend();
+        toast.success(
+          `Cobro/Abono de $${Math.round(deletedPaymentAmount).toLocaleString("es-CO")} eliminado correctamente. El saldo ha sido corregido ✅`,
+          { icon: "🗑️" }
+        );
+      },
+
+      deleteExpenseSettlement: (txId, settlementId) => {
+        get().deleteDebtPayment(txId, settlementId);
+      },
+
       // ── Loan Settlement & Reimbursement (Full, Partial or Split Participant) ──────────────
       settleLoanTransaction: (txId, settlementData) => {
         set((state) => {

@@ -6,6 +6,7 @@ import { formatCashFlowMoney } from "../../utils/cashFlowFormatters";
 import { useTheme } from "../../context/ThemeContext";
 import { toast } from "react-hot-toast";
 import { toastConfirm } from "../../utils/toastAlerts";
+import { useCashFlowStore } from "../../store/cashFlowStore";
 import "./CashFlow.css";
 
 export default function LoanSettlementModal({
@@ -35,6 +36,15 @@ export default function LoanSettlementModal({
   const previousSettlements = Array.isArray(transaction.settlements) ? transaction.settlements : [];
   const alreadySettledTotal = previousSettlements.reduce((acc, s) => acc + (Number(s.amount) || 0), 0);
   const currentPendingBalance = Math.max(0, baseLoanAmount - alreadySettledTotal);
+
+  const handleDeleteSettlement = (settlement) => {
+    const formattedAmt = formatMoney(settlement.amount);
+    const msg = `¿Deseas eliminar este cobro/abono de ${formattedAmt} (${settlement.note || "Registro"})?\n\nEl saldo pendiente por cobrar se restaurará automáticamente.`;
+    if (window.confirm(msg)) {
+      useCashFlowStore.getState().deleteDebtPayment(transaction.id, settlement.id);
+      onClose();
+    }
+  };
 
   // Determine initial mode: split vs direct
   const isInitiallySplit = Boolean(
@@ -1518,8 +1528,61 @@ export default function LoanSettlementModal({
               </div>
 
               {previousSettlements.length > 0 && (
-                <div style={{ marginTop: 6, fontSize: "0.72rem", color: "#10b981" }}>
-                  ✓ Ya se han recibido {previousSettlements.length} abono(s) por un total de {formatMoney(alreadySettledTotal)}
+                <div style={{ marginTop: 8, padding: "8px 10px", borderRadius: "8px", background: isLight ? "#f8fafc" : "rgba(15, 23, 42, 0.4)", border: "1px solid var(--border)" }}>
+                  <div style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: 6, display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 4 }}>
+                    <span>Historial de Cobros Recibidos ({previousSettlements.length}):</span>
+                    <strong style={{ color: "#10b981" }}>Total: +{formatMoney(alreadySettledTotal)}</strong>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 5, maxHeight: 120, overflowY: "auto" }}>
+                    {previousSettlements.map((s) => (
+                      <div
+                        key={s.id}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          padding: "4px 8px",
+                          borderRadius: 6,
+                          background: "var(--bg-surface)",
+                          fontSize: "0.72rem",
+                          border: "1px solid var(--border)",
+                          gap: 6,
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
+                          <strong style={{ color: "#10b981" }}>+{formatMoney(s.amount)}</strong>
+                          <span style={{ color: "var(--text-muted)" }}>• {s.date}</span>
+                          <span style={{ color: "var(--text-secondary)" }}>({s.targetName || s.paymentMethod || "Cobro"})</span>
+                          {s.note && <span style={{ color: "var(--text-muted)", fontStyle: "italic" }}>"{s.note}"</span>}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteSettlement(s);
+                          }}
+                          title="Eliminar este abono para corregir saldo o duplicados"
+                          style={{
+                            background: isLight ? "rgba(239, 68, 68, 0.08)" : "rgba(239, 68, 68, 0.16)",
+                            border: isLight ? "1px solid rgba(239, 68, 68, 0.25)" : "1px solid rgba(239, 68, 68, 0.35)",
+                            color: isLight ? "#dc2626" : "#f87171",
+                            cursor: "pointer",
+                            padding: "2px 6px",
+                            borderRadius: "4px",
+                            fontSize: "0.68rem",
+                            fontWeight: 600,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "3px",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <span>🗑️</span>
+                          <span>Eliminar</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

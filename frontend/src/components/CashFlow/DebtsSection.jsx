@@ -4,6 +4,7 @@ import { formatCashFlowMoney } from "../../utils/cashFlowFormatters";
 import { notifyDebtTelegramApi, checkDebtRemindersApi } from "../../api/client";
 import { toast } from "react-hot-toast";
 import { toastConfirm } from "../../utils/toastAlerts";
+import { useCashFlowStore } from "../../store/cashFlowStore";
 import "./CashFlow.css";
 
 export default function DebtsSection({
@@ -11,6 +12,7 @@ export default function DebtsSection({
   onOpenDebtModal,
   onOpenPaymentModal,
   onDeleteDebt,
+  onDeletePayment,
   fixedIncomeAccounts = [],
   currency = "COP",
   fxRate = 4150,
@@ -31,6 +33,19 @@ export default function DebtsSection({
   };
 
   const isReceivableTab = sectionTab === "receivable";
+
+  const handleDeletePayment = (debt, payment) => {
+    const formattedAmt = formatCashFlowMoney(payment.amount, currency, fxRate);
+    const isRec = debt.debtType === "receivable";
+    const confirmMsg = `¿Deseas eliminar este ${isRec ? "cobro recibido" : "abono realizado"} de ${formattedAmt} (${payment.note || payment.paymentMethod || "Registro"})?\n\nEl saldo de la deuda se corregirá automáticamente sin duplicidades.`;
+    if (window.confirm(confirmMsg)) {
+      if (onDeletePayment) {
+        onDeletePayment(debt.id, payment.id);
+      } else {
+        useCashFlowStore.getState().deleteDebtPayment(debt.id, payment.id);
+      }
+    }
+  };
 
   // Split into Pasivos (yo debo) and Cuentas por cobrar (me deben)
   const payableDebts = useMemo(() => debts.filter((d) => d.debtType !== "receivable"), [debts]);
@@ -814,7 +829,7 @@ export default function DebtsSection({
                               border: "1px solid var(--border)",
                             }}
                           >
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
                               <span style={{ color: "#10b981", fontWeight: 700 }}>
                                 +{formatCashFlowMoney(p.amount, currency, fxRate)}
                               </span>
@@ -824,9 +839,42 @@ export default function DebtsSection({
                               </span>
                               {p.note && <span style={{ color: "var(--text-muted)", fontStyle: "italic" }}>"{p.note}"</span>}
                             </div>
-                            <span style={{ color: "#10b981", fontSize: "0.68rem", fontWeight: 700 }}>
-                              ✓ {isReceivable ? "Ingresado" : "Aplicado"}
-                            </span>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                              <span style={{ color: "#10b981", fontSize: "0.68rem", fontWeight: 700 }}>
+                                ✓ {isReceivable ? "Ingresado" : "Aplicado"}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeletePayment(debt, p);
+                                }}
+                                title="Eliminar este cobro / abono para corregir saldo o duplicados"
+                                style={{
+                                  background: isLight ? "rgba(239, 68, 68, 0.08)" : "rgba(239, 68, 68, 0.16)",
+                                  border: isLight ? "1px solid rgba(239, 68, 68, 0.25)" : "1px solid rgba(239, 68, 68, 0.35)",
+                                  color: isLight ? "#dc2626" : "#f87171",
+                                  cursor: "pointer",
+                                  padding: "3px 8px",
+                                  borderRadius: "6px",
+                                  fontSize: "0.72rem",
+                                  fontWeight: 600,
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  transition: "all 0.15s ease",
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = isLight ? "rgba(239, 68, 68, 0.18)" : "rgba(239, 68, 68, 0.28)";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = isLight ? "rgba(239, 68, 68, 0.08)" : "rgba(239, 68, 68, 0.16)";
+                                }}
+                              >
+                                <span>🗑️</span>
+                                <span>Eliminar</span>
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>

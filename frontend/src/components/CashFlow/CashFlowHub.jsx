@@ -92,6 +92,7 @@ export default function CashFlowHub() {
     updateDebt,
     deleteDebt,
     recordDebtPayment,
+    deleteDebtPayment,
     syncFromFixedIncome,
     syncFromPortfolio,
   } = useCashFlowStore();
@@ -3226,6 +3227,7 @@ export default function CashFlowHub() {
                 setDebtPaymentModalOpen(true);
               }}
               onDeleteDebt={deleteDebt}
+              onDeletePayment={deleteDebtPayment}
               fixedIncomeAccounts={fixedAccounts}
               currency={currency}
               fxRate={fxRate}
