@@ -45,9 +45,29 @@ export default function CashFlowSankey({
   const activeOrientation = viewOrientation === "auto" ? (isSmallScreen ? "vertical" : "horizontal") : viewOrientation;
 
   // ── 1. Calculate Aggregate Financial Values ──────────
-  const totalInflow = useMemo(() => {
-    return inflows.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+  // Filtrar ingresos presupuestados reales (por defecto los 3 de siempre: Salario, Renta Fija y Renta Variable)
+  // descartando micro-cobros o reintegros de préstamos a menos que se hayan marcado explícitamente como ingreso extra.
+  const activeInflows = useMemo(() => {
+    return inflows.filter((i) => {
+      if ((Number(i.amount) || 0) <= 0) return false;
+      const isReimb =
+        i.category === "reimbursement" ||
+        i.id?.startsWith("in_reimb_") ||
+        i.id?.startsWith("in_cash_") ||
+        i.id?.startsWith("in_wallet_") ||
+        i.id?.startsWith("in_pocket_") ||
+        (i.name || "").toLowerCase().includes("cobro préstamo") ||
+        (i.name || "").toLowerCase().includes("reintegro préstamo");
+      if (isReimb) {
+        return Boolean(i.isExplicitBudgetIncome);
+      }
+      return true;
+    });
   }, [inflows]);
+
+  const totalInflow = useMemo(() => {
+    return activeInflows.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+  }, [activeInflows]);
 
   const totalNeeds = useMemo(() => {
     return needs.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
@@ -74,8 +94,8 @@ export default function CashFlowSankey({
 
     const colX = [30, 370, 710, 1010]; // 4 Well-distributed columns
 
-    // Column 0: Valid Inflow Sources
-    const validInflows = inflows.filter((i) => (Number(i.amount) || 0) > 0);
+    // Column 0: Valid Inflow Sources (Preserva los 3 de siempre limpios)
+    const validInflows = activeInflows;
     const col0Count = Math.max(1, validInflows.length);
 
     // Column 2: Pillars

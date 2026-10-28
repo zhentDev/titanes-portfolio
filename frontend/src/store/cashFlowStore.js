@@ -637,7 +637,24 @@ export const useCashFlowStore = create(
           }
           return d;
         });
-        const mergedInflows = unionById(source?.inflows, cachedLocal?.inflows);
+        // Sanitize inflows: Keep only canonical real incomes (Salario, Renta Fija, Renta Variable)
+        // and discard auto-generated loan reimbursements unless explicitly marked by user as budget income.
+        const mergedInflows = unionById(source?.inflows, cachedLocal?.inflows).filter((inf) => {
+          if (!inf || !inf.id) return false;
+          if (inf.id === "in_salary" || inf.id === "in_fixed_yield" || inf.id === "in_stock_div") return true;
+          const isAutoReimb =
+            inf.category === "reimbursement" ||
+            inf.id.startsWith("in_reimb_") ||
+            inf.id.startsWith("in_cash_") ||
+            inf.id.startsWith("in_wallet_") ||
+            inf.id.startsWith("in_pocket_") ||
+            (inf.name || "").toLowerCase().includes("cobro préstamo") ||
+            (inf.name || "").toLowerCase().includes("reintegro préstamo");
+          if (isAutoReimb) {
+            return Boolean(inf.isExplicitBudgetIncome);
+          }
+          return true;
+        });
         const mergedNeeds = unionById(source?.needs, cachedLocal?.needs);
         const mergedWants = unionById(source?.wants, cachedLocal?.wants);
         const mergedWealth = unionById(source?.wealth, cachedLocal?.wealth);
@@ -2240,39 +2257,8 @@ export const useCashFlowStore = create(
                 createdAt: new Date().toISOString(),
               };
               updatedPayments = [newPayment, ...updatedPayments];
-            } else if (settlementData.targetType === "payroll") {
-              // Inflow return to payroll account
-              const reimbursementInflow = {
-                id: `in_reimb_${Date.now()}`,
-                name: `Reintegro Préstamo: ${settlementData.recipient || "Tercero"}`,
-                category: "reimbursement",
-                amount: Number(settlementData.amount),
-                currency: settlementData.currency || state.currency,
-                isPassive: false,
-                frequency: "one_time",
-                period: state.activePeriod,
-                paymentSource: { type: "payroll", targetName: state.payrollAccount?.name || "Nu Colombia" },
-                icon: "🤝",
-                createdAt: new Date().toISOString(),
-              };
-              updatedInflows = [reimbursementInflow, ...updatedInflows];
             } else if (settlementData.targetType === "cash") {
-              // Cash inflow to wallet
-              const cashInflow = {
-                id: `in_cash_${Date.now()}`,
-                name: `Cobro Préstamo (Efectivo Físico): ${settlementData.recipient || settlementData.participantName || "Tercero"}`,
-                category: "reimbursement",
-                amount: Number(settlementData.amount),
-                currency: settlementData.currency || state.currency,
-                isPassive: false,
-                frequency: "one_time",
-                period: state.activePeriod,
-                paymentSource: { type: "cash", targetId: "acc_cash_wallet", targetName: "Efectivo (Billetera)" },
-                icon: "💵",
-                createdAt: new Date().toISOString(),
-              };
-              updatedInflows = [cashInflow, ...updatedInflows];
-
+              // Registra el ingreso en efectivo en el log para la métrica dinámica de la billetera física
               const cashIncomeTx = {
                 id: `cf_tx_reimb_${Date.now()}`,
                 period: state.activePeriod,
@@ -2294,45 +2280,31 @@ export const useCashFlowStore = create(
                 createdAt: new Date().toISOString(),
               };
               updatedExpensesLog = [cashIncomeTx, ...updatedExpensesLog];
-            } else if (settlementData.targetType === "nequi" || settlementData.targetType === "digital_wallet") {
-              const isNequi = settlementData.targetType === "nequi" || (settlementData.targetName || "").toLowerCase().includes("nequi");
-              const walletInflow = {
-                id: `in_wallet_${Date.now()}`,
-                name: `Cobro Préstamo: ${settlementData.recipient || "Tercero"} (${settlementData.targetName || (isNequi ? "Nequi" : "Billetera Digital")})`,
-                category: "reimbursement",
+            }
+
+            // Libertad de clasificación: SOLO si el usuario activó explícitamente la opción de clasificar
+            // como un nuevo ingreso presupuestado en Flujo de Caja (Sankey), se añade a inflows.
+            // Por defecto permanece desmarcado para preservar limpios los 3 ingresos habituales (Salario, Renta Fija y Renta Variable).
+            if (settlementData.registerAsBudgetInflow) {
+              const explicitInflow = {
+                id: `in_custom_${Date.now()}`,
+                name: `Ingreso Extra: ${settlementData.recipient || settlementData.participantName || "Cobro Préstamo"}`,
+                category: "other",
                 amount: Number(settlementData.amount),
                 currency: settlementData.currency || state.currency,
                 isPassive: false,
+                isExplicitBudgetIncome: true,
                 frequency: "one_time",
                 period: state.activePeriod,
                 paymentSource: {
-                  type: "digital_wallet",
-                  targetId: settlementData.targetId || (isNequi ? "acc_nequi_disp" : null),
-                  targetName: settlementData.targetName || (isNequi ? "Disponible Nequi" : "Billetera Digital"),
-                },
-                icon: isNequi ? "🟣" : "📱",
-                createdAt: new Date().toISOString(),
-              };
-              updatedInflows = [walletInflow, ...updatedInflows];
-            } else if (settlementData.targetType === "fixed_pocket") {
-              const pocketInflow = {
-                id: `in_pocket_${Date.now()}`,
-                name: `Cobro Préstamo: ${settlementData.recipient || "Tercero"} (${settlementData.targetName || "Ahorro"})`,
-                category: "reimbursement",
-                amount: Number(settlementData.amount),
-                currency: settlementData.currency || state.currency,
-                isPassive: false,
-                frequency: "one_time",
-                period: state.activePeriod,
-                paymentSource: {
-                  type: "fixed_pocket",
+                  type: settlementData.targetType,
                   targetId: settlementData.targetId,
-                  targetName: settlementData.targetName || "Cuenta de Ahorro",
+                  targetName: settlementData.targetName,
                 },
-                icon: "🏦",
+                icon: "💰",
                 createdAt: new Date().toISOString(),
               };
-              updatedInflows = [pocketInflow, ...updatedInflows];
+              updatedInflows = [explicitInflow, ...updatedInflows];
             }
           }
 

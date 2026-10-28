@@ -11,39 +11,6 @@
   "emergencyFundTargetMonths": 6,
   "inflows": [
     {
-      "id": "in_wallet_1793196309821",
-      "name": "Cobro Préstamo: Andre (Disponible Nequi)",
-      "category": "reimbursement",
-      "amount": 8000,
-      "currency": "COP",
-      "isPassive": false,
-      "frequency": "one_time",
-      "period": "2026-11",
-      "paymentSource": {
-        "type": "digital_wallet",
-        "targetId": "acc_nequi_disp",
-        "targetName": "Disponible Nequi"
-      },
-      "icon": "🟣",
-      "createdAt": "2026-10-28T14:05:09.821Z"
-    },
-    {
-      "id": "in_reimb_1793195781151",
-      "name": "Reintegro Préstamo: Amigo / Familiar",
-      "category": "reimbursement",
-      "amount": 178000,
-      "currency": "COP",
-      "isPassive": false,
-      "frequency": "one_time",
-      "period": "2026-11",
-      "paymentSource": {
-        "type": "payroll",
-        "targetName": "Nu Colombia (Cuenta Nu Débito)"
-      },
-      "icon": "🤝",
-      "createdAt": "2026-10-28T13:56:21.151Z"
-    },
-    {
       "id": "in_salary",
       "name": "Salario Neto (Nómina)",
       "category": "salary",
@@ -91,23 +58,6 @@
       },
       "icon": "📈",
       "createdAt": "2026-09-19T16:57:44.254Z"
-    },
-    {
-      "id": "in_reimb_presea_100k_cash",
-      "name": "Reintegro Préstamo (Efectivo Físico): Amigos Presea Rooftop",
-      "category": "reimbursement",
-      "amount": 100000,
-      "currency": "COP",
-      "isPassive": false,
-      "frequency": "one_time",
-      "period": "2026-11",
-      "paymentSource": {
-        "type": "cash",
-        "targetId": "acc_efectivo_fisico",
-        "targetName": "Efectivo Físico (Billetera)"
-      },
-      "icon": "💵",
-      "createdAt": "2026-10-24T23:30:00.000Z"
     }
   ],
   "needs": [

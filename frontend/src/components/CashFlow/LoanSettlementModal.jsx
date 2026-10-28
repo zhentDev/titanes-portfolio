@@ -87,6 +87,7 @@ export default function LoanSettlementModal({
   const [editingParticipantId, setEditingParticipantId] = useState(null);
   const [customShareInput, setCustomShareInput] = useState(0);
   const [settlingAmount, setSettlingAmount] = useState(0);
+  const [registerAsBudgetInflow, setRegisterAsBudgetInflow] = useState(false);
 
   // --- DIRECT SETTLEMENT STATE ---
   const [settlementAmount, setSettlementAmount] = useState(currentPendingBalance);
@@ -385,6 +386,7 @@ export default function LoanSettlementModal({
         targetName,
         recipient: settlingParticipant.name,
         alreadyRegistered: isNoIncome,
+        registerAsBudgetInflow: !isNoIncome && registerAsBudgetInflow,
         isPartial: !isNowFullyPaid,
         note: targetType === "split_offset"
           ? `Cruce de cuentas / gasto dividido con ${settlingParticipant.name} (Sin ingreso)`
@@ -516,6 +518,7 @@ export default function LoanSettlementModal({
       description: transaction.description || "Préstamo",
       note: note.trim(),
       alreadyRegistered: isNoIncome,
+      registerAsBudgetInflow: !isNoIncome && registerAsBudgetInflow,
       currency,
     });
 
@@ -1482,6 +1485,38 @@ export default function LoanSettlementModal({
                                 </select>
                               </div>
                             )}
+
+                            {/* Option: Clasificar como Nuevo Ingreso Presupuestado (Desmarcado por defecto) */}
+                            {targetType !== "already_registered" && targetType !== "split_offset" && (
+                              <div
+                                style={{
+                                  marginTop: 8,
+                                  padding: "7px 10px",
+                                  borderRadius: 8,
+                                  background: isLight ? "rgba(2, 132, 199, 0.05)" : "rgba(2, 132, 199, 0.12)",
+                                  border: isLight ? "1px solid rgba(2, 132, 199, 0.2)" : "1px solid rgba(2, 132, 199, 0.3)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  gap: 8,
+                                }}
+                              >
+                                <div>
+                                  <div style={{ fontSize: "0.74rem", fontWeight: 700, color: isLight ? "#0369a1" : "#38bdf8" }}>
+                                    Registrar como Ingreso Extra en Flujo de Caja
+                                  </div>
+                                  <div style={{ fontSize: "0.64rem", color: "var(--text-muted)" }}>
+                                    Desmarcado por defecto para no saturar los 3 ingresos habituales en Sankey.
+                                  </div>
+                                </div>
+                                <input
+                                  type="checkbox"
+                                  checked={registerAsBudgetInflow}
+                                  onChange={(e) => setRegisterAsBudgetInflow(e.target.checked)}
+                                  style={{ width: 16, height: 16, cursor: "pointer", accentColor: "#0284c7" }}
+                                />
+                              </div>
+                            )}
                           </div>
 
                           {/* Section 3: Fecha & Botón de Confirmación */}
@@ -2014,6 +2049,37 @@ export default function LoanSettlementModal({
                     </option>
                   ))}
                 </select>
+              </div>
+            )}
+
+            {/* Option: Clasificar como Nuevo Ingreso Presupuestado (Desmarcado por defecto) */}
+            {targetType !== "already_registered" && targetType !== "split_offset" && (
+              <div
+                style={{
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  background: isLight ? "rgba(2, 132, 199, 0.05)" : "rgba(2, 132, 199, 0.12)",
+                  border: isLight ? "1px solid rgba(2, 132, 199, 0.2)" : "1px solid rgba(2, 132, 199, 0.3)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 700, color: isLight ? "#0369a1" : "#38bdf8" }}>
+                    Registrar como Ingreso Extra en Flujo de Caja
+                  </div>
+                  <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 2 }}>
+                    Desmarcado por defecto para mantener limpios los 3 ingresos habituales (Salario, Renta Fija y Renta Variable).
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={registerAsBudgetInflow}
+                  onChange={(e) => setRegisterAsBudgetInflow(e.target.checked)}
+                  style={{ width: 18, height: 18, cursor: "pointer", accentColor: "#0284c7" }}
+                />
               </div>
             )}
 
