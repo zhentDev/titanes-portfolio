@@ -2106,8 +2106,8 @@ export const useCashFlowStore = create(
             return tx;
           });
 
-          // 2. Route the returned money to target destination ONLY IF not already registered!
-          if (!settlementData.alreadyRegistered) {
+          // 2. Route the returned money to target destination ONLY IF not already registered or split offset!
+          if (!settlementData.alreadyRegistered && settlementData.targetType !== "split_offset" && settlementData.targetType !== "already_registered") {
             if (settlementData.targetType === "credit_card" && settlementData.targetId) {
               // Apply payment to credit card -> reduces debt and frees credit limit
               updatedCards = state.creditCards.map((c) => {

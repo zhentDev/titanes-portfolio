@@ -329,13 +329,21 @@ export default function LoanSettlementModal({
   };
 
   // Confirm Participant Payment (Full or Partial / Bonificación)
-  const handleConfirmParticipantPayment = (alreadyRegistered) => {
+  const handleConfirmParticipantPayment = (alreadyRegisteredParam) => {
     if (!settlingParticipant) return;
 
-    let targetId = null;
-    let targetName = "Registrado previamente";
+    const isNoIncome = Boolean(
+      alreadyRegisteredParam ||
+      targetType === "already_registered" ||
+      targetType === "split_offset"
+    );
 
-    if (!alreadyRegistered) {
+    let targetId = null;
+    let targetName = targetType === "split_offset"
+      ? "Gasto dividido (Cruce sin ingreso)"
+      : "Registrado previamente";
+
+    if (!isNoIncome) {
       if (targetType === "nequi") {
         targetId = nequiAccount?.id || "acc_nequi_disp";
         targetName = nequiAccount?.name || "Disponible Nequi";
@@ -372,13 +380,15 @@ export default function LoanSettlementModal({
         participantName: settlingParticipant.name,
         amount: amountToPay,
         date: settlementDate,
-        targetType: alreadyRegistered ? "already_registered" : targetType,
+        targetType: isNoIncome ? (targetType === "split_offset" ? "split_offset" : "already_registered") : targetType,
         targetId,
         targetName,
         recipient: settlingParticipant.name,
-        alreadyRegistered: Boolean(alreadyRegistered),
+        alreadyRegistered: isNoIncome,
         isPartial: !isNowFullyPaid,
-        note: !isNowFullyPaid
+        note: targetType === "split_offset"
+          ? `Cruce de cuentas / gasto dividido con ${settlingParticipant.name} (Sin ingreso)`
+          : !isNowFullyPaid
           ? `Abono parcial / bonificación de ${settlingParticipant.name} ($${Math.round(amountToPay).toLocaleString("es-CO")}) por ${transaction.description || "Gasto compartido"}`
           : `Pago cuota de ${settlingParticipant.name} (Gasto compartido: ${transaction.description || "Préstamo"})`,
         currency,
@@ -395,13 +405,68 @@ export default function LoanSettlementModal({
               paidAmount: newTotalPaid,
               paidAt: settlementDate,
               targetName,
-              alreadyRegistered: Boolean(alreadyRegistered),
+              alreadyRegistered: isNoIncome,
             }
           : p
       )
     );
 
     setSettlingParticipant(null);
+    toast.success(
+      targetType === "split_offset"
+        ? `Cuota de ${settlingParticipant.name} saldada por gasto dividido (sin registrar ingreso) 🤝`
+        : isNoIncome
+        ? `Cuota de ${settlingParticipant.name} marcada como pagada (sin duplicar) ✓`
+        : `Abono de ${settlingParticipant.name} registrado en ${targetName} 💵`
+    );
+  };
+
+  // Quick 1-click settlement for roommate/friend shared expense without creating income
+  const handleQuickOffsetParticipant = async (participant) => {
+    const effShare = getParticipantShare(participant);
+    const paidSoFar = getParticipantPaid(participant);
+    const pendingToPay = Math.max(0, effShare - paidSoFar);
+    if (pendingToPay <= 0) return;
+
+    const ok = await toastConfirm(
+      `¿Marcar la cuota de ${participant.name} (${formatMoney(pendingToPay)}) como saldada por gasto dividido / cruce con roomie (sin registrar entrada de dinero)?`
+    );
+    if (!ok) return;
+
+    const targetName = "Gasto dividido (Cruce sin ingreso)";
+
+    if (onConfirmSettlement) {
+      onConfirmSettlement(transaction.id, {
+        participantId: participant.id,
+        participantName: participant.name,
+        amount: pendingToPay,
+        date: settlementDate || new Date().toISOString().slice(0, 10),
+        targetType: "split_offset",
+        targetId: null,
+        targetName,
+        recipient: participant.name,
+        alreadyRegistered: true,
+        isPartial: false,
+        note: `Cruce de cuentas / gasto dividido con ${participant.name} (Sin ingreso)`,
+        currency,
+      });
+    }
+
+    setParticipants((prev) =>
+      prev.map((p) =>
+        p.id === participant.id
+          ? {
+              ...p,
+              paid: true,
+              paidAmount: effShare,
+              paidAt: settlementDate || new Date().toISOString().slice(0, 10),
+              targetName,
+              alreadyRegistered: true,
+            }
+          : p
+      )
+    );
+    toast.success(`Cuota de ${participant.name} saldada por gasto dividido con roomie 🤝`);
   };
 
   // Handle Direct Lump-Sum Settlement Submit
@@ -409,40 +474,48 @@ export default function LoanSettlementModal({
     e.preventDefault();
     if (Number(settlementAmount) <= 0) return;
 
+    const isNoIncome = targetType === "already_registered" || targetType === "split_offset";
     let targetId = null;
-    let targetName = payrollAccount.name || "Cuenta de Nómina";
+    let targetName = targetType === "split_offset"
+      ? "Gasto dividido (Cruce sin ingreso)"
+      : targetType === "already_registered"
+      ? "Registrado previamente"
+      : (payrollAccount.name || "Cuenta de Nómina");
 
-    if (targetType === "nequi") {
-      targetId = nequiAccount?.id || "acc_nequi_disp";
-      targetName = nequiAccount?.name || "Disponible Nequi";
-    } else if (targetType === "digital_wallet") {
-      const wallet = (fixedIncomeAccounts || []).find((a) => a.id === selectedWalletId) || otherWallets[0];
-      targetId = wallet?.id;
-      targetName = wallet ? wallet.name : "Billetera Digital";
-    } else if (targetType === "credit_card") {
-      const card = creditCards.find((c) => c.id === selectedCardId) || creditCards[0];
-      targetId = card?.id;
-      targetName = card ? card.name : "Tarjeta de Crédito";
-    } else if (targetType === "fixed_pocket") {
-      const pocket = (fixedIncomeAccounts || []).find((p) => p.id === selectedPocketId) || savingsPockets[0];
-      targetId = pocket?.id;
-      targetName = pocket ? pocket.name : "Cuenta de Ahorro";
-    } else if (targetType === "investment_cash") {
-      targetName = "Portafolio de Inversión / Broker";
-    } else if (targetType === "cash") {
-      targetName = "Efectivo / Billetera (Cash físico)";
-      targetId = "cash_wallet";
+    if (!isNoIncome) {
+      if (targetType === "nequi") {
+        targetId = nequiAccount?.id || "acc_nequi_disp";
+        targetName = nequiAccount?.name || "Disponible Nequi";
+      } else if (targetType === "digital_wallet") {
+        const wallet = (fixedIncomeAccounts || []).find((a) => a.id === selectedWalletId) || otherWallets[0];
+        targetId = wallet?.id;
+        targetName = wallet ? wallet.name : "Billetera Digital";
+      } else if (targetType === "credit_card") {
+        const card = creditCards.find((c) => c.id === selectedCardId) || creditCards[0];
+        targetId = card?.id;
+        targetName = card ? card.name : "Tarjeta de Crédito";
+      } else if (targetType === "fixed_pocket") {
+        const pocket = (fixedIncomeAccounts || []).find((p) => p.id === selectedPocketId) || savingsPockets[0];
+        targetId = pocket?.id;
+        targetName = pocket ? pocket.name : "Cuenta de Ahorro";
+      } else if (targetType === "investment_cash") {
+        targetName = "Portafolio de Inversión / Broker";
+      } else if (targetType === "cash") {
+        targetName = "Efectivo / Billetera (Cash físico)";
+        targetId = "cash_wallet";
+      }
     }
 
     onConfirmSettlement(transaction.id, {
       amount: Number(settlementAmount),
       date: settlementDate,
-      targetType,
+      targetType: isNoIncome ? (targetType === "split_offset" ? "split_offset" : "already_registered") : targetType,
       targetId,
       targetName,
       recipient: transaction.loanRecipient || "Amigo/Familiar",
       description: transaction.description || "Préstamo",
       note: note.trim(),
+      alreadyRegistered: isNoIncome,
       currency,
     });
 
@@ -826,24 +899,47 @@ export default function LoanSettlementModal({
                           </span>
 
                           {!isPaid ? (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenParticipantCheck(p)}
-                              style={{
-                                padding: "4px 8px",
-                                borderRadius: 6,
-                                border: `1px solid ${isPartial ? (isLight ? "#d97706" : "#f59e0b") : (isLight ? "#059669" : "#10b981")}`,
-                                background: isPartial
-                                  ? (isLight ? "rgba(245, 158, 11, 0.12)" : "rgba(245, 158, 11, 0.2)")
-                                  : (isLight ? "rgba(16, 185, 129, 0.1)" : "rgba(16, 185, 129, 0.18)"),
-                                color: isPartial ? (isLight ? "#b45309" : "#fbbf24") : (isLight ? "#047857" : "#6ee7b7"),
-                                fontSize: "0.72rem",
-                                fontWeight: 700,
-                                cursor: "pointer",
-                              }}
-                            >
-                              {isPartial ? "Abonar restante" : "Cobrar"}
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenParticipantCheck(p)}
+                                style={{
+                                  padding: "4px 8px",
+                                  borderRadius: 6,
+                                  border: `1px solid ${isPartial ? (isLight ? "#d97706" : "#f59e0b") : (isLight ? "#059669" : "#10b981")}`,
+                                  background: isPartial
+                                    ? (isLight ? "rgba(245, 158, 11, 0.12)" : "rgba(245, 158, 11, 0.2)")
+                                    : (isLight ? "rgba(16, 185, 129, 0.1)" : "rgba(16, 185, 129, 0.18)"),
+                                  color: isPartial ? (isLight ? "#b45309" : "#fbbf24") : (isLight ? "#047857" : "#6ee7b7"),
+                                  fontSize: "0.72rem",
+                                  fontWeight: 700,
+                                  cursor: "pointer",
+                                }}
+                              >
+                                {isPartial ? "Abonar restante" : "Cobrar"}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleQuickOffsetParticipant(p)}
+                                style={{
+                                  padding: "4px 8px",
+                                  borderRadius: 6,
+                                  border: isLight ? "1px solid rgba(6, 182, 212, 0.45)" : "1px solid rgba(6, 182, 212, 0.5)",
+                                  background: isLight ? "rgba(6, 182, 212, 0.1)" : "rgba(6, 182, 212, 0.18)",
+                                  color: isLight ? "#0891b2" : "#22d3ee",
+                                  fontSize: "0.72rem",
+                                  fontWeight: 700,
+                                  cursor: "pointer",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 3,
+                                }}
+                                title="Marcar como pagado por cruce de cuentas o gasto dividido con roomie (sin registrar entrada de dinero en tus cuentas)"
+                              >
+                                🤝 Sin ingreso
+                              </button>
+                            </>
                           ) : (
                             <button
                               type="button"
@@ -1253,7 +1349,31 @@ export default function LoanSettlementModal({
                                 <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>Restaura cupo</span>
                               </button>
 
-                              {/* Option 7: Already Registered */}
+                              {/* Option 7: Gasto Dividido / Cruce Roomies (Sin Ingreso) */}
+                              <button
+                                type="button"
+                                onClick={() => setTargetType("split_offset")}
+                                style={{
+                                  padding: "8px 10px",
+                                  borderRadius: 8,
+                                  border: targetType === "split_offset" ? "2px solid #06b6d4" : "1px solid var(--border)",
+                                  background: targetType === "split_offset" ? (isLight ? "rgba(6, 182, 212, 0.15)" : "rgba(6, 182, 212, 0.25)") : "var(--bg-surface)",
+                                  color: targetType === "split_offset" ? (isLight ? "#0891b2" : "#22d3ee") : "var(--text-secondary)",
+                                  fontSize: "0.74rem",
+                                  fontWeight: 700,
+                                  cursor: "pointer",
+                                  textAlign: "left",
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: 2,
+                                  transition: "all 0.15s ease",
+                                }}
+                              >
+                                <span style={{ fontSize: "0.82rem" }}>🤝 Cruce Roomies</span>
+                                <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>Gasto dividido (sin ingreso)</span>
+                              </button>
+
+                              {/* Option 8: Already Registered */}
                               <button
                                 type="button"
                                 onClick={() => setTargetType("already_registered")}
@@ -1273,8 +1393,8 @@ export default function LoanSettlementModal({
                                   transition: "all 0.15s ease",
                                 }}
                               >
-                                <span style={{ fontSize: "0.82rem" }}>✓ Ya Registrado</span>
-                                <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>En extracto (sin duplicar)</span>
+                                <span style={{ fontSize: "0.82rem" }}>✓ Ya en Extracto</span>
+                                <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>Sin duplicar movimiento</span>
                               </button>
                             </div>
 
@@ -1386,14 +1506,20 @@ export default function LoanSettlementModal({
                             <button
                               type="button"
                               disabled={Number(settlingAmount) <= 0}
-                              onClick={() => handleConfirmParticipantPayment(targetType === "already_registered")}
+                              onClick={() => handleConfirmParticipantPayment(targetType === "already_registered" || targetType === "split_offset")}
                               style={{
                                 flex: 1,
                                 minWidth: 200,
                                 padding: "10px 16px",
                                 borderRadius: 8,
                                 border: "none",
-                                background: targetType === "nequi" ? "linear-gradient(135deg, #7000ff 0%, #ff007a 100%)" : (isLight ? "#059669" : "#10b981"),
+                                background: targetType === "split_offset"
+                                  ? (isLight ? "#0891b2" : "#06b6d4")
+                                  : targetType === "already_registered"
+                                  ? (isLight ? "#475569" : "#64748b")
+                                  : targetType === "nequi"
+                                  ? "linear-gradient(135deg, #7000ff 0%, #ff007a 100%)"
+                                  : (isLight ? "#059669" : "#10b981"),
                                 color: "#ffffff",
                                 fontSize: "0.82rem",
                                 fontWeight: 800,
@@ -1407,7 +1533,11 @@ export default function LoanSettlementModal({
                               }}
                             >
                               <span>✓</span> Confirmar Abono de {formatMoney(settlingAmount)} {
-                                targetType === "nequi"
+                                targetType === "split_offset"
+                                  ? "(Cruce Roomies - Sin Ingreso) 🤝"
+                                  : targetType === "already_registered"
+                                  ? "(Ya Registrado en Extracto) ✓"
+                                  : targetType === "nequi"
                                   ? "a Nequi 🟣"
                                   : targetType === "cash"
                                   ? "en Efectivo Físico 💵"
@@ -1419,7 +1549,7 @@ export default function LoanSettlementModal({
                                   ? `a ${(creditCards.find((c) => c.id === selectedCardId)?.name || "Tarjeta")} 💳`
                                   : targetType === "fixed_pocket"
                                   ? `a ${(savingsPockets.find((p) => p.id === selectedPocketId)?.name || "Cajita / Ahorro")} 🏦`
-                                  : "(Ya Registrado en Extracto) ✓"
+                                  : "✓"
                               }
                             </button>
                           </div>
@@ -1775,6 +1905,54 @@ export default function LoanSettlementModal({
                 >
                   <span style={{ fontSize: "0.82rem" }}>💳 Tarjeta de Crédito</span>
                   <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>Paga deuda y libera cupo</span>
+                </button>
+
+                {/* Option 7: Gasto Dividido / Cruce (Sin Ingreso) */}
+                <button
+                  type="button"
+                  onClick={() => setTargetType("split_offset")}
+                  style={{
+                    padding: "8px 10px",
+                    borderRadius: 8,
+                    border: targetType === "split_offset" ? "2px solid #06b6d4" : "1px solid var(--border)",
+                    background: targetType === "split_offset" ? (isLight ? "rgba(6, 182, 212, 0.15)" : "rgba(6, 182, 212, 0.25)") : "var(--bg-surface)",
+                    color: targetType === "split_offset" ? (isLight ? "#0891b2" : "#22d3ee") : "var(--text-secondary)",
+                    fontSize: "0.74rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    textAlign: "left",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <span style={{ fontSize: "0.82rem" }}>🤝 Cruce Roomies</span>
+                  <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>Gasto dividido (sin ingreso)</span>
+                </button>
+
+                {/* Option 8: Ya Registrado */}
+                <button
+                  type="button"
+                  onClick={() => setTargetType("already_registered")}
+                  style={{
+                    padding: "8px 10px",
+                    borderRadius: 8,
+                    border: targetType === "already_registered" ? "2px solid #64748b" : "1px solid var(--border)",
+                    background: targetType === "already_registered" ? (isLight ? "rgba(100, 116, 139, 0.15)" : "rgba(100, 116, 139, 0.25)") : "var(--bg-surface)",
+                    color: targetType === "already_registered" ? (isLight ? "#334155" : "#cbd5e1") : "var(--text-secondary)",
+                    fontSize: "0.74rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    textAlign: "left",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <span style={{ fontSize: "0.82rem" }}>✓ Ya en Extracto</span>
+                  <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>Sin duplicar movimiento</span>
                 </button>
               </div>
             </div>
