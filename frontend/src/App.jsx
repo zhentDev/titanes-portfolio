@@ -622,6 +622,7 @@ export default function App() {
       <>
         <Toaster
           position="bottom-right"
+          containerStyle={{ zIndex: 99999999 }}
           toastOptions={{
             style: {
               background: "var(--bg-surface)",
@@ -654,6 +655,7 @@ export default function App() {
     <div className="app-wrapper">
       <Toaster
         position="bottom-right"
+        containerStyle={{ zIndex: 99999999 }}
         toastOptions={{
           style: {
             background: "var(--bg-surface)",
