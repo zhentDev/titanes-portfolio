@@ -4,6 +4,7 @@ import DynamicDatePicker from "../Common/DynamicDatePicker";
 import GlassModalWrapper from "../Common/GlassModalWrapper";
 import { useTheme } from "../../context/ThemeContext";
 import { getCurrentPeriod } from "../../utils/periodUtils";
+import { calculateEffectiveExpense } from "../../utils/cashFlowFormatters";
 import "./CashFlow.css";
 
 function formatMoney(val, currency = "COP") {
@@ -24,6 +25,7 @@ export default function CreditCardPaymentModal({
   fixedIncomeAccounts = [],
   budgetItems = [],
   expensesLog = [],
+  debts = [],
   initialCardId = null,
   initialAmount = null,
   onSavePayment,
@@ -53,13 +55,8 @@ export default function CreditCardPaymentModal({
         (tx) => tx.budgetItemId === item.id || tx.budgetItemName === item.name
       );
       const totalGross = itemTransactions.reduce((acc, tx) => acc + (Number(tx.amount) || 0), 0);
-      const totalLent = itemTransactions.reduce((acc, tx) => {
-        if (tx.isLoan) {
-          return acc + (Number(tx.loanAmount) > 0 ? Number(tx.loanAmount) : Number(tx.amount));
-        }
-        return acc;
-      }, 0);
-      const spent = Math.max(0, totalGross - totalLent);
+      const spent = itemTransactions.reduce((acc, tx) => acc + calculateEffectiveExpense(tx, debts).effectiveSpent, 0);
+      const totalRepaid = itemTransactions.reduce((acc, tx) => acc + calculateEffectiveExpense(tx, debts).repaidAmount, 0);
       const baseBudget = Number(item.amount) || 0;
       const available = Math.max(0, baseBudget - spent);
 
@@ -67,10 +64,12 @@ export default function CreditCardPaymentModal({
         ...item,
         baseBudget,
         spent,
+        totalGross,
+        totalRepaid,
         available,
       };
     });
-  }, [budgetItems, expensesLog]);
+  }, [budgetItems, expensesLog, debts]);
 
   // Visible budget items for discounting (Wants & Wealth by default, Needs optional)
   const visibleBudgetItems = useMemo(() => {

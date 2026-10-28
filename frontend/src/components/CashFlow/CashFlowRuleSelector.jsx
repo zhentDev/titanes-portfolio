@@ -1,6 +1,6 @@
 import React from "react";
 import HourglassRangeSlider from "../Common/HourglassRangeSlider";
-import { formatCashFlowMoney } from "../../utils/cashFlowFormatters";
+import { formatCashFlowMoney, calculateEffectiveExpense } from "../../utils/cashFlowFormatters";
 import "./CashFlow.css";
 
 export default function CashFlowRuleSelector({
@@ -13,6 +13,7 @@ export default function CashFlowRuleSelector({
   totalWants = 0,
   totalWealth = 0,
   expensesLog = [],
+  debts = [],
   currency = "COP",
   fxRate = 4150,
 }) {
@@ -65,20 +66,14 @@ export default function CashFlowRuleSelector({
   const targetWantsAmt = (totalInflow * (customRatios.wants || 30)) / 100;
   const targetWealthAmt = (totalInflow * (customRatios.savings || 20)) / 100;
 
-  // Real Spending by Pillar (Net Personal Spending excluding loans)
+  // Real Spending by Pillar (Net Personal Spending after debt repayments/settlements)
   const needsSpent = (expensesLog || [])
     .filter((tx) => tx.budgetItemId?.startsWith("need_") || tx.budgetItemType === "needs" || tx.budgetItemName?.includes("Arriendo") || tx.budgetItemName?.includes("Servicio") || tx.budgetItemName?.includes("Alimentación"))
-    .reduce((acc, tx) => {
-      const loanAmt = tx.isLoan ? (Number(tx.loanAmount) > 0 ? Number(tx.loanAmount) : Number(tx.amount)) : 0;
-      return acc + Math.max(0, (Number(tx.amount) || 0) - loanAmt);
-    }, 0);
+    .reduce((acc, tx) => acc + calculateEffectiveExpense(tx, debts).effectiveSpent, 0);
 
   const wantsSpent = (expensesLog || [])
     .filter((tx) => tx.budgetItemId?.startsWith("want_") || tx.budgetItemType === "wants" || tx.budgetItemName?.includes("Restaurante") || tx.budgetItemName?.includes("Suscrip") || tx.budgetItemName?.includes("Ocio"))
-    .reduce((acc, tx) => {
-      const loanAmt = tx.isLoan ? (Number(tx.loanAmount) > 0 ? Number(tx.loanAmount) : Number(tx.amount)) : 0;
-      return acc + Math.max(0, (Number(tx.amount) || 0) - loanAmt);
-    }, 0);
+    .reduce((acc, tx) => acc + calculateEffectiveExpense(tx, debts).effectiveSpent, 0);
 
   // Remaining Strategy Capacities (Cupo Libre para Gastar)
   const needsRemainingQuota = targetNeedsAmt - totalNeeds;
@@ -86,8 +81,7 @@ export default function CashFlowRuleSelector({
   const wealthSurplus = totalWealth - targetWealthAmt;
 
   const totalSpentAll = (expensesLog || []).reduce((acc, tx) => {
-    const loanAmt = tx.isLoan ? (Number(tx.loanAmount) > 0 ? Number(tx.loanAmount) : Number(tx.amount)) : 0;
-    return acc + Math.max(0, (Number(tx.amount) || 0) - loanAmt);
+    return acc + calculateEffectiveExpense(tx, debts).effectiveSpent;
   }, 0);
   const totalTargetSpending = targetNeedsAmt + targetWantsAmt;
   const totalFreeSpendingQuota = Math.max(0, totalTargetSpending - (totalNeeds + totalWants));

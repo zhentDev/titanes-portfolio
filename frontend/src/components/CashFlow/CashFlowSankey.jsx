@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useTheme } from "../../context/ThemeContext";
-import { formatCashFlowMoneyWithCode } from "../../utils/cashFlowFormatters";
+import { formatCashFlowMoneyWithCode, calculateEffectiveExpense } from "../../utils/cashFlowFormatters";
 import "./CashFlow.css";
 
 /**
@@ -14,6 +14,7 @@ export default function CashFlowSankey({
   wants = [],
   wealth = [],
   expensesLog = [],
+  debts = [],
   activePeriod,
   currency = "COP",
   fxRate = 4150,
@@ -196,22 +197,35 @@ export default function CashFlowSankey({
       const budgeted = Number(item.amount) || 0;
       const pct = totalInflow > 0 ? ((budgeted / totalInflow) * 100).toFixed(1) : 0;
 
-      // Real execution matching from expensesLog
-      const spent = (expensesLog || [])
-        .filter((tx) => {
-          if (tx.period && activePeriod && tx.period !== activePeriod) return false;
-          // Si está explícitamente asignado al rubro por su ID, siempre cuenta como ejecución
-          if (tx.budgetItemId && tx.budgetItemId === item.id) return true;
-          const desc = (tx.description || "").toLowerCase();
-          const bName = (tx.budgetItemName || "").toLowerCase();
-          const itemName = item.name.toLowerCase();
-          if (bName && (bName.includes(itemName) || itemName.includes(bName))) return true;
-          if (itemName.includes("emergencia") && (desc.includes("emergencia") || bName.includes("emergencia") || desc.includes("rappicuenta"))) return true;
-          if (itemName.includes("arriendo") && (desc.includes("arriendo") || bName.includes("arriendo"))) return true;
-          if (tx.type === "credit" || tx.budgetItemType === "income") return false;
-          return false;
-        })
-        .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+      // Real execution matching from expensesLog with dynamic loan liberation
+      const matchingTxs = (expensesLog || []).filter((tx) => {
+        if (tx.period && activePeriod && tx.period !== activePeriod) return false;
+        // Si está explícitamente asignado al rubro por su ID, siempre cuenta como ejecución
+        if (tx.budgetItemId && tx.budgetItemId === item.id) return true;
+        const desc = (tx.description || "").toLowerCase();
+        const bName = (tx.budgetItemName || "").toLowerCase();
+        const itemName = item.name.toLowerCase();
+        if (bName && (bName.includes(itemName) || itemName.includes(bName))) return true;
+        if (itemName.includes("emergencia") && (desc.includes("emergencia") || bName.includes("emergencia") || desc.includes("rappicuenta"))) return true;
+        if (itemName.includes("arriendo") && (desc.includes("arriendo") || bName.includes("arriendo"))) return true;
+        if (tx.type === "credit" || tx.budgetItemType === "income") return false;
+        return false;
+      });
+
+      let spent = 0;
+      let grossSpent = 0;
+      let liberatedAmount = 0;
+      let pendingLoanAmount = 0;
+      let purePersonalSpent = 0;
+
+      for (const tx of matchingTxs) {
+        const eff = calculateEffectiveExpense(tx, debts);
+        grossSpent += eff.grossAmount;
+        spent += eff.effectiveSpent;
+        liberatedAmount += eff.repaidAmount;
+        pendingLoanAmount += eff.pendingLoan;
+        purePersonalSpent += eff.purePersonalSpent;
+      }
 
       const progressPct = budgeted > 0 ? (spent / budgeted) * 100 : 0;
       const remaining = Math.max(0, budgeted - spent);
@@ -272,6 +286,10 @@ export default function CashFlowSankey({
         icon: item.icon || "🎯",
         amount: budgeted,
         spent,
+        grossSpent,
+        liberatedAmount,
+        pendingLoanAmount,
+        purePersonalSpent,
         remaining,
         progressPct,
         statusLabel,
@@ -418,7 +436,7 @@ export default function CashFlowSankey({
       W,
       H,
     };
-  }, [inflows, needs, wants, wealth, totalInflow, totalNeeds, totalWants, totalWealth, freeCashFlow, expensesLog, activePeriod, isLight]);
+  }, [inflows, needs, wants, wealth, totalInflow, totalNeeds, totalWants, totalWealth, freeCashFlow, expensesLog, debts, activePeriod, isLight]);
 
   return (
     <div className="cashflow-sankey-section">
@@ -724,6 +742,11 @@ export default function CashFlowSankey({
                               {dest.spent > 0 && (
                                 <div style={{ fontSize: "0.68rem", color: dest.statusColor, fontWeight: 700, marginTop: 2 }}>
                                   Ejecutado: {formatAmount(dest.spent, currency)}
+                                </div>
+                              )}
+                              {dest.liberatedAmount > 0 && (
+                                <div style={{ fontSize: "0.65rem", color: "#10b981", fontWeight: 600, marginTop: 1 }}>
+                                  🌱 +{formatAmount(dest.liberatedAmount, currency)} liberados
                                 </div>
                               )}
                             </div>
@@ -1143,9 +1166,26 @@ export default function CashFlowSankey({
           {hoveredItem.spent !== undefined && (
             <div style={{ marginTop: 6, paddingTop: 6, borderTop: isLight ? "1px solid rgba(0,0,0,0.06)" : "1px solid rgba(255,255,255,0.06)" }}>
               <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-                Ejecutado / Pagado Real: <strong style={{ color: hoveredItem.statusColor || "#10b981" }}>{formatAmount(hoveredItem.spent, currency)}</strong> ({hoveredItem.progressPct?.toFixed(0)}%)
+                Ejecutado Actual: <strong style={{ color: hoveredItem.statusColor || "#10b981" }}>{formatAmount(hoveredItem.spent, currency)}</strong> ({hoveredItem.progressPct?.toFixed(0)}%)
               </div>
-              <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: 2 }}>
+              {hoveredItem.liberatedAmount > 0 && (
+                <div style={{ fontSize: "0.76rem", color: "#10b981", marginTop: 3, display: "flex", alignItems: "center", gap: 4 }}>
+                  <span>🌱 Liberado por cobros de deuda:</span>
+                  <strong>+{formatAmount(hoveredItem.liberatedAmount, currency)}</strong>
+                </div>
+              )}
+              {hoveredItem.pendingLoanAmount > 0 && (
+                <div style={{ fontSize: "0.76rem", color: isLight ? "#b45309" : "#fbbf24", marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
+                  <span>⏳ Pendiente por cobrar:</span>
+                  <strong>{formatAmount(hoveredItem.pendingLoanAmount, currency)}</strong>
+                </div>
+              )}
+              {hoveredItem.liberatedAmount > 0 && hoveredItem.purePersonalSpent !== undefined && (
+                <div style={{ fontSize: "0.73rem", color: "var(--text-muted)", marginTop: 3, borderTop: isLight ? "1px dashed rgba(0,0,0,0.08)" : "1px dashed rgba(255,255,255,0.08)", paddingTop: 3 }}>
+                  🎯 Gasto propio proyectado: <strong>{formatAmount(hoveredItem.purePersonalSpent, currency)}</strong>
+                </div>
+              )}
+              <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: 4 }}>
                 Disponible Restante: <strong style={{ color: hoveredItem.remaining > 0 ? "#10b981" : "#f43f5e" }}>{formatAmount(hoveredItem.remaining, currency)}</strong>
               </div>
               <div style={{ fontSize: "0.76rem", color: hoveredItem.statusColor || "#10b981", fontWeight: 700, marginTop: 4 }}>

@@ -2132,6 +2132,7 @@ export default function CashFlowHub() {
           wants={periodWants}
           wealth={periodWealth}
           expensesLog={expensesLog}
+          debts={debts}
           activePeriod={activePeriod}
           currency={currency}
           fxRate={fxRate}
@@ -2515,6 +2516,7 @@ export default function CashFlowHub() {
               totalWants={totalWants}
               totalWealth={totalWealth}
               expensesLog={periodExpenses}
+              debts={debts}
               currency={currency}
               fxRate={fxRate}
             />
@@ -2735,6 +2737,7 @@ export default function CashFlowHub() {
               icon="🟢"
               items={periodInflows}
               expensesLog={periodExpenses}
+              debts={debts}
               totalInflow={totalInflow}
               currency={currency}
               fxRate={fxRate}
@@ -2750,6 +2753,7 @@ export default function CashFlowHub() {
               icon="🔴"
               items={periodNeeds}
               expensesLog={periodExpenses}
+              debts={debts}
               activePeriod={activePeriod}
               totalInflow={totalInflow}
               targetRatio={customRatios.needs}
@@ -2774,6 +2778,7 @@ export default function CashFlowHub() {
               icon="🟣"
               items={periodWants}
               expensesLog={periodExpenses}
+              debts={debts}
               activePeriod={activePeriod}
               totalInflow={totalInflow}
               targetRatio={customRatios.wants}
@@ -2798,6 +2803,7 @@ export default function CashFlowHub() {
               icon="🔵"
               items={periodWealth}
               expensesLog={periodExpenses}
+              debts={debts}
               activePeriod={activePeriod}
               totalInflow={totalInflow}
               targetRatio={customRatios.savings}

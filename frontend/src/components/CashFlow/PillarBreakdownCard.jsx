@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import toast from "react-hot-toast";
 import { useTheme } from "../../context/ThemeContext";
-import { formatCashFlowMoney } from "../../utils/cashFlowFormatters";
+import { formatCashFlowMoney, calculateEffectiveExpense } from "../../utils/cashFlowFormatters";
 import "./CashFlow.css";
 
 export default function PillarBreakdownCard({
@@ -10,6 +10,7 @@ export default function PillarBreakdownCard({
   icon = "💼",
   items = [],
   expensesLog = [], // Array of real transactions for active period
+  debts = [],
   activePeriod,
   totalInflow = 0,
   targetRatio = 0,
@@ -268,15 +269,20 @@ export default function PillarBreakdownCard({
               }
               return false;
             });
-            const totalGrossAmount = itemTransactions.reduce((acc, tx) => acc + (Number(tx.amount) || 0), 0);
-            const totalLentAmount = itemTransactions.reduce((acc, tx) => {
-              if (tx.isLoan) {
-                return acc + (Number(tx.loanAmount) > 0 ? Number(tx.loanAmount) : Number(tx.amount));
-              }
-              return acc;
-            }, 0);
-            // Gasto Personal Real Imputable al Sobre Presupuestal
-            const spentAmount = Math.max(0, totalGrossAmount - totalLentAmount);
+            let totalGrossAmount = 0;
+            let spentAmount = 0;
+            let totalRepaidAmount = 0;
+            let totalPendingLoanAmount = 0;
+            let purePersonalSpent = 0;
+
+            for (const tx of itemTransactions) {
+              const eff = calculateEffectiveExpense(tx, debts);
+              totalGrossAmount += eff.grossAmount;
+              spentAmount += eff.effectiveSpent;
+              totalRepaidAmount += eff.repaidAmount;
+              totalPendingLoanAmount += eff.pendingLoan;
+              purePersonalSpent += eff.purePersonalSpent;
+            }
             const isOverBudget = type !== "inflow" && spentAmount > Number(itemAmt) && Number(itemAmt) > 0;
             const overspendDelta = spentAmount - Number(itemAmt);
             const remainingBudget = Math.max(0, Number(itemAmt) - spentAmount);
@@ -750,11 +756,19 @@ export default function PillarBreakdownCard({
                       </div>
                     )}
 
-                    {totalLentAmount > 0 && (
-                      <div style={{ fontSize: "0.7rem", color: "#fcd34d", marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
-                        <span>🤝</span>
+                    {totalRepaidAmount > 0 && (
+                      <div style={{ fontSize: "0.7rem", color: "#10b981", marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                        <span>🌱</span>
                         <span>
-                          <strong>{formatMoney(totalLentAmount, currency)}</strong> en préstamos/deudas por cobrar (no consumen tu cupo personal)
+                          <strong>+{formatMoney(totalRepaidAmount, currency)}</strong> liberados de este rubro por cobros de deuda recibidos
+                        </span>
+                      </div>
+                    )}
+                    {totalPendingLoanAmount > 0 && (
+                      <div style={{ fontSize: "0.7rem", color: "#f59e0b", marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                        <span>⏳</span>
+                        <span>
+                          <strong>{formatMoney(totalPendingLoanAmount, currency)}</strong> pendiente por cobrar (al recibirlo, tu gasto neto será {formatMoney(purePersonalSpent, currency)})
                         </span>
                       </div>
                     )}

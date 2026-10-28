@@ -95,3 +95,77 @@ export function formatCashFlowMoneyShort(val, currency = "COP", fxRate = 4150) {
 export function formatCurrencyLocal(val, currency = "COP", options = {}) {
   return formatCashFlowMoney(val, currency, 4150, options);
 }
+
+/**
+ * Calculates the effective spending of a transaction towards a budget envelope,
+ * liberating the envelope budget as loans or shared expenses are repaid (cobros / abonos).
+ *
+ * @param {Object} tx - Expense transaction from expensesLog
+ * @param {Array} debts - Optional debts array to cross-reference repayments
+ * @returns {{ grossAmount: number, repaidAmount: number, effectiveSpent: number, pendingLoan: number, purePersonalSpent: number, isLoanExpense: boolean }}
+ */
+export function calculateEffectiveExpense(tx, debts = []) {
+  const grossAmount = Number(tx?.amount) || 0;
+  if (!tx) {
+    return { grossAmount: 0, repaidAmount: 0, effectiveSpent: 0, pendingLoan: 0, purePersonalSpent: 0, isLoanExpense: false };
+  }
+
+  const isLoan = Boolean(
+    tx.isLoan ||
+    Number(tx.loanAmount) > 0 ||
+    (Array.isArray(tx.participants) && tx.participants.length > 0) ||
+    (Array.isArray(tx.settlements) && tx.settlements.length > 0)
+  );
+
+  const linkedDebt = Array.isArray(debts)
+    ? debts.find((d) => d.linkedExpenseId === tx.id || d.id === tx.debtId || d.id === `debt_tx_${tx.id}`)
+    : null;
+
+  if (!isLoan && !linkedDebt) {
+    return {
+      grossAmount,
+      repaidAmount: 0,
+      effectiveSpent: grossAmount,
+      pendingLoan: 0,
+      purePersonalSpent: grossAmount,
+      isLoanExpense: false,
+    };
+  }
+
+  // 1. Repayments from tx.settlements
+  const settlements = Array.isArray(tx.settlements) ? tx.settlements : [];
+  const settlementsRepaid = settlements.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+
+  // 2. Repayments from linked debt payments
+  let debtRepaid = 0;
+  if (linkedDebt) {
+    const debtPayments = Array.isArray(linkedDebt.paymentsLog) ? linkedDebt.paymentsLog : [];
+    const paymentsSum = debtPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const tot = Number(linkedDebt.totalAmount) || 0;
+    const rem = linkedDebt.remainingAmount !== undefined ? Number(linkedDebt.remainingAmount) : tot;
+    debtRepaid = Math.max(paymentsSum, Math.max(0, tot - rem));
+  }
+
+  // Best knowledge of total repaid to date
+  const repaidAmount = Math.max(settlementsRepaid, debtRepaid);
+
+  // Effective expense currently tied up in the envelope = gross - repaid
+  const effectiveSpent = Math.max(0, grossAmount - repaidAmount);
+
+  // Total amount loaned out
+  const totalLoaned = Number(tx.loanAmount) > 0
+    ? Number(tx.loanAmount)
+    : (linkedDebt ? Number(linkedDebt.totalAmount) || grossAmount : grossAmount);
+
+  const pendingLoan = Math.max(0, totalLoaned - repaidAmount);
+  const purePersonalSpent = Math.max(0, grossAmount - totalLoaned);
+
+  return {
+    grossAmount,
+    repaidAmount,
+    effectiveSpent,
+    pendingLoan,
+    purePersonalSpent,
+    isLoanExpense: true,
+  };
+}

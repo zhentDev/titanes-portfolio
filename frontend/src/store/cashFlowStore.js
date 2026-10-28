@@ -1103,7 +1103,7 @@ export const useCashFlowStore = create(
         toast.success("Concepto reasignado exitosamente al nuevo rubro ✅");
       },
 
-      reclassifyMovement: ({ movementId, destinationType, targetId, targetItem, subItem, destinationAccount, cardId, distributions, paymentSource, newDebtData }) => {
+      reclassifyMovement: ({ movementId, destinationType, targetId, targetItem, subItem, destinationAccount, cardId, distributions, paymentSource, newDebtData, alreadyRegisteredInDebt }) => {
         const state = get();
 
         // 0. Destination: Multi-Rubro Distribution (Split Movement / Distributed Card Payment)
@@ -1221,7 +1221,7 @@ export const useCashFlowStore = create(
           if (!debt) return;
 
           const currentRemaining = Number(debt.remainingAmount !== undefined ? debt.remainingAmount : debt.totalAmount || 0);
-          const newRemaining = Math.max(0, currentRemaining - amount);
+          const newRemaining = alreadyRegisteredInDebt ? currentRemaining : Math.max(0, currentRemaining - amount);
           const isSettled = newRemaining <= 0;
 
           const paymentRecord = {
@@ -1230,7 +1230,9 @@ export const useCashFlowStore = create(
             date: expense.date || new Date().toISOString().slice(0, 10),
             paymentMethod: expense.paymentSource?.type === "payroll" ? "Nómina Nu Débito" : "Transferencia Débito",
             paymentSourceId: expense.paymentSource?.targetId || null,
-            note: isReceivable
+            note: alreadyRegisteredInDebt
+              ? `Conciliado con cobro previo (sin alterar saldo): ${expense.description || "Extracto bancario"}`
+              : isReceivable
               ? `Cobro/Abono recibido desde movimiento: ${expense.description || "Ingreso bancario"}`
               : `Abono registrado desde movimiento: ${expense.description || "Gasto bancario"}`,
             createdAt: new Date().toISOString(),
@@ -1245,6 +1247,17 @@ export const useCashFlowStore = create(
               paymentsLog: [paymentRecord, ...(d.paymentsLog || [])],
             };
           });
+
+          // Limpiar ingreso duplicado manual si se está conciliando con el extracto real
+          let updatedInflows = state.inflows || [];
+          if (alreadyRegisteredInDebt) {
+            updatedInflows = updatedInflows.filter((inf) => {
+              if (inf.id === "in_reimb_1793195781151" || (inf.category === "reimbursement" && Number(inf.amount) === 178000)) {
+                return false;
+              }
+              return true;
+            });
+          }
 
           // Update expense description and tag it as debt payment / collection
           let updatedExpenses = (state.expensesLog || []).map((e) => {
@@ -1290,16 +1303,18 @@ export const useCashFlowStore = create(
             });
           }
 
-          set({ debts: updatedDebts, expensesLog: updatedExpenses });
+          set({ debts: updatedDebts, expensesLog: updatedExpenses, inflows: updatedInflows });
           try {
             localStorage.setItem("titanes_cash_flow_store_v2", JSON.stringify({ ...state, debts: updatedDebts, expensesLog: updatedExpenses }));
           } catch {}
           get().syncStateWithBackend();
           toast.success(
-            isReceivable
+            alreadyRegisteredInDebt
+              ? `Movimiento "${expense.description}" conciliado con deuda "${debt.concept}" (sin doble descuento) ✅`
+              : isReceivable
               ? `Cobro de préstamo "${debt.concept}" registrado. ${isSettled ? "¡Préstamo 100% saldado! 🎊" : `Saldo pendiente: $${Math.round(newRemaining).toLocaleString("es-CO")}`}`
               : `Abono a deuda "${debt.concept}" registrado. ${isSettled ? "¡Deuda 100% saldada! 🎊" : `Saldo restante: $${Math.round(newRemaining).toLocaleString("es-CO")}`}`,
-            { icon: isReceivable ? "📥" : "🤝" }
+            { icon: alreadyRegisteredInDebt ? "📌" : isReceivable ? "📥" : "🤝" }
           );
           return;
         }

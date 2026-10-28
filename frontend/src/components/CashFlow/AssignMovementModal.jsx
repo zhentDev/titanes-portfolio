@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import GlassModalWrapper from "../Common/GlassModalWrapper";
 import InfoTooltip from "../Common/InfoTooltip";
 import { useTheme } from "../../context/ThemeContext";
-import { parseLocalNumber, formatCashFlowMoney } from "../../utils/cashFlowFormatters";
+import { parseLocalNumber, formatCashFlowMoney, calculateEffectiveExpense } from "../../utils/cashFlowFormatters";
 import { useCashFlowStore } from "../../store/cashFlowStore";
 
 export default function AssignMovementModal({
@@ -62,6 +62,7 @@ export default function AssignMovementModal({
     totalAmount: String(Number(movement?.amount) || ""),
     debtType: isIncoming ? "receivable" : "payable",
   }));
+  const [alreadyRegisteredInDebt, setAlreadyRegisteredInDebt] = useState(false);
   const [selectedCardId, setSelectedCardId] = useState(creditCards[0]?.id || "");
   const [selectedDestAccountId, setSelectedDestAccountId] = useState(movement?.destinationAccountId || "");
   const [cardActionMode, setCardActionMode] = useState("purchase"); // "purchase" | "payoff"
@@ -246,7 +247,7 @@ export default function AssignMovementModal({
       const bName = (tx.budgetItemName || "").toLowerCase();
       return bName && bName === env.name.toLowerCase();
     });
-    const alreadySpent = envExpenses.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+    const alreadySpent = envExpenses.reduce((sum, tx) => sum + calculateEffectiveExpense(tx, debts).effectiveSpent, 0);
     const subItemsList = Array.isArray(env.subItems) ? env.subItems : [];
 
     // Identify pending concepts that have NOT been paid and are NOT selected in this card split:
@@ -565,6 +566,7 @@ export default function AssignMovementModal({
           destinationType: "debt",
           targetId: debt.id,
           targetItem: debt,
+          alreadyRegisteredInDebt,
           paymentSource: {
             type: chosenSource.type,
             targetId: chosenSource.id,
@@ -1747,7 +1749,7 @@ export default function AssignMovementModal({
                               return bName && bName === item.name.toLowerCase();
                             });
 
-                            const spentAmt = itemExpenses.reduce((acc, tx) => acc + (Number(tx.amount) || 0), 0);
+                            const spentAmt = itemExpenses.reduce((acc, tx) => acc + calculateEffectiveExpense(tx, debts).effectiveSpent, 0);
                             const subItemsList = Array.isArray(item.subItems) ? item.subItems : [];
                             const isExpanded = Boolean(expandedEnvelopes[item.id]);
 
@@ -2428,10 +2430,61 @@ export default function AssignMovementModal({
                               <span style={{ color: "#10b981", fontWeight: 600 }}>
                                 {isRec ? "Cobro a aplicar:" : "Abono a aplicar:"} {formatMoney(movementAmount, currency)}
                               </span>
-                              <span style={{ color: willSettle ? "#10b981" : "var(--text-primary)", fontWeight: 700 }}>
-                                {willSettle ? "¡Quedará 100% saldada! 🎊" : `Nuevo saldo: ${formatMoney(newRemaining, currency)}`}
+                              <span style={{ color: willSettle && !alreadyRegisteredInDebt ? "#10b981" : "var(--text-primary)", fontWeight: 700 }}>
+                                {alreadyRegisteredInDebt
+                                  ? `Nuevo saldo: ${formatMoney(currentRemaining, currency)} (Sin doble descuento ✓)`
+                                  : willSettle
+                                  ? "¡Quedará 100% saldada! 🎊"
+                                  : `Nuevo saldo: ${formatMoney(newRemaining, currency)}`}
                               </span>
                             </div>
+
+                            {/* Checkbox para cobro ya registrado manualmente */}
+                            {isSelected && (
+                              <div
+                                onClick={(e) => e.stopPropagation()}
+                                style={{
+                                  marginTop: 10,
+                                  padding: "9px 12px",
+                                  borderRadius: "8px",
+                                  background: alreadyRegisteredInDebt
+                                    ? (isLight ? "#ecfdf5" : "rgba(16, 185, 129, 0.15)")
+                                    : (isLight ? "#f1f5f9" : "rgba(15, 23, 42, 0.6)"),
+                                  border: alreadyRegisteredInDebt
+                                    ? (isLight ? "1px solid #a7f3d0" : "1px solid rgba(16, 185, 129, 0.3)")
+                                    : (isLight ? "1px solid #cbd5e1" : "1px solid rgba(255, 255, 255, 0.08)"),
+                                  transition: "all 0.15s ease",
+                                }}
+                              >
+                                <label
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "flex-start",
+                                    gap: 8,
+                                    cursor: "pointer",
+                                    fontSize: "0.76rem",
+                                    userSelect: "none",
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={alreadyRegisteredInDebt}
+                                    onChange={(e) => setAlreadyRegisteredInDebt(e.target.checked)}
+                                    style={{ marginTop: 2, cursor: "pointer", accentColor: "#10b981" }}
+                                  />
+                                  <div>
+                                    <strong style={{ display: "block", color: alreadyRegisteredInDebt ? (isLight ? "#047857" : "#34d399") : "var(--text-primary)" }}>
+                                      📌 Ya registré este cobro manualmente en la deuda
+                                    </strong>
+                                    <span style={{ fontSize: "0.71rem", color: "var(--text-muted)", display: "block", marginTop: 2 }}>
+                                      {alreadyRegisteredInDebt
+                                        ? `✓ Conciliar movimiento sin volver a restar del saldo ($${Math.round(currentRemaining).toLocaleString("es-CO")}) ni duplicar ingresos.`
+                                        : "Marca esto si ya habías ingresado este abono manualmente y solo quieres vincular la transacción del banco sin descontar dos veces."}
+                                    </span>
+                                  </div>
+                                </label>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
