@@ -1005,7 +1005,7 @@ export const useCashFlowStore = create(
         toast.success("Concepto reasignado exitosamente al nuevo rubro ✅");
       },
 
-      reclassifyMovement: ({ movementId, destinationType, targetId, targetItem, subItem, destinationAccount, cardId, distributions, paymentSource }) => {
+      reclassifyMovement: ({ movementId, destinationType, targetId, targetItem, subItem, destinationAccount, cardId, distributions, paymentSource, newDebtData }) => {
         const state = get();
 
         // 0. Destination: Multi-Rubro Distribution (Split Movement / Distributed Card Payment)
@@ -1091,9 +1091,35 @@ export const useCashFlowStore = create(
           return;
         }
 
-        // 2. Destination: Personal Debt Payment
+        // 2. Destination: Personal Debt Payment / Debt Collection
         if (destinationType === "debt") {
-          const debt = (state.debts || []).find((d) => d.id === targetId);
+          let debt = targetId ? (state.debts || []).find((d) => d.id === targetId) : null;
+          let currentDebts = [...(state.debts || [])];
+          const isReceivable = (newDebtData?.debtType === "receivable") ||
+            (debt?.debtType === "receivable") ||
+            expense.type === "credit";
+
+          if (!debt && newDebtData) {
+            const tot = Math.max(amount, Number(newDebtData.totalAmount) || amount);
+            const debtorName = (newDebtData.debtor || newDebtData.creditor || expense.description || "Deudor").trim();
+            debt = {
+              id: `debt_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+              debtType: isReceivable ? "receivable" : "payable",
+              concept: newDebtData.concept?.trim() || `${isReceivable ? "Préstamo a" : "Deuda con"} ${debtorName}`,
+              creditor: debtorName,
+              debtor: debtorName,
+              totalAmount: tot,
+              remainingAmount: tot,
+              paymentMethod: expense.paymentSource?.type === "payroll" ? "Cuenta Nu Débito" : "Transferencia Bancaria",
+              paymentSourceId: expense.paymentSource?.targetId || null,
+              paymentFrequency: isReceivable ? "one_time" : "monthly",
+              status: "active",
+              paymentsLog: [],
+              createdAt: new Date().toISOString(),
+            };
+            currentDebts = [debt, ...currentDebts];
+          }
+
           if (!debt) return;
 
           const currentRemaining = Number(debt.remainingAmount !== undefined ? debt.remainingAmount : debt.totalAmount || 0);
@@ -1106,12 +1132,14 @@ export const useCashFlowStore = create(
             date: expense.date || new Date().toISOString().slice(0, 10),
             paymentMethod: expense.paymentSource?.type === "payroll" ? "Nómina Nu Débito" : "Transferencia Débito",
             paymentSourceId: expense.paymentSource?.targetId || null,
-            note: `Abono registrado desde movimiento: ${expense.description || "Gasto bancario"}`,
+            note: isReceivable
+              ? `Cobro/Abono recibido desde movimiento: ${expense.description || "Ingreso bancario"}`
+              : `Abono registrado desde movimiento: ${expense.description || "Gasto bancario"}`,
             createdAt: new Date().toISOString(),
           };
 
-          const updatedDebts = (state.debts || []).map((d) => {
-            if (d.id !== targetId) return d;
+          const updatedDebts = currentDebts.map((d) => {
+            if (d.id !== debt.id) return d;
             return {
               ...d,
               remainingAmount: newRemaining,
@@ -1120,16 +1148,20 @@ export const useCashFlowStore = create(
             };
           });
 
-          // Update expense description and tag it as debt payment
+          // Update expense description and tag it as debt payment / collection
           const updatedExpenses = (state.expensesLog || []).map((e) => {
             if (e.id !== movementId) return e;
             return {
               ...e,
-              description: `Pago Deuda: ${debt.concept}`,
+              description: isReceivable ? `Cobro Deuda: ${debt.concept}` : `Pago Deuda: ${debt.concept}`,
               budgetItemId: null,
-              budgetItemName: `Abono Deuda (${debt.creditor || debt.concept})`,
-              budgetItemType: "needs",
+              budgetItemName: isReceivable
+                ? `Cobro Préstamo (${debt.debtor || debt.creditor || debt.concept})`
+                : `Abono Deuda (${debt.creditor || debt.concept})`,
+              budgetItemType: isReceivable ? "income" : "needs",
+              type: isReceivable ? "credit" : (e.type || "debit"),
               isDebtPayment: true,
+              isDebtCollection: isReceivable,
               debtId: debt.id,
             };
           });
@@ -1140,8 +1172,10 @@ export const useCashFlowStore = create(
           } catch {}
           get().syncStateWithBackend();
           toast.success(
-            `Abono a deuda "${debt.concept}" registrado. ${isSettled ? "¡Deuda 100% saldada! 🎊" : `Saldo restante: $${Math.round(newRemaining).toLocaleString("es-CO")}`}`,
-            { icon: "🤝" }
+            isReceivable
+              ? `Cobro de préstamo "${debt.concept}" registrado. ${isSettled ? "¡Préstamo 100% saldado! 🎊" : `Saldo pendiente: $${Math.round(newRemaining).toLocaleString("es-CO")}`}`
+              : `Abono a deuda "${debt.concept}" registrado. ${isSettled ? "¡Deuda 100% saldada! 🎊" : `Saldo restante: $${Math.round(newRemaining).toLocaleString("es-CO")}`}`,
+            { icon: isReceivable ? "📥" : "🤝" }
           );
           return;
         }

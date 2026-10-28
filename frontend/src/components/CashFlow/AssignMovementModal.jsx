@@ -53,6 +53,15 @@ export default function AssignMovementModal({
     return found || null;
   });
   const [selectedDebtId, setSelectedDebtId] = useState(debts[0]?.id || "");
+  const isIncoming = movement?.type === "credit" || movement?.budgetItemType === "income";
+  const [debtMode, setDebtMode] = useState(debts.length === 0 ? "new" : "existing"); // "existing" | "new"
+  const [debtTypeFilter, setDebtTypeFilter] = useState("all"); // "all" | "receivable" | "payable"
+  const [newDebtData, setNewDebtData] = useState(() => ({
+    concept: `Préstamo a ${movement?.description || "Particular"}`,
+    debtor: movement?.description || "",
+    totalAmount: String(Number(movement?.amount) || ""),
+    debtType: isIncoming ? "receivable" : "payable",
+  }));
   const [selectedCardId, setSelectedCardId] = useState(creditCards[0]?.id || "");
   const [selectedDestAccountId, setSelectedDestAccountId] = useState(movement?.destinationAccountId || "");
   const [cardActionMode, setCardActionMode] = useState("purchase"); // "purchase" | "payoff"
@@ -529,20 +538,40 @@ export default function AssignMovementModal({
         paymentSource: movement.paymentSource,
       });
     } else if (activeTab === "debt") {
-      const debt = debts.find((d) => d.id === selectedDebtId);
-      if (!debt) return;
       const chosenSource = allPaymentSources.find((s) => s.key === selectedSourceAccountKey) || allPaymentSources[0];
-      onReclassify({
-        movementId: movement.id,
-        destinationType: "debt",
-        targetId: debt.id,
-        targetItem: debt,
-        paymentSource: {
-          type: chosenSource.type,
-          targetId: chosenSource.id,
-          targetName: chosenSource.name,
-        },
-      });
+      if (debtMode === "new") {
+        onReclassify({
+          movementId: movement.id,
+          destinationType: "debt",
+          targetId: null,
+          newDebtData: {
+            concept: newDebtData.concept?.trim() || `Préstamo a ${newDebtData.debtor?.trim() || movement.description}`,
+            debtor: newDebtData.debtor?.trim() || movement.description,
+            creditor: newDebtData.debtor?.trim() || movement.description,
+            totalAmount: Number(newDebtData.totalAmount) || movementAmount,
+            debtType: newDebtData.debtType || (isIncoming ? "receivable" : "payable"),
+          },
+          paymentSource: {
+            type: chosenSource.type,
+            targetId: chosenSource.id,
+            targetName: chosenSource.name,
+          },
+        });
+      } else {
+        const debt = debts.find((d) => d.id === selectedDebtId);
+        if (!debt) return;
+        onReclassify({
+          movementId: movement.id,
+          destinationType: "debt",
+          targetId: debt.id,
+          targetItem: debt,
+          paymentSource: {
+            type: chosenSource.type,
+            targetId: chosenSource.id,
+            targetName: chosenSource.name,
+          },
+        });
+      }
     } else if (activeTab === "credit_card") {
       const card = creditCards.find((c) => c.id === selectedCardId);
       if (!card) return;
@@ -582,7 +611,11 @@ export default function AssignMovementModal({
   const isConfirmDisabled =
     (activeTab === "budget_envelope" && !selectedEnvelopeId) ||
     (activeTab === "internal_transfer" && !selectedTransferAccId) ||
-    (activeTab === "debt" && !selectedDebtId) ||
+    (activeTab === "debt" && (
+      debtMode === "existing"
+        ? !selectedDebtId
+        : (!newDebtData.concept?.trim() || !newDebtData.debtor?.trim() || !newDebtData.totalAmount || Number(newDebtData.totalAmount) <= 0)
+    )) ||
     (activeTab === "credit_card" && !selectedCardId) ||
     (activeTab === "multi_envelope" && (splitRemaining !== 0 || totalSplitAssigned <= 0));
 
@@ -697,8 +730,8 @@ export default function AssignMovementModal({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1.15fr 1fr 1fr",
-            gap: 6,
+            gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+            gap: 4,
             background: isLight ? "#f1f5f9" : "rgba(15, 23, 42, 0.6)",
             padding: "4px",
             borderRadius: "12px",
@@ -749,7 +782,7 @@ export default function AssignMovementModal({
               transition: "all 0.15s ease",
             }}
           >
-            <span>📊</span> Distribuir Varios
+            <span>📊</span> Distribuir
           </button>
 
           <button
@@ -795,7 +828,7 @@ export default function AssignMovementModal({
               transition: "all 0.15s ease",
             }}
           >
-            <span>🔄</span> Transferir / Efectivo
+            <span>🔄</span> Transferir
           </button>
 
           <button
@@ -2167,94 +2200,431 @@ export default function AssignMovementModal({
           </div>
         )}
 
-        {/* Tab 2: Personal Debt Payment Selection */}
+        {/* Tab 2: Personal Debt Payment / Debt Collection */}
         {activeTab === "debt" && (
           <div>
-            <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginBottom: 12, lineHeight: 1.4 }}>
-              Asigna este movimiento como un <strong>abono a una deuda personal</strong> (ej. préstamo o compromiso con un familiar o tercero). El saldo restante se reducirá automáticamente y si llega a \$0 quedará saldada.
-            </p>
+            <div
+              style={{
+                background: isLight ? "#f0fdf4" : "rgba(16, 185, 129, 0.08)",
+                border: isLight ? "1px solid #bbf7d0" : "1px solid rgba(16, 185, 129, 0.25)",
+                borderRadius: "12px",
+                padding: "12px 16px",
+                marginBottom: 16,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <span style={{ fontSize: "1.1rem" }}>{isIncoming ? "📥" : "🤝"}</span>
+                <strong style={{ fontSize: "0.86rem", color: isLight ? "#166534" : "#4ade80" }}>
+                  {isIncoming ? "Cobro de Préstamo / Recuperación de Cartera" : "Abono a Deuda Personal"}
+                </strong>
+              </div>
+              <p style={{ fontSize: "0.78rem", color: isLight ? "#1e3a2b" : "#cbd5e1", margin: 0, lineHeight: 1.4 }}>
+                {isIncoming ? (
+                  <>Este dinero entró a tu cuenta como <strong>pago de una deuda o préstamo</strong> que te debían. El saldo de la deuda se reducirá automáticamente y no consumirá tus rubros de gastos mensuales.</>
+                ) : (
+                  <>Asigna este movimiento como un <strong>abono a una deuda personal</strong> (ej. préstamo con un familiar o tercero). El saldo restante se reducirá automáticamente y si llega a $0 quedará saldada.</>
+                )}
+              </p>
+            </div>
 
-            {activeDebts.length === 0 ? (
-              <div
+            {/* Mode Switcher: Deuda Existente vs Crear Nueva Deuda */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+              <button
+                type="button"
+                onClick={() => setDebtMode("existing")}
                 style={{
-                  textAlign: "center",
-                  padding: "26px 16px",
-                  borderRadius: "12px",
-                  background: isLight ? "#f8fafc" : "var(--bg-surface)",
-                  color: "var(--text-muted)",
-                  fontSize: "0.84rem",
-                  marginBottom: 20,
-                  border: isLight ? "1px solid rgba(0,0,0,0.06)" : "1px solid var(--border)",
+                  padding: "9px 12px",
+                  borderRadius: "10px",
+                  border: debtMode === "existing" ? "2px solid #2563eb" : (isLight ? "1px solid rgba(0,0,0,0.12)" : "1px solid var(--border)"),
+                  background: debtMode === "existing"
+                    ? (isLight ? "rgba(37, 99, 235, 0.1)" : "rgba(37, 99, 235, 0.25)")
+                    : (isLight ? "#ffffff" : "var(--bg-surface)"),
+                  color: debtMode === "existing" ? (isLight ? "#1d4ed8" : "#60a5fa") : "var(--text-muted)",
+                  fontWeight: 700,
+                  fontSize: "0.8rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  transition: "all 0.15s ease",
                 }}
               >
-                <span>🎉</span> No tienes deudas personales activas pendientes de pago.
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
-                {activeDebts.map((debt) => {
-                  const isSelected = selectedDebtId === debt.id;
-                  const currentRemaining = Number(
-                    debt.remainingAmount !== undefined ? debt.remainingAmount : debt.totalAmount || 0
-                  );
-                  const newRemaining = Math.max(0, currentRemaining - movementAmount);
-                  const willSettle = newRemaining <= 0;
+                <span>📋</span> Deuda Existente ({activeDebts.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setDebtMode("new")}
+                style={{
+                  padding: "9px 12px",
+                  borderRadius: "10px",
+                  border: debtMode === "new" ? "2px solid #10b981" : (isLight ? "1px solid rgba(0,0,0,0.12)" : "1px solid var(--border)"),
+                  background: debtMode === "new"
+                    ? (isLight ? "rgba(16, 185, 129, 0.1)" : "rgba(16, 185, 129, 0.25)")
+                    : (isLight ? "#ffffff" : "var(--bg-surface)"),
+                  color: debtMode === "new" ? (isLight ? "#047857" : "#34d399") : "var(--text-muted)",
+                  fontWeight: 700,
+                  fontSize: "0.8rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <span>✨</span> Crear Nueva Deuda / Préstamo
+              </button>
+            </div>
+
+            {/* Sub-view: Existing Debts */}
+            {debtMode === "existing" && (
+              <div>
+                {/* Type Filter Pills */}
+                {activeDebts.length > 0 && (
+                  <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+                    {[
+                      { id: "all", label: `Todas (${activeDebts.length})` },
+                      { id: "receivable", label: `📥 Por Cobrar (${activeDebts.filter((d) => d.debtType === "receivable").length})` },
+                      { id: "payable", label: `📤 Por Pagar (${activeDebts.filter((d) => d.debtType !== "receivable").length})` },
+                    ].map((f) => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setDebtTypeFilter(f.id)}
+                        style={{
+                          padding: "4px 10px",
+                          borderRadius: "20px",
+                          fontSize: "0.72rem",
+                          fontWeight: debtTypeFilter === f.id ? 700 : 500,
+                          border: debtTypeFilter === f.id ? "1px solid #2563eb" : (isLight ? "1px solid rgba(0,0,0,0.1)" : "1px solid var(--border)"),
+                          background: debtTypeFilter === f.id ? (isLight ? "#2563eb" : "#3b82f6") : "transparent",
+                          color: debtTypeFilter === f.id ? "#ffffff" : "var(--text-muted)",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {(() => {
+                  const filteredDebts = activeDebts.filter((d) => {
+                    if (debtTypeFilter === "receivable") return d.debtType === "receivable";
+                    if (debtTypeFilter === "payable") return d.debtType !== "receivable";
+                    return true;
+                  });
+
+                  if (filteredDebts.length === 0) {
+                    return (
+                      <div
+                        style={{
+                          textAlign: "center",
+                          padding: "24px 16px",
+                          borderRadius: "12px",
+                          background: isLight ? "#f8fafc" : "var(--bg-surface)",
+                          color: "var(--text-muted)",
+                          fontSize: "0.84rem",
+                          marginBottom: 16,
+                          border: isLight ? "1px solid rgba(0,0,0,0.06)" : "1px solid var(--border)",
+                        }}
+                      >
+                        <p style={{ margin: "0 0 10px 0" }}>
+                          No hay deudas registradas en esta categoría.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setDebtMode("new")}
+                          style={{
+                            padding: "7px 14px",
+                            borderRadius: "8px",
+                            background: isLight ? "#10b981" : "#059669",
+                            color: "#ffffff",
+                            border: "none",
+                            fontWeight: 700,
+                            fontSize: "0.78rem",
+                            cursor: "pointer",
+                          }}
+                        >
+                          ➕ Registrar Préstamo de {movement.description || "esta persona"}
+                        </button>
+                      </div>
+                    );
+                  }
 
                   return (
-                    <div
-                      key={debt.id}
-                      onClick={() => setSelectedDebtId(debt.id)}
-                      style={{
-                        padding: "12px 16px",
-                        borderRadius: "12px",
-                        border: isSelected ? "2px solid #38bdf8" : (isLight ? "1px solid rgba(0,0,0,0.08)" : "1px solid var(--border)"),
-                        background: isSelected
-                          ? (isLight ? "rgba(56, 189, 248, 0.08)" : "rgba(56, 189, 248, 0.12)")
-                          : (isLight ? "#ffffff" : "var(--bg-surface)"),
-                        cursor: "pointer",
-                        transition: "all 0.15s ease",
-                      }}
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-                        <div>
-                          <strong style={{ fontSize: "0.88rem", color: "var(--text-primary)", display: "block" }}>
-                            {debt.concept}
-                          </strong>
-                          <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-                            Acreedor: <strong style={{ color: "var(--text-primary)" }}>{debt.creditor || "Particular"}</strong>
-                          </span>
-                        </div>
-                        <div style={{ textAlign: "right" }}>
-                          <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block" }}>
-                            Saldo actual
-                          </span>
-                          <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.92rem", fontWeight: 700, color: "#f43f5e" }}>
-                            {formatMoney(currentRemaining, currency)}
-                          </span>
-                        </div>
-                      </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+                      {filteredDebts.map((debt) => {
+                        const isSelected = selectedDebtId === debt.id;
+                        const isRec = debt.debtType === "receivable";
+                        const currentRemaining = Number(
+                          debt.remainingAmount !== undefined ? debt.remainingAmount : debt.totalAmount || 0
+                        );
+                        const newRemaining = Math.max(0, currentRemaining - movementAmount);
+                        const willSettle = newRemaining <= 0;
 
-                      {/* Simulation of payment impact */}
+                        return (
+                          <div
+                            key={debt.id}
+                            onClick={() => setSelectedDebtId(debt.id)}
+                            style={{
+                              padding: "12px 16px",
+                              borderRadius: "12px",
+                              border: isSelected ? "2px solid #2563eb" : (isLight ? "1px solid rgba(0,0,0,0.08)" : "1px solid var(--border)"),
+                              background: isSelected
+                                ? (isLight ? "rgba(37, 99, 235, 0.07)" : "rgba(37, 99, 235, 0.16)")
+                                : (isLight ? "#ffffff" : "var(--bg-surface)"),
+                              cursor: "pointer",
+                              transition: "all 0.15s ease",
+                            }}
+                          >
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                              <div>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                                  <strong style={{ fontSize: "0.88rem", color: "var(--text-primary)" }}>
+                                    {debt.concept}
+                                  </strong>
+                                  <span
+                                    style={{
+                                      fontSize: "0.68rem",
+                                      fontWeight: 700,
+                                      padding: "2px 6px",
+                                      borderRadius: "6px",
+                                      background: isRec ? (isLight ? "#dcfce7" : "rgba(16, 185, 129, 0.2)") : (isLight ? "#fef3c7" : "rgba(245, 158, 11, 0.2)"),
+                                      color: isRec ? (isLight ? "#15803d" : "#4ade80") : (isLight ? "#b45309" : "#fbbf24"),
+                                    }}
+                                  >
+                                    {isRec ? "📥 Te deben (Por Cobrar)" : "📤 Debes (Por Pagar)"}
+                                  </span>
+                                </div>
+                                <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
+                                  {isRec ? "Deudor:" : "Acreedor:"} <strong style={{ color: "var(--text-primary)" }}>{debt.debtor || debt.creditor || "Particular"}</strong>
+                                </span>
+                              </div>
+                              <div style={{ textAlign: "right" }}>
+                                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block" }}>
+                                  Saldo actual
+                                </span>
+                                <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.92rem", fontWeight: 700, color: isRec ? "#10b981" : "#f43f5e" }}>
+                                  {formatMoney(currentRemaining, currency)}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Simulation of payment impact */}
+                            <div
+                              style={{
+                                marginTop: 8,
+                                paddingTop: 8,
+                                borderTop: isLight ? "1px solid rgba(0,0,0,0.06)" : "1px solid rgba(255,255,255,0.06)",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                fontSize: "0.76rem",
+                              }}
+                            >
+                              <span style={{ color: "#10b981", fontWeight: 600 }}>
+                                {isRec ? "Cobro a aplicar:" : "Abono a aplicar:"} {formatMoney(movementAmount, currency)}
+                              </span>
+                              <span style={{ color: willSettle ? "#10b981" : "var(--text-primary)", fontWeight: 700 }}>
+                                {willSettle ? "¡Quedará 100% saldada! 🎊" : `Nuevo saldo: ${formatMoney(newRemaining, currency)}`}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* Sub-view: Create New Debt / Loan */}
+            {debtMode === "new" && (
+              <div
+                style={{
+                  background: isLight ? "#f8fafc" : "var(--bg-surface)",
+                  border: isLight ? "1px solid rgba(0,0,0,0.08)" : "1px solid var(--border)",
+                  borderRadius: "14px",
+                  padding: "16px 18px",
+                  marginBottom: 16,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                  <span style={{ fontSize: "1.1rem" }}>✨</span>
+                  <strong style={{ fontSize: "0.88rem", color: "var(--text-primary)" }}>
+                    Registrar Préstamo o Deuda para este Movimiento
+                  </strong>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {/* Tipo de Deuda: Por Cobrar vs Por Pagar */}
+                  <div>
+                    <label style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: 6 }}>
+                      Tipo de Compromiso:
+                    </label>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                      <button
+                        type="button"
+                        onClick={() => setNewDebtData((prev) => ({ ...prev, debtType: "receivable" }))}
+                        style={{
+                          padding: "8px 10px",
+                          borderRadius: "8px",
+                          border: newDebtData.debtType === "receivable" ? "2px solid #10b981" : (isLight ? "1px solid rgba(0,0,0,0.12)" : "1px solid var(--border)"),
+                          background: newDebtData.debtType === "receivable" ? (isLight ? "#ecfdf5" : "rgba(16, 185, 129, 0.2)") : "transparent",
+                          color: newDebtData.debtType === "receivable" ? (isLight ? "#047857" : "#34d399") : "var(--text-muted)",
+                          fontWeight: 700,
+                          fontSize: "0.76rem",
+                          cursor: "pointer",
+                        }}
+                      >
+                        📥 Por Cobrar (Te debían)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewDebtData((prev) => ({ ...prev, debtType: "payable" }))}
+                        style={{
+                          padding: "8px 10px",
+                          borderRadius: "8px",
+                          border: newDebtData.debtType === "payable" ? "2px solid #f43f5e" : (isLight ? "1px solid rgba(0,0,0,0.12)" : "1px solid var(--border)"),
+                          background: newDebtData.debtType === "payable" ? (isLight ? "#fff1f2" : "rgba(244, 63, 94, 0.2)") : "transparent",
+                          color: newDebtData.debtType === "payable" ? (isLight ? "#be123c" : "#fb7185") : "var(--text-muted)",
+                          fontWeight: 700,
+                          fontSize: "0.76rem",
+                          cursor: "pointer",
+                        }}
+                      >
+                        📤 Por Pagar (Tú debías)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Persona Deudora / Acreedora */}
+                  <div>
+                    <label style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>
+                      {newDebtData.debtType === "receivable" ? "Nombre de la Persona que te pagó (Deudor):" : "Nombre del Acreedor:"}
+                    </label>
+                    <input
+                      type="text"
+                      value={newDebtData.debtor}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setNewDebtData((prev) => ({
+                          ...prev,
+                          debtor: val,
+                          concept: prev.concept.includes("Préstamo") || !prev.concept ? `Préstamo a ${val}` : prev.concept,
+                        }));
+                      }}
+                      placeholder="Ej. Sindy Johanys Rojas"
+                      style={{
+                        width: "100%",
+                        padding: "8px 12px",
+                        borderRadius: "8px",
+                        fontSize: "0.82rem",
+                        background: isLight ? "#ffffff" : "var(--bg-primary)",
+                        color: "var(--text-primary)",
+                        border: isLight ? "1px solid rgba(0,0,0,0.15)" : "1px solid var(--border)",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+
+                  {/* Concepto de la Deuda */}
+                  <div>
+                    <label style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>
+                      Concepto o Motivo del Préstamo:
+                    </label>
+                    <input
+                      type="text"
+                      value={newDebtData.concept}
+                      onChange={(e) => setNewDebtData((prev) => ({ ...prev, concept: e.target.value }))}
+                      placeholder="Ej. Préstamo personal o cuota compartida"
+                      style={{
+                        width: "100%",
+                        padding: "8px 12px",
+                        borderRadius: "8px",
+                        fontSize: "0.82rem",
+                        background: isLight ? "#ffffff" : "var(--bg-primary)",
+                        color: "var(--text-primary)",
+                        border: isLight ? "1px solid rgba(0,0,0,0.15)" : "1px solid var(--border)",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+
+                  {/* Monto Total Original del Préstamo */}
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                      <label style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-secondary)" }}>
+                        Monto Total Original que se prestó:
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setNewDebtData((prev) => ({ ...prev, totalAmount: String(movementAmount) }))}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#2563eb",
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          padding: 0,
+                        }}
+                      >
+                        ⚡ Igual al movimiento ({formatMoney(movementAmount, currency)})
+                      </button>
+                    </div>
+                    <input
+                      type="number"
+                      value={newDebtData.totalAmount}
+                      onChange={(e) => setNewDebtData((prev) => ({ ...prev, totalAmount: e.target.value }))}
+                      placeholder="Monto total prestado"
+                      style={{
+                        width: "100%",
+                        padding: "8px 12px",
+                        borderRadius: "8px",
+                        fontSize: "0.82rem",
+                        fontFamily: "JetBrains Mono, monospace",
+                        fontWeight: 700,
+                        background: isLight ? "#ffffff" : "var(--bg-primary)",
+                        color: "var(--text-primary)",
+                        border: isLight ? "1px solid rgba(0,0,0,0.15)" : "1px solid var(--border)",
+                        outline: "none",
+                      }}
+                    />
+
+                    {/* Impact preview */}
+                    {Number(newDebtData.totalAmount) > 0 && (
                       <div
                         style={{
                           marginTop: 8,
-                          paddingTop: 8,
-                          borderTop: isLight ? "1px solid rgba(0,0,0,0.06)" : "1px solid rgba(255,255,255,0.06)",
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
+                          padding: "8px 12px",
+                          borderRadius: "8px",
                           fontSize: "0.76rem",
+                          background: Number(newDebtData.totalAmount) <= movementAmount
+                            ? (isLight ? "#ecfdf5" : "rgba(16, 185, 129, 0.15)")
+                            : (isLight ? "#eff6ff" : "rgba(37, 99, 235, 0.15)"),
+                          color: Number(newDebtData.totalAmount) <= movementAmount
+                            ? (isLight ? "#047857" : "#34d399")
+                            : (isLight ? "#1d4ed8" : "#60a5fa"),
+                          fontWeight: 600,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
                         }}
                       >
-                        <span style={{ color: "#10b981", fontWeight: 600 }}>
-                          Abono a aplicar: -{formatMoney(movementAmount, currency)}
-                        </span>
-                        <span style={{ color: willSettle ? "#10b981" : "var(--text-primary)", fontWeight: 700 }}>
-                          {willSettle ? "¡Quedará 100% saldada! 🎊" : `Nuevo saldo: ${formatMoney(newRemaining, currency)}`}
+                        <span>{Number(newDebtData.totalAmount) <= movementAmount ? "🎊" : "ℹ️"}</span>
+                        <span>
+                          {Number(newDebtData.totalAmount) <= movementAmount
+                            ? "¡Con este pago de " + formatMoney(movementAmount, currency) + " el préstamo quedará 100% SALDADO!"
+                            : "Abono aplicado: " + formatMoney(movementAmount, currency) + " • Saldo que te seguirá debiendo: " + formatMoney(Math.max(0, Number(newDebtData.totalAmount) - movementAmount), currency)}
                         </span>
                       </div>
-                    </div>
-                  );
-                })}
+                    )}
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -2460,16 +2830,28 @@ export default function AssignMovementModal({
             disabled={isConfirmDisabled}
             onClick={handleConfirm}
             style={{
-              padding: "9px 20px",
-              fontSize: "0.84rem",
-              background: "linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)",
-              borderColor: "#0284c7",
+              padding: "10px 22px",
+              fontSize: "0.86rem",
+              background: isConfirmDisabled
+                ? (isLight ? "#e2e8f0" : "#1e293b")
+                : (isLight ? "#2563eb" : "#3b82f6"),
+              color: isConfirmDisabled
+                ? (isLight ? "#94a3b8" : "#64748b")
+                : "#ffffff",
+              border: isConfirmDisabled
+                ? (isLight ? "1px solid #cbd5e1" : "1px solid #334155")
+                : (isLight ? "1px solid #1d4ed8" : "1px solid #2563eb"),
+              boxShadow: isConfirmDisabled
+                ? "none"
+                : (isLight ? "0 4px 14px rgba(37, 99, 235, 0.3)" : "0 4px 14px rgba(59, 130, 246, 0.35)"),
               fontWeight: 700,
               display: "inline-flex",
               alignItems: "center",
               gap: 6,
-              opacity: isConfirmDisabled ? 0.5 : 1,
+              opacity: 1,
               cursor: isConfirmDisabled ? "not-allowed" : "pointer",
+              borderRadius: "10px",
+              transition: "all 0.15s ease",
             }}
           >
             <span>⚡</span> Confirmar Asignación
