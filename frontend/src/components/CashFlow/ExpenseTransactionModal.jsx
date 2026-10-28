@@ -51,7 +51,7 @@ export default function ExpenseTransactionModal({
   );
 
   // Common Fields
-  const [selectedBudgetItemId, setSelectedBudgetItemId] = useState(budgetItems[0]?.id || "");
+  const [selectedBudgetItemId, setSelectedBudgetItemId] = useState("");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState(0);
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
@@ -107,7 +107,7 @@ export default function ExpenseTransactionModal({
           editTransaction.budgetItemType === "income";
 
         setMovementNature(isTxIncome ? "income" : "expense");
-        setSelectedBudgetItemId(editTransaction.budgetItemId || budgetItems[0]?.id || "");
+        setSelectedBudgetItemId(editTransaction.budgetItemId || "");
         setDescription(editTransaction.description || "");
         setAmount(Number(editTransaction.amount) || 0);
         setDate(editTransaction.date || new Date().toISOString().split("T")[0]);
@@ -164,32 +164,14 @@ export default function ExpenseTransactionModal({
         setUserIncluded(true);
         setParticipants([]);
         setNewParticipantInput("");
-        if (budgetItems.length > 0) {
-          const firstItem = budgetItems.find((b) => b.id === selectedBudgetItemId) || budgetItems[0];
-          if (firstItem) {
-            setSelectedBudgetItemId(firstItem.id);
-            setAmount(Number(firstItem.amount) || 0);
-            setDescription(firstItem.name || "");
-            if (firstItem.paymentSource) {
-              setSourceType(firstItem.paymentSource.type || "payroll");
-              if (firstItem.paymentSource.targetId) {
-                if (firstItem.paymentSource.type === "credit_card") {
-                  setSelectedCardId(firstItem.paymentSource.targetId);
-                  if (firstItem.paymentSource.installments) {
-                    setCardInstallments(firstItem.paymentSource.installments);
-                  }
-                } else if (firstItem.paymentSource.type === "fixed_pocket") {
-                  setSelectedPocketId(firstItem.paymentSource.targetId);
-                }
-              }
-            }
-          }
-        }
+        setSelectedBudgetItemId("");
+        setAmount(0);
+        setDescription("");
       }
     }
   }, [isOpen, editTransaction]);
 
-  const selectedBudgetItem = budgetItems.find((b) => b.id === selectedBudgetItemId) || budgetItems[0];
+  const selectedBudgetItem = selectedBudgetItemId ? budgetItems.find((b) => b.id === selectedBudgetItemId) || null : null;
   const isWealthItem = selectedBudgetItem?.pillarType === "wealth";
 
   const externalCount = participants.length;
@@ -303,9 +285,9 @@ export default function ExpenseTransactionModal({
         ...(editTransaction || {}),
         id: editTransaction ? editTransaction.id : `tx_${Date.now()}`,
         period: editTransaction?.period || currentPeriod,
-        budgetItemId: selectedBudgetItem?.id,
-        budgetItemName: selectedBudgetItem?.name || "Movimiento",
-        budgetItemType: selectedBudgetItem?.pillarType || "needs",
+        budgetItemId: selectedBudgetItem?.id || null,
+        budgetItemName: selectedBudgetItem?.name || (description.trim() || (isLoan ? `Préstamo (${loanRecipient || 'Deudor'})` : "Sin Asignar")),
+        budgetItemType: selectedBudgetItem?.pillarType || (isLoan ? "receivable" : null),
         description: description.trim(),
         amount: Number(amount),
         currency,

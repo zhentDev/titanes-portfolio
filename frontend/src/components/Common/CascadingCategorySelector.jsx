@@ -56,7 +56,7 @@ export default function CascadingCategorySelector({
   }, [budgetItems]);
 
   // Current selected item
-  const selectedItem = budgetItems.find((b) => b.id === value) || budgetItems[0];
+  const selectedItem = value ? budgetItems.find((b) => b.id === value) || null : null;
 
   // Set initial hovered pillar based on selected item
   useEffect(() => {
@@ -164,7 +164,12 @@ export default function CascadingCategorySelector({
               </span>
             </>
           ) : (
-            <span style={{ color: "#64748b" }}>Selecciona un rubro...</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: "1rem" }}>🏷️</span>
+              <span style={{ color: "var(--text-muted)", fontSize: "0.84rem" }}>
+                Sin Asignar (Seleccionar rubro opcional)
+              </span>
+            </div>
           )}
         </div>
 
@@ -212,6 +217,36 @@ export default function CascadingCategorySelector({
               }}
               autoFocus
             />
+          </div>
+
+          {/* Quick Option: Sin Asignar */}
+          <div
+            onClick={() => {
+              onChange("");
+              setIsOpen(false);
+              setSearchQuery("");
+            }}
+            style={{
+              padding: "8px 14px",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              cursor: "pointer",
+              background: !value ? (isLight ? "rgba(100, 116, 139, 0.12)" : "rgba(100, 116, 139, 0.25)") : "transparent",
+              borderBottom: isLight ? "1px solid rgba(0, 0, 0, 0.06)" : "1px solid rgba(255, 255, 255, 0.06)",
+              transition: "background 0.15s ease",
+            }}
+          >
+            <span style={{ fontSize: "1rem" }}>🚫</span>
+            <div>
+              <strong style={{ fontSize: "0.82rem", color: isLight ? "#475569" : "#cbd5e1", display: "block" }}>
+                Sin Asignar (Dejar libre / Asignar más tarde)
+              </strong>
+              <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                No descuenta ningún sobre mensual de presupuesto
+              </span>
+            </div>
+            {!value && <span style={{ marginLeft: "auto", color: "#64748b", fontWeight: 700 }}>✓</span>}
           </div>
 
           {/* Search Results Mode */}

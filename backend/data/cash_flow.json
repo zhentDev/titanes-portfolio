@@ -11,6 +11,39 @@
   "emergencyFundTargetMonths": 6,
   "inflows": [
     {
+      "id": "in_wallet_1793196309821",
+      "name": "Cobro Préstamo: Andre (Disponible Nequi)",
+      "category": "reimbursement",
+      "amount": 8000,
+      "currency": "COP",
+      "isPassive": false,
+      "frequency": "one_time",
+      "period": "2026-11",
+      "paymentSource": {
+        "type": "digital_wallet",
+        "targetId": "acc_nequi_disp",
+        "targetName": "Disponible Nequi"
+      },
+      "icon": "🟣",
+      "createdAt": "2026-10-28T14:05:09.821Z"
+    },
+    {
+      "id": "in_reimb_1793195781151",
+      "name": "Reintegro Préstamo: Amigo / Familiar",
+      "category": "reimbursement",
+      "amount": 178000,
+      "currency": "COP",
+      "isPassive": false,
+      "frequency": "one_time",
+      "period": "2026-11",
+      "paymentSource": {
+        "type": "payroll",
+        "targetName": "Nu Colombia (Cuenta Nu Débito)"
+      },
+      "icon": "🤝",
+      "createdAt": "2026-10-28T13:56:21.151Z"
+    },
+    {
       "id": "in_cash_1792906472012",
       "name": "Cobro Préstamo (Efectivo Físico): Farra Amigos del trabajo de Julian",
       "category": "reimbursement",
@@ -45,7 +78,7 @@
       "id": "in_fixed_yield",
       "name": "Ingreso por Renta Fija",
       "category": "passive_fixed",
-      "amount": 29379,
+      "amount": 29401,
       "currency": "COP",
       "isPassive": true,
       "isAutoSynced": true,
@@ -62,7 +95,7 @@
       "id": "in_stock_div",
       "name": "Ingreso por Renta Variable",
       "category": "passive_equity",
-      "amount": 35746,
+      "amount": 35944,
       "currency": "COP",
       "isPassive": true,
       "isAutoSynced": true,
@@ -74,6 +107,23 @@
       },
       "icon": "📈",
       "createdAt": "2026-09-19T16:57:44.254Z"
+    },
+    {
+      "id": "in_reimb_presea_100k_cash",
+      "name": "Reintegro Préstamo (Efectivo Físico): Amigos Presea Rooftop",
+      "category": "reimbursement",
+      "amount": 100000,
+      "currency": "COP",
+      "isPassive": false,
+      "frequency": "one_time",
+      "period": "2026-11",
+      "paymentSource": {
+        "type": "cash",
+        "targetId": "acc_efectivo_fisico",
+        "targetName": "Efectivo Físico (Billetera)"
+      },
+      "icon": "💵",
+      "createdAt": "2026-10-24T23:30:00.000Z"
     }
   ],
   "needs": [
@@ -237,7 +287,7 @@
       "category": "equity_investment",
       "targetAmount": 30000000,
       "monthlyContribution": 500000,
-      "currentBalance": 21447768,
+      "currentBalance": 21566354,
       "currency": "COP",
       "linkedModule": "variable_income",
       "paymentSource": {
@@ -253,7 +303,7 @@
       "category": "fixed_savings",
       "targetAmount": 15000000,
       "monthlyContribution": 300000,
-      "currentBalance": 7837573,
+      "currentBalance": 7844302,
       "currency": "COP",
       "linkedModule": "fixed_income",
       "paymentSource": {
@@ -278,27 +328,419 @@
       },
       "icon": "✈️",
       "createdAt": "2026-09-19T16:57:44.254Z"
+    },
+    {
+      "id": "wealth_impresora",
+      "name": "Meta Impresora 3D",
+      "category": "medium_term_goal",
+      "targetAmount": 1500000,
+      "monthlyContribution": 70000,
+      "currentBalance": 296483.88,
+      "currency": "COP",
+      "linkedModule": "fixed_income",
+      "paymentSource": {
+        "type": "fixed_pocket",
+        "targetId": "acc_1789616855068",
+        "targetName": "Cajita Impresora (RappiPay)"
+      },
+      "icon": "🖨️",
+      "createdAt": "2026-10-26T15:00:00.000Z"
     }
   ],
   "expensesLog": [
     {
-      "id": "cf_tx_mb_1793135853228_123ad8",
+      "id": "cf_tx_mb_1793196416104_be1347",
       "period": "2026-11",
-      "budgetItemId": null,
-      "budgetItemName": "Compra en D1",
+      "budgetItemId": "want_dining",
+      "budgetItemName": "Restaurantes, Cafés & Salidas",
       "budgetItemType": "wants",
-      "description": "Compra en D1",
-      "amount": 1000.0,
+      "description": "corresponsal Bancolombia",
+      "amount": 30000,
       "currency": "COP",
       "date": "2026-10-27",
-      "time": "16:17:33",
+      "time": "13:31:56",
+      "type": "debit",
+      "cascaded": false,
+      "shortfall": 0,
+      "fallbackAccountName": null,
+      "paymentSource": {
+        "type": "fixed_pocket",
+        "targetId": "acc_nequi_disp",
+        "targetName": "Disponible Nequi"
+      },
+      "createdAt": "2026-10-28T09:06:56.104984-05:00",
+      "itemType": "expense",
+      "isLoan": false,
+      "loanRecipient": null,
+      "loanAmount": null,
+      "loanDueDate": null,
+      "loanStatus": null,
+      "isSplit": false,
+      "userIncluded": false,
+      "userShare": 0,
+      "participants": [],
+      "remainingLoan": 30000
+    },
+    {
+      "id": "cf_tx_mb_1793196398699_9169cf",
+      "period": "2026-11",
+      "budgetItemId": null,
+      "budgetItemName": "Ingreso: Transferencia",
+      "budgetItemType": "income",
+      "description": "Abono bancario",
+      "amount": 30000,
+      "currency": "COP",
+      "date": "2026-10-27",
+      "time": "13:10:38",
+      "type": "credit",
+      "cascaded": false,
+      "shortfall": 0,
+      "fallbackAccountName": null,
+      "paymentSource": {
+        "type": "fixed_pocket",
+        "targetId": "acc_nequi_disp",
+        "targetName": "Disponible Nequi"
+      },
+      "createdAt": "2026-10-28T09:06:38.699579-05:00",
+      "itemType": "income",
+      "destinationAccountId": "acc_nequi_disp",
+      "destinationAccountName": "Disponible Nequi"
+    },
+    {
+      "id": "cf_tx_mb_1793196353362_c59efd",
+      "period": "2026-11",
+      "budgetItemId": null,
+      "budgetItemName": "Ingreso: Transferencia",
+      "budgetItemType": "income",
+      "description": "Consignación JULIETH VARGAS",
+      "amount": 8000,
+      "currency": "COP",
+      "date": "2026-10-28",
+      "time": "09:05:53",
+      "type": "credit",
+      "cascaded": false,
+      "shortfall": 0,
+      "fallbackAccountName": null,
+      "paymentSource": {
+        "type": "fixed_pocket",
+        "targetId": "acc_nequi_disp",
+        "targetName": "Disponible Nequi"
+      },
+      "createdAt": "2026-10-28T09:05:53.362810-05:00",
+      "itemType": "income",
+      "destinationAccountId": "acc_nequi_disp",
+      "destinationAccountName": "Disponible Nequi"
+    },
+    {
+      "id": "cf_tx_mb_1793157932032_c0a937",
+      "period": "2026-11",
+      "budgetItemId": "need_health_transport",
+      "budgetItemName": "Salud, EPS & Transporte",
+      "budgetItemType": "needs",
+      "description": "CRI******** DAZ***",
+      "amount": 16000,
+      "currency": "COP",
+      "date": "2026-10-27",
+      "time": "22:25:32",
+      "type": "debit",
+      "cascaded": false,
+      "shortfall": 0,
+      "fallbackAccountName": null,
+      "paymentSource": {
+        "type": "payroll",
+        "targetName": "Nu Colombia (Cuenta Nu Débito)"
+      },
+      "createdAt": "2026-10-27T22:25:32.032189-05:00",
+      "isLoan": true,
+      "loanRecipient": "Andre",
+      "loanAmount": 8000,
+      "loanStatus": "settled",
+      "itemType": "expense",
+      "loanDueDate": null,
+      "isSplit": true,
+      "userIncluded": true,
+      "userShare": 8000,
+      "participants": [
+        {
+          "id": "part_1793195264460",
+          "name": "Andre",
+          "paid": true,
+          "share": 8000,
+          "paidAmount": 8000,
+          "paidAt": "2026-10-28",
+          "targetName": "Disponible Nequi",
+          "alreadyRegistered": false,
+          "customShare": null
+        }
+      ],
+      "remainingLoan": 0,
+      "totalSettled": 8000,
+      "settlements": [
+        {
+          "id": "stl_1793196309821",
+          "participantId": "part_1793195264460",
+          "participantName": "Andre",
+          "alreadyRegistered": false,
+          "amount": 8000,
+          "date": "2026-10-28",
+          "targetType": "nequi",
+          "targetId": "acc_nequi_disp",
+          "targetName": "Disponible Nequi",
+          "note": "Pago cuota de Andre (Gasto compartido: CRI******** DAZ***)",
+          "settledAt": "2026-10-28T14:05:09.821Z"
+        }
+      ],
+      "settlementDetails": {
+        "id": "stl_1793196309821",
+        "participantId": "part_1793195264460",
+        "participantName": "Andre",
+        "alreadyRegistered": false,
+        "amount": 8000,
+        "date": "2026-10-28",
+        "targetType": "nequi",
+        "targetId": "acc_nequi_disp",
+        "targetName": "Disponible Nequi",
+        "note": "Pago cuota de Andre (Gasto compartido: CRI******** DAZ***)",
+        "settledAt": "2026-10-28T14:05:09.821Z"
+      }
+    },
+    {
+      "id": "cf_tx_mb_1793157649484_fb5dfe",
+      "period": "2026-11",
+      "budgetItemId": null,
+      "budgetItemName": "MARIO ARZUZAR MARTINEZ",
+      "budgetItemType": "income",
+      "description": "MARIO ARZUZAR MARTINEZ",
+      "amount": 40000,
+      "currency": "COP",
+      "date": "2026-10-27",
+      "time": "22:20:49",
+      "type": "credit",
+      "cascaded": false,
+      "shortfall": 0,
+      "fallbackAccountName": null,
+      "paymentSource": {
+        "type": "payroll",
+        "targetId": "acc_nu_debito",
+        "targetName": "Cuenta Nu Débito (Nómina)"
+      },
+      "createdAt": "2026-10-27T22:20:49.484457-05:00"
+    },
+    {
+      "id": "cf_tx_mb_1793157626986_849252",
+      "period": "2026-11",
+      "budgetItemId": null,
+      "budgetItemName": "SINDY JOHANYS ROJAS ARZUZAR",
+      "budgetItemType": "income",
+      "description": "SINDY JOHANYS ROJAS ARZUZAR",
+      "amount": 138000,
+      "currency": "COP",
+      "date": "2026-10-27",
+      "time": "22:20:26",
+      "type": "credit",
+      "cascaded": false,
+      "shortfall": 0,
+      "fallbackAccountName": null,
+      "paymentSource": {
+        "type": "payroll",
+        "targetId": "acc_nu_debito",
+        "targetName": "Cuenta Nu Débito (Nómina)"
+      },
+      "createdAt": "2026-10-27T22:20:26.986605-05:00"
+    },
+    {
+      "id": "cf_tx_mb_1793157595802_f27553",
+      "period": "2026-11",
+      "budgetItemId": null,
+      "budgetItemName": "Compra en Didi",
+      "budgetItemType": "wants",
+      "description": "Compra en Didi",
+      "amount": 6500,
+      "currency": "COP",
+      "date": "2026-10-27",
+      "time": "22:19:55",
       "type": "debit",
       "paymentSource": {
         "type": "credit_card",
         "targetId": "cc_nu",
         "targetName": "Tarjeta Nu Mastercard"
       },
-      "createdAt": "2026-10-27T16:17:33.228502-05:00"
+      "createdAt": "2026-10-27T22:19:55.802995-05:00"
+    },
+    {
+      "id": "cf_tx_mb_1793143745550_ad067e",
+      "period": "2026-11",
+      "budgetItemId": null,
+      "budgetItemName": "Compra en SURTIMAYORISTA AVENIDA",
+      "budgetItemType": "wants",
+      "description": "Compra en SURTIMAYORISTA AVENIDA",
+      "amount": 42455,
+      "currency": "COP",
+      "date": "2026-10-27",
+      "time": "18:29:05",
+      "type": "debit",
+      "paymentSource": {
+        "type": "credit_card",
+        "targetId": "cc_nu",
+        "targetName": "Tarjeta Nu Mastercard"
+      },
+      "createdAt": "2026-10-27T18:29:05.550418-05:00"
+    },
+    {
+      "id": "cf_tx_mb_1793141750382_de0beb",
+      "period": "2026-11",
+      "budgetItemId": null,
+      "budgetItemName": "Abono bancario",
+      "budgetItemType": "income",
+      "description": "Abono bancario",
+      "amount": 16000,
+      "currency": "COP",
+      "date": "2026-10-27",
+      "time": "17:55:50",
+      "type": "credit",
+      "cascaded": false,
+      "shortfall": 0,
+      "fallbackAccountName": null,
+      "paymentSource": {
+        "type": "payroll",
+        "targetId": "acc_nu_debito",
+        "targetName": "Cuenta Nu Débito (Nómina)"
+      },
+      "createdAt": "2026-10-27T17:55:50.382551-05:00"
+    },
+    {
+      "id": "cf_tx_mb_1793140366083_9ca9c0",
+      "period": "2026-11",
+      "budgetItemId": "need_utilities",
+      "budgetItemName": "Servicios Públicos, Luz & Fibra Óptica",
+      "budgetItemType": "needs",
+      "description": "Gasto bancario",
+      "amount": 18950,
+      "currency": "COP",
+      "date": "2026-10-27",
+      "time": "17:32:46",
+      "type": "debit",
+      "cascaded": false,
+      "shortfall": 0,
+      "fallbackAccountName": null,
+      "paymentSource": {
+        "type": "payroll",
+        "targetId": "acc_nu_debito",
+        "targetName": "Cuenta Nu Débito (Nómina)"
+      },
+      "createdAt": "2026-10-27T17:32:46.083250-05:00",
+      "subItemId": null,
+      "subItemName": null,
+      "isDebtPayment": false,
+      "debtId": null,
+      "destinationAccountId": null,
+      "destinationAccountName": null
+    },
+    {
+      "id": "cf_tx_mb_1793136598344_4a7534",
+      "period": "2026-11",
+      "budgetItemId": "want_dining",
+      "budgetItemName": "Restaurantes, Cafés & Salidas",
+      "budgetItemType": "wants",
+      "description": "Compra en WOMPI IMPEBENECER SA",
+      "amount": 627626,
+      "currency": "COP",
+      "date": "2026-10-27",
+      "time": "16:29:58",
+      "type": "debit",
+      "paymentSource": {
+        "type": "credit_card",
+        "targetId": "cc_rappi",
+        "targetName": "RappiCard Visa (MSI) (1 cuota 0%)",
+        "installments": 1
+      },
+      "createdAt": "2026-10-27T16:29:58.344081-05:00",
+      "isLoan": true,
+      "loanRecipient": "María",
+      "loanAmount": 627626,
+      "loanStatus": "partially_settled",
+      "totalSettled": 178000,
+      "remainingLoan": 449626,
+      "settlements": [
+        {
+          "id": "stl_1793195781151",
+          "participantId": null,
+          "participantName": null,
+          "alreadyRegistered": false,
+          "amount": 178000,
+          "date": "2026-10-28",
+          "targetType": "payroll",
+          "targetId": null,
+          "targetName": "Nu Colombia (Cuenta Nu Débito)",
+          "note": "",
+          "settledAt": "2026-10-28T13:56:21.151Z"
+        }
+      ],
+      "settlementDetails": {
+        "id": "stl_1793195781151",
+        "participantId": null,
+        "participantName": null,
+        "alreadyRegistered": false,
+        "amount": 178000,
+        "date": "2026-10-28",
+        "targetType": "payroll",
+        "targetId": null,
+        "targetName": "Nu Colombia (Cuenta Nu Débito)",
+        "note": "",
+        "settledAt": "2026-10-28T13:56:21.151Z"
+      },
+      "itemType": "expense",
+      "loanDueDate": null,
+      "isSplit": false,
+      "userIncluded": false,
+      "userShare": 0,
+      "participants": []
+    },
+    {
+      "id": "cf_tx_mb_1793124317077_fead9d",
+      "period": "2026-11",
+      "budgetItemId": null,
+      "budgetItemName": "Transferencia / Retiro a Efectivo",
+      "budgetItemType": "transfer",
+      "description": "Transferencia Nu a Nequi ➔ Retiro a Efectivo (Billetera)",
+      "amount": 30000,
+      "currency": "COP",
+      "date": "2026-10-27",
+      "time": "13:05:17",
+      "type": "debit",
+      "cascaded": false,
+      "shortfall": 0,
+      "fallbackAccountName": null,
+      "paymentSource": {
+        "type": "payroll",
+        "targetId": "acc_nu_debito",
+        "targetName": "Cuenta Nu Débito (Nómina)"
+      },
+      "createdAt": "2026-10-27T13:05:17.077113-05:00",
+      "isInternalTransfer": true,
+      "destinationAccountId": "acc_cash_wallet",
+      "destinationAccountName": "Efectivo (Billetera)"
+    },
+    {
+      "id": "cf_tx_mb_1793024460513_550489",
+      "period": "2026-11",
+      "date": "2026-10-26",
+      "time": "09:21:00",
+      "amount": 210000,
+      "currency": "COP",
+      "type": "debit",
+      "budgetItemId": null,
+      "budgetItemName": "Abono Deuda (Mike)",
+      "budgetItemType": "needs",
+      "isDebtPayment": true,
+      "debtId": "debt_1792861678786_npzu",
+      "description": "Pago Deuda: Mike (MAI***** FON*******)",
+      "paymentSource": {
+        "type": "payroll",
+        "targetId": "acc_nu_debito",
+        "targetName": "Cuenta Nu Débito (Nómina)"
+      },
+      "createdAt": "2026-10-24T20:45:00.000Z"
     },
     {
       "id": "cf_tx_mb_1792944694475_3448d5",
@@ -328,7 +770,7 @@
       "budgetItemId": "need_groceries",
       "budgetItemName": "Alimentación & Supermercado",
       "budgetItemType": "needs",
-      "description": "Gasto bancario",
+      "description": "Compra en SURTIMAYORISTA AVENIDA",
       "amount": 8667,
       "currency": "COP",
       "date": "2026-10-25",
@@ -339,7 +781,8 @@
       "fallbackAccountName": null,
       "paymentSource": {
         "type": "payroll",
-        "targetName": "Nu Colombia (Cuenta Nu Débito)"
+        "targetId": "acc_nu_debito",
+        "targetName": "Cuenta Nu Débito (Nómina)"
       },
       "createdAt": "2026-10-25T09:30:59.603920-05:00",
       "itemType": "expense",
@@ -358,8 +801,8 @@
     {
       "id": "cf_tx_mb_1792938543570_167912",
       "period": "2026-11",
-      "budgetItemId": "need_utilities",
-      "budgetItemName": "Servicios Públicos, Luz & Fibra Óptica",
+      "budgetItemId": null,
+      "budgetItemName": "THE********* SAS**",
       "budgetItemType": "needs",
       "description": "THE********* SAS**",
       "amount": 9800,
@@ -382,109 +825,6 @@
       "debtId": null,
       "destinationAccountId": null,
       "destinationAccountName": null
-    },
-    {
-      "id": "tx_1792909650611",
-      "period": "2026-11",
-      "budgetItemId": null,
-      "budgetItemName": "Arriendo / Vivienda & Admin",
-      "budgetItemType": "split_distribution",
-      "description": "Arriendo / Vivienda & Admin (Distribuido en 2 rubros)",
-      "amount": 210000,
-      "currency": "COP",
-      "date": "2026-10-24",
-      "paymentSource": {
-        "type": "payroll",
-        "targetName": "Nu Colombia (Cuenta Nu Débito)"
-      },
-      "isLoan": false,
-      "loanRecipient": null,
-      "loanAmount": null,
-      "loanDueDate": null,
-      "loanStatus": null,
-      "createdAt": "2026-10-25T06:27:30.611Z",
-      "isDistributed": true,
-      "isDebt": false,
-      "budgetDeductions": [
-        {
-          "budgetItemId": "wealth_travel_goal",
-          "budgetItemName": "Meta Viaje / Estudio",
-          "budgetItemType": "wealth",
-          "amount": 150000,
-          "subItemId": null,
-          "subItemName": null,
-          "isEmergencySavingsDeduction": true
-        },
-        {
-          "budgetItemId": "wealth_tech_etf",
-          "budgetItemName": "Portafolio Renta Variable (Al día / Tiempo Real)",
-          "budgetItemType": "wealth",
-          "amount": 60000,
-          "subItemId": null,
-          "subItemName": null,
-          "isEmergencySavingsDeduction": true
-        }
-      ]
-    },
-    {
-      "id": "tx_1792909650611_split_0_1792909698846",
-      "splitParentId": "tx_1792909650611",
-      "isSplitChild": true,
-      "isSplitDeductionChild": true,
-      "period": "2026-11",
-      "date": "2026-10-24",
-      "time": null,
-      "amount": 150000,
-      "currency": "COP",
-      "type": "debit",
-      "budgetItemId": "wealth_travel_goal",
-      "budgetItemName": "Meta Viaje / Estudio",
-      "budgetItemType": "wealth",
-      "subItemId": null,
-      "subItemName": null,
-      "description": "Arriendo / Vivienda & Admin (Meta Viaje / Estudio)",
-      "paymentSource": {
-        "type": "payroll",
-        "targetName": "Nu Colombia (Cuenta Nu Débito)"
-      },
-      "creditCardPaymentId": null,
-      "isCreditCardPayoff": false,
-      "cardId": null,
-      "isEmergencySavingsDeduction": false,
-      "itemType": "wealth_saving",
-      "destinationAccountId": null,
-      "destinationAccountName": null,
-      "createdAt": "2026-10-25T06:28:18.846Z"
-    },
-    {
-      "id": "tx_1792909650611_split_1_1792909698846",
-      "splitParentId": "tx_1792909650611",
-      "isSplitChild": true,
-      "isSplitDeductionChild": true,
-      "period": "2026-11",
-      "date": "2026-10-24",
-      "time": null,
-      "amount": 60000,
-      "currency": "COP",
-      "type": "debit",
-      "budgetItemId": "wealth_tech_etf",
-      "budgetItemName": "Portafolio Renta Variable (Al día / Tiempo Real)",
-      "budgetItemType": "wealth",
-      "subItemId": null,
-      "subItemName": null,
-      "description": "Arriendo / Vivienda & Admin (Portafolio Renta Variable (Al día / Tiempo Real))",
-      "paymentSource": {
-        "type": "payroll",
-        "targetName": "Nu Colombia (Cuenta Nu Débito)"
-      },
-      "creditCardPaymentId": null,
-      "isCreditCardPayoff": false,
-      "cardId": null,
-      "isEmergencySavingsDeduction": false,
-      "itemType": "wealth_saving",
-      "destinationAccountId": null,
-      "destinationAccountName": null,
-      "createdAt": "2026-10-25T06:28:18.846Z"
     },
     {
       "id": "cf_tx_mb_1792899122345_fe1ee8",
@@ -530,7 +870,7 @@
       "shortfall": 0,
       "fallbackAccountName": null,
       "paymentSource": {
-        "type": "payroll",
+        "type": "savings",
         "targetId": "acc_rappi_principal",
         "targetName": "Cuenta RappiPay (Principal)"
       },
@@ -725,22 +1065,16 @@
       "amount": 67901,
       "currency": "COP",
       "type": "debit",
-      "budgetItemId": "need_utilities",
-      "budgetItemName": "Servicios Públicos, Luz & Fibra Óptica",
-      "budgetItemType": "needs",
+      "budgetItemId": "want_leisure",
+      "budgetItemName": "Ocio, Hobbies & Compras",
+      "budgetItemType": "wants",
       "description": "Envío Col******* Tel***************** S (PEXTO COLOMBIA SAS)",
       "paymentSource": {
         "type": "payroll",
         "targetId": "acc_nu_debito",
         "targetName": "Cuenta Nu Débito (Nómina)"
       },
-      "createdAt": "2026-10-24T01:52:40.708230-05:00",
-      "subItemId": null,
-      "subItemName": null,
-      "isDebtPayment": false,
-      "debtId": null,
-      "destinationAccountId": null,
-      "destinationAccountName": null
+      "createdAt": "2026-10-24T01:52:40.708230-05:00"
     },
     {
       "id": "cf_tx_mb_1792824204973_2fd09c",
@@ -760,35 +1094,78 @@
       },
       "createdAt": "2026-10-24T01:43:24.973417-05:00",
       "isLoan": true,
-      "loanRecipient": "Farra Amigos del trabajo de Julian",
-      "loanAmount": 235500,
+      "loanRecipient": "Julian, David, Juana, Prima de Juana, Gabriela, Amiga de Gabriela, John, Yuli",
+      "loanAmount": 235552,
       "loanStatus": "partially_settled",
-      "itemType": "expense",
-      "loanDueDate": null,
       "totalSettled": 100000,
-      "remainingLoan": 135500,
+      "remainingLoan": 165000,
       "settlements": [
         {
-          "id": "stl_1792906472012",
+          "id": "stl_presea_100k_cash",
           "amount": 100000,
-          "date": "2026-10-25",
+          "date": "2026-10-24",
           "targetType": "cash",
-          "targetId": "cash_wallet",
-          "targetName": "Efectivo / Billetera (Cash físico)",
-          "note": "",
-          "settledAt": "2026-10-25T05:34:32.012Z"
+          "targetId": "acc_efectivo_fisico",
+          "targetName": "Efectivo Físico (Billetera)",
+          "note": "Abono recibido en efectivo ($100.000 COP) de los $265.000 prestados en Presea Rooftop",
+          "settledAt": "2026-10-24T23:30:00.000Z"
         }
       ],
-      "settlementDetails": {
-        "id": "stl_1792906472012",
-        "amount": 100000,
-        "date": "2026-10-25",
-        "targetType": "cash",
-        "targetId": "cash_wallet",
-        "targetName": "Efectivo / Billetera (Cash físico)",
-        "note": "",
-        "settledAt": "2026-10-25T05:34:32.012Z"
-      }
+      "itemType": "expense",
+      "loanDueDate": null,
+      "isSplit": true,
+      "userIncluded": true,
+      "userShare": 29448,
+      "participants": [
+        {
+          "id": "part_1793135754725",
+          "name": "Julian",
+          "paid": false,
+          "share": 29444
+        },
+        {
+          "id": "part_1793135756709",
+          "name": "David",
+          "paid": false,
+          "share": 29444
+        },
+        {
+          "id": "part_1793135759617",
+          "name": "Juana",
+          "paid": false,
+          "share": 29444
+        },
+        {
+          "id": "part_1793135768767",
+          "name": "Prima de Juana",
+          "paid": false,
+          "share": 29444
+        },
+        {
+          "id": "part_1793135771935",
+          "name": "Gabriela",
+          "paid": false,
+          "share": 29444
+        },
+        {
+          "id": "part_1793135777830",
+          "name": "Amiga de Gabriela",
+          "paid": false,
+          "share": 29444
+        },
+        {
+          "id": "part_1793135781190",
+          "name": "John",
+          "paid": false,
+          "share": 29444
+        },
+        {
+          "id": "part_1793135789094",
+          "name": "Yuli",
+          "paid": false,
+          "share": 29444
+        }
+      ]
     },
     {
       "id": "cf_tx_mb_1792810591520_fdef77",
@@ -949,12 +1326,33 @@
       "createdAt": "2026-10-23T13:15:38.792630-05:00"
     },
     {
+      "id": "cf_tx_int_1793021051631_out",
+      "period": "2026-11",
+      "type": "debit",
+      "amount": 70000,
+      "currency": "COP",
+      "budgetItemId": "wealth_impresora",
+      "budgetItemName": "Meta Impresora 3D",
+      "budgetItemType": "wealth",
+      "description": "Aporte a Ahorro: Cajita Impresora (Ganancia Tony Chopper)",
+      "date": "2026-10-26",
+      "time": "08:24:11",
+      "paymentSource": {
+        "type": "savings",
+        "targetId": "acc_rappi_principal",
+        "targetName": "Cuenta RappiPay (Principal)"
+      },
+      "destinationAccountId": "acc_1789616855068",
+      "destinationAccountName": "Cajita Impresora (RappiPay)",
+      "createdAt": "2026-10-26T08:24:11.631Z"
+    },
+    {
       "id": "cf_tx_mb_1793020231371_461300",
       "period": "2026-11",
       "budgetItemId": null,
-      "budgetItemName": "Ingreso: Transferencia Recibida",
+      "budgetItemName": "Venta Impresión 3D (Emprendimiento)",
       "budgetItemType": "income",
-      "description": "Transferencia recibida RappiCuenta",
+      "description": "Venta Impresión 3D: Base para celular Tony Chopper (Johan)",
       "amount": 70000,
       "currency": "COP",
       "date": "2026-10-25",
@@ -964,19 +1362,21 @@
       "shortfall": 0,
       "fallbackAccountName": null,
       "paymentSource": {
-        "type": "payroll",
+        "type": "savings",
         "targetId": "acc_rappi_principal",
         "targetName": "Cuenta RappiPay (Principal)"
       },
-      "createdAt": "2026-10-26T08:10:31.371487-05:00"
+      "createdAt": "2026-10-26T08:10:31.371487-05:00",
+      "destinationAccountId": null,
+      "destinationAccountName": null
     },
     {
       "id": "tx_1793019721410",
       "period": "2026-11",
-      "budgetItemId": "need_housing",
-      "budgetItemName": "Arriendo / Vivienda & Admin",
-      "budgetItemType": "needs",
-      "description": "Arriendo / Vivienda & Admin",
+      "budgetItemId": "want_dining",
+      "budgetItemName": "Restaurantes, Cafés & Salidas",
+      "budgetItemType": "wants",
+      "description": "Pan",
       "amount": 20000,
       "currency": "COP",
       "date": "2026-10-25",
@@ -985,19 +1385,103 @@
         "targetName": "Nu Colombia (Cuenta Nu Débito)"
       },
       "isLoan": true,
-      "loanRecipient": "Pan :v",
-      "loanAmount": 20000,
+      "loanRecipient": "Mike, Julian, Primi, Walter, Sebas, Sebas porto",
+      "loanAmount": 17142,
       "loanDueDate": null,
-      "loanStatus": "pending",
-      "createdAt": "2026-10-26T13:02:01.410Z"
+      "loanStatus": "partially_settled",
+      "createdAt": "2026-10-26T13:02:01.410Z",
+      "itemType": "expense",
+      "time": "13:02:00",
+      "type": "debit",
+      "isSplit": true,
+      "userIncluded": true,
+      "userShare": 2858,
+      "participants": [
+        {
+          "id": "part_1793131200388",
+          "name": "Mike",
+          "paid": false,
+          "share": 2857,
+          "customShare": null
+        },
+        {
+          "id": "part_1793131202904",
+          "name": "Julian",
+          "paid": false,
+          "share": 2857,
+          "customShare": null
+        },
+        {
+          "id": "part_1793141147235",
+          "name": "Primi",
+          "paid": true,
+          "share": 2857,
+          "paidAmount": 2857,
+          "paidAt": "2026-10-27",
+          "targetName": "Registrado previamente",
+          "alreadyRegistered": true,
+          "customShare": null
+        },
+        {
+          "id": "part_1793141160643",
+          "name": "Walter",
+          "paid": false,
+          "share": 2857,
+          "customShare": null
+        },
+        {
+          "id": "part_1793141164791",
+          "name": "Sebas",
+          "paid": false,
+          "share": 2857,
+          "customShare": null
+        },
+        {
+          "id": "part_1793141206661",
+          "name": "Sebas porto",
+          "paid": false,
+          "share": 2857,
+          "customShare": null
+        }
+      ],
+      "remainingLoan": 14285,
+      "totalSettled": 2857,
+      "settlements": [
+        {
+          "id": "stl_1793141813256",
+          "participantId": "part_1793141147235",
+          "participantName": "Primi",
+          "alreadyRegistered": true,
+          "amount": 2857,
+          "date": "2026-10-27",
+          "targetType": "already_registered",
+          "targetId": null,
+          "targetName": "Registrado previamente",
+          "note": "Pago cuota de Primi (Gasto compartido: Arriendo / Vivienda & Admin)",
+          "settledAt": "2026-10-27T22:56:53.256Z"
+        }
+      ],
+      "settlementDetails": {
+        "id": "stl_1793141813256",
+        "participantId": "part_1793141147235",
+        "participantName": "Primi",
+        "alreadyRegistered": true,
+        "amount": 2857,
+        "date": "2026-10-27",
+        "targetType": "already_registered",
+        "targetId": null,
+        "targetName": "Registrado previamente",
+        "note": "Pago cuota de Primi (Gasto compartido: Arriendo / Vivienda & Admin)",
+        "settledAt": "2026-10-27T22:56:53.256Z"
+      }
     },
     {
       "id": "tx_1793019639815",
       "period": "2026-11",
-      "budgetItemId": "need_housing",
-      "budgetItemName": "Arriendo / Vivienda & Admin",
-      "budgetItemType": "needs",
-      "description": "Arriendo / Vivienda & Admin",
+      "budgetItemId": "want_dining",
+      "budgetItemName": "Restaurantes, Cafés & Salidas",
+      "budgetItemType": "wants",
+      "description": "Cumpleaños Campo",
       "amount": 129700,
       "currency": "COP",
       "date": "2026-10-25",
@@ -1008,11 +1492,109 @@
         "installments": 1
       },
       "isLoan": true,
-      "loanRecipient": "Invitados regalo Campo",
-      "loanAmount": 129700,
+      "loanRecipient": "Mike, John, Walter, Nicolás, Johan, Sebas porto, Primi, Norbert",
+      "loanAmount": 115288,
       "loanDueDate": null,
-      "loanStatus": "pending",
-      "createdAt": "2026-10-26T13:00:39.815Z"
+      "loanStatus": "partially_settled",
+      "createdAt": "2026-10-26T13:00:39.815Z",
+      "itemType": "expense",
+      "time": "13:00:00",
+      "type": "debit",
+      "isSplit": true,
+      "userIncluded": true,
+      "userShare": 14412,
+      "participants": [
+        {
+          "id": "part_1793124461942",
+          "name": "Mike",
+          "paid": false,
+          "share": 14411,
+          "customShare": null
+        },
+        {
+          "id": "part_1793124472549",
+          "name": "John",
+          "paid": false,
+          "share": 14411,
+          "customShare": null
+        },
+        {
+          "id": "part_1793124478653",
+          "name": "Walter",
+          "paid": false,
+          "share": 14411,
+          "customShare": null
+        },
+        {
+          "id": "part_1793124483616",
+          "name": "Nicolás",
+          "paid": false,
+          "share": 14411,
+          "customShare": null
+        },
+        {
+          "id": "part_1793124492249",
+          "name": "Johan",
+          "paid": false,
+          "share": 14411,
+          "customShare": null
+        },
+        {
+          "id": "part_1793124497381",
+          "name": "Sebas porto",
+          "paid": false,
+          "share": 14411,
+          "customShare": null
+        },
+        {
+          "id": "part_1793124519878",
+          "name": "Primi",
+          "paid": true,
+          "share": 14411,
+          "customShare": null,
+          "paidAmount": 14411,
+          "paidAt": "2026-10-27",
+          "targetName": "Registrado previamente",
+          "alreadyRegistered": true
+        },
+        {
+          "id": "part_1793125070927",
+          "name": "Norbert",
+          "paid": false,
+          "share": 14411,
+          "customShare": null
+        }
+      ],
+      "remainingLoan": 100877,
+      "totalSettled": 14411,
+      "settlements": [
+        {
+          "id": "stl_1793141795721",
+          "participantId": "part_1793124519878",
+          "participantName": "Primi",
+          "alreadyRegistered": true,
+          "amount": 14411,
+          "date": "2026-10-27",
+          "targetType": "already_registered",
+          "targetId": null,
+          "targetName": "Registrado previamente",
+          "note": "Pago cuota de Primi (Gasto compartido: Cumpleaños Campo)",
+          "settledAt": "2026-10-27T22:56:35.721Z"
+        }
+      ],
+      "settlementDetails": {
+        "id": "stl_1793141795721",
+        "participantId": "part_1793124519878",
+        "participantName": "Primi",
+        "alreadyRegistered": true,
+        "amount": 14411,
+        "date": "2026-10-27",
+        "targetType": "already_registered",
+        "targetId": null,
+        "targetName": "Registrado previamente",
+        "note": "Pago cuota de Primi (Gasto compartido: Cumpleaños Campo)",
+        "settledAt": "2026-10-27T22:56:35.721Z"
+      }
     },
     {
       "id": "cf_tx_mb_1792953469335_6753df",
@@ -1035,6 +1617,33 @@
         "targetName": "Cuenta Nu Débito (Nómina)"
       },
       "createdAt": "2026-10-25T13:37:49.335465-05:00"
+    },
+    {
+      "id": "cf_tx_cash_4000_20261027",
+      "period": "2026-11",
+      "budgetItemId": "need_groceries",
+      "budgetItemName": "Alimentación & Supermercado",
+      "budgetItemType": "needs",
+      "description": "Gasto en efectivo",
+      "amount": 4000,
+      "currency": "COP",
+      "date": "2026-10-27",
+      "time": "13:06:00",
+      "type": "debit",
+      "cascaded": false,
+      "shortfall": 0,
+      "paymentSource": {
+        "type": "cash",
+        "targetId": "acc_cash_wallet",
+        "targetName": "Efectivo (Billetera)"
+      },
+      "createdAt": "2026-10-27T13:06:00.000000-05:00",
+      "subItemId": null,
+      "subItemName": null,
+      "isDebtPayment": false,
+      "debtId": null,
+      "destinationAccountId": null,
+      "destinationAccountName": null
     }
   ],
   "creditCards": [
@@ -1045,7 +1654,7 @@
       "color": "#820ad1",
       "icon": "💜",
       "totalLimit": 200000,
-      "usedLimit": 32392.0,
+      "usedLimit": 80347,
       "closingDay": 15,
       "paymentDay": 2,
       "rateEA": 24.5,
@@ -1059,8 +1668,8 @@
       "bankId": "rappi",
       "color": "#ff441f",
       "icon": "🧡",
-      "totalLimit": 600000,
-      "usedLimit": 129700,
+      "totalLimit": 800000,
+      "usedLimit": 627626,
       "closingDay": 20,
       "paymentDay": 1,
       "rateEA": 24,
@@ -1273,7 +1882,7 @@
           "id": "in_salary",
           "name": "Salario Neto (Nómina)",
           "category": "salary",
-          "amount": 3496000,
+          "amount": 3662854,
           "currency": "COP",
           "isPassive": false,
           "frequency": "monthly",
@@ -1523,15 +2132,48 @@
   },
   "creditPurchases": [
     {
+      "id": "cp_tx_mb_1793136598344_4a7534",
+      "cardId": "cc_rappi",
+      "description": "Compra en WOMPI IMPEBENECER SA",
+      "amount": 627626,
+      "installmentsCount": 1,
+      "startPeriod": "2026-11",
+      "monthlyInstallment": 627626,
+      "date": "2026-10-27",
+      "createdAt": "2026-10-27T16:29:58.344081-05:00"
+    },
+    {
       "id": "cp_tx_mb_1793135853228_123ad8",
       "cardId": "cc_nu",
       "description": "Compra en D1",
-      "amount": 1000.0,
+      "amount": 1000,
       "installmentsCount": 1,
       "startPeriod": "2026-11",
-      "monthlyInstallment": 1000.0,
+      "monthlyInstallment": 1000,
       "date": "2026-10-27",
       "createdAt": "2026-10-27T16:17:33.228502-05:00"
+    },
+    {
+      "id": "cp_tx_mb_1793157595802_f27553",
+      "cardId": "cc_nu",
+      "description": "Compra en Didi",
+      "amount": 6500,
+      "installmentsCount": 1,
+      "startPeriod": "2026-11",
+      "monthlyInstallment": 6500,
+      "date": "2026-10-27",
+      "createdAt": "2026-10-27T22:19:55.802995-05:00"
+    },
+    {
+      "id": "cp_tx_mb_1793143745550_ad067e",
+      "cardId": "cc_nu",
+      "description": "Compra en SURTIMAYORISTA AVENIDA",
+      "amount": 42455,
+      "installmentsCount": 1,
+      "startPeriod": "2026-11",
+      "monthlyInstallment": 42455,
+      "date": "2026-10-27",
+      "createdAt": "2026-10-27T18:29:05.550418-05:00"
     }
   ],
   "debts": [
@@ -1548,7 +2190,7 @@
       "dueDate": null,
       "nextPaymentDate": "2026-11-25",
       "status": "active",
-      "notes": "Un solo pago, ahorrando 3 cuotas.",
+      "notes": "Pagos directos a Mike (3 cuotas de $210.000).",
       "paymentsLog": [
         {
           "id": "pay_mike_20261024_01",
@@ -1560,6 +2202,25 @@
         }
       ],
       "createdAt": "2026-10-24T17:07:58.786Z"
+    },
+    {
+      "id": "debt_1793111301169_7a55",
+      "debtType": "receivable",
+      "concept": "Prestamo Vanne",
+      "creditor": "Vanesa",
+      "debtor": "Vanesa",
+      "totalAmount": 230000,
+      "remainingAmount": 230000,
+      "paymentMethod": "Transferencia a Cuenta / Cajita",
+      "paymentSourceId": "acc_nu_debito",
+      "paymentFrequency": "monthly",
+      "installmentAmount": 230000,
+      "dueDate": "2026-11-05",
+      "nextPaymentDate": "2026-11-05",
+      "status": "active",
+      "notes": "",
+      "paymentsLog": [],
+      "createdAt": "2026-10-27T14:28:21.169Z"
     },
     {
       "id": "debt_1792784275907_r2b4",
@@ -1577,6 +2238,330 @@
       "notes": "",
       "paymentsLog": [],
       "createdAt": "2026-10-23T19:37:55.907Z"
+    },
+    {
+      "id": "debt_tx_cf_tx_mb_1793157932032_c0a937",
+      "debtType": "receivable",
+      "linkedExpenseId": "cf_tx_mb_1793157932032_c0a937",
+      "concept": "Préstamo: CRI******** DAZ*** (Andre)",
+      "debtor": "Andre",
+      "creditor": "Yo",
+      "totalAmount": 8000.0,
+      "remainingAmount": 0.0,
+      "status": "paid",
+      "paymentMethod": "Nu Colombia (Cuenta Nu Débito)",
+      "paymentFrequency": "one_time",
+      "dueDate": null,
+      "isGroupSplit": true,
+      "participants": [
+        {
+          "id": "part_1793195264460",
+          "name": "Andre",
+          "paid": true,
+          "share": 8000,
+          "paidAmount": 8000,
+          "paidAt": "2026-10-28",
+          "targetName": "Disponible Nequi",
+          "alreadyRegistered": false,
+          "customShare": null
+        }
+      ],
+      "paymentsLog": [
+        {
+          "id": "stl_1793196309821",
+          "amount": 8000.0,
+          "date": "2026-10-28",
+          "paymentMethod": "Disponible Nequi",
+          "note": "Pago cuota de Andre (Gasto compartido: CRI******** DAZ***)",
+          "createdAt": "2026-10-28T14:05:09.821Z"
+        }
+      ],
+      "createdAt": "2026-10-27T22:25:32.032189-05:00"
+    },
+    {
+      "id": "debt_tx_cf_tx_mb_1793136598344_4a7534",
+      "debtType": "receivable",
+      "linkedExpenseId": "cf_tx_mb_1793136598344_4a7534",
+      "concept": "Préstamo: Compra en WOMPI IMPEBENECER SA (María)",
+      "debtor": "María",
+      "creditor": "Yo",
+      "totalAmount": 627626.0,
+      "remainingAmount": 449626.0,
+      "status": "active",
+      "paymentMethod": "RappiCard Visa (MSI) (1 cuota 0%)",
+      "paymentFrequency": "one_time",
+      "dueDate": null,
+      "isGroupSplit": false,
+      "participants": [],
+      "paymentsLog": [
+        {
+          "id": "stl_1793195781151",
+          "amount": 178000.0,
+          "date": "2026-10-28",
+          "paymentMethod": "Nu Colombia (Cuenta Nu Débito)",
+          "note": "Abono de María",
+          "createdAt": "2026-10-28T13:56:21.151Z"
+        }
+      ],
+      "createdAt": "2026-10-27T16:29:58.344081-05:00"
+    },
+    {
+      "id": "debt_tx_cf_tx_mb_1792824204973_2fd09c",
+      "debtType": "receivable",
+      "linkedExpenseId": "cf_tx_mb_1792824204973_2fd09c",
+      "concept": "Préstamo: Salida en PRESEA ROOFTOP (Tarjeta Débito Nu) (Julian, David, Juana, Prima de Juana, Gabriela, Amiga de Gabriela, John, Yuli)",
+      "debtor": "Julian, David, Juana, Prima de Juana, Gabriela, Amiga de Gabriela, John, Yuli",
+      "creditor": "Yo",
+      "totalAmount": 235552.0,
+      "remainingAmount": 135552.0,
+      "status": "active",
+      "paymentMethod": "Nu Colombia (Cuenta Nu Débito)",
+      "paymentFrequency": "one_time",
+      "dueDate": null,
+      "isGroupSplit": true,
+      "participants": [
+        {
+          "id": "part_1793135754725",
+          "name": "Julian",
+          "paid": false,
+          "share": 29444
+        },
+        {
+          "id": "part_1793135756709",
+          "name": "David",
+          "paid": false,
+          "share": 29444
+        },
+        {
+          "id": "part_1793135759617",
+          "name": "Juana",
+          "paid": false,
+          "share": 29444
+        },
+        {
+          "id": "part_1793135768767",
+          "name": "Prima de Juana",
+          "paid": false,
+          "share": 29444
+        },
+        {
+          "id": "part_1793135771935",
+          "name": "Gabriela",
+          "paid": false,
+          "share": 29444
+        },
+        {
+          "id": "part_1793135777830",
+          "name": "Amiga de Gabriela",
+          "paid": false,
+          "share": 29444
+        },
+        {
+          "id": "part_1793135781190",
+          "name": "John",
+          "paid": false,
+          "share": 29444
+        },
+        {
+          "id": "part_1793135789094",
+          "name": "Yuli",
+          "paid": false,
+          "share": 29444
+        }
+      ],
+      "paymentsLog": [
+        {
+          "id": "stl_presea_100k_cash",
+          "amount": 100000.0,
+          "date": "2026-10-24",
+          "paymentMethod": "Efectivo Físico (Billetera)",
+          "note": "Abono recibido en efectivo ($100.000 COP) de los $265.000 prestados en Presea Rooftop",
+          "createdAt": "2026-10-24T23:30:00.000Z"
+        }
+      ],
+      "createdAt": "2026-10-24T01:43:24.973417-05:00"
+    },
+    {
+      "id": "debt_tx_tx_1793019721410",
+      "debtType": "receivable",
+      "linkedExpenseId": "tx_1793019721410",
+      "concept": "Préstamo: Pan (Mike, Julian, Primi, Walter, Sebas, Sebas porto)",
+      "debtor": "Mike, Julian, Primi, Walter, Sebas, Sebas porto",
+      "creditor": "Yo",
+      "totalAmount": 17142.0,
+      "remainingAmount": 14285.0,
+      "status": "active",
+      "paymentMethod": "Nu Colombia (Cuenta Nu Débito)",
+      "paymentFrequency": "one_time",
+      "dueDate": null,
+      "isGroupSplit": true,
+      "participants": [
+        {
+          "id": "part_1793131200388",
+          "name": "Mike",
+          "paid": false,
+          "share": 2857,
+          "customShare": null
+        },
+        {
+          "id": "part_1793131202904",
+          "name": "Julian",
+          "paid": false,
+          "share": 2857,
+          "customShare": null
+        },
+        {
+          "id": "part_1793141147235",
+          "name": "Primi",
+          "paid": true,
+          "share": 2857,
+          "paidAmount": 2857,
+          "paidAt": "2026-10-27",
+          "targetName": "Registrado previamente",
+          "alreadyRegistered": true,
+          "customShare": null
+        },
+        {
+          "id": "part_1793141160643",
+          "name": "Walter",
+          "paid": false,
+          "share": 2857,
+          "customShare": null
+        },
+        {
+          "id": "part_1793141164791",
+          "name": "Sebas",
+          "paid": false,
+          "share": 2857,
+          "customShare": null
+        },
+        {
+          "id": "part_1793141206661",
+          "name": "Sebas porto",
+          "paid": false,
+          "share": 2857,
+          "customShare": null
+        }
+      ],
+      "paymentsLog": [
+        {
+          "id": "stl_1793141813256",
+          "amount": 2857.0,
+          "date": "2026-10-27",
+          "paymentMethod": "Registrado previamente",
+          "note": "Pago cuota de Primi (Gasto compartido: Arriendo / Vivienda & Admin)",
+          "createdAt": "2026-10-27T22:56:53.256Z"
+        }
+      ],
+      "createdAt": "2026-10-26T13:02:01.410Z"
+    },
+    {
+      "id": "debt_tx_tx_1793019639815",
+      "debtType": "receivable",
+      "linkedExpenseId": "tx_1793019639815",
+      "concept": "Préstamo: Cumpleaños Campo (Mike, John, Walter, Nicolás, Johan, Sebas porto, Primi, Norbert)",
+      "debtor": "Mike, John, Walter, Nicolás, Johan, Sebas porto, Primi, Norbert",
+      "creditor": "Yo",
+      "totalAmount": 115288.0,
+      "remainingAmount": 100877.0,
+      "status": "active",
+      "paymentMethod": "RappiCard Visa (MSI) (1 cuota 0%)",
+      "paymentFrequency": "one_time",
+      "dueDate": null,
+      "isGroupSplit": true,
+      "participants": [
+        {
+          "id": "part_1793124461942",
+          "name": "Mike",
+          "paid": false,
+          "share": 14411,
+          "customShare": null
+        },
+        {
+          "id": "part_1793124472549",
+          "name": "John",
+          "paid": false,
+          "share": 14411,
+          "customShare": null
+        },
+        {
+          "id": "part_1793124478653",
+          "name": "Walter",
+          "paid": false,
+          "share": 14411,
+          "customShare": null
+        },
+        {
+          "id": "part_1793124483616",
+          "name": "Nicolás",
+          "paid": false,
+          "share": 14411,
+          "customShare": null
+        },
+        {
+          "id": "part_1793124492249",
+          "name": "Johan",
+          "paid": false,
+          "share": 14411,
+          "customShare": null
+        },
+        {
+          "id": "part_1793124497381",
+          "name": "Sebas porto",
+          "paid": false,
+          "share": 14411,
+          "customShare": null
+        },
+        {
+          "id": "part_1793124519878",
+          "name": "Primi",
+          "paid": true,
+          "share": 14411,
+          "customShare": null,
+          "paidAmount": 14411,
+          "paidAt": "2026-10-27",
+          "targetName": "Registrado previamente",
+          "alreadyRegistered": true
+        },
+        {
+          "id": "part_1793125070927",
+          "name": "Norbert",
+          "paid": false,
+          "share": 14411,
+          "customShare": null
+        }
+      ],
+      "paymentsLog": [
+        {
+          "id": "stl_1793141795721",
+          "amount": 14411.0,
+          "date": "2026-10-27",
+          "paymentMethod": "Registrado previamente",
+          "note": "Pago cuota de Primi (Gasto compartido: Cumpleaños Campo)",
+          "createdAt": "2026-10-27T22:56:35.721Z"
+        }
+      ],
+      "createdAt": "2026-10-26T13:00:39.815Z"
     }
+  ],
+  "deletedExpenseIds": [
+    "tx_transfer_nu_to_cajita_deudas_210k",
+    "exp_transfer_mike_cajita_202611_split_0_1792908328343",
+    "tx_1792909650611",
+    "tx_1792909650611_split_1_1792909698846",
+    "exp_transfer_mike_cajita_202611_split_wealth_60k",
+    "cf_tx_cajita_viaje_150k_202611",
+    "cf_tx_mb_rappi_emergency_150k_202611",
+    "exp_transfer_mike_cajita_202611_split_0",
+    "tx_1792909650611_split_0_1792909698846",
+    "exp_transfer_mike_cajita_202611_split_1_1792908328343",
+    "cf_tx_mb_1793135518637_73deb8",
+    "cf_tx_plenti_broker_funding_200k_202611",
+    "exp_transfer_mike_cajita_202611",
+    "exp_transfer_mike_cajita_202611_split_1"
+  ],
+  "deletedDebtIds": [
+    "debt_loan_carlos_2026",
+    "debt_mike_nu_2026"
   ]
 }

@@ -89,6 +89,94 @@ function cleanLegacyPeriods(periods = {}) {
   return cleaned;
 }
 
+// Helper: Synchronize expense loans (isLoan: true) to debts collection
+export function syncExpenseLoansToDebts(expensesLog = [], currentDebts = []) {
+  const debtsMap = new Map();
+
+  // 1. Preserve standalone debts (e.g. Mike, Vanne, Maye)
+  for (const d of currentDebts) {
+    if (d && d.id) {
+      debtsMap.set(d.id, { ...d });
+    }
+  }
+
+  // 2. Map all expenses marked with isLoan: true
+  for (const tx of expensesLog) {
+    if (!tx || !tx.isLoan) {
+      if (tx?.id) {
+        debtsMap.delete(`debt_tx_${tx.id}`);
+        for (const [id, d] of debtsMap.entries()) {
+          if (d.linkedExpenseId === tx.id) debtsMap.delete(id);
+        }
+      }
+      continue;
+    }
+
+    const debtId = `debt_tx_${tx.id}`;
+    const debtor = (
+      tx.loanRecipient ||
+      (Array.isArray(tx.participants) && tx.participants.length > 0
+        ? tx.participants.map((p) => p.name).join(", ")
+        : "Amigo / Familiar")
+    ).trim();
+
+    const isSplit = Boolean(tx.isSplit || (Array.isArray(tx.participants) && tx.participants.length > 0));
+    const baseAmount = Number(tx.loanAmount) > 0 ? Number(tx.loanAmount) : Number(tx.amount) || 0;
+
+    // Calculate total settled
+    let settledTotal = 0;
+    if (Array.isArray(tx.settlements)) {
+      settledTotal += tx.settlements.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+    }
+    if (Array.isArray(tx.participants)) {
+      const partSettled = tx.participants
+        .filter((p) => p.paid)
+        .reduce((sum, p) => sum + (Number(p.paidAmount) || Number(p.customShare) || Number(p.share) || 0), 0);
+      settledTotal = Math.max(settledTotal, partSettled);
+    }
+
+    const remaining = Math.max(0, baseAmount - settledTotal);
+    const isSettled = tx.loanStatus === "settled" || remaining <= 0;
+
+    const existingDebt = debtsMap.get(debtId) || Array.from(debtsMap.values()).find((d) => d.linkedExpenseId === tx.id);
+
+    const paymentsLog = Array.isArray(tx.settlements) && tx.settlements.length > 0
+      ? tx.settlements.map((st) => ({
+          id: st.id || `stl_${Date.now()}`,
+          amount: Number(st.amount) || 0,
+          date: st.date || tx.date,
+          paymentMethod: st.targetName || "Transferencia",
+          note: st.note || `Abono de ${st.participantName || debtor}`,
+          createdAt: st.settledAt || new Date().toISOString(),
+        }))
+      : (existingDebt?.paymentsLog || []);
+
+    const syncedDebt = {
+      ...(existingDebt || {}),
+      id: existingDebt?.id || debtId,
+      debtType: "receivable",
+      linkedExpenseId: tx.id,
+      concept: `Préstamo: ${tx.description || "Gasto"} (${debtor})`,
+      debtor: debtor,
+      creditor: "Yo",
+      totalAmount: baseAmount,
+      remainingAmount: remaining,
+      status: isSettled ? "paid" : "active",
+      paymentMethod: tx.paymentSource?.targetName || "Transferencia a Cuenta / Cajita",
+      paymentFrequency: "one_time",
+      dueDate: tx.loanDueDate || existingDebt?.dueDate || null,
+      isGroupSplit: isSplit,
+      participants: Array.isArray(tx.participants) ? tx.participants : [],
+      paymentsLog,
+      createdAt: tx.createdAt || tx.date || new Date().toISOString(),
+    };
+
+    debtsMap.set(syncedDebt.id, syncedDebt);
+  }
+
+  return Array.from(debtsMap.values());
+}
+
 export const useCashFlowStore = create(
   (set, get) => ({
     // ── State ────────────────────────────────────────
@@ -348,6 +436,16 @@ export const useCashFlowStore = create(
               destinationAccountName: "Cuenta RappiPay (Principal)",
             };
           }
+
+          // Desvincular Pan y Cumpleaños Campo de 'need_housing' (Arriendo) por error de valor por defecto
+          if ((e.id === "tx_1793019721410" || e.id === "tx_1793019639815" || e.description?.toLowerCase().includes("pan") || e.description?.toLowerCase().includes("cumpleaños campo")) && e.budgetItemId === "need_housing") {
+            return {
+              ...e,
+              budgetItemId: null,
+              budgetItemName: e.isSplit || e.participants?.length > 0 ? "Gasto Compartido (Vaca)" : "Préstamo",
+              budgetItemType: "receivable",
+            };
+          }
           return e;
         });
 
@@ -450,7 +548,7 @@ export const useCashFlowStore = create(
           creditCardPayments: mergedCreditCardPayments,
           expensesLog: sanitizedExpensesLog,
           deletedExpenseIds: combinedDeletedIds,
-          debts: mergedDebts,
+          debts: syncExpenseLoansToDebts(sanitizedExpensesLog, mergedDebts),
           deletedDebtIds: combinedDeletedDebtIds,
           inflows: mergedInflows,
           needs: mergedNeeds,
@@ -1149,7 +1247,7 @@ export const useCashFlowStore = create(
           });
 
           // Update expense description and tag it as debt payment / collection
-          const updatedExpenses = (state.expensesLog || []).map((e) => {
+          let updatedExpenses = (state.expensesLog || []).map((e) => {
             if (e.id !== movementId) return e;
             return {
               ...e,
@@ -1165,6 +1263,32 @@ export const useCashFlowStore = create(
               debtId: debt.id,
             };
           });
+
+          // If the debt is linked to an expense loan, update the expense settlement record in expensesLog
+          if (debt.linkedExpenseId) {
+            updatedExpenses = updatedExpenses.map((e) => {
+              if (e.id === debt.linkedExpenseId) {
+                const currentSettlements = Array.isArray(e.settlements) ? e.settlements : [];
+                const newSettlement = {
+                  id: `stl_${Date.now()}`,
+                  amount: amount,
+                  date: expense.date || new Date().toISOString().slice(0, 10),
+                  targetName: expense.paymentSource?.targetName || "Nómina Nu Débito",
+                  note: `Cobro asignado desde: ${expense.description || "Ingreso bancario"}`,
+                  settledAt: new Date().toISOString(),
+                };
+                const totalSettledSoFar = currentSettlements.reduce((sum, s) => sum + (Number(s.amount) || 0), 0) + amount;
+                return {
+                  ...e,
+                  loanStatus: newRemaining <= 0 ? "settled" : "partially_settled",
+                  remainingLoan: newRemaining,
+                  totalSettled: totalSettledSoFar,
+                  settlements: [newSettlement, ...currentSettlements],
+                };
+              }
+              return e;
+            });
+          }
 
           set({ debts: updatedDebts, expensesLog: updatedExpenses });
           try {
@@ -1345,15 +1469,24 @@ export const useCashFlowStore = create(
 
       deleteDebt: (id) => {
         set((state) => {
+          const targetDebt = (state.debts || []).find((d) => d.id === id);
           const updatedDebts = (state.debts || []).filter((d) => d.id !== id);
+          let updatedExpensesLog = state.expensesLog || [];
+          if (targetDebt?.linkedExpenseId) {
+            updatedExpensesLog = updatedExpensesLog.map((tx) =>
+              tx.id === targetDebt.linkedExpenseId
+                ? { ...tx, isLoan: false, loanRecipient: null, loanAmount: null, loanStatus: null }
+                : tx
+            );
+          }
           const nextDeletedDebtIds = [...new Set([...(state.deletedDebtIds || []), id])];
           try {
             localStorage.setItem(
               "titanes_cash_flow_store_v2",
-              JSON.stringify({ ...state, debts: updatedDebts, deletedDebtIds: nextDeletedDebtIds })
+              JSON.stringify({ ...state, debts: updatedDebts, expensesLog: updatedExpensesLog, deletedDebtIds: nextDeletedDebtIds })
             );
           } catch {}
-          return { debts: updatedDebts, deletedDebtIds: nextDeletedDebtIds };
+          return { debts: updatedDebts, expensesLog: updatedExpensesLog, deletedDebtIds: nextDeletedDebtIds };
         });
         get().syncStateWithBackend();
         deleteDebtApi(id).catch(() => {});
@@ -1395,6 +1528,33 @@ export const useCashFlowStore = create(
           });
 
           let updatedExpenses = state.expensesLog || [];
+
+          // If debt was linked to an expense loan, register settlement on the expense row
+          if (debt.linkedExpenseId) {
+            updatedExpenses = updatedExpenses.map((e) => {
+              if (e.id === debt.linkedExpenseId) {
+                const currentSettlements = Array.isArray(e.settlements) ? e.settlements : [];
+                const newSettlement = {
+                  id: `stl_${Date.now()}`,
+                  amount: pAmt,
+                  date: payment.date || new Date().toISOString().slice(0, 10),
+                  targetName: payment.paymentMethod || "Abono a Deuda",
+                  note: payment.note || `Abono de ${debt.debtor || "Deudor"}`,
+                  settledAt: new Date().toISOString(),
+                };
+                const totalSettledSoFar = currentSettlements.reduce((sum, s) => sum + (Number(s.amount) || 0), 0) + pAmt;
+                return {
+                  ...e,
+                  loanStatus: newRemaining <= 0 ? "settled" : "partially_settled",
+                  remainingLoan: newRemaining,
+                  totalSettled: totalSettledSoFar,
+                  settlements: [newSettlement, ...currentSettlements],
+                };
+              }
+              return e;
+            });
+          }
+
           if (isReceivable && payment.createIncomeMovement) {
             const destAccount = (state.fixedIncomeAccounts || []).find((a) => a.id === payment.paymentSourceId);
             createdIncomeTx = {
@@ -1629,11 +1789,13 @@ export const useCashFlowStore = create(
             }
           }
 
+          const updatedDebts = syncExpenseLoansToDebts(updatedExpensesLog, state.debts);
           return {
             expensesLog: updatedExpensesLog,
             creditCards: updatedCards,
             creditCardPayments: updatedPayments,
             inflows: updatedInflows,
+            debts: updatedDebts,
           };
         });
 
@@ -1674,7 +1836,8 @@ export const useCashFlowStore = create(
             }
             return tx;
           });
-          return { expensesLog: updatedExpensesLog };
+          const updatedDebts = syncExpenseLoansToDebts(updatedExpensesLog, state.debts);
+          return { expensesLog: updatedExpensesLog, debts: updatedDebts };
         });
         get().syncStateWithBackend();
         toast.success("Configuración de división guardada", { icon: "👥" });
@@ -1707,7 +1870,8 @@ export const useCashFlowStore = create(
             }
             return tx;
           });
-          return { expensesLog: updatedExpensesLog };
+          const updatedDebts = syncExpenseLoansToDebts(updatedExpensesLog, state.debts);
+          return { expensesLog: updatedExpensesLog, debts: updatedDebts };
         });
         get().syncStateWithBackend();
         toast("Pago de participante desmarcado", { icon: "↩️" });
@@ -1727,10 +1891,11 @@ export const useCashFlowStore = create(
             }
             return tx;
           });
-          return { expensesLog: updatedExpensesLog };
+          const updatedDebts = syncExpenseLoansToDebts(updatedExpensesLog, state.debts);
+          return { expensesLog: updatedExpensesLog, debts: updatedDebts };
         });
         get().syncStateWithBackend();
-        toast.success(isLoan ? "Gasto marcado como Préstamo por Cobrar" : "Gasto desmarcado de préstamo", { icon: "🤝" });
+        toast.success(isLoan ? "Gasto marcado como Préstamo y sincronizado a Deudas" : "Gasto desmarcado de préstamo", { icon: "🤝" });
       },
 
       // ── Credit Card Debt Payments / Abonos ───────────
