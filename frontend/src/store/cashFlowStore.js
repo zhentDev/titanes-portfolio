@@ -268,7 +268,6 @@ export const useCashFlowStore = create(
         const KNOWN_PHANTOM_EXPENSE_IDS = [
           "cf_tx_plenti_broker_funding_200k_202611",
           "cf_tx_mb_rappi_emergency_150k_202611",
-          "cf_tx_cajita_viaje_150k_202611",
           "tx_1792909650611",
           "tx_1792909650611_split_0_1792909698846",
           "tx_1792909650611_split_1_1792909698846",
@@ -285,7 +284,12 @@ export const useCashFlowStore = create(
             ...(source?.deletedExpenseIds || []),
             ...(cachedLocal?.deletedExpenseIds || [])
           ])
-        ].filter((id) => id !== "cf_tx_mb_1793143745550_ad067e" && id !== "cp_tx_mb_1793143745550_ad067e");
+        ].filter(
+          (id) =>
+            id !== "cf_tx_mb_1793143745550_ad067e" &&
+            id !== "cp_tx_mb_1793143745550_ad067e" &&
+            id !== "cf_tx_cajita_viaje_150k_202611"
+        );
         const deletedExpenseIds = new Set(combinedDeletedIds);
         // Remote expensesLog is authoritative when available from server.
         // Never resurrect stale deleted transactions from cachedLocal unless they are genuine offline drafts.
@@ -331,6 +335,37 @@ export const useCashFlowStore = create(
           baseExpenses.push(SURTIMAYORISTA_42K_EXPENSE);
         }
 
+        // Explicitly guarantee Meta Viaje / Estudio $150.000 COP contribution from Nómina exists and is never lost
+        const CAJITA_VIAJE_150K_EXPENSE = {
+          id: "cf_tx_cajita_viaje_150k_202611",
+          period: "2026-11",
+          date: "2026-10-24",
+          time: "21:00:00",
+          amount: 150000,
+          currency: "COP",
+          type: "debit",
+          cascaded: false,
+          shortfall: 0,
+          fallbackAccountName: null,
+          budgetItemId: "wealth_travel_goal",
+          budgetItemName: "Meta Viaje / Estudio",
+          budgetItemType: "wealth",
+          description: "Aporte a Cajita Viaje Nu (Meta Viaje / Estudio)",
+          destinationAccountId: "acc_viaje",
+          destinationAccountName: "Cajita Viaje (9.35% E.A.)",
+          paymentSource: {
+            type: "payroll",
+            targetId: "acc_nu_debito",
+            targetName: "Cuenta Nu Débito (Nómina)",
+          },
+          itemType: "wealth_saving",
+          isLoan: false,
+          createdAt: "2026-10-24T21:00:00.000Z",
+        };
+        if (!baseExpenses.some((e) => e && (e.id === "cf_tx_cajita_viaje_150k_202611" || (Number(e.amount) === 150000 && (e.budgetItemId === "wealth_travel_goal" || (e.description || "").toLowerCase().includes("viaje")))))) {
+          baseExpenses.push(CAJITA_VIAJE_150K_EXPENSE);
+        }
+
         const mergedExpensesLog = baseExpenses.filter(
           (e) => e && e.id && !deletedExpenseIds.has(e.id) && !isTestExpense(e)
         );
@@ -352,6 +387,30 @@ export const useCashFlowStore = create(
               budgetItemType: "needs",
               type: "debit",
               itemType: "expense",
+              paymentSource: {
+                type: "payroll",
+                targetId: "acc_nu_debito",
+                targetName: "Cuenta Nu Débito (Nómina)",
+              },
+            };
+          }
+
+          // Aporte a Cajita Viaje Nu (Meta Viaje / Estudio) $150.000 COP
+          if (
+            e.id === "cf_tx_cajita_viaje_150k_202611" ||
+            (Number(e.amount) === 150000 && (e.budgetItemId === "wealth_travel_goal" || (e.description || "").toLowerCase().includes("viaje")))
+          ) {
+            return {
+              ...e,
+              amount: 150000,
+              description: "Aporte a Cajita Viaje Nu (Meta Viaje / Estudio)",
+              budgetItemId: "wealth_travel_goal",
+              budgetItemName: "Meta Viaje / Estudio",
+              budgetItemType: "wealth",
+              type: "debit",
+              itemType: "wealth_saving",
+              destinationAccountId: "acc_viaje",
+              destinationAccountName: "Cajita Viaje (9.35% E.A.)",
               paymentSource: {
                 type: "payroll",
                 targetId: "acc_nu_debito",
