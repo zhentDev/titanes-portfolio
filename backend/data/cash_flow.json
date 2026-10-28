@@ -1344,106 +1344,6 @@
       ]
     },
     {
-      "id": "pay_conv_1792863163027_gx31h_split_3_1792875528218",
-      "period": "2026-11",
-      "date": "2026-10-24",
-      "time": null,
-      "amount": 48724,
-      "currency": "COP",
-      "type": "debit",
-      "budgetItemId": "wealth_tech_etf",
-      "budgetItemName": "Portafolio Renta Variable (Al día / Tiempo Real)",
-      "budgetItemType": "wealth",
-      "subItemId": null,
-      "subItemName": null,
-      "description": "💳 Pago RappiCard Visa (MSI) (Descontado de Portafolio Renta Variable (Al día / Tiempo Real))",
-      "paymentSource": {
-        "type": "payroll",
-        "targetName": "Nu Colombia (Cuenta Nu Débito)"
-      },
-      "creditCardPaymentId": "ccpay_split_1792875528218",
-      "isCreditCardPayoff": true,
-      "itemType": "wealth_saving",
-      "destinationAccountId": null,
-      "destinationAccountName": null,
-      "createdAt": "2026-10-24T20:58:48.218Z"
-    },
-    {
-      "id": "pay_conv_1792863163027_gx31h_split_2_1792875528218",
-      "period": "2026-11",
-      "date": "2026-10-24",
-      "time": null,
-      "amount": 300000,
-      "currency": "COP",
-      "type": "debit",
-      "budgetItemId": "wealth_high_yield",
-      "budgetItemName": "Ahorro Alto Rendimiento (Nu / Plenti / CDTs)",
-      "budgetItemType": "wealth",
-      "subItemId": null,
-      "subItemName": null,
-      "description": "💳 Pago RappiCard Visa (MSI) (Descontado de Ahorro Alto Rendimiento (Nu / Plenti / CDTs))",
-      "paymentSource": {
-        "type": "payroll",
-        "targetName": "Nu Colombia (Cuenta Nu Débito)"
-      },
-      "creditCardPaymentId": "ccpay_split_1792875528218",
-      "isCreditCardPayoff": true,
-      "itemType": "wealth_saving",
-      "destinationAccountId": null,
-      "destinationAccountName": null,
-      "createdAt": "2026-10-24T20:58:48.218Z"
-    },
-    {
-      "id": "pay_conv_1792863163027_gx31h_split_1_1792875528218",
-      "period": "2026-11",
-      "date": "2026-10-24",
-      "time": null,
-      "amount": 124826,
-      "currency": "COP",
-      "type": "debit",
-      "budgetItemId": "want_leisure",
-      "budgetItemName": "Ocio, Hobbies & Compras",
-      "budgetItemType": "wants",
-      "subItemId": null,
-      "subItemName": null,
-      "description": "💳 Pago RappiCard Visa (MSI) (Descontado de Ocio, Hobbies & Compras)",
-      "paymentSource": {
-        "type": "payroll",
-        "targetName": "Nu Colombia (Cuenta Nu Débito)"
-      },
-      "creditCardPaymentId": "ccpay_split_1792875528218",
-      "isCreditCardPayoff": true,
-      "itemType": "expense",
-      "destinationAccountId": null,
-      "destinationAccountName": null,
-      "createdAt": "2026-10-24T20:58:48.218Z"
-    },
-    {
-      "id": "pay_conv_1792863163027_gx31h_split_0_1792875528218",
-      "period": "2026-11",
-      "date": "2026-10-24",
-      "time": null,
-      "amount": 119000,
-      "currency": "COP",
-      "type": "debit",
-      "budgetItemId": "want_subs",
-      "budgetItemName": "Suscripciones (Netflix, Spotify, Gym)",
-      "budgetItemType": "wants",
-      "subItemId": null,
-      "subItemName": null,
-      "description": "💳 Pago RappiCard Visa (MSI) (Descontado de Suscripciones (Netflix, Spotify, Gym))",
-      "paymentSource": {
-        "type": "payroll",
-        "targetName": "Nu Colombia (Cuenta Nu Débito)"
-      },
-      "creditCardPaymentId": "ccpay_split_1792875528218",
-      "isCreditCardPayoff": true,
-      "itemType": "expense",
-      "destinationAccountId": null,
-      "destinationAccountName": null,
-      "createdAt": "2026-10-24T20:58:48.218Z"
-    },
-    {
       "id": "cf_tx_mb_1792810591520_fdef77",
       "period": "2026-11",
       "date": "2026-10-23",
@@ -1635,47 +1535,6 @@
     }
   ],
   "creditCardPayments": [
-    {
-      "id": "pay_split_1792875528218_ykk7e",
-      "period": "2026-11",
-      "cardId": "cc_rappi",
-      "cardName": "RappiCard Visa (MSI)",
-      "amount": 592550,
-      "currency": "COP",
-      "date": "2026-10-24",
-      "description": "Pago RappiCard Visa (MSI) (Distribuido en 4 rubros)",
-      "sourceType": "payroll",
-      "sourceAccountId": null,
-      "sourceAccount": "Nu Colombia (Cuenta Nu Débito)",
-      "notes": "Distribuido desde: Pago RappiCard Visa (MSI) (Asignado manualmente)",
-      "budgetDeductions": [
-        {
-          "budgetItemId": "want_subs",
-          "budgetItemName": "Suscripciones (Netflix, Spotify, Gym)",
-          "budgetItemType": "wants",
-          "amount": 119000
-        },
-        {
-          "budgetItemId": "want_leisure",
-          "budgetItemName": "Ocio, Hobbies & Compras",
-          "budgetItemType": "wants",
-          "amount": 124826
-        },
-        {
-          "budgetItemId": "wealth_high_yield",
-          "budgetItemName": "Ahorro Alto Rendimiento (Nu / Plenti / CDTs)",
-          "budgetItemType": "wealth",
-          "amount": 300000
-        },
-        {
-          "budgetItemId": "wealth_tech_etf",
-          "budgetItemName": "Portafolio Renta Variable (Al día / Tiempo Real)",
-          "budgetItemType": "wealth",
-          "amount": 48724
-        }
-      ],
-      "createdAt": "2026-10-24T20:58:48.218Z"
-    },
     {
       "id": "pay_tx_mb_1792789337918_65be26",
       "period": "2026-11",
@@ -2517,23 +2376,31 @@
     }
   ],
   "deletedExpenseIds": [
-    "tx_transfer_nu_to_cajita_deudas_210k",
-    "exp_transfer_mike_cajita_202611_split_0_1792908328343",
-    "tx_1792909650611",
-    "tx_1792909650611_split_1_1792909698846",
-    "exp_transfer_mike_cajita_202611_split_wealth_60k",
-    "cf_tx_mb_rappi_emergency_150k_202611",
-    "exp_transfer_mike_cajita_202611_split_0",
-    "tx_1792909650611_split_0_1792909698846",
-    "exp_transfer_mike_cajita_202611_split_1_1792908328343",
+    "cf_tx_cajita_viaje_150k_202611",
     "cf_tx_mb_1793135518637_73deb8",
+    "cf_tx_mb_rappi_emergency_150k_202611",
     "cf_tx_plenti_broker_funding_200k_202611",
     "exp_transfer_mike_cajita_202611",
+    "exp_transfer_mike_cajita_202611_split_0",
+    "exp_transfer_mike_cajita_202611_split_0_1792908328343",
     "exp_transfer_mike_cajita_202611_split_1",
-    "cf_tx_cajita_viaje_150k_202611"
+    "exp_transfer_mike_cajita_202611_split_1_1792908328343",
+    "exp_transfer_mike_cajita_202611_split_wealth_60k",
+    "pay_conv_1792863163027_gx31h_split_0_1792875528218",
+    "pay_conv_1792863163027_gx31h_split_1_1792875528218",
+    "pay_conv_1792863163027_gx31h_split_2_1792875528218",
+    "pay_conv_1792863163027_gx31h_split_3_1792875528218",
+    "tx_1792909650611",
+    "tx_1792909650611_split_0_1792909698846",
+    "tx_1792909650611_split_1_1792909698846",
+    "tx_transfer_nu_to_cajita_deudas_210k"
   ],
   "deletedDebtIds": [
     "debt_loan_carlos_2026",
     "debt_mike_nu_2026"
+  ],
+  "deletedCreditCardPaymentIds": [
+    "ccpay_split_1792875528218",
+    "pay_split_1792875528218_ykk7e"
   ]
 }

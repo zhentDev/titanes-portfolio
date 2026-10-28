@@ -837,8 +837,8 @@ export default function ExpensesLogSection({
 
             if (isPayment) {
               const hasDeductions = Array.isArray(item.budgetDeductions) && item.budgetDeductions.length > 0;
-              const hasWealthEmergency = hasDeductions && item.budgetDeductions.some(
-                (d) => d.budgetItemType === "wealth" || d.isEmergencySavingsDeduction || d.budgetItemName?.toLowerCase().includes("ahorro") || d.budgetItemName?.toLowerCase().includes("renta") || d.budgetItemName?.toLowerCase().includes("invers")
+              const hasWealthDeduction = hasDeductions && item.budgetDeductions.some(
+                (d) => d.budgetItemType === "wealth" || d.budgetItemName?.toLowerCase().includes("ahorro") || d.budgetItemName?.toLowerCase().includes("renta") || d.budgetItemName?.toLowerCase().includes("invers")
               );
               const isExpanded = Boolean(expandedDeductions[item.id]);
               const isCard = item.itemType === "card_payment" || Boolean(item.cardName);
@@ -852,10 +852,10 @@ export default function ExpensesLogSection({
                     flexDirection: "column",
                     background: isDebt
                       ? (isLight ? "rgba(245, 158, 11, 0.08)" : "rgba(245, 158, 11, 0.1)")
-                      : hasWealthEmergency ? "rgba(245, 158, 11, 0.05)" : "rgba(16, 185, 129, 0.08)",
+                      : (isLight ? "rgba(16, 185, 129, 0.05)" : "rgba(16, 185, 129, 0.08)"),
                     border: isDebt
                       ? "1px solid rgba(245, 158, 11, 0.4)"
-                      : hasWealthEmergency ? "1px solid rgba(245, 158, 11, 0.35)" : "1px solid rgba(16, 185, 129, 0.25)",
+                      : "1px solid rgba(16, 185, 129, 0.25)",
                     borderRadius: "12px",
                     padding: "12px 16px",
                     transition: "all 0.15s ease",
@@ -864,7 +864,7 @@ export default function ExpensesLogSection({
                   <div className="expense-log-row-card" style={{ width: "100%" }}>
                     <div className="expense-log-row-left">
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                        <span style={{ fontSize: "1rem" }}>{isDebt ? "🤝" : (hasWealthEmergency ? "⚠️ 💳" : isCard ? "💳" : "📋")}</span>
+                        <span style={{ fontSize: "1rem" }}>{isDebt ? "🤝" : isCard ? "💳" : "📋"}</span>
                         <strong className="expense-log-row-title">
                           {isCard ? `${item.cardName} • ${item.description || "Abono a tarjeta"}` : item.description}
                         </strong>
@@ -881,21 +881,6 @@ export default function ExpensesLogSection({
                         >
                           {isDebt ? "🤝 Abono a Deuda (Distribuido)" : isCard ? "✓ Abono / Libera Cupo" : "📋 Deducción Multi-Rubro"}
                         </span>
-                        {hasWealthEmergency ? (
-                          <span
-                            style={{
-                              background: "rgba(245, 158, 11, 0.18)",
-                              border: "1px solid rgba(245, 158, 11, 0.4)",
-                              padding: "2px 6px",
-                              borderRadius: "6px",
-                              fontSize: "0.68rem",
-                              color: "#f59e0b",
-                              fontWeight: 700,
-                            }}
-                          >
-                            ⚠️ Desvío de Ahorro (Emergencia)
-                          </span>
-                        ) : null}
                         {isCard && (item.budgetDeductions || []).some((d) => d.budgetItemType === "wealth" || d.budgetItemId?.startsWith("wealth_")) && (
                           <span
                             style={{
@@ -915,21 +900,19 @@ export default function ExpensesLogSection({
                               .toLocaleString("es-CO")} COP
                           </span>
                         )}
-                        {!hasWealthEmergency && (
-                          <span
-                            style={{
-                              background: "rgba(16, 185, 129, 0.12)",
-                              border: "1px solid rgba(16, 185, 129, 0.3)",
-                              padding: "2px 6px",
-                              borderRadius: "6px",
-                              fontSize: "0.68rem",
-                              color: "#10b981",
-                              fontWeight: 700,
-                            }}
-                          >
-                            📤 Salida (Abono)
-                          </span>
-                        )}
+                        <span
+                          style={{
+                            background: "rgba(16, 185, 129, 0.12)",
+                            border: "1px solid rgba(16, 185, 129, 0.3)",
+                            padding: "2px 6px",
+                            borderRadius: "6px",
+                            fontSize: "0.68rem",
+                            color: "#10b981",
+                            fontWeight: 700,
+                          }}
+                        >
+                          📤 Salida (Abono)
+                        </span>
                       </div>
 
                       <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: 3, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
@@ -1041,11 +1024,6 @@ export default function ExpensesLogSection({
                         <span>{isExpanded ? "▼" : "▶"}</span>
                         <span>
                           {isExpanded ? "Ocultar distribución" : "Ver distribución"} ({item.budgetDeductions.length} rubros)
-                          {hasWealthEmergency && (
-                            <span style={{ color: "#f59e0b", marginLeft: 6, fontWeight: 700 }}>
-                              (⚠️ Ahorro usado para cubrir tarjeta por emergencia)
-                            </span>
-                          )}
                         </span>
                       </div>
 
@@ -1065,7 +1043,6 @@ export default function ExpensesLogSection({
                           {item.budgetDeductions.map((ded, idx) => {
                             const isWealthDeduction =
                               ded.budgetItemType === "wealth" ||
-                              ded.isEmergencySavingsDeduction ||
                               ded.budgetItemName?.toLowerCase().includes("ahorro") ||
                               ded.budgetItemName?.toLowerCase().includes("renta") ||
                               ded.budgetItemName?.toLowerCase().includes("invers");
@@ -1080,18 +1057,18 @@ export default function ExpensesLogSection({
                                   padding: "6px 10px",
                                   borderRadius: "7px",
                                   background: isWealthDeduction
-                                    ? (isLight ? "rgba(245, 158, 11, 0.12)" : "rgba(245, 158, 11, 0.18)")
+                                    ? (isLight ? "rgba(56, 189, 248, 0.1)" : "rgba(56, 189, 248, 0.14)")
                                     : (isLight ? "#ffffff" : "rgba(15, 23, 42, 0.6)"),
                                   border: isWealthDeduction
-                                    ? "1px solid rgba(245, 158, 11, 0.45)"
+                                    ? "1px solid rgba(56, 189, 248, 0.35)"
                                     : (isLight ? "1px solid rgba(0,0,0,0.06)" : "1px solid var(--border)"),
                                 }}
                               >
                                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                                   <span style={{ fontSize: "0.95rem" }}>
-                                    {isWealthDeduction ? "⚠️" : ded.budgetItemType === "needs" ? "🏠" : "🍿"}
+                                    {isWealthDeduction ? "💎" : ded.budgetItemType === "needs" ? "🏠" : "🍿"}
                                   </span>
-                                  <strong style={{ fontSize: "0.82rem", color: isWealthDeduction ? "#f59e0b" : "var(--text-primary)" }}>
+                                  <strong style={{ fontSize: "0.82rem", color: isWealthDeduction ? (isLight ? "#0284c7" : "#38bdf8") : "var(--text-primary)" }}>
                                     {ded.budgetItemName}
                                   </strong>
                                   {isWealthDeduction ? (
@@ -1099,14 +1076,14 @@ export default function ExpensesLogSection({
                                       style={{
                                         fontSize: "0.68rem",
                                         fontWeight: 800,
-                                        color: "#f59e0b",
-                                        background: isLight ? "rgba(245, 158, 11, 0.2)" : "rgba(245, 158, 11, 0.3)",
-                                        border: "1px solid rgba(245, 158, 11, 0.5)",
+                                        color: isLight ? "#0284c7" : "#38bdf8",
+                                        background: isLight ? "rgba(2, 132, 199, 0.12)" : "rgba(56, 189, 248, 0.2)",
+                                        border: "1px solid rgba(56, 189, 248, 0.4)",
                                         padding: "1px 6px",
                                         borderRadius: "4px",
                                       }}
                                     >
-                                      ⚠️ Desvío de Ahorro (Caso de Emergencia para Tarjeta)
+                                      💎 Ahorro / Inversión
                                     </span>
                                   ) : (
                                     <span
@@ -1148,17 +1125,12 @@ export default function ExpensesLogSection({
               const isCardPayoffEmergency =
                 item.isCreditCardPayoff ||
                 Boolean(item.creditCardPaymentId) ||
-                item.isEmergencySavingsDeduction ||
                 item.description?.toLowerCase().includes("pago") ||
                 item.description?.toLowerCase().includes("descontado de");
 
-              const cardBg = isCardPayoffEmergency
-                ? (isLight ? "rgba(245, 158, 11, 0.08)" : "rgba(245, 158, 11, 0.12)")
-                : "rgba(56, 189, 248, 0.08)";
-              const cardBorder = isCardPayoffEmergency
-                ? "1px solid rgba(245, 158, 11, 0.4)"
-                : "1px solid rgba(56, 189, 248, 0.25)";
-              const mainColor = isCardPayoffEmergency ? "#f59e0b" : "#38bdf8";
+              const cardBg = isLight ? "rgba(56, 189, 248, 0.05)" : "rgba(56, 189, 248, 0.08)";
+              const cardBorder = isLight ? "1px solid rgba(56, 189, 248, 0.25)" : "1px solid rgba(56, 189, 248, 0.25)";
+              const mainColor = isLight ? "#0284c7" : "#38bdf8";
 
               return (
                 <div
@@ -1174,13 +1146,13 @@ export default function ExpensesLogSection({
                 >
                   <div className="expense-log-row-left">
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                      <span style={{ fontSize: "1rem" }}>{isCardPayoffEmergency ? "⚠️ 💳" : "💎"}</span>
+                      <span style={{ fontSize: "1rem" }}>{isCardPayoffEmergency ? "💳" : "💎"}</span>
                       <strong style={{ fontSize: "0.9rem", color: "var(--text-primary)", wordBreak: "break-word" }}>
                         {item.description}
                       </strong>
                       <span
                         style={{
-                          background: isCardPayoffEmergency ? "rgba(245, 158, 11, 0.15)" : "rgba(56, 189, 248, 0.18)",
+                          background: isLight ? "rgba(2, 132, 199, 0.1)" : "rgba(56, 189, 248, 0.15)",
                           border: `1px solid ${mainColor}`,
                           padding: "2px 8px",
                           borderRadius: "6px",
@@ -1189,12 +1161,12 @@ export default function ExpensesLogSection({
                           fontWeight: 700,
                         }}
                       >
-                        {item.budgetItemName} • {isCardPayoffEmergency ? "Ahorro Afectado" : "Inversión / Ahorro"}
+                        {item.budgetItemName} • Inversión / Ahorro
                       </span>
                       <span
                         style={{
-                          background: isCardPayoffEmergency ? "rgba(245, 158, 11, 0.2)" : "rgba(56, 189, 248, 0.15)",
-                          border: isCardPayoffEmergency ? "1px solid rgba(245, 158, 11, 0.4)" : "1px solid rgba(56, 189, 248, 0.35)",
+                          background: isLight ? "rgba(2, 132, 199, 0.12)" : "rgba(56, 189, 248, 0.15)",
+                          border: `1px solid ${mainColor}`,
                           padding: "2px 6px",
                           borderRadius: "6px",
                           fontSize: "0.68rem",
@@ -1202,7 +1174,7 @@ export default function ExpensesLogSection({
                           fontWeight: 700,
                         }}
                       >
-                        {isCardPayoffEmergency ? "⚠️ Salida (Desvío de Ahorro para Tarjeta)" : "📤 Salida (Aporte a Ahorro)"}
+                        {isCardPayoffEmergency ? "💳 Salida (Imputado a Tarjeta)" : "📤 Salida (Aporte a Ahorro)"}
                       </span>
                     </div>
 
@@ -1215,17 +1187,9 @@ export default function ExpensesLogSection({
                         </>
                       )}
                       <span>•</span>
-                      <span style={{ color: isCardPayoffEmergency ? "#f59e0b" : "#c084fc", fontWeight: 600 }}>
+                      <span style={{ color: "#c084fc", fontWeight: 600 }}>
                         Descontado de: {item.paymentSource?.targetName || "Nómina Nu"}
                       </span>
-                      {isCardPayoffEmergency && (
-                        <>
-                          <span>•</span>
-                          <span style={{ color: "#f59e0b", fontStyle: "italic", fontSize: "0.7rem" }}>
-                            (⚠️ Caso de emergencia: cubrió deuda de tarjeta, no es ahorro real)
-                          </span>
-                        </>
-                      )}
                       {item.destinationAccountName && !isCardPayoffEmergency && (
                         <>
                           <span>•</span>
@@ -1687,10 +1651,16 @@ export default function ExpensesLogSection({
                         </button>
                       )}
 
-                      {onDeleteTransaction && (
+                      {(onDeleteTransaction || onDeletePayment) && (
                         <button
                           type="button"
-                          onClick={() => handleDeleteTransaction(item)}
+                          onClick={() => {
+                            if (item.itemType === "card_payment" || item.isCardPayment) {
+                              handleDeleteCardPayment(item);
+                            } else {
+                              handleDeleteTransaction(item);
+                            }
+                          }}
                           style={{
                             background: "transparent",
                             border: "none",
@@ -1699,7 +1669,7 @@ export default function ExpensesLogSection({
                             padding: "4px",
                             fontSize: "0.85rem",
                           }}
-                          title="Eliminar este gasto"
+                          title={item.itemType === "card_payment" || item.isCardPayment ? "Revertir este pago de tarjeta" : "Eliminar este gasto"}
                         >
                           🗑️
                         </button>

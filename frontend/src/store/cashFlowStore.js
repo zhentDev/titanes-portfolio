@@ -192,6 +192,7 @@ export const useCashFlowStore = create(
     creditCards: DEFAULT_CREDIT_CARDS,
     creditPurchases: DEFAULT_CREDIT_PURCHASES,
     creditCardPayments: [],
+    deletedCreditCardPaymentIds: [],
     expensesLog: [],
     debts: [],
     inflows: DEFAULT_INFLOWS,
@@ -282,6 +283,24 @@ export const useCashFlowStore = create(
         const mergedCreditCards = Array.isArray(source?.creditCards) && source.creditCards.length > 0 ? source.creditCards : (cachedLocal?.creditCards || []);
         const mergedCreditPurchases = unionById(source?.creditPurchases, cachedLocal?.creditPurchases);
         const mergedCreditCardPayments = unionById(source?.creditCardPayments, cachedLocal?.creditCardPayments);
+
+        const KNOWN_PHANTOM_PAYMENT_IDS = [
+          "pay_split_1792875528218_ykk7e",
+          "ccpay_split_1792875528218",
+        ];
+        const combinedDeletedPaymentIds = [
+          ...new Set([
+            ...KNOWN_PHANTOM_PAYMENT_IDS,
+            ...(source?.deletedCreditCardPaymentIds || []),
+            ...(cachedLocal?.deletedCreditCardPaymentIds || []),
+          ]),
+        ];
+        const deletedPaymentIds = new Set(combinedDeletedPaymentIds);
+
+        const sanitizedCreditCardPayments = mergedCreditCardPayments.filter(
+          (p) => p && p.id && !deletedPaymentIds.has(p.id)
+        );
+
         // Permanent tombstones for deleted transactions: combine backend and local storage
         const KNOWN_PHANTOM_EXPENSE_IDS = [
           "cf_tx_plenti_broker_funding_200k_202611",
@@ -296,6 +315,10 @@ export const useCashFlowStore = create(
           "exp_transfer_mike_cajita_202611_split_wealth_60k",
           "exp_transfer_mike_cajita_202611_split_0_1792908328343",
           "exp_transfer_mike_cajita_202611_split_1_1792908328343",
+          "pay_conv_1792863163027_gx31h_split_0_1792875528218",
+          "pay_conv_1792863163027_gx31h_split_1_1792875528218",
+          "pay_conv_1792863163027_gx31h_split_2_1792875528218",
+          "pay_conv_1792863163027_gx31h_split_3_1792875528218",
         ];
         const combinedDeletedIds = [
           ...new Set([
@@ -698,7 +721,8 @@ export const useCashFlowStore = create(
           },
           creditCards: syncedCreditCards,
           creditPurchases: sanitizedCreditPurchases,
-          creditCardPayments: mergedCreditCardPayments,
+          creditCardPayments: sanitizedCreditCardPayments,
+          deletedCreditCardPaymentIds: combinedDeletedPaymentIds,
           expensesLog: sanitizedExpensesLog,
           deletedExpenseIds: combinedDeletedIds,
           debts: syncExpenseLoansToDebts(sanitizedExpensesLog, mergedDebts),
@@ -759,6 +783,7 @@ export const useCashFlowStore = create(
               creditCards: currentState.creditCards,
               creditPurchases: currentState.creditPurchases,
               creditCardPayments: currentState.creditCardPayments,
+              deletedCreditCardPaymentIds: currentState.deletedCreditCardPaymentIds || [],
               expensesLog: currentState.expensesLog,
               deletedExpenseIds: currentState.deletedExpenseIds || [],
               debts: currentState.debts || [],
@@ -1203,7 +1228,8 @@ export const useCashFlowStore = create(
 
         let paymentRecord = null;
         if (card) {
-          const paymentId = `pay_split_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+          // If this was already a cardPayment, preserve its ID so we update in-place without creating a ghost duplicate!
+          const paymentId = cardPayment?.id || (typeof movementId === "string" && movementId.startsWith("pay_") ? movementId : `pay_split_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`);
           paymentRecord = {
             id: paymentId,
             period: sourceItem.period || state.activePeriod,
@@ -1212,6 +1238,7 @@ export const useCashFlowStore = create(
             amount: totalAmount,
             currency: sourceItem.currency || state.currency,
             date: sourceItem.date || new Date().toISOString().split("T")[0],
+            time: sourceItem.time || null,
             description: `Pago ${card.name} (Distribuido en ${distributions.length} rubros)`,
             sourceType: sourceItem.sourceType || sourceItem.paymentSource?.type || "payroll",
             sourceAccountId: sourceItem.sourceAccountId || sourceItem.paymentSource?.targetId || null,
@@ -1224,9 +1251,9 @@ export const useCashFlowStore = create(
               amount: Number(d.amount),
               subItemId: d.subItemId || null,
               subItemName: d.subItemName || null,
-              isEmergencySavingsDeduction: d.budgetItemType === "wealth",
+              isEmergencySavingsDeduction: false,
             })),
-            createdAt: new Date().toISOString(),
+            createdAt: sourceItem.createdAt || new Date().toISOString(),
           };
           updatedPayments = [paymentRecord, ...updatedPayments];
         }
@@ -1263,7 +1290,7 @@ export const useCashFlowStore = create(
             creditCardPaymentId: paymentRecord ? paymentRecord.id : null,
             isCreditCardPayoff: Boolean(card),
             cardId: card ? card.id : null,
-            isEmergencySavingsDeduction: d.budgetItemType === "wealth" && Boolean(card),
+            isEmergencySavingsDeduction: false,
             itemType: d.budgetItemType === "wealth" ? "wealth_saving" : "expense",
             destinationAccountId: d.destinationAccountId || null,
             destinationAccountName: d.destinationAccountName || null,
@@ -2531,10 +2558,21 @@ export const useCashFlowStore = create(
             });
           }
 
+          const nextDeletedPaymentIds = [...new Set([...(state.deletedCreditCardPaymentIds || []), id])];
+          // Also tombstone any child expenses in expensesLog associated with this payment
+          const childExpenseIds = (state.expensesLog || [])
+            .filter((tx) => tx.creditCardPaymentId === id || tx.splitParentId === id)
+            .map((tx) => tx.id);
+          const nextDeletedExpenseIds = [...new Set([...(state.deletedExpenseIds || []), ...childExpenseIds])];
+
           return {
+            deletedCreditCardPaymentIds: nextDeletedPaymentIds,
+            deletedExpenseIds: nextDeletedExpenseIds,
             creditCardPayments: (state.creditCardPayments || []).filter((p) => p.id !== id),
             creditCards: updatedCards,
-            expensesLog: (state.expensesLog || []).filter((tx) => tx.creditCardPaymentId !== id),
+            expensesLog: (state.expensesLog || []).filter(
+              (tx) => tx.creditCardPaymentId !== id && tx.splitParentId !== id
+            ),
           };
         });
         get().syncStateWithBackend();
