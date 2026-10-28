@@ -54,18 +54,25 @@ export default function CreditCardsSection({
     let monthlyBill = 0;
 
     cardPurchases.forEach((p) => {
-      const info = getInstallmentInfo(p, activePeriod);
+      const tot = Number(p.totalAmount) || Number(p.amount) || Number(p.monthlyInstallment) || 0;
+      const normalizedP = {
+        ...p,
+        totalAmount: tot,
+        amount: tot,
+        monthlyInstallment: Number(p.monthlyInstallment) || tot,
+      };
+      const info = getInstallmentInfo(normalizedP, activePeriod);
       if (info && info.status !== "completed") {
-        purchasesUsedLimit += p.totalAmount;
+        purchasesUsedLimit += tot;
       }
       if (info && info.isActive) {
-        monthlyBill += Number(p.monthlyInstallment) || 0;
+        monthlyBill += Number(p.monthlyInstallment) || tot;
       }
     });
 
-    // If the card has a manual usedLimit defined, prioritize it, otherwise fallback to sum of purchases
-    const usedLimit = card.usedLimit !== undefined ? Number(card.usedLimit) : purchasesUsedLimit;
-    const availableLimit = Math.max(0, (card.totalLimit || 0) - usedLimit);
+    // Dynamic usedLimit: prioritize active purchases sum if purchases exist, or fallback to card.usedLimit
+    const usedLimit = purchasesUsedLimit > 0 ? purchasesUsedLimit : (card.usedLimit !== undefined ? Number(card.usedLimit) : 0);
+    const availableLimit = Math.max(0, (Number(card.totalLimit) || 0) - usedLimit);
     const usagePct = card.totalLimit > 0 ? ((usedLimit / card.totalLimit) * 100).toFixed(0) : 0;
 
     return {
@@ -470,10 +477,10 @@ export default function CreditCardsSection({
                   <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                     <div style={{ textAlign: "right" }}>
                       <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.95rem", fontWeight: 700, color: info?.isActive ? "var(--text-primary)" : "var(--text-muted)" }}>
-                        {formatMoney(purchase.monthlyInstallment, currency)} / mes
+                        {formatMoney(purchase.monthlyInstallment || purchase.totalAmount || purchase.amount, currency)} / mes
                       </div>
                       <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                        Total: {formatMoney(purchase.totalAmount, currency)}
+                        Total: {formatMoney(purchase.totalAmount || purchase.amount || purchase.monthlyInstallment, currency)}
                       </div>
                     </div>
 

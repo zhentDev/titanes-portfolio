@@ -540,23 +540,56 @@ export const useCashFlowStore = create(
           return true;
         });
 
-        // Ensure Microsoft*Xbox ($31.392 COP) is included in creditPurchases if present in sanitizedExpensesLog
-        const xboxTx = sanitizedExpensesLog.find(
-          (tx) => tx.id === "cf_tx_mb_1792944694475_3448d5" || (tx.description || "").toLowerCase().includes("xbox")
-        );
-        if (xboxTx && !sanitizedCreditPurchases.some((cp) => cp.id === "cp_tx_mb_1792944694475_3448d5" || cp.description?.toLowerCase().includes("xbox"))) {
-          sanitizedCreditPurchases.push({
-            id: "cp_tx_mb_1792944694475_3448d5",
-            cardId: "cc_nu",
-            description: "Compra en Microsoft*Xbox",
-            amount: Number(xboxTx.amount) || 31392,
-            installmentsCount: 1,
-            startPeriod: xboxTx.period || "2026-11",
-            monthlyInstallment: Number(xboxTx.amount) || 31392,
-            date: xboxTx.date || "2026-10-25",
-            createdAt: xboxTx.createdAt || new Date().toISOString(),
-          });
-        }
+        // Ensure all creditPurchases have totalAmount normalized
+        sanitizedCreditPurchases = sanitizedCreditPurchases.map((cp) => {
+          const tot = Number(cp.totalAmount) || Number(cp.amount) || Number(cp.monthlyInstallment) || 0;
+          return {
+            ...cp,
+            totalAmount: tot,
+            amount: tot,
+            monthlyInstallment: Number(cp.monthlyInstallment) || tot,
+          };
+        });
+
+        // Ensure credit card expenses in sanitizedExpensesLog are reflected in sanitizedCreditPurchases
+        sanitizedExpensesLog.forEach((tx) => {
+          if (tx.paymentSource?.type === "credit_card") {
+            const cardId = tx.paymentSource.targetId || (tx.description?.toLowerCase().includes("rappi") ? "cc_rappi" : "cc_nu");
+            const cleanId = tx.id.replace("cf_", "");
+            const amt = Number(tx.amount) || 0;
+            const matchingCp = sanitizedCreditPurchases.find((p) => p.id === `cp_${cleanId}` || p.id === tx.id);
+            if (matchingCp) {
+              matchingCp.totalAmount = amt;
+              matchingCp.amount = amt;
+              matchingCp.monthlyInstallment = Number(matchingCp.monthlyInstallment) || amt;
+              matchingCp.cardId = cardId;
+            } else {
+              sanitizedCreditPurchases.push({
+                id: `cp_${cleanId}`,
+                cardId,
+                description: tx.description,
+                amount: amt,
+                totalAmount: amt,
+                installmentsCount: tx.paymentSource?.installments || 1,
+                startPeriod: tx.period || activeP,
+                monthlyInstallment: amt,
+                date: tx.date,
+                createdAt: tx.createdAt || new Date().toISOString(),
+              });
+            }
+          }
+        });
+
+        // Sync credit cards usedLimit directly with actual active purchases
+        const syncedCreditCards = (mergedCreditCards || []).map((card) => {
+          const cardPurchasesTotal = sanitizedCreditPurchases
+            .filter((p) => p.cardId === card.id)
+            .reduce((sum, p) => sum + (Number(p.totalAmount) || Number(p.amount) || 0), 0);
+          return {
+            ...card,
+            usedLimit: cardPurchasesTotal > 0 ? cardPurchasesTotal : (Number(card.usedLimit) || 0),
+          };
+        });
 
         const resolvedState = {
           startPeriod: startP,
@@ -572,7 +605,7 @@ export const useCashFlowStore = create(
             ...(source?.payrollAccount || {}),
             activeFromDate: "2026-10-23",
           },
-          creditCards: mergedCreditCards,
+          creditCards: syncedCreditCards,
           creditPurchases: sanitizedCreditPurchases,
           creditCardPayments: mergedCreditCardPayments,
           expensesLog: sanitizedExpensesLog,
@@ -703,37 +736,66 @@ export const useCashFlowStore = create(
 
       // ── Credit Purchases & Installments CRUD ─────────
       addCreditPurchase: (purchase) => {
-        set((state) => ({ creditPurchases: [purchase, ...state.creditPurchases] }));
+        set((state) => {
+          const tot = Number(purchase.totalAmount) || Number(purchase.amount) || Number(purchase.monthlyInstallment) || 0;
+          const normalizedP = {
+            ...purchase,
+            totalAmount: tot,
+            amount: tot,
+            monthlyInstallment: Number(purchase.monthlyInstallment) || tot,
+          };
+          const nextPurchases = [normalizedP, ...(state.creditPurchases || [])];
+          const nextCards = (state.creditCards || []).map((c) => {
+            const cardPurchasesTotal = nextPurchases
+              .filter((p) => p.cardId === c.id)
+              .reduce((sum, p) => sum + (Number(p.totalAmount) || Number(p.amount) || 0), 0);
+            return { ...c, usedLimit: cardPurchasesTotal > 0 ? cardPurchasesTotal : c.usedLimit };
+          });
+          return { creditPurchases: nextPurchases, creditCards: nextCards };
+        });
         get().syncStateWithBackend();
         toast.success(`Compra diferida "${purchase.description}" registrada`, { icon: "🛍️" });
       },
 
       updateCreditPurchase: (id, updates) => {
-        set((state) => ({
-          creditPurchases: state.creditPurchases.map((p) => (p.id === id ? { ...p, ...updates } : p)),
-        }));
+        set((state) => {
+          const nextPurchases = (state.creditPurchases || []).map((p) => {
+            if (p.id === id) {
+              const merged = { ...p, ...updates };
+              const tot = Number(merged.totalAmount) || Number(merged.amount) || Number(merged.monthlyInstallment) || 0;
+              return { ...merged, totalAmount: tot, amount: tot };
+            }
+            return p;
+          });
+          const nextCards = (state.creditCards || []).map((c) => {
+            const cardPurchasesTotal = nextPurchases
+              .filter((p) => p.cardId === c.id)
+              .reduce((sum, p) => sum + (Number(p.totalAmount) || Number(p.amount) || 0), 0);
+            return { ...c, usedLimit: cardPurchasesTotal > 0 ? cardPurchasesTotal : c.usedLimit };
+          });
+          return { creditPurchases: nextPurchases, creditCards: nextCards };
+        });
         get().syncStateWithBackend();
       },
 
       deleteCreditPurchase: (id) => {
         set((state) => {
-          const purchase = (state.creditPurchases || []).find((p) => p.id === id);
-          let updatedCards = state.creditCards;
-          if (purchase && purchase.cardId) {
-            updatedCards = state.creditCards.map((c) => {
-              if (c.id === purchase.cardId) {
-                const amt = Number(purchase.monthlyInstallment) || Number(purchase.amount) || 0;
-                return { ...c, usedLimit: Math.max(0, (Number(c.usedLimit) || 0) - amt) };
-              }
-              return c;
-            });
-          }
+          const nextPurchases = (state.creditPurchases || []).filter((p) => p.id !== id);
+          const updatedCards = (state.creditCards || []).map((c) => {
+            const cardPurchasesTotal = nextPurchases
+              .filter((p) => p.cardId === c.id)
+              .reduce((sum, p) => sum + (Number(p.totalAmount) || Number(p.amount) || 0), 0);
+            return {
+              ...c,
+              usedLimit: cardPurchasesTotal,
+            };
+          });
           const cleanTxId = id.startsWith("cp_") ? id.replace("cp_", "") : id;
           const updatedExpenses = (state.expensesLog || []).filter(
             (tx) => tx.id !== id && tx.id !== cleanTxId && tx.id !== `cf_${cleanTxId}`
           );
           return {
-            creditPurchases: (state.creditPurchases || []).filter((p) => p.id !== id),
+            creditPurchases: nextPurchases,
             creditCards: updatedCards,
             expensesLog: updatedExpenses,
           };
@@ -746,18 +808,34 @@ export const useCashFlowStore = create(
       addExpenseTransaction: (tx) => {
         set((state) => {
           let updatedCards = state.creditCards;
+          let updatedPurchases = state.creditPurchases || [];
           if (tx.paymentSource?.type === "credit_card" && tx.paymentSource.targetId) {
-            updatedCards = state.creditCards.map((c) => {
-              if (c.id === tx.paymentSource.targetId) {
-                return { ...c, usedLimit: (Number(c.usedLimit) || 0) + Number(tx.amount) };
-              }
-              return c;
+            const cleanId = (tx.id || "").replace("cf_", "");
+            const purchaseObj = {
+              id: `cp_${cleanId}`,
+              cardId: tx.paymentSource.targetId,
+              description: tx.description,
+              amount: Number(tx.amount) || 0,
+              totalAmount: Number(tx.amount) || 0,
+              installmentsCount: tx.paymentSource.installments || 1,
+              startPeriod: tx.period || state.activePeriod,
+              monthlyInstallment: Number(tx.amount) || 0,
+              date: tx.date,
+              createdAt: tx.createdAt || new Date().toISOString(),
+            };
+            updatedPurchases = [purchaseObj, ...updatedPurchases];
+            updatedCards = (state.creditCards || []).map((c) => {
+              const cardPurchasesTotal = updatedPurchases
+                .filter((p) => p.cardId === c.id)
+                .reduce((sum, p) => sum + (Number(p.totalAmount) || Number(p.amount) || 0), 0);
+              return { ...c, usedLimit: cardPurchasesTotal > 0 ? cardPurchasesTotal : c.usedLimit };
             });
           }
 
           return {
             expensesLog: [tx, ...(state.expensesLog || [])],
             creditCards: updatedCards,
+            creditPurchases: updatedPurchases,
           };
         });
         get().syncStateWithBackend();
@@ -806,6 +884,7 @@ export const useCashFlowStore = create(
                     cardId,
                     description: updatedTx.description,
                     amount: Number(updatedTx.amount) || p.amount,
+                    totalAmount: Number(updatedTx.amount) || p.totalAmount || p.amount,
                     monthlyInstallment: Number(updatedTx.amount) || p.monthlyInstallment,
                   };
                 }
@@ -818,6 +897,7 @@ export const useCashFlowStore = create(
                   cardId,
                   description: updatedTx.description,
                   amount: Number(updatedTx.amount),
+                  totalAmount: Number(updatedTx.amount),
                   installmentsCount: 1,
                   startPeriod: updatedTx.period || state.activePeriod,
                   monthlyInstallment: Number(updatedTx.amount),
@@ -831,6 +911,14 @@ export const useCashFlowStore = create(
             // Payment source changed away from credit card, remove from creditPurchases
             updatedPurchases = updatedPurchases.filter((p) => p.id !== `cp_${cleanId}` && p.id !== updatedTx.id);
           }
+
+          // Dynamically sync creditCards usedLimit
+          updatedCards = updatedCards.map((c) => {
+            const cardPurchasesTotal = updatedPurchases
+              .filter((p) => p.cardId === c.id)
+              .reduce((sum, p) => sum + (Number(p.totalAmount) || Number(p.amount) || 0), 0);
+            return { ...c, usedLimit: cardPurchasesTotal > 0 ? cardPurchasesTotal : c.usedLimit };
+          });
 
           const updatedLog = (state.expensesLog || []).map((tx) =>
             tx.id === updatedTx.id ? { ...tx, ...updatedTx } : tx
@@ -865,6 +953,14 @@ export const useCashFlowStore = create(
           const updatedPurchases = (state.creditPurchases || []).filter(
             (p) => p.id !== id && p.id !== `cp_${cleanId}` && p.id !== `cp_${id}`
           );
+
+          // Dynamically sync creditCards usedLimit
+          updatedCards = (state.creditCards || []).map((c) => {
+            const cardPurchasesTotal = updatedPurchases
+              .filter((p) => p.cardId === c.id)
+              .reduce((sum, p) => sum + (Number(p.totalAmount) || Number(p.amount) || 0), 0);
+            return { ...c, usedLimit: cardPurchasesTotal };
+          });
 
           // Also remove matching deduction from parent card payment if this was a split deduction
           let updatedPayments = state.creditCardPayments || [];
@@ -1246,17 +1342,38 @@ export const useCashFlowStore = create(
         if (destinationType === "credit_card_purchase") {
           const cid = targetId || cardId;
           const card = (state.creditCards || []).find((c) => c.id === cid);
-          const wasCard = expense.paymentSource?.type === "credit_card";
-          
-          let updatedCards = [...(state.creditCards || [])];
-          if (!wasCard && card) {
-            updatedCards = updatedCards.map((c) => {
-              if (c.id === card.id) {
-                return { ...c, usedLimit: Math.round(((Number(c.usedLimit) || 0) + amount) * 100) / 100 };
-              }
-              return c;
-            });
+          const cleanId = (movementId || "").replace("cf_", "");
+
+          let nextPurchases = [...(state.creditPurchases || [])];
+          const existingCpIdx = nextPurchases.findIndex((p) => p.id === `cp_${cleanId}` || p.id === movementId);
+          const purchaseObj = {
+            id: `cp_${cleanId}`,
+            cardId: card ? card.id : cid,
+            description: expense.description || "Compra con Tarjeta",
+            amount: amount,
+            totalAmount: amount,
+            installmentsCount: installments || expense.paymentSource?.installments || 1,
+            startPeriod: expense.period || state.activePeriod,
+            monthlyInstallment: amount,
+            date: expense.date,
+            createdAt: expense.createdAt || new Date().toISOString(),
+          };
+
+          if (existingCpIdx >= 0) {
+            nextPurchases[existingCpIdx] = { ...nextPurchases[existingCpIdx], ...purchaseObj };
+          } else {
+            nextPurchases.push(purchaseObj);
           }
+
+          const updatedCards = (state.creditCards || []).map((c) => {
+            const cardPurchasesTotal = nextPurchases
+              .filter((p) => p.cardId === c.id)
+              .reduce((sum, p) => sum + (Number(p.totalAmount) || Number(p.amount) || 0), 0);
+            return {
+              ...c,
+              usedLimit: cardPurchasesTotal > 0 ? cardPurchasesTotal : (Number(c.usedLimit) || 0),
+            };
+          });
 
           const updatedExpenses = (state.expensesLog || []).map((e) => {
             if (e.id !== movementId) return e;
@@ -1267,13 +1384,22 @@ export const useCashFlowStore = create(
                 type: "credit_card",
                 targetId: card ? card.id : cid,
                 targetName: card ? card.name : "Tarjeta de Crédito",
+                installments: installments || 1,
               },
             };
           });
 
-          set({ creditCards: updatedCards, expensesLog: updatedExpenses });
+          set({ creditCards: updatedCards, creditPurchases: nextPurchases, expensesLog: updatedExpenses });
           try {
-            localStorage.setItem("titanes_cash_flow_store_v2", JSON.stringify({ ...state, creditCards: updatedCards, expensesLog: updatedExpenses }));
+            localStorage.setItem(
+              "titanes_cash_flow_store_v2",
+              JSON.stringify({
+                ...state,
+                creditCards: updatedCards,
+                creditPurchases: nextPurchases,
+                expensesLog: updatedExpenses,
+              })
+            );
           } catch {}
           get().syncStateWithBackend();
           toast.success(`Movimiento clasificado como compra con ${card?.name || 'Tarjeta'}. Cupo usado actualizado 💳`);

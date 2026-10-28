@@ -1650,7 +1650,7 @@
       "color": "#ff441f",
       "icon": "🧡",
       "totalLimit": 800000,
-      "usedLimit": 627626,
+      "usedLimit": 757326,
       "closingDay": 20,
       "paymentDay": 1,
       "rateEA": 24,
@@ -2113,6 +2113,18 @@
   },
   "creditPurchases": [
     {
+      "id": "cp_tx_1793019639815",
+      "cardId": "cc_rappi",
+      "description": "Cumpleaños Campo",
+      "amount": 129700,
+      "totalAmount": 129700,
+      "installmentsCount": 1,
+      "startPeriod": "2026-11",
+      "monthlyInstallment": 129700,
+      "date": "2026-10-26",
+      "createdAt": "2026-10-26T20:00:00.000Z"
+    },
+    {
       "id": "cp_tx_mb_1793136598344_4a7534",
       "cardId": "cc_rappi",
       "description": "Compra en WOMPI IMPEBENECER SA",
@@ -2121,7 +2133,8 @@
       "startPeriod": "2026-11",
       "monthlyInstallment": 627626,
       "date": "2026-10-27",
-      "createdAt": "2026-10-27T16:29:58.344081-05:00"
+      "createdAt": "2026-10-27T16:29:58.344081-05:00",
+      "totalAmount": 627626
     },
     {
       "id": "cp_tx_mb_1793135853228_123ad8",
@@ -2132,7 +2145,8 @@
       "startPeriod": "2026-11",
       "monthlyInstallment": 1000,
       "date": "2026-10-27",
-      "createdAt": "2026-10-27T16:17:33.228502-05:00"
+      "createdAt": "2026-10-27T16:17:33.228502-05:00",
+      "totalAmount": 1000
     },
     {
       "id": "cp_tx_mb_1793157595802_f27553",
@@ -2143,7 +2157,8 @@
       "startPeriod": "2026-11",
       "monthlyInstallment": 6500,
       "date": "2026-10-27",
-      "createdAt": "2026-10-27T22:19:55.802995-05:00"
+      "createdAt": "2026-10-27T22:19:55.802995-05:00",
+      "totalAmount": 6500
     },
     {
       "id": "cp_tx_mb_1792944694475_3448d5",
@@ -2154,7 +2169,8 @@
       "startPeriod": "2026-11",
       "monthlyInstallment": 31392,
       "date": "2026-10-25",
-      "createdAt": "2026-10-25T11:11:34.475447-05:00"
+      "createdAt": "2026-10-25T11:11:34.475447-05:00",
+      "totalAmount": 31392
     }
   ],
   "debts": [
