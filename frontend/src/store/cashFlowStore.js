@@ -1553,6 +1553,45 @@ export const useCashFlowStore = create(
                 createdAt: new Date().toISOString(),
               };
               updatedInflows = [cashInflow, ...updatedInflows];
+            } else if (settlementData.targetType === "nequi" || settlementData.targetType === "digital_wallet") {
+              const isNequi = settlementData.targetType === "nequi" || (settlementData.targetName || "").toLowerCase().includes("nequi");
+              const walletInflow = {
+                id: `in_wallet_${Date.now()}`,
+                name: `Cobro Préstamo: ${settlementData.recipient || "Tercero"} (${settlementData.targetName || (isNequi ? "Nequi" : "Billetera Digital")})`,
+                category: "reimbursement",
+                amount: Number(settlementData.amount),
+                currency: settlementData.currency || state.currency,
+                isPassive: false,
+                frequency: "one_time",
+                period: state.activePeriod,
+                paymentSource: {
+                  type: "digital_wallet",
+                  targetId: settlementData.targetId || (isNequi ? "acc_nequi_disp" : null),
+                  targetName: settlementData.targetName || (isNequi ? "Disponible Nequi" : "Billetera Digital"),
+                },
+                icon: isNequi ? "🟣" : "📱",
+                createdAt: new Date().toISOString(),
+              };
+              updatedInflows = [walletInflow, ...updatedInflows];
+            } else if (settlementData.targetType === "fixed_pocket") {
+              const pocketInflow = {
+                id: `in_pocket_${Date.now()}`,
+                name: `Cobro Préstamo: ${settlementData.recipient || "Tercero"} (${settlementData.targetName || "Ahorro"})`,
+                category: "reimbursement",
+                amount: Number(settlementData.amount),
+                currency: settlementData.currency || state.currency,
+                isPassive: false,
+                frequency: "one_time",
+                period: state.activePeriod,
+                paymentSource: {
+                  type: "fixed_pocket",
+                  targetId: settlementData.targetId,
+                  targetName: settlementData.targetName || "Cuenta de Ahorro",
+                },
+                icon: "🏦",
+                createdAt: new Date().toISOString(),
+              };
+              updatedInflows = [pocketInflow, ...updatedInflows];
             }
           }
 
@@ -1564,7 +1603,13 @@ export const useCashFlowStore = create(
           };
         });
 
-        if (!settlementData.alreadyRegistered && settlementData.targetType === "fixed_pocket" && settlementData.targetId) {
+        if (
+          !settlementData.alreadyRegistered &&
+          (settlementData.targetType === "fixed_pocket" ||
+           settlementData.targetType === "digital_wallet" ||
+           settlementData.targetType === "nequi") &&
+          settlementData.targetId
+        ) {
           try {
             useFixedIncomeStore.getState().creditAccountFromCashFlow({
               accountId: settlementData.targetId,
@@ -1573,7 +1618,7 @@ export const useCashFlowStore = create(
               description: `Cobro Préstamo: ${settlementData.recipient || "Tercero"}`,
             });
           } catch (e) {
-            console.warn("Could not credit fixed income pocket:", e);
+            console.warn("Could not credit fixed income account:", e);
           }
         }
 

@@ -93,6 +93,45 @@ export default function LoanSettlementModal({
   const [selectedPocketId, setSelectedPocketId] = useState(fixedIncomeAccounts[0]?.id || "");
   const [note, setNote] = useState("");
 
+  // Target account helpers from fixedIncomeAccounts
+  const nequiAccount = useMemo(() => {
+    return (fixedIncomeAccounts || []).find((a) => (a.name || "").toLowerCase().includes("nequi"));
+  }, [fixedIncomeAccounts]);
+
+  const otherWallets = useMemo(() => {
+    return (fixedIncomeAccounts || []).filter(
+      (a) =>
+        (a.accountCategory === "digital_wallet" || a.type === "wallet") &&
+        !(a.name || "").toLowerCase().includes("nequi")
+    );
+  }, [fixedIncomeAccounts]);
+
+  const savingsPockets = useMemo(() => {
+    return (fixedIncomeAccounts || []).filter(
+      (a) =>
+        a.accountCategory !== "payroll" &&
+        a.accountCategory !== "digital_wallet" &&
+        a.type !== "wallet" &&
+        !(a.name || "").toLowerCase().includes("nomina") &&
+        !(a.name || "").toLowerCase().includes("nómina") &&
+        !(a.name || "").toLowerCase().includes("nequi") &&
+        !(a.name || "").toLowerCase().includes("daviplata")
+    );
+  }, [fixedIncomeAccounts]);
+
+  const [selectedWalletId, setSelectedWalletId] = useState("");
+  useEffect(() => {
+    if (otherWallets.length > 0 && !selectedWalletId) {
+      setSelectedWalletId(otherWallets[0].id);
+    }
+  }, [otherWallets, selectedWalletId]);
+
+  useEffect(() => {
+    if (savingsPockets.length > 0 && !selectedPocketId) {
+      setSelectedPocketId(savingsPockets[0].id);
+    }
+  }, [savingsPockets, selectedPocketId]);
+
   // Sync state if transaction changes
   useEffect(() => {
     if (transaction) {
@@ -287,14 +326,22 @@ export default function LoanSettlementModal({
     let targetName = "Registrado previamente";
 
     if (!alreadyRegistered) {
-      if (targetType === "credit_card") {
+      if (targetType === "nequi") {
+        targetId = nequiAccount?.id || "acc_nequi_disp";
+        targetName = nequiAccount?.name || "Disponible Nequi";
+      } else if (targetType === "digital_wallet") {
+        const wallet = (fixedIncomeAccounts || []).find((a) => a.id === selectedWalletId) || otherWallets[0];
+        targetId = wallet?.id || "acc_daviplata_disp";
+        targetName = wallet ? wallet.name : "Billetera Digital";
+      } else if (targetType === "credit_card") {
         const card = creditCards.find((c) => c.id === selectedCardId) || creditCards[0];
         targetId = card?.id;
         targetName = card ? card.name : "Tarjeta de Crédito";
       } else if (targetType === "payroll") {
         targetName = payrollAccount.name || "Cuenta Nu (Nómina)";
+        targetId = "acc_nu_debito";
       } else if (targetType === "fixed_pocket") {
-        const pocket = fixedIncomeAccounts.find((p) => p.id === selectedPocketId) || fixedIncomeAccounts[0];
+        const pocket = (fixedIncomeAccounts || []).find((p) => p.id === selectedPocketId) || savingsPockets[0];
         targetId = pocket?.id;
         targetName = pocket ? pocket.name : "Cuenta de Ahorro / Cajita";
       } else if (targetType === "cash") {
@@ -355,12 +402,19 @@ export default function LoanSettlementModal({
     let targetId = null;
     let targetName = payrollAccount.name || "Cuenta de Nómina";
 
-    if (targetType === "credit_card") {
+    if (targetType === "nequi") {
+      targetId = nequiAccount?.id || "acc_nequi_disp";
+      targetName = nequiAccount?.name || "Disponible Nequi";
+    } else if (targetType === "digital_wallet") {
+      const wallet = (fixedIncomeAccounts || []).find((a) => a.id === selectedWalletId) || otherWallets[0];
+      targetId = wallet?.id;
+      targetName = wallet ? wallet.name : "Billetera Digital";
+    } else if (targetType === "credit_card") {
       const card = creditCards.find((c) => c.id === selectedCardId) || creditCards[0];
       targetId = card?.id;
       targetName = card ? card.name : "Tarjeta de Crédito";
     } else if (targetType === "fixed_pocket") {
-      const pocket = fixedIncomeAccounts.find((p) => p.id === selectedPocketId) || fixedIncomeAccounts[0];
+      const pocket = (fixedIncomeAccounts || []).find((p) => p.id === selectedPocketId) || savingsPockets[0];
       targetId = pocket?.id;
       targetName = pocket ? pocket.name : "Cuenta de Ahorro";
     } else if (targetType === "investment_cash") {
@@ -1033,11 +1087,43 @@ export default function LoanSettlementModal({
 
                           {/* Section 2: ¿Dónde recibiste el dinero? */}
                           <div style={{ marginBottom: 12 }}>
-                            <label style={{ fontSize: "0.74rem", color: "var(--text-secondary)", fontWeight: 700, display: "block", marginBottom: 6 }}>
-                              ¿Dónde o cómo recibiste este pago?
-                            </label>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                              <label style={{ fontSize: "0.74rem", color: "var(--text-secondary)", fontWeight: 700 }}>
+                                ¿Dónde o cómo recibiste este pago?
+                              </label>
+                              <span style={{ fontSize: "0.66rem", color: "var(--text-muted)" }}>
+                                Selecciona el destino real del dinero
+                              </span>
+                            </div>
+
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 6 }}>
-                              {/* Option 1: Cash / Efectivo */}
+                              {/* Option 1: Nequi */}
+                              <button
+                                type="button"
+                                onClick={() => setTargetType("nequi")}
+                                style={{
+                                  padding: "8px 10px",
+                                  borderRadius: 8,
+                                  border: targetType === "nequi" ? "2px solid #ff007a" : "1px solid var(--border)",
+                                  background: targetType === "nequi" ? (isLight ? "rgba(255, 0, 122, 0.12)" : "rgba(255, 0, 122, 0.22)") : "var(--bg-surface)",
+                                  color: targetType === "nequi" ? (isLight ? "#b80058" : "#ff4d9e") : "var(--text-secondary)",
+                                  fontSize: "0.74rem",
+                                  fontWeight: 700,
+                                  cursor: "pointer",
+                                  textAlign: "left",
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: 2,
+                                  transition: "all 0.15s ease",
+                                }}
+                              >
+                                <span style={{ fontSize: "0.82rem" }}>🟣 Nequi</span>
+                                <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>
+                                  {nequiAccount ? `Saldo: ${formatMoney(nequiAccount.balance || 0)}` : "Disponible Nequi"}
+                                </span>
+                              </button>
+
+                              {/* Option 2: Cash / Efectivo */}
                               <button
                                 type="button"
                                 onClick={() => setTargetType("cash")}
@@ -1054,13 +1140,14 @@ export default function LoanSettlementModal({
                                   display: "flex",
                                   flexDirection: "column",
                                   gap: 2,
+                                  transition: "all 0.15s ease",
                                 }}
                               >
                                 <span style={{ fontSize: "0.82rem" }}>💵 Efectivo Físico</span>
                                 <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>Billetera / En mano</span>
                               </button>
 
-                              {/* Option 2: Payroll / Cuenta Nu */}
+                              {/* Option 3: Payroll / Cuenta Nu */}
                               <button
                                 type="button"
                                 onClick={() => setTargetType("payroll")}
@@ -1077,22 +1164,23 @@ export default function LoanSettlementModal({
                                   display: "flex",
                                   flexDirection: "column",
                                   gap: 2,
+                                  transition: "all 0.15s ease",
                                 }}
                               >
                                 <span style={{ fontSize: "0.82rem" }}>💼 Cuenta Nu (Nómina)</span>
                                 <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>Transferencia bancaria</span>
                               </button>
 
-                              {/* Option 3: Credit Card */}
+                              {/* Option 4: Otras Billeteras Digitales */}
                               <button
                                 type="button"
-                                onClick={() => setTargetType("credit_card")}
+                                onClick={() => setTargetType("digital_wallet")}
                                 style={{
                                   padding: "8px 10px",
                                   borderRadius: 8,
-                                  border: targetType === "credit_card" ? "2px solid #10b981" : "1px solid var(--border)",
-                                  background: targetType === "credit_card" ? (isLight ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.25)") : "var(--bg-surface)",
-                                  color: targetType === "credit_card" ? (isLight ? "#047857" : "#6ee7b7") : "var(--text-secondary)",
+                                  border: targetType === "digital_wallet" ? "2px solid #3b82f6" : "1px solid var(--border)",
+                                  background: targetType === "digital_wallet" ? (isLight ? "rgba(59, 130, 246, 0.15)" : "rgba(59, 130, 246, 0.25)") : "var(--bg-surface)",
+                                  color: targetType === "digital_wallet" ? (isLight ? "#1d4ed8" : "#93c5fd") : "var(--text-secondary)",
                                   fontSize: "0.74rem",
                                   fontWeight: 700,
                                   cursor: "pointer",
@@ -1100,13 +1188,14 @@ export default function LoanSettlementModal({
                                   display: "flex",
                                   flexDirection: "column",
                                   gap: 2,
+                                  transition: "all 0.15s ease",
                                 }}
                               >
-                                <span style={{ fontSize: "0.82rem" }}>💳 Tarjeta de Crédito</span>
-                                <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>Restaura cupo</span>
+                                <span style={{ fontSize: "0.82rem" }}>📱 Otras Billeteras</span>
+                                <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>Daviplata, Rappi, etc.</span>
                               </button>
 
-                              {/* Option 4: Cajitas / Ahorro */}
+                              {/* Option 5: Cajitas / Ahorro */}
                               <button
                                 type="button"
                                 onClick={() => setTargetType("fixed_pocket")}
@@ -1123,13 +1212,38 @@ export default function LoanSettlementModal({
                                   display: "flex",
                                   flexDirection: "column",
                                   gap: 2,
+                                  transition: "all 0.15s ease",
                                 }}
                               >
                                 <span style={{ fontSize: "0.82rem" }}>🏦 Cajitas / Ahorro</span>
-                                <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>Rendimiento Nu</span>
+                                <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>Rendimiento Nu / CDTs</span>
                               </button>
 
-                              {/* Option 5: Already Registered */}
+                              {/* Option 6: Credit Card */}
+                              <button
+                                type="button"
+                                onClick={() => setTargetType("credit_card")}
+                                style={{
+                                  padding: "8px 10px",
+                                  borderRadius: 8,
+                                  border: targetType === "credit_card" ? "2px solid #10b981" : "1px solid var(--border)",
+                                  background: targetType === "credit_card" ? (isLight ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.25)") : "var(--bg-surface)",
+                                  color: targetType === "credit_card" ? (isLight ? "#047857" : "#6ee7b7") : "var(--text-secondary)",
+                                  fontSize: "0.74rem",
+                                  fontWeight: 700,
+                                  cursor: "pointer",
+                                  textAlign: "left",
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: 2,
+                                  transition: "all 0.15s ease",
+                                }}
+                              >
+                                <span style={{ fontSize: "0.82rem" }}>💳 Tarjeta de Crédito</span>
+                                <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>Restaura cupo</span>
+                              </button>
+
+                              {/* Option 7: Already Registered */}
                               <button
                                 type="button"
                                 onClick={() => setTargetType("already_registered")}
@@ -1146,12 +1260,98 @@ export default function LoanSettlementModal({
                                   display: "flex",
                                   flexDirection: "column",
                                   gap: 2,
+                                  transition: "all 0.15s ease",
                                 }}
                               >
                                 <span style={{ fontSize: "0.82rem" }}>✓ Ya Registrado</span>
                                 <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>En extracto (sin duplicar)</span>
                               </button>
                             </div>
+
+                            {/* Dynamic Sub-selectors for wallets, cajitas, and cards */}
+                            {targetType === "digital_wallet" && otherWallets.length > 0 && (
+                              <div style={{ marginTop: 8, padding: "8px 10px", borderRadius: 8, background: isLight ? "rgba(59, 130, 246, 0.08)" : "rgba(59, 130, 246, 0.15)", border: "1px solid rgba(59, 130, 246, 0.25)", display: "flex", alignItems: "center", gap: 8 }}>
+                                <label style={{ fontSize: "0.72rem", color: isLight ? "#1d4ed8" : "#93c5fd", fontWeight: 700, whiteSpace: "nowrap" }}>
+                                  Billetera destino:
+                                </label>
+                                <select
+                                  value={selectedWalletId}
+                                  onChange={(e) => setSelectedWalletId(e.target.value)}
+                                  style={{
+                                    flex: 1,
+                                    background: "var(--bg-surface)",
+                                    border: "1px solid var(--border)",
+                                    borderRadius: 6,
+                                    padding: "4px 8px",
+                                    fontSize: "0.76rem",
+                                    color: "var(--text-primary)",
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  {otherWallets.map((w) => (
+                                    <option key={w.id} value={w.id}>
+                                      {w.name} ({formatMoney(w.balance || 0)})
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
+
+                            {targetType === "fixed_pocket" && savingsPockets.length > 0 && (
+                              <div style={{ marginTop: 8, padding: "8px 10px", borderRadius: 8, background: isLight ? "rgba(0, 229, 255, 0.08)" : "rgba(0, 229, 255, 0.15)", border: "1px solid rgba(0, 229, 255, 0.25)", display: "flex", alignItems: "center", gap: 8 }}>
+                                <label style={{ fontSize: "0.72rem", color: isLight ? "#0284c7" : "#00e5ff", fontWeight: 700, whiteSpace: "nowrap" }}>
+                                  Cajita / Cuenta destino:
+                                </label>
+                                <select
+                                  value={selectedPocketId}
+                                  onChange={(e) => setSelectedPocketId(e.target.value)}
+                                  style={{
+                                    flex: 1,
+                                    background: "var(--bg-surface)",
+                                    border: "1px solid var(--border)",
+                                    borderRadius: 6,
+                                    padding: "4px 8px",
+                                    fontSize: "0.76rem",
+                                    color: "var(--text-primary)",
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  {savingsPockets.map((p) => (
+                                    <option key={p.id} value={p.id}>
+                                      {p.name} ({formatMoney(p.balance || 0)})
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
+
+                            {targetType === "credit_card" && creditCards.length > 1 && (
+                              <div style={{ marginTop: 8, padding: "8px 10px", borderRadius: 8, background: isLight ? "rgba(16, 185, 129, 0.08)" : "rgba(16, 185, 129, 0.15)", border: "1px solid rgba(16, 185, 129, 0.25)", display: "flex", alignItems: "center", gap: 8 }}>
+                                <label style={{ fontSize: "0.72rem", color: isLight ? "#047857" : "#6ee7b7", fontWeight: 700, whiteSpace: "nowrap" }}>
+                                  Tarjeta de crédito:
+                                </label>
+                                <select
+                                  value={selectedCardId}
+                                  onChange={(e) => setSelectedCardId(e.target.value)}
+                                  style={{
+                                    flex: 1,
+                                    background: "var(--bg-surface)",
+                                    border: "1px solid var(--border)",
+                                    borderRadius: 6,
+                                    padding: "4px 8px",
+                                    fontSize: "0.76rem",
+                                    color: "var(--text-primary)",
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  {creditCards.map((c) => (
+                                    <option key={c.id} value={c.id}>
+                                      {c.name} (Cupo libre: {formatMoney((c.totalLimit || 0) - (c.usedLimit || 0))})
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
                           </div>
 
                           {/* Section 3: Fecha & Botón de Confirmación */}
@@ -1183,7 +1383,7 @@ export default function LoanSettlementModal({
                                 padding: "10px 16px",
                                 borderRadius: 8,
                                 border: "none",
-                                background: isLight ? "#059669" : "#10b981",
+                                background: targetType === "nequi" ? "linear-gradient(135deg, #7000ff 0%, #ff007a 100%)" : (isLight ? "#059669" : "#10b981"),
                                 color: "#ffffff",
                                 fontSize: "0.82rem",
                                 fontWeight: 800,
@@ -1197,14 +1397,18 @@ export default function LoanSettlementModal({
                               }}
                             >
                               <span>✓</span> Confirmar Abono de {formatMoney(settlingAmount)} {
-                                targetType === "cash"
+                                targetType === "nequi"
+                                  ? "a Nequi 🟣"
+                                  : targetType === "cash"
                                   ? "en Efectivo Físico 💵"
                                   : targetType === "payroll"
                                   ? "a Cuenta Nu Débito 💼"
+                                  : targetType === "digital_wallet"
+                                  ? `a ${(otherWallets.find((w) => w.id === selectedWalletId)?.name || "Billetera Digital")} 📱`
                                   : targetType === "credit_card"
-                                  ? "a Tarjeta de Crédito 💳"
+                                  ? `a ${(creditCards.find((c) => c.id === selectedCardId)?.name || "Tarjeta")} 💳`
                                   : targetType === "fixed_pocket"
-                                  ? "a Cajita / Ahorro 🏦"
+                                  ? `a ${(savingsPockets.find((p) => p.id === selectedPocketId)?.name || "Cajita / Ahorro")} 🏦`
                                   : "(Ya Registrado en Extracto) ✓"
                               }
                             </button>
@@ -1354,92 +1558,183 @@ export default function LoanSettlementModal({
 
             {/* Destination Selector: Where did the money return to? */}
             <div>
-              <label style={{ display: "block", fontSize: "0.8rem", color: "var(--text-primary)", marginBottom: 8, fontWeight: 700 }}>
-                ¿A qué cuenta retornó este dinero?
-              </label>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <label style={{ fontSize: "0.78rem", color: "var(--text-primary)", fontWeight: 700 }}>
+                  ¿A qué cuenta retornó este dinero?
+                </label>
+                <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                  Selecciona el destino real del pago
+                </span>
+              </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                {/* Option 1: Nómina */}
-                <div
-                  onClick={() => setTargetType("payroll")}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 6 }}>
+                {/* Option 1: Nequi */}
+                <button
+                  type="button"
+                  onClick={() => setTargetType("nequi")}
                   style={{
-                    padding: "10px 12px",
-                    borderRadius: "10px",
+                    padding: "8px 10px",
+                    borderRadius: 8,
+                    border: targetType === "nequi" ? "2px solid #ff007a" : "1px solid var(--border)",
+                    background: targetType === "nequi" ? (isLight ? "rgba(255, 0, 122, 0.12)" : "rgba(255, 0, 122, 0.22)") : "var(--bg-surface)",
+                    color: targetType === "nequi" ? (isLight ? "#b80058" : "#ff4d9e") : "var(--text-secondary)",
+                    fontSize: "0.74rem",
+                    fontWeight: 700,
                     cursor: "pointer",
-                    background: targetType === "payroll" ? (isLight ? "rgba(130, 10, 209, 0.12)" : "rgba(130, 10, 209, 0.25)") : "var(--bg-surface)",
-                    border: targetType === "payroll" ? "1.5px solid #a855f7" : "1px solid var(--border)",
+                    textAlign: "left",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
                     transition: "all 0.15s ease",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700, fontSize: "0.8rem", color: targetType === "payroll" ? (isLight ? "#7e22ce" : "#d8b4fe") : "var(--text-primary)" }}>
-                    <span>💼</span> Cuenta de Nómina
-                  </div>
-                  <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
-                    {payrollAccount.name?.split(" ")[0] || "Nu"} • Vuelve a tu liquidez libre
-                  </div>
-                </div>
+                  <span style={{ fontSize: "0.82rem" }}>🟣 Nequi</span>
+                  <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>
+                    {nequiAccount ? `Saldo: ${formatMoney(nequiAccount.balance || 0)}` : "Disponible Nequi"}
+                  </span>
+                </button>
 
-                {/* Option 2: Tarjeta de Crédito */}
-                <div
-                  onClick={() => setTargetType("credit_card")}
-                  style={{
-                    padding: "10px 12px",
-                    borderRadius: "10px",
-                    cursor: "pointer",
-                    background: targetType === "credit_card" ? (isLight ? "rgba(16, 185, 129, 0.12)" : "rgba(16, 185, 129, 0.25)") : "var(--bg-surface)",
-                    border: targetType === "credit_card" ? "1.5px solid #10b981" : "1px solid var(--border)",
-                    transition: "all 0.15s ease",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700, fontSize: "0.8rem", color: targetType === "credit_card" ? (isLight ? "#047857" : "#6ee7b7") : "var(--text-primary)" }}>
-                    <span>💳</span> Abono a Tarjeta
-                  </div>
-                  <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
-                    Paga deuda y libera cupo
-                  </div>
-                </div>
-
-                {/* Option 3: Cajitas de Ahorro / CDTs */}
-                <div
-                  onClick={() => setTargetType("fixed_pocket")}
-                  style={{
-                    padding: "10px 12px",
-                    borderRadius: "10px",
-                    cursor: "pointer",
-                    background: targetType === "fixed_pocket" ? (isLight ? "rgba(0, 229, 255, 0.12)" : "rgba(0, 229, 255, 0.22)") : "var(--bg-surface)",
-                    border: targetType === "fixed_pocket" ? "1.5px solid #00e5ff" : "1px solid var(--border)",
-                    transition: "all 0.15s ease",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700, fontSize: "0.8rem", color: targetType === "fixed_pocket" ? (isLight ? "#0284c7" : "#00e5ff") : "var(--text-primary)" }}>
-                    <span>🏦</span> Ahorro / CDT / Cuenta
-                  </div>
-                  <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
-                    Depositar en fondo de ahorro
-                  </div>
-                </div>
-
-                {/* Option 4: Efectivo Físico / Billetera */}
-                <div
+                {/* Option 2: Efectivo Físico */}
+                <button
+                  type="button"
                   onClick={() => setTargetType("cash")}
                   style={{
-                    padding: "10px 12px",
-                    borderRadius: "10px",
+                    padding: "8px 10px",
+                    borderRadius: 8,
+                    border: targetType === "cash" ? "2px solid #f59e0b" : "1px solid var(--border)",
+                    background: targetType === "cash" ? (isLight ? "rgba(245, 158, 11, 0.15)" : "rgba(245, 158, 11, 0.25)") : "var(--bg-surface)",
+                    color: targetType === "cash" ? (isLight ? "#b45309" : "#fcd34d") : "var(--text-secondary)",
+                    fontSize: "0.74rem",
+                    fontWeight: 700,
                     cursor: "pointer",
-                    background: targetType === "cash" ? (isLight ? "rgba(16, 185, 129, 0.12)" : "rgba(16, 185, 129, 0.22)") : "var(--bg-surface)",
-                    border: targetType === "cash" ? "1.5px solid #10b981" : "1px solid var(--border)",
+                    textAlign: "left",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
                     transition: "all 0.15s ease",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700, fontSize: "0.8rem", color: targetType === "cash" ? "#10b981" : "var(--text-primary)" }}>
-                    <span>💵</span> Efectivo Físico
-                  </div>
-                  <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 2 }}>
-                    Dinero en mano en tu billetera
-                  </div>
-                </div>
+                  <span style={{ fontSize: "0.82rem" }}>💵 Efectivo Físico</span>
+                  <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>Billetera / En mano</span>
+                </button>
+
+                {/* Option 3: Nómina Nu */}
+                <button
+                  type="button"
+                  onClick={() => setTargetType("payroll")}
+                  style={{
+                    padding: "8px 10px",
+                    borderRadius: 8,
+                    border: targetType === "payroll" ? "2px solid #a855f7" : "1px solid var(--border)",
+                    background: targetType === "payroll" ? (isLight ? "rgba(168, 85, 247, 0.15)" : "rgba(168, 85, 247, 0.25)") : "var(--bg-surface)",
+                    color: targetType === "payroll" ? (isLight ? "#7e22ce" : "#d8b4fe") : "var(--text-secondary)",
+                    fontSize: "0.74rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    textAlign: "left",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <span style={{ fontSize: "0.82rem" }}>💼 Cuenta Nu (Nómina)</span>
+                  <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>Vuelve a liquidez libre</span>
+                </button>
+
+                {/* Option 4: Otras Billeteras */}
+                <button
+                  type="button"
+                  onClick={() => setTargetType("digital_wallet")}
+                  style={{
+                    padding: "8px 10px",
+                    borderRadius: 8,
+                    border: targetType === "digital_wallet" ? "2px solid #3b82f6" : "1px solid var(--border)",
+                    background: targetType === "digital_wallet" ? (isLight ? "rgba(59, 130, 246, 0.15)" : "rgba(59, 130, 246, 0.25)") : "var(--bg-surface)",
+                    color: targetType === "digital_wallet" ? (isLight ? "#1d4ed8" : "#93c5fd") : "var(--text-secondary)",
+                    fontSize: "0.74rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    textAlign: "left",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <span style={{ fontSize: "0.82rem" }}>📱 Otras Billeteras</span>
+                  <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>Daviplata, Rappi, etc.</span>
+                </button>
+
+                {/* Option 5: Cajitas / Ahorro */}
+                <button
+                  type="button"
+                  onClick={() => setTargetType("fixed_pocket")}
+                  style={{
+                    padding: "8px 10px",
+                    borderRadius: 8,
+                    border: targetType === "fixed_pocket" ? "2px solid #00e5ff" : "1px solid var(--border)",
+                    background: targetType === "fixed_pocket" ? (isLight ? "rgba(0, 229, 255, 0.15)" : "rgba(0, 229, 255, 0.25)") : "var(--bg-surface)",
+                    color: targetType === "fixed_pocket" ? (isLight ? "#0284c7" : "#00e5ff") : "var(--text-secondary)",
+                    fontSize: "0.74rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    textAlign: "left",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <span style={{ fontSize: "0.82rem" }}>🏦 Cajitas / Ahorro</span>
+                  <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>Fondo de ahorro Nu / CDTs</span>
+                </button>
+
+                {/* Option 6: Tarjeta de Crédito */}
+                <button
+                  type="button"
+                  onClick={() => setTargetType("credit_card")}
+                  style={{
+                    padding: "8px 10px",
+                    borderRadius: 8,
+                    border: targetType === "credit_card" ? "2px solid #10b981" : "1px solid var(--border)",
+                    background: targetType === "credit_card" ? (isLight ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.25)") : "var(--bg-surface)",
+                    color: targetType === "credit_card" ? (isLight ? "#047857" : "#6ee7b7") : "var(--text-secondary)",
+                    fontSize: "0.74rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    textAlign: "left",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <span style={{ fontSize: "0.82rem" }}>💳 Tarjeta de Crédito</span>
+                  <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 500 }}>Paga deuda y libera cupo</span>
+                </button>
               </div>
             </div>
+
+            {/* Sub-select for Digital Wallets */}
+            {targetType === "digital_wallet" && otherWallets.length > 0 && (
+              <div style={{ background: isLight ? "rgba(59, 130, 246, 0.08)" : "rgba(59, 130, 246, 0.15)", border: "1px solid rgba(59, 130, 246, 0.25)", borderRadius: "8px", padding: "10px 12px" }}>
+                <label style={{ display: "block", fontSize: "0.74rem", color: isLight ? "#1d4ed8" : "#93c5fd", marginBottom: 5, fontWeight: 700 }}>
+                  Selecciona la Billetera Digital destino:
+                </label>
+                <select
+                  value={selectedWalletId}
+                  onChange={(e) => setSelectedWalletId(e.target.value)}
+                  style={{ width: "100%", background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: "6px", padding: "8px 12px", color: "var(--text-primary)", fontSize: "0.82rem" }}
+                >
+                  {otherWallets.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name} ({formatMoney(w.balance || 0)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Sub-select for Credit Card */}
             {targetType === "credit_card" && (
@@ -1462,19 +1757,19 @@ export default function LoanSettlementModal({
             )}
 
             {/* Sub-select for Fixed Pocket */}
-            {targetType === "fixed_pocket" && fixedIncomeAccounts.length > 0 && (
+            {targetType === "fixed_pocket" && savingsPockets.length > 0 && (
               <div style={{ background: isLight ? "rgba(0, 229, 255, 0.08)" : "rgba(0, 229, 255, 0.12)", border: "1px solid rgba(0, 229, 255, 0.3)", borderRadius: "8px", padding: "10px 12px" }}>
                 <label style={{ display: "block", fontSize: "0.74rem", color: isLight ? "#0284c7" : "#00e5ff", marginBottom: 5, fontWeight: 700 }}>
-                  Selecciona la Cuenta de Ahorro destino:
+                  Selecciona la Cajita / Cuenta de Ahorro destino:
                 </label>
                 <select
                   value={selectedPocketId}
                   onChange={(e) => setSelectedPocketId(e.target.value)}
                   style={{ width: "100%", background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: "6px", padding: "8px 12px", color: "var(--text-primary)", fontSize: "0.82rem" }}
                 >
-                  {fixedIncomeAccounts.map((a) => (
+                  {savingsPockets.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.name} ({a.entityName || "Renta Fija"})
+                      {a.name} ({formatMoney(a.balance || 0)})
                     </option>
                   ))}
                 </select>
