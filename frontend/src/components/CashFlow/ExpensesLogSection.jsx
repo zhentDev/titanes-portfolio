@@ -957,7 +957,7 @@ export default function ExpensesLogSection({
 
                     <div className="expense-log-row-right">
                       <div className="expense-log-amount-actions">
-                        <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.05rem", fontWeight: 800, color: hasWealthEmergency ? "#f59e0b" : "#10b981" }}>
+                        <span style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "1.05rem", fontWeight: 800, color: isDebt ? (isLight ? "#d97706" : "#f59e0b") : (isLight ? "#047857" : "#10b981") }}>
                           -{formatMoney(item.amount, currency)}
                         </span>
                         <div className="expense-log-action-btns">
