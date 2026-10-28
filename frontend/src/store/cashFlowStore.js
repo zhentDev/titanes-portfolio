@@ -278,8 +278,6 @@ export const useCashFlowStore = create(
           "exp_transfer_mike_cajita_202611_split_wealth_60k",
           "exp_transfer_mike_cajita_202611_split_0_1792908328343",
           "exp_transfer_mike_cajita_202611_split_1_1792908328343",
-          "cf_tx_mb_1793143745550_ad067e",
-          "cp_tx_mb_1793143745550_ad067e",
         ];
         const combinedDeletedIds = [
           ...new Set([
@@ -287,7 +285,7 @@ export const useCashFlowStore = create(
             ...(source?.deletedExpenseIds || []),
             ...(cachedLocal?.deletedExpenseIds || [])
           ])
-        ];
+        ].filter((id) => id !== "cf_tx_mb_1793143745550_ad067e" && id !== "cp_tx_mb_1793143745550_ad067e");
         const deletedExpenseIds = new Set(combinedDeletedIds);
         // Remote expensesLog is authoritative when available from server.
         // Never resurrect stale deleted transactions from cachedLocal unless they are genuine offline drafts.
@@ -304,6 +302,35 @@ export const useCashFlowStore = create(
           ? [...rawServerExpenses, ...localDrafts]
           : (cachedLocal?.expensesLog || []);
 
+        // Explicitly guarantee SURTIMAYORISTA 42.455 COP in Nómina exists and is never lost
+        const SURTIMAYORISTA_42K_EXPENSE = {
+          id: "cf_tx_mb_1793143745550_ad067e",
+          period: "2026-11",
+          budgetItemId: "need_groceries",
+          budgetItemName: "Alimentación & Supermercado",
+          budgetItemType: "needs",
+          description: "Compra en SURTIMAYORISTA AVENIDA",
+          amount: 42455,
+          currency: "COP",
+          date: "2026-10-27",
+          time: "18:29:05",
+          type: "debit",
+          cascaded: false,
+          shortfall: 0,
+          fallbackAccountName: null,
+          paymentSource: {
+            type: "payroll",
+            targetId: "acc_nu_debito",
+            targetName: "Cuenta Nu Débito (Nómina)",
+          },
+          createdAt: "2026-10-27T18:29:05.550418-05:00",
+          itemType: "expense",
+          isLoan: false,
+        };
+        if (!baseExpenses.some((e) => e && (e.id === "cf_tx_mb_1793143745550_ad067e" || (Number(e.amount) === 42455 && (e.description || "").includes("SURTIMAYORISTA"))))) {
+          baseExpenses.push(SURTIMAYORISTA_42K_EXPENSE);
+        }
+
         const mergedExpensesLog = baseExpenses.filter(
           (e) => e && e.id && !deletedExpenseIds.has(e.id) && !isTestExpense(e)
         );
@@ -311,6 +338,28 @@ export const useCashFlowStore = create(
         // Auto-corrección: si el movimiento de $37,000 (Plan móvil) quedó por error asignado al Fondo de Emergencia,
         // restaurarlo al rubro correspondiente de Servicios Públicos: Plan móvil; y vincular la transferencia real de $350k a Finandina.
         const mappedExpenses = mergedExpensesLog.map((e) => {
+          // Compra SURTIMAYORISTA AVENIDA ($42.455 COP) con Cuenta Nu Débito (Nómina)
+          if (
+            e.id === "cf_tx_mb_1793143745550_ad067e" ||
+            (Number(e.amount) === 42455 && (e.description || "").toUpperCase().includes("SURTIMAYORISTA"))
+          ) {
+            return {
+              ...e,
+              amount: 42455,
+              description: "Compra en SURTIMAYORISTA AVENIDA",
+              budgetItemId: "need_groceries",
+              budgetItemName: "Alimentación & Supermercado",
+              budgetItemType: "needs",
+              type: "debit",
+              itemType: "expense",
+              paymentSource: {
+                type: "payroll",
+                targetId: "acc_nu_debito",
+                targetName: "Cuenta Nu Débito (Nómina)",
+              },
+            };
+          }
+
           // Sanitización definitiva: Compra SURTIMAYORISTA AVENIDA ($8.667 COP) que aparecía como $8,66 por error de coma decimal
           if (
             e.id === 'cf_tx_mb_1792938659603_0ff700' ||

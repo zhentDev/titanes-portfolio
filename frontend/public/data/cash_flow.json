@@ -570,9 +570,9 @@
     {
       "id": "cf_tx_mb_1793143745550_ad067e",
       "period": "2026-11",
-      "budgetItemId": null,
-      "budgetItemName": "Compra en SURTIMAYORISTA AVENIDA",
-      "budgetItemType": "wants",
+      "budgetItemId": "need_groceries",
+      "budgetItemName": "Alimentación & Supermercado",
+      "budgetItemType": "needs",
       "description": "Compra en SURTIMAYORISTA AVENIDA",
       "amount": 42455,
       "currency": "COP",
@@ -580,11 +580,12 @@
       "time": "18:29:05",
       "type": "debit",
       "paymentSource": {
-        "type": "credit_card",
-        "targetId": "cc_nu",
-        "targetName": "Tarjeta Nu Mastercard"
+        "type": "payroll",
+        "targetId": "acc_nu_debito",
+        "targetName": "Cuenta Nu Débito (Nómina)"
       },
-      "createdAt": "2026-10-27T18:29:05.550418-05:00"
+      "createdAt": "2026-10-27T18:29:05.550418-05:00",
+      "itemType": "expense"
     },
     {
       "id": "cf_tx_mb_1793141750382_de0beb",
