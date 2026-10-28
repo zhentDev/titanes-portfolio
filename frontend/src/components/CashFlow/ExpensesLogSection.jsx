@@ -6,6 +6,7 @@ import AssignMovementModal from "./AssignMovementModal";
 import InfoTooltip from "../Common/InfoTooltip";
 import { toastConfirm, toastPrompt } from "../../utils/toastAlerts";
 import { useTheme } from "../../context/ThemeContext";
+import { useCashFlowStore } from "../../store/cashFlowStore";
 import "./CashFlow.css";
 
 export default function ExpensesLogSection({
@@ -45,6 +46,7 @@ export default function ExpensesLogSection({
   const [assignModalItem, setAssignModalItem] = useState(null);
   const [expandedDeductions, setExpandedDeductions] = useState({});
   const toggleDeductions = (id) => setExpandedDeductions((prev) => ({ ...prev, [id]: !prev[id] }));
+  const toggleMovementAsBudgetInflow = useCashFlowStore((s) => s.toggleMovementAsBudgetInflow);
 
   const isAnyFilterActive = Boolean(
     filterSource !== "all" ||
@@ -1321,6 +1323,19 @@ export default function ExpensesLogSection({
             const isIncome = item.itemType === "income";
             const { date: itemDate, time: itemTime } = formatMovementDateTime(item);
 
+            // Detailed loan metrics (works for both direct loans and shared expenses)
+            const loanTotal = Number(item.loanAmount) > 0 ? Number(item.loanAmount) : Number(item.amount) || 0;
+            const settlementsList = Array.isArray(item.settlements)
+              ? item.settlements
+              : item.settlementDetails
+              ? [item.settlementDetails]
+              : [];
+            const totalSettledAmt = Number(item.totalSettled) || settlementsList.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+            const remainingLoanAmt = item.remainingLoan !== undefined
+              ? Number(item.remainingLoan)
+              : Math.max(0, loanTotal - totalSettledAmt);
+            const settlementsCount = settlementsList.length;
+
             return (
               <div
                 key={item.id}
@@ -1352,19 +1367,54 @@ export default function ExpensesLogSection({
                     </strong>
 
                     {isIncome ? (
-                      <span
-                        style={{
-                          background: "rgba(16, 185, 129, 0.2)",
-                          border: "1px solid #10b981",
-                          padding: "2px 8px",
-                          borderRadius: "6px",
-                          fontSize: "0.72rem",
-                          color: "#10b981",
-                          fontWeight: 700,
-                        }}
-                      >
-                        📥 Entrada (Consignación)
-                      </span>
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                        <span
+                          style={{
+                            background: "rgba(16, 185, 129, 0.2)",
+                            border: "1px solid #10b981",
+                            padding: "2px 8px",
+                            borderRadius: "6px",
+                            fontSize: "0.72rem",
+                            color: "#10b981",
+                            fontWeight: 700,
+                          }}
+                        >
+                          📥 Entrada (Consignación)
+                        </span>
+
+                        {/* Libertad Total: Clasificar movimiento opcionalmente como nuevo ingreso presupuestado en Sankey */}
+                        <button
+                          type="button"
+                          onClick={() => toggleMovementAsBudgetInflow && toggleMovementAsBudgetInflow(item.id)}
+                          style={{
+                            background: item.isExplicitBudgetIncome
+                              ? (isLight ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.25)")
+                              : (isLight ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.06)"),
+                            border: item.isExplicitBudgetIncome
+                              ? "1px solid #10b981"
+                              : (isLight ? "1px dashed rgba(0, 0, 0, 0.2)" : "1px dashed rgba(255, 255, 255, 0.2)"),
+                            color: item.isExplicitBudgetIncome
+                              ? (isLight ? "#047857" : "#34d399")
+                              : (isLight ? "#64748b" : "var(--text-muted)"),
+                            borderRadius: "6px",
+                            padding: "2px 8px",
+                            fontSize: "0.70rem",
+                            fontWeight: item.isExplicitBudgetIncome ? 700 : 500,
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                            transition: "all 0.15s ease",
+                          }}
+                          title={
+                            item.isExplicitBudgetIncome
+                              ? "Incluido en Flujo de Caja (Sankey). Clic para quitar y mantener limpios tus 3 ingresos presupuestados principales."
+                              : "Clic para clasificar este movimiento como un Nuevo Ingreso Presupuestado en el diagrama de Flujo de Caja (Sankey)."
+                          }
+                        >
+                          {item.isExplicitBudgetIncome ? "⚡ En Sankey (Ingreso Presupuestado) ✕" : "+ Clasificar como Ingreso Sankey"}
+                        </button>
+                      </div>
                     ) : (
                       <>
                         {!isLoan && (
@@ -1390,7 +1440,7 @@ export default function ExpensesLogSection({
                               : "📤 Salida"}
                           </span>
                         )}
-                        {item.budgetItemName && item.budgetItemName.toLowerCase().trim() !== (item.description || "").toLowerCase().trim() && (
+                        {(item.budgetItemName || isLoan) && (
                           <span
                             style={{
                               background: isLight ? "rgba(0, 0, 0, 0.05)" : "rgba(128, 128, 128, 0.1)",
@@ -1402,7 +1452,7 @@ export default function ExpensesLogSection({
                               fontWeight: 600,
                             }}
                           >
-                            {item.budgetItemName}
+                            {item.budgetItemName || (item.isSplit ? "👥 Gasto Compartido" : "🤝 Préstamo Personal")}
                           </span>
                         )}
                       </>
@@ -1434,7 +1484,7 @@ export default function ExpensesLogSection({
                           </span>
                         )}
                         <span>
-                          • Por cobrar: <strong style={{ color: isLight ? "#1e40af" : "#bfdbfe" }}>{formatMoney(item.remainingLoan !== undefined ? item.remainingLoan : (item.loanAmount || item.amount))}</strong>
+                          • Por cobrar: <strong style={{ color: isLight ? "#1e40af" : "#bfdbfe" }}>{formatMoney(remainingLoanAmt)}</strong>
                         </span>
                       </span>
                     )}
@@ -1445,19 +1495,31 @@ export default function ExpensesLogSection({
                         style={{
                           background: isLight ? "rgba(245, 158, 11, 0.12)" : "rgba(245, 158, 11, 0.2)",
                           border: isLight ? "1px solid rgba(217, 119, 6, 0.4)" : "1px solid #f59e0b",
-                          padding: "2px 8px",
+                          padding: "3px 10px",
                           borderRadius: "6px",
                           fontSize: "0.72rem",
                           color: isLight ? "#92400e" : "#fcd34d",
                           fontWeight: 700,
                           display: "inline-flex",
                           alignItems: "center",
-                          gap: 4,
+                          gap: 5,
                           cursor: "pointer",
+                          flexWrap: "wrap",
                         }}
-                        title="Clic para registrar cobro o dividir en partes iguales"
+                        title="Clic para registrar abono o cobro de este préstamo"
                       >
-                        <span>🤝</span> Préstamo a: <strong style={{ color: isLight ? "#78350f" : "#fef08a" }}>{item.loanRecipient || "Amigo"}</strong> ({formatMoney(item.loanAmount || item.amount)})
+                        <span>🤝</span> Préstamo a: <strong style={{ color: isLight ? "#78350f" : "#fef08a" }}>{item.loanRecipient || "Amigo"}</strong>
+                        <span style={{ opacity: 0.85, fontWeight: 500 }}>
+                          • Total: {formatMoney(loanTotal)}
+                        </span>
+                        {totalSettledAmt > 0 && (
+                          <span style={{ color: isLight ? "#047857" : "#6ee7b7", fontWeight: 600 }}>
+                            • Abonado: {formatMoney(totalSettledAmt)}{settlementsCount > 0 ? ` (${settlementsCount} ${settlementsCount === 1 ? "abono" : "abonos"})` : ""}
+                          </span>
+                        )}
+                        <span>
+                          • Por cobrar: <strong style={{ color: isLight ? "#b45309" : "#fbbf24" }}>{formatMoney(remainingLoanAmt)}</strong>
+                        </span>
                       </span>
                     )}
 
@@ -1496,6 +1558,14 @@ export default function ExpensesLogSection({
                     <span style={{ color: sourceColor, fontWeight: 600 }}>
                       {source.targetName || "Nómina"}
                     </span>
+                    {isLoan && settlementsList.length > 0 && (
+                      <>
+                        <span>•</span>
+                        <span style={{ color: isLight ? "#047857" : "#34d399", fontWeight: 600 }}>
+                          ✓ Último cobro: {formatMoney(settlementsList[0].amount)} ({settlementsList[0].date || "reciente"}) ➔ {settlementsList[0].targetName || "Cuenta"}
+                        </span>
+                      </>
+                    )}
 
                     {/* Option to toggle as loan if not yet marked */}
                     {!isLoan && onToggleExpenseLoan && (
@@ -1578,7 +1648,7 @@ export default function ExpensesLogSection({
                       }}
                       title="Registrar devolución o cobro de este préstamo"
                     >
-                      <span>📥</span> {item.isSplit || (item.participants || []).length > 0 ? "Gestionar Cobros" : "Registrar Cobro"}
+                      <span>📥</span> Gestionar Cobros
                     </button>
                   )}
 

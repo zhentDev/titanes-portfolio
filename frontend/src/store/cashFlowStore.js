@@ -257,6 +257,24 @@ export const useCashFlowStore = create(
         Object.keys(cleanedPeriodsData).forEach((k) => {
           if (k < INCOME_SYSTEM_START_PERIOD) {
             delete cleanedPeriodsData[k];
+          } else if (cleanedPeriodsData[k] && Array.isArray(cleanedPeriodsData[k].inflows)) {
+            // Keep only canonical real incomes or explicitly marked budget incomes in periodsData
+            cleanedPeriodsData[k].inflows = cleanedPeriodsData[k].inflows.filter((inf) => {
+              if (!inf || !inf.id) return false;
+              if (inf.id === "in_salary" || inf.id === "in_fixed_yield" || inf.id === "in_stock_div") return true;
+              const isAutoReimb =
+                inf.category === "reimbursement" ||
+                inf.id.startsWith("in_reimb_") ||
+                inf.id.startsWith("in_cash_") ||
+                inf.id.startsWith("in_wallet_") ||
+                inf.id.startsWith("in_pocket_") ||
+                (inf.name || "").toLowerCase().includes("cobro préstamo") ||
+                (inf.name || "").toLowerCase().includes("reintegro préstamo");
+              if (isAutoReimb) {
+                return Boolean(inf.isExplicitBudgetIncome);
+              }
+              return true;
+            });
           }
         });
 
@@ -268,6 +286,7 @@ export const useCashFlowStore = create(
         const KNOWN_PHANTOM_EXPENSE_IDS = [
           "cf_tx_plenti_broker_funding_200k_202611",
           "cf_tx_mb_rappi_emergency_150k_202611",
+          "cf_tx_cajita_viaje_150k_202611",
           "tx_1792909650611",
           "tx_1792909650611_split_0_1792909698846",
           "tx_1792909650611_split_1_1792909698846",
@@ -287,8 +306,7 @@ export const useCashFlowStore = create(
         ].filter(
           (id) =>
             id !== "cf_tx_mb_1793143745550_ad067e" &&
-            id !== "cp_tx_mb_1793143745550_ad067e" &&
-            id !== "cf_tx_cajita_viaje_150k_202611"
+            id !== "cp_tx_mb_1793143745550_ad067e"
         );
         const deletedExpenseIds = new Set(combinedDeletedIds);
         // Remote expensesLog is authoritative when available from server.
@@ -335,37 +353,6 @@ export const useCashFlowStore = create(
           baseExpenses.push(SURTIMAYORISTA_42K_EXPENSE);
         }
 
-        // Explicitly guarantee Meta Viaje / Estudio $150.000 COP contribution from Nómina exists and is never lost
-        const CAJITA_VIAJE_150K_EXPENSE = {
-          id: "cf_tx_cajita_viaje_150k_202611",
-          period: "2026-11",
-          date: "2026-10-24",
-          time: "21:00:00",
-          amount: 150000,
-          currency: "COP",
-          type: "debit",
-          cascaded: false,
-          shortfall: 0,
-          fallbackAccountName: null,
-          budgetItemId: "wealth_travel_goal",
-          budgetItemName: "Meta Viaje / Estudio",
-          budgetItemType: "wealth",
-          description: "Aporte a Cajita Viaje Nu (Meta Viaje / Estudio)",
-          destinationAccountId: "acc_viaje",
-          destinationAccountName: "Cajita Viaje (9.35% E.A.)",
-          paymentSource: {
-            type: "payroll",
-            targetId: "acc_nu_debito",
-            targetName: "Cuenta Nu Débito (Nómina)",
-          },
-          itemType: "wealth_saving",
-          isLoan: false,
-          createdAt: "2026-10-24T21:00:00.000Z",
-        };
-        if (!baseExpenses.some((e) => e && (e.id === "cf_tx_cajita_viaje_150k_202611" || (Number(e.amount) === 150000 && (e.budgetItemId === "wealth_travel_goal" || (e.description || "").toLowerCase().includes("viaje")))))) {
-          baseExpenses.push(CAJITA_VIAJE_150K_EXPENSE);
-        }
-
         const mergedExpensesLog = baseExpenses.filter(
           (e) => e && e.id && !deletedExpenseIds.has(e.id) && !isTestExpense(e)
         );
@@ -387,30 +374,6 @@ export const useCashFlowStore = create(
               budgetItemType: "needs",
               type: "debit",
               itemType: "expense",
-              paymentSource: {
-                type: "payroll",
-                targetId: "acc_nu_debito",
-                targetName: "Cuenta Nu Débito (Nómina)",
-              },
-            };
-          }
-
-          // Aporte a Cajita Viaje Nu (Meta Viaje / Estudio) $150.000 COP
-          if (
-            e.id === "cf_tx_cajita_viaje_150k_202611" ||
-            (Number(e.amount) === 150000 && (e.budgetItemId === "wealth_travel_goal" || (e.description || "").toLowerCase().includes("viaje")))
-          ) {
-            return {
-              ...e,
-              amount: 150000,
-              description: "Aporte a Cajita Viaje Nu (Meta Viaje / Estudio)",
-              budgetItemId: "wealth_travel_goal",
-              budgetItemName: "Meta Viaje / Estudio",
-              budgetItemType: "wealth",
-              type: "debit",
-              itemType: "wealth_saving",
-              destinationAccountId: "acc_viaje",
-              destinationAccountName: "Cajita Viaje (9.35% E.A.)",
               paymentSource: {
                 type: "payroll",
                 targetId: "acc_nu_debito",
@@ -2415,6 +2378,68 @@ export const useCashFlowStore = create(
         });
         get().syncStateWithBackend();
         toast.success(isLoan ? "Gasto marcado como Préstamo y sincronizado a Deudas" : "Gasto desmarcado de préstamo", { icon: "🤝" });
+      },
+
+      toggleMovementAsBudgetInflow: (txId) => {
+        set((state) => {
+          const tx = (state.expensesLog || []).find((e) => e.id === txId);
+          if (!tx) return {};
+
+          const willBeInflow = !tx.isExplicitBudgetIncome;
+          const updatedExpensesLog = (state.expensesLog || []).map((e) => {
+            if (e.id === txId) {
+              return {
+                ...e,
+                isExplicitBudgetIncome: willBeInflow,
+              };
+            }
+            return e;
+          });
+
+          let updatedInflows = [...(state.inflows || [])];
+          const cleanId = String(txId).replace(/^cf_tx_/, "").replace(/^tx_/, "");
+          const inflowId = `in_mov_${cleanId}`;
+
+          if (willBeInflow) {
+            const newInflow = {
+              id: inflowId,
+              linkedMovementId: txId,
+              name: tx.description || "Ingreso Adicional",
+              category: "other",
+              amount: Number(tx.amount) || 0,
+              currency: tx.currency || state.currency,
+              isPassive: false,
+              isExplicitBudgetIncome: true,
+              frequency: "one_time",
+              period: tx.period || state.activePeriod,
+              paymentSource: tx.paymentSource || { type: "payroll", targetName: "Cuenta Nómina" },
+              icon: "💰",
+              createdAt: new Date().toISOString(),
+            };
+            updatedInflows = [newInflow, ...updatedInflows];
+            toast.success("Movimiento clasificado como Nuevo Ingreso en Flujo de Caja (Sankey) ⚡");
+          } else {
+            updatedInflows = updatedInflows.filter(
+              (inf) => inf.id !== inflowId && inf.linkedMovementId !== txId && inf.id !== `in_custom_${cleanId}`
+            );
+            toast.success("Movimiento retirado de Ingresos de Flujo de Caja (Sankey)");
+          }
+
+          try {
+            localStorage.setItem(
+              "titanes_cash_flow_store_v2",
+              JSON.stringify({
+                ...state,
+                expensesLog: updatedExpensesLog,
+                inflows: updatedInflows,
+              })
+            );
+          } catch {}
+
+          return { expensesLog: updatedExpensesLog, inflows: updatedInflows };
+        });
+
+        get().syncStateWithBackend();
       },
 
       // ── Credit Card Debt Payments / Abonos ───────────
