@@ -53,6 +53,7 @@ export default function AssignMovementModal({
     return found || null;
   });
   const [selectedDebtId, setSelectedDebtId] = useState(debts[0]?.id || "");
+  const [selectedParticipantId, setSelectedParticipantId] = useState("");
   const isIncoming = movement?.type === "credit" || movement?.budgetItemType === "income";
   const [debtMode, setDebtMode] = useState(debts.length === 0 ? "new" : "existing"); // "existing" | "new"
   const [debtTypeFilter, setDebtTypeFilter] = useState("all"); // "all" | "receivable" | "payable"
@@ -75,6 +76,21 @@ export default function AssignMovementModal({
     }
     return "acc_nu_debito";
   });
+
+  // Auto-match participant from movement description if assigning to a shared debt (vaca)
+  const selectedDebtObj = useMemo(() => {
+    return (debts || []).find((d) => d.id === selectedDebtId) || null;
+  }, [debts, selectedDebtId]);
+
+  React.useEffect(() => {
+    if (selectedDebtObj && Array.isArray(selectedDebtObj.participants) && selectedDebtObj.participants.length > 0) {
+      const desc = (movement?.description || "").toLowerCase();
+      const matched = selectedDebtObj.participants.find((p) => p.name && desc.includes(p.name.toLowerCase()));
+      if (matched && !selectedParticipantId) {
+        setSelectedParticipantId(matched.id);
+      }
+    }
+  }, [selectedDebtObj, movement?.description]);
 
   const allPaymentSources = useMemo(() => {
     const list = [
@@ -561,12 +577,15 @@ export default function AssignMovementModal({
       } else {
         const debt = debts.find((d) => d.id === selectedDebtId);
         if (!debt) return;
+        const selectedPartObj = (debt.participants || []).find((p) => p.id === selectedParticipantId);
         onReclassify({
           movementId: movement.id,
           destinationType: "debt",
           targetId: debt.id,
           targetItem: debt,
           alreadyRegisteredInDebt,
+          selectedParticipantId: selectedParticipantId || null,
+          participantName: selectedPartObj?.name || null,
           paymentSource: {
             type: chosenSource.type,
             targetId: chosenSource.id,
@@ -2438,6 +2457,87 @@ export default function AssignMovementModal({
                                   : `Nuevo saldo: ${formatMoney(newRemaining, currency)}`}
                               </span>
                             </div>
+
+                            {/* Participant Selector for Shared Expenses (Vaca) */}
+                            {isSelected && Array.isArray(debt.participants) && debt.participants.length > 0 && (
+                              <div
+                                onClick={(e) => e.stopPropagation()}
+                                style={{
+                                  marginTop: 10,
+                                  padding: "10px 12px",
+                                  borderRadius: "10px",
+                                  background: isLight ? "#f8fafc" : "rgba(30, 41, 59, 0.6)",
+                                  border: isLight ? "1px solid rgba(0,0,0,0.1)" : "1px solid var(--border)",
+                                }}
+                              >
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                                  <label style={{ fontSize: "0.76rem", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 6 }}>
+                                    <span>👥</span> ¿Quién te transfirió este dinero? (Participante)
+                                  </label>
+                                  {selectedParticipantId && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedParticipantId("")}
+                                      style={{ background: "transparent", border: "none", color: "#38bdf8", fontSize: "0.7rem", cursor: "pointer", textDecoration: "underline" }}
+                                    >
+                                      Limpiar selección
+                                    </button>
+                                  )}
+                                </div>
+
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 6 }}>
+                                  {debt.participants.map((p) => {
+                                    const isPartSelected = selectedParticipantId === p.id;
+                                    const partQuota = Number(p.customShare || p.share || 0);
+                                    return (
+                                      <button
+                                        key={p.id}
+                                        type="button"
+                                        onClick={() => setSelectedParticipantId(isPartSelected ? "" : p.id)}
+                                        style={{
+                                          padding: "6px 8px",
+                                          borderRadius: "8px",
+                                          textAlign: "left",
+                                          border: isPartSelected
+                                            ? "2px solid #10b981"
+                                            : p.paid
+                                            ? (isLight ? "1px solid #bbf7d0" : "1px solid rgba(16, 185, 129, 0.25)")
+                                            : (isLight ? "1px solid rgba(0,0,0,0.1)" : "1px solid var(--border)"),
+                                          background: isPartSelected
+                                            ? (isLight ? "#ecfdf5" : "rgba(16, 185, 129, 0.2)")
+                                            : p.paid
+                                            ? (isLight ? "rgba(16, 185, 129, 0.06)" : "rgba(16, 185, 129, 0.08)")
+                                            : (isLight ? "#ffffff" : "var(--bg-surface)"),
+                                          color: isPartSelected
+                                            ? (isLight ? "#047857" : "#34d399")
+                                            : "var(--text-primary)",
+                                          cursor: "pointer",
+                                          transition: "all 0.15s ease",
+                                        }}
+                                      >
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                          <strong style={{ fontSize: "0.76rem" }}>{p.name}</strong>
+                                          <span style={{ fontSize: "0.68rem" }}>{p.paid ? "✅" : "⏳"}</span>
+                                        </div>
+                                        <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 2, fontFamily: "JetBrains Mono, monospace" }}>
+                                          {formatMoney(partQuota, currency)}
+                                        </div>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+
+                                {selectedParticipantId && (() => {
+                                  const pObj = debt.participants.find((p) => p.id === selectedParticipantId);
+                                  return (
+                                    <div style={{ marginTop: 8, padding: "6px 10px", borderRadius: "6px", background: isLight ? "#f0fdf4" : "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.3)", fontSize: "0.73rem", color: isLight ? "#166534" : "#4ade80", display: "flex", alignItems: "center", gap: 6 }}>
+                                      <span>✓</span>
+                                      <span>Este abono de <strong>{formatMoney(movementAmount, currency)}</strong> marcará la cuota de <strong>{pObj?.name}</strong> como pagada en la vaca.</span>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            )}
 
                             {/* Checkbox para cobro ya registrado manualmente */}
                             {isSelected && (

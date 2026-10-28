@@ -568,25 +568,6 @@
       "createdAt": "2026-10-27T22:19:55.802995-05:00"
     },
     {
-      "id": "cf_tx_mb_1793143745550_ad067e",
-      "period": "2026-11",
-      "budgetItemId": null,
-      "budgetItemName": "Compra en SURTIMAYORISTA AVENIDA",
-      "budgetItemType": "wants",
-      "description": "Compra en SURTIMAYORISTA AVENIDA",
-      "amount": 42455,
-      "currency": "COP",
-      "date": "2026-10-27",
-      "time": "18:29:05",
-      "type": "debit",
-      "paymentSource": {
-        "type": "credit_card",
-        "targetId": "cc_nu",
-        "targetName": "Tarjeta Nu Mastercard"
-      },
-      "createdAt": "2026-10-27T18:29:05.550418-05:00"
-    },
-    {
       "id": "cf_tx_mb_1793141750382_de0beb",
       "period": "2026-11",
       "budgetItemId": null,
@@ -759,8 +740,8 @@
       "fallbackAccountName": null,
       "paymentSource": {
         "type": "credit_card",
-        "targetId": "card_nu_credito",
-        "targetName": "Tarjeta Nu Mastercard (3887)"
+        "targetId": "cc_nu",
+        "targetName": "Tarjeta Nu Mastercard"
       },
       "createdAt": "2026-10-25T11:11:34.475447-05:00"
     },
@@ -1654,7 +1635,7 @@
       "color": "#820ad1",
       "icon": "💜",
       "totalLimit": 200000,
-      "usedLimit": 80347,
+      "usedLimit": 38892,
       "closingDay": 15,
       "paymentDay": 2,
       "rateEA": 24.5,
@@ -2165,15 +2146,15 @@
       "createdAt": "2026-10-27T22:19:55.802995-05:00"
     },
     {
-      "id": "cp_tx_mb_1793143745550_ad067e",
+      "id": "cp_tx_mb_1792944694475_3448d5",
       "cardId": "cc_nu",
-      "description": "Compra en SURTIMAYORISTA AVENIDA",
-      "amount": 42455,
+      "description": "Compra en Microsoft*Xbox",
+      "amount": 31392,
       "installmentsCount": 1,
       "startPeriod": "2026-11",
-      "monthlyInstallment": 42455,
-      "date": "2026-10-27",
-      "createdAt": "2026-10-27T18:29:05.550418-05:00"
+      "monthlyInstallment": 31392,
+      "date": "2026-10-25",
+      "createdAt": "2026-10-25T11:11:34.475447-05:00"
     }
   ],
   "debts": [

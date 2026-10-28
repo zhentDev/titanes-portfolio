@@ -36,10 +36,33 @@ export default function ExpensesLogSection({
   const isLight = theme === "light";
   const formatMoney = (val, cur = currency) => formatCashFlowMoney(val, cur, fxRate);
   const [filterSource, setFilterSource] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterCategory, setFilterCategory] = useState("all");
+  const [filterDatePreset, setFilterDatePreset] = useState("all");
+  const [filterDateStart, setFilterDateStart] = useState("");
+  const [filterDateEnd, setFilterDateEnd] = useState("");
   const [settlingTransaction, setSettlingTransaction] = useState(null);
   const [assignModalItem, setAssignModalItem] = useState(null);
   const [expandedDeductions, setExpandedDeductions] = useState({});
   const toggleDeductions = (id) => setExpandedDeductions((prev) => ({ ...prev, [id]: !prev[id] }));
+
+  const isAnyFilterActive = Boolean(
+    filterSource !== "all" ||
+    searchQuery.trim() !== "" ||
+    filterCategory !== "all" ||
+    filterDatePreset !== "all" ||
+    filterDateStart ||
+    filterDateEnd
+  );
+
+  const handleClearAllFilters = () => {
+    setFilterSource("all");
+    setSearchQuery("");
+    setFilterCategory("all");
+    setFilterDatePreset("all");
+    setFilterDateStart("");
+    setFilterDateEnd("");
+  };
 
   const handleDeleteTransaction = async (item) => {
     const title = item.description || "este movimiento";
@@ -183,56 +206,88 @@ export default function ExpensesLogSection({
   }, [pendingLoans]);
 
   const filteredActivities = useMemo(() => {
-    if (filterSource === "all") return combinedActivities;
-    if (filterSource === "only_loans") return combinedActivities.filter((i) => i.isLoan);
-    if (filterSource === "only_expenses") return combinedActivities.filter((i) => i.itemType === "expense" && !i.isLoan);
-    if (filterSource === "only_incomes") return combinedActivities.filter((i) => i.itemType === "income");
-    if (filterSource === "only_wealth") {
-      return combinedActivities.filter(
-        (i) =>
-          i.itemType === "wealth_saving" ||
-          (i.itemType === "card_payment" && (i.budgetDeductions || []).some((d) => d.budgetItemType === "wealth" || d.budgetItemId?.startsWith("wealth_")))
-      );
-    }
-    if (filterSource === "only_payments") return combinedActivities.filter((i) => i.itemType === "card_payment");
-    if (filterSource === "payroll") {
-      return combinedActivities.filter(
-        (i) =>
-          ((i.itemType === "expense" || i.itemType === "wealth_saving" || i.itemType === "income") && (!i.paymentSource || i.paymentSource.type === "payroll")) ||
-          (i.itemType === "card_payment" && (!i.sourceType || i.sourceType === "payroll"))
-      );
-    }
-    if (filterSource === "credit_card") {
-      return combinedActivities.filter(
-        (i) =>
-          (i.itemType === "expense" && i.paymentSource?.type === "credit_card") ||
-          (i.itemType === "card_payment")
-      );
-    }
-    if (filterSource === "fixed_pocket") {
-      return combinedActivities.filter(
-        (i) =>
-          ((i.itemType === "expense" || i.itemType === "wealth_saving") && i.paymentSource?.type === "fixed_pocket") ||
-          (i.itemType === "card_payment" && i.sourceType === "fixed_pocket")
-      );
-    }
-    if (filterSource === "investment_cash") {
-      return combinedActivities.filter(
-        (i) =>
-          ((i.itemType === "expense" || i.itemType === "wealth_saving") && i.paymentSource?.type === "investment_cash") ||
-          (i.paymentSource?.type === "investment_cash")
-      );
-    }
-    if (filterSource === "cash") {
-      return combinedActivities.filter(
-        (i) =>
-          i.paymentSource?.type === "cash" ||
-          (i.paymentSource?.targetName || "").toLowerCase().includes("efectivo") ||
-          (i.settlements || []).some((s) => s.targetType === "cash")
-      );
-    }
-    return combinedActivities;
-  }, [combinedActivities, filterSource]);
+    return combinedActivities.filter((item) => {
+      // 1. Source / Nature pill filter
+      if (filterSource === "only_loans" && !item.isLoan) return false;
+      if (filterSource === "only_expenses" && (item.itemType !== "expense" || item.isLoan)) return false;
+      if (filterSource === "only_incomes" && item.itemType !== "income") return false;
+      if (filterSource === "only_wealth") {
+        const isW = item.itemType === "wealth_saving" || (item.itemType === "card_payment" && (item.budgetDeductions || []).some((d) => d.budgetItemType === "wealth" || d.budgetItemId?.startsWith("wealth_")));
+        if (!isW) return false;
+      }
+      if (filterSource === "only_payments" && item.itemType !== "card_payment") return false;
+      if (filterSource === "payroll") {
+        const isPay = ((item.itemType === "expense" || item.itemType === "wealth_saving" || item.itemType === "income") && (!item.paymentSource || item.paymentSource.type === "payroll")) ||
+          (item.itemType === "card_payment" && (!item.sourceType || item.sourceType === "payroll"));
+        if (!isPay) return false;
+      }
+      if (filterSource === "credit_card") {
+        const isCC = (item.itemType === "expense" && item.paymentSource?.type === "credit_card") || (item.itemType === "card_payment");
+        if (!isCC) return false;
+      }
+      if (filterSource === "fixed_pocket") {
+        const isPoc = ((item.itemType === "expense" || item.itemType === "wealth_saving") && item.paymentSource?.type === "fixed_pocket") || (item.itemType === "card_payment" && item.sourceType === "fixed_pocket");
+        if (!isPoc) return false;
+      }
+      if (filterSource === "investment_cash") {
+        const isInv = ((item.itemType === "expense" || item.itemType === "wealth_saving") && item.paymentSource?.type === "investment_cash") || (item.paymentSource?.type === "investment_cash");
+        if (!isInv) return false;
+      }
+      if (filterSource === "cash") {
+        const isCash = item.paymentSource?.type === "cash" || (item.paymentSource?.targetName || "").toLowerCase().includes("efectivo") || (item.settlements || []).some((s) => s.targetType === "cash");
+        if (!isCash) return false;
+      }
+
+      // 2. Category / Envelope filter
+      if (filterCategory !== "all") {
+        if (filterCategory === "unassigned") {
+          if (item.budgetItemId || item.isLoan || item.itemType === "card_payment") return false;
+        } else if (filterCategory === "loans") {
+          if (!item.isLoan && !item.isDebtPayment && !item.isDebtCollection) return false;
+        } else {
+          const matchesEnv = item.budgetItemId === filterCategory || (Array.isArray(item.budgetDeductions) && item.budgetDeductions.some((d) => d.budgetItemId === filterCategory));
+          if (!matchesEnv) return false;
+        }
+      }
+
+      // 3. Date range filter
+      const itemDate = item.date || item.createdAt?.slice(0, 10) || "";
+      if (filterDatePreset === "today") {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        if (itemDate !== todayStr) return false;
+      } else if (filterDatePreset === "last7") {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const limitStr = sevenDaysAgo.toISOString().slice(0, 10);
+        if (itemDate < limitStr) return false;
+      } else if (filterDatePreset === "this_month") {
+        const monthPrefix = activePeriod || new Date().toISOString().slice(0, 7);
+        if (!itemDate.startsWith(monthPrefix)) return false;
+      } else if (filterDatePreset === "custom" || filterDateStart || filterDateEnd) {
+        if (filterDateStart && itemDate < filterDateStart) return false;
+        if (filterDateEnd && itemDate > filterDateEnd) return false;
+      }
+
+      // 4. Search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const descMatch = (item.description || "").toLowerCase().includes(q);
+        const catMatch = (item.budgetItemName || "").toLowerCase().includes(q);
+        const subMatch = (item.subItemName || "").toLowerCase().includes(q);
+        const noteMatch = (item.note || item.notes || "").toLowerCase().includes(q);
+        const cardMatch = (item.cardName || item.paymentSource?.targetName || "").toLowerCase().includes(q);
+        const amtMatch = String(item.amount || "").includes(q) || String(Math.round(item.amount || 0)).includes(q);
+        const partMatch = Array.isArray(item.participants) && item.participants.some((p) => (p.name || "").toLowerCase().includes(q));
+        const dedMatch = Array.isArray(item.budgetDeductions) && item.budgetDeductions.some((d) => (d.budgetItemName || "").toLowerCase().includes(q));
+
+        if (!descMatch && !catMatch && !subMatch && !noteMatch && !cardMatch && !amtMatch && !partMatch && !dedMatch) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [combinedActivities, filterSource, filterCategory, filterDatePreset, filterDateStart, filterDateEnd, searchQuery, activePeriod]);
 
   // Only outflows actually executed from Payroll (Debit) account affect Saldo en Nómina.
   // Outflows from Cajitas (fixed_pocket), Credit Cards, or external savings do not touch Nómina.
@@ -501,6 +556,181 @@ export default function ExpensesLogSection({
               </button>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Advanced Search & Filtering Bar */}
+      <div
+        style={{
+          display: "flex",
+          gap: 10,
+          marginBottom: 12,
+          flexWrap: "wrap",
+          alignItems: "center",
+          background: isLight ? "#ffffff" : "var(--bg-card)",
+          border: isLight ? "1px solid rgba(0,0,0,0.1)" : "1px solid var(--border)",
+          borderRadius: "14px",
+          padding: "10px 14px",
+          boxShadow: isLight ? "0 2px 8px rgba(0,0,0,0.04)" : "none",
+        }}
+      >
+        {/* Search input with 🔍 icon */}
+        <div style={{ position: "relative", flex: "1 1 220px", minWidth: 200 }}>
+          <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: "0.85rem", color: "var(--text-muted)" }}>
+            🔍
+          </span>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar por concepto, comercio, amigo, monto..."
+            style={{
+              width: "100%",
+              padding: "8px 30px 8px 32px",
+              borderRadius: "8px",
+              border: isLight ? "1px solid #cbd5e1" : "1px solid rgba(255,255,255,0.12)",
+              background: isLight ? "#f8fafc" : "rgba(15, 23, 42, 0.6)",
+              color: "var(--text-primary)",
+              fontSize: "0.8rem",
+              outline: "none",
+              boxSizing: "border-box",
+            }}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              style={{
+                position: "absolute",
+                right: 8,
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "transparent",
+                border: "none",
+                color: "var(--text-muted)",
+                cursor: "pointer",
+                fontSize: "0.85rem",
+              }}
+              title="Borrar búsqueda"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        {/* Category / Envelope Select */}
+        <div style={{ flex: "0 1 180px", minWidth: 160 }}>
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "8px 10px",
+              borderRadius: "8px",
+              border: isLight ? "1px solid #cbd5e1" : "1px solid rgba(255,255,255,0.12)",
+              background: isLight ? "#f8fafc" : "rgba(15, 23, 42, 0.6)",
+              color: "var(--text-primary)",
+              fontSize: "0.78rem",
+              cursor: "pointer",
+              outline: "none",
+              boxSizing: "border-box",
+            }}
+          >
+            <option value="all">📂 Todos los Rubros</option>
+            <option value="unassigned">⚠️ Sin Asignar (Pendientes)</option>
+            <option value="loans">👥 Préstamos / Vacas</option>
+            {(budgetItems || []).map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.icon || "🏷️"} {b.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Date Preset Select */}
+        <div style={{ flex: "0 1 150px", minWidth: 140 }}>
+          <select
+            value={filterDatePreset}
+            onChange={(e) => setFilterDatePreset(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "8px 10px",
+              borderRadius: "8px",
+              border: isLight ? "1px solid #cbd5e1" : "1px solid rgba(255,255,255,0.12)",
+              background: isLight ? "#f8fafc" : "rgba(15, 23, 42, 0.6)",
+              color: "var(--text-primary)",
+              fontSize: "0.78rem",
+              cursor: "pointer",
+              outline: "none",
+              boxSizing: "border-box",
+            }}
+          >
+            <option value="all">📅 Todo el Período</option>
+            <option value="today">☀️ Solo Hoy</option>
+            <option value="last7">⚡ Últimos 7 Días</option>
+            <option value="this_month">🗓️ Este Mes ({activePeriod})</option>
+            <option value="custom">🛠️ Rango Personalizado...</option>
+          </select>
+        </div>
+
+        {/* Custom Date Inputs if 'custom' */}
+        {filterDatePreset === "custom" && (
+          <div style={{ display: "flex", gap: 6, alignItems: "center", flex: "1 1 230px" }}>
+            <input
+              type="date"
+              value={filterDateStart}
+              onChange={(e) => setFilterDateStart(e.target.value)}
+              style={{
+                padding: "6px 8px",
+                borderRadius: "6px",
+                border: isLight ? "1px solid #cbd5e1" : "1px solid rgba(255,255,255,0.12)",
+                background: isLight ? "#f8fafc" : "rgba(15, 23, 42, 0.6)",
+                color: "var(--text-primary)",
+                fontSize: "0.75rem",
+              }}
+            />
+            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>a</span>
+            <input
+              type="date"
+              value={filterDateEnd}
+              onChange={(e) => setFilterDateEnd(e.target.value)}
+              style={{
+                padding: "6px 8px",
+                borderRadius: "6px",
+                border: isLight ? "1px solid #cbd5e1" : "1px solid rgba(255,255,255,0.12)",
+                background: isLight ? "#f8fafc" : "rgba(15, 23, 42, 0.6)",
+                color: "var(--text-primary)",
+                fontSize: "0.75rem",
+              }}
+            />
+          </div>
+        )}
+
+        {/* Active count badge & Reset button */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto" }}>
+          <span style={{ fontSize: "0.74rem", color: "var(--text-muted)", fontWeight: 600 }}>
+            Mostrando <strong style={{ color: "var(--text-primary)" }}>{filteredActivities.length}</strong> de {combinedActivities.length}
+          </span>
+          {isAnyFilterActive && (
+            <button
+              type="button"
+              onClick={handleClearAllFilters}
+              style={{
+                padding: "5px 10px",
+                borderRadius: "6px",
+                background: isLight ? "#fee2e2" : "rgba(239, 68, 68, 0.15)",
+                border: isLight ? "1px solid #fca5a5" : "1px solid rgba(239, 68, 68, 0.3)",
+                color: isLight ? "#b91c1c" : "#f87171",
+                fontSize: "0.72rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+              title="Restablecer todos los filtros"
+            >
+              ✕ Limpiar filtros
+            </button>
+          )}
         </div>
       </div>
 

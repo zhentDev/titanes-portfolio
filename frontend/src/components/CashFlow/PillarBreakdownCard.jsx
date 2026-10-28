@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import toast from "react-hot-toast";
 import { useTheme } from "../../context/ThemeContext";
 import { formatCashFlowMoney, calculateEffectiveExpense } from "../../utils/cashFlowFormatters";
+import { toastConfirm } from "../../utils/toastAlerts";
 import "./CashFlow.css";
 
 export default function PillarBreakdownCard({
@@ -37,6 +38,27 @@ export default function PillarBreakdownCard({
       ...prev,
       [itemId]: !prev[itemId],
     }));
+  };
+
+  const handleDeleteItemClick = async (item) => {
+    const title = item.name || "este rubro";
+    const ok = await toastConfirm(
+      `¿Estás seguro de que deseas eliminar el rubro "${title}"?\nSe desvinculará de las asignaciones de gastos.`
+    );
+    if (ok && onDeleteItem) {
+      onDeleteItem(item.id);
+    }
+  };
+
+  const handleDeleteTransactionClick = async (tx) => {
+    const title = tx.description || "este gasto";
+    const formattedAmt = formatMoney(tx.amount, currency);
+    const ok = await toastConfirm(
+      `¿Estás seguro de que deseas eliminar "${title}" (${formattedAmt})?`
+    );
+    if (ok && onDeleteTransaction) {
+      onDeleteTransaction(tx.id);
+    }
   };
 
   const totalAmount = items.reduce((acc, curr) => {
@@ -477,7 +499,7 @@ export default function PillarBreakdownCard({
                         <button
                           type="button"
                           className="cashflow-item-delete-btn"
-                          onClick={() => onDeleteItem(item.id)}
+                          onClick={() => handleDeleteItemClick(item)}
                           title="Eliminar este ítem"
                         >
                           🗑️
@@ -920,7 +942,7 @@ export default function PillarBreakdownCard({
                                     {onDeleteTransaction && (
                                       <button
                                         type="button"
-                                        onClick={() => onDeleteTransaction(tx.id)}
+                                        onClick={() => handleDeleteTransactionClick(tx)}
                                         style={{
                                           background: "transparent",
                                           border: "none",

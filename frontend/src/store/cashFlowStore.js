@@ -277,6 +277,8 @@ export const useCashFlowStore = create(
           "exp_transfer_mike_cajita_202611_split_wealth_60k",
           "exp_transfer_mike_cajita_202611_split_0_1792908328343",
           "exp_transfer_mike_cajita_202611_split_1_1792908328343",
+          "cf_tx_mb_1793143745550_ad067e",
+          "cp_tx_mb_1793143745550_ad067e",
         ];
         const combinedDeletedIds = [
           ...new Set([
@@ -345,8 +347,8 @@ export const useCashFlowStore = create(
               budgetItemType: "wants",
               paymentSource: {
                 type: "credit_card",
-                targetId: "card_nu_credito",
-                targetName: "Tarjeta Nu Mastercard (3887)",
+                targetId: "cc_nu",
+                targetName: "Tarjeta Nu Mastercard",
               },
             };
           }
@@ -529,6 +531,33 @@ export const useCashFlowStore = create(
         const mergedWants = unionById(source?.wants, cachedLocal?.wants);
         const mergedWealth = unionById(source?.wealth, cachedLocal?.wealth);
 
+        let sanitizedCreditPurchases = (mergedCreditPurchases || []).filter((cp) => {
+          if (!cp || !cp.id) return false;
+          if (deletedExpenseIds.has(cp.id)) return false;
+          const cleanTxId = cp.id.startsWith("cp_") ? cp.id.replace("cp_", "") : cp.id;
+          if (deletedExpenseIds.has(cleanTxId) || deletedExpenseIds.has(`cf_${cleanTxId}`)) return false;
+          if (cp.id === "cp_tx_mb_1793143745550_ad067e" || cp.description?.includes("SURTIMAYORISTA")) return false;
+          return true;
+        });
+
+        // Ensure Microsoft*Xbox ($31.392 COP) is included in creditPurchases if present in sanitizedExpensesLog
+        const xboxTx = sanitizedExpensesLog.find(
+          (tx) => tx.id === "cf_tx_mb_1792944694475_3448d5" || (tx.description || "").toLowerCase().includes("xbox")
+        );
+        if (xboxTx && !sanitizedCreditPurchases.some((cp) => cp.id === "cp_tx_mb_1792944694475_3448d5" || cp.description?.toLowerCase().includes("xbox"))) {
+          sanitizedCreditPurchases.push({
+            id: "cp_tx_mb_1792944694475_3448d5",
+            cardId: "cc_nu",
+            description: "Compra en Microsoft*Xbox",
+            amount: Number(xboxTx.amount) || 31392,
+            installmentsCount: 1,
+            startPeriod: xboxTx.period || "2026-11",
+            monthlyInstallment: Number(xboxTx.amount) || 31392,
+            date: xboxTx.date || "2026-10-25",
+            createdAt: xboxTx.createdAt || new Date().toISOString(),
+          });
+        }
+
         const resolvedState = {
           startPeriod: startP,
           activePeriod: activeP,
@@ -544,7 +573,7 @@ export const useCashFlowStore = create(
             activeFromDate: "2026-10-23",
           },
           creditCards: mergedCreditCards,
-          creditPurchases: mergedCreditPurchases,
+          creditPurchases: sanitizedCreditPurchases,
           creditCardPayments: mergedCreditCardPayments,
           expensesLog: sanitizedExpensesLog,
           deletedExpenseIds: combinedDeletedIds,
@@ -687,9 +716,28 @@ export const useCashFlowStore = create(
       },
 
       deleteCreditPurchase: (id) => {
-        set((state) => ({
-          creditPurchases: state.creditPurchases.filter((p) => p.id !== id),
-        }));
+        set((state) => {
+          const purchase = (state.creditPurchases || []).find((p) => p.id === id);
+          let updatedCards = state.creditCards;
+          if (purchase && purchase.cardId) {
+            updatedCards = state.creditCards.map((c) => {
+              if (c.id === purchase.cardId) {
+                const amt = Number(purchase.monthlyInstallment) || Number(purchase.amount) || 0;
+                return { ...c, usedLimit: Math.max(0, (Number(c.usedLimit) || 0) - amt) };
+              }
+              return c;
+            });
+          }
+          const cleanTxId = id.startsWith("cp_") ? id.replace("cp_", "") : id;
+          const updatedExpenses = (state.expensesLog || []).filter(
+            (tx) => tx.id !== id && tx.id !== cleanTxId && tx.id !== `cf_${cleanTxId}`
+          );
+          return {
+            creditPurchases: (state.creditPurchases || []).filter((p) => p.id !== id),
+            creditCards: updatedCards,
+            expensesLog: updatedExpenses,
+          };
+        });
         get().syncStateWithBackend();
         toast.success("Compra diferida eliminada", { icon: "🗑️" });
       },
@@ -744,6 +792,46 @@ export const useCashFlowStore = create(
             });
           }
 
+          // Real-time synchronization with creditPurchases
+          const cleanId = updatedTx.id.replace("cf_", "");
+          let updatedPurchases = state.creditPurchases || [];
+          if (updatedTx.paymentSource?.type === "credit_card") {
+            const cardId = updatedTx.paymentSource.targetId || "cc_nu";
+            const exists = updatedPurchases.some((p) => p.id === `cp_${cleanId}` || p.id === updatedTx.id);
+            if (exists) {
+              updatedPurchases = updatedPurchases.map((p) => {
+                if (p.id === `cp_${cleanId}` || p.id === updatedTx.id) {
+                  return {
+                    ...p,
+                    cardId,
+                    description: updatedTx.description,
+                    amount: Number(updatedTx.amount) || p.amount,
+                    monthlyInstallment: Number(updatedTx.amount) || p.monthlyInstallment,
+                  };
+                }
+                return p;
+              });
+            } else {
+              updatedPurchases = [
+                {
+                  id: `cp_${cleanId}`,
+                  cardId,
+                  description: updatedTx.description,
+                  amount: Number(updatedTx.amount),
+                  installmentsCount: 1,
+                  startPeriod: updatedTx.period || state.activePeriod,
+                  monthlyInstallment: Number(updatedTx.amount),
+                  date: updatedTx.date,
+                  createdAt: updatedTx.createdAt || new Date().toISOString(),
+                },
+                ...updatedPurchases,
+              ];
+            }
+          } else if (oldTx?.paymentSource?.type === "credit_card") {
+            // Payment source changed away from credit card, remove from creditPurchases
+            updatedPurchases = updatedPurchases.filter((p) => p.id !== `cp_${cleanId}` && p.id !== updatedTx.id);
+          }
+
           const updatedLog = (state.expensesLog || []).map((tx) =>
             tx.id === updatedTx.id ? { ...tx, ...updatedTx } : tx
           );
@@ -751,6 +839,7 @@ export const useCashFlowStore = create(
           return {
             expensesLog: updatedLog,
             creditCards: updatedCards,
+            creditPurchases: updatedPurchases,
           };
         });
         get().syncStateWithBackend();
@@ -770,6 +859,12 @@ export const useCashFlowStore = create(
               return c;
             });
           }
+
+          // Remove corresponding credit purchase if exists
+          const cleanId = id.replace("cf_", "");
+          const updatedPurchases = (state.creditPurchases || []).filter(
+            (p) => p.id !== id && p.id !== `cp_${cleanId}` && p.id !== `cp_${id}`
+          );
 
           // Also remove matching deduction from parent card payment if this was a split deduction
           let updatedPayments = state.creditCardPayments || [];
@@ -813,6 +908,7 @@ export const useCashFlowStore = create(
                 deletedExpenseIds: nextDeletedIds,
                 creditCards: updatedCards,
                 creditCardPayments: updatedPayments,
+                creditPurchases: updatedPurchases,
               })
             );
           } catch {}
@@ -822,6 +918,7 @@ export const useCashFlowStore = create(
             deletedExpenseIds: nextDeletedIds,
             creditCards: updatedCards,
             creditCardPayments: updatedPayments,
+            creditPurchases: updatedPurchases,
           };
         });
         get().syncStateWithBackend();
@@ -1103,7 +1200,7 @@ export const useCashFlowStore = create(
         toast.success("Concepto reasignado exitosamente al nuevo rubro ✅");
       },
 
-      reclassifyMovement: ({ movementId, destinationType, targetId, targetItem, subItem, destinationAccount, cardId, distributions, paymentSource, newDebtData, alreadyRegisteredInDebt }) => {
+      reclassifyMovement: ({ movementId, destinationType, targetId, targetItem, subItem, destinationAccount, cardId, distributions, paymentSource, newDebtData, alreadyRegisteredInDebt, selectedParticipantId, participantName }) => {
         const state = get();
 
         // 0. Destination: Multi-Rubro Distribution (Split Movement / Distributed Card Payment)
@@ -1262,48 +1359,99 @@ export const useCashFlowStore = create(
           // Update expense description and tag it as debt payment / collection
           let updatedExpenses = (state.expensesLog || []).map((e) => {
             if (e.id !== movementId) return e;
+            const conceptLabel = participantName
+              ? `Cobro Préstamo: ${participantName} (${debt.concept})`
+              : (isReceivable ? `Cobro Deuda: ${debt.concept}` : `Pago Deuda: ${debt.concept}`);
             return {
               ...e,
-              description: isReceivable ? `Cobro Deuda: ${debt.concept}` : `Pago Deuda: ${debt.concept}`,
+              description: conceptLabel,
               budgetItemId: null,
               budgetItemName: isReceivable
-                ? `Cobro Préstamo (${debt.debtor || debt.creditor || debt.concept})`
+                ? `Cobro Préstamo (${participantName || debt.debtor || debt.creditor || debt.concept})`
                 : `Abono Deuda (${debt.creditor || debt.concept})`,
               budgetItemType: isReceivable ? "income" : "needs",
               type: isReceivable ? "credit" : (e.type || "debit"),
               isDebtPayment: true,
               isDebtCollection: isReceivable,
               debtId: debt.id,
+              participantId: selectedParticipantId || null,
+              participantName: participantName || null,
             };
           });
 
-          // If the debt is linked to an expense loan, update the expense settlement record in expensesLog
-          if (debt.linkedExpenseId) {
+          // If the debt is linked to an expense loan or has participants, update the participant & settlement in expensesLog
+          const linkedExpId = debt.linkedExpenseId || (debt.id?.startsWith("debt_tx_") ? debt.id.replace("debt_tx_", "") : null);
+          if (linkedExpId) {
             updatedExpenses = updatedExpenses.map((e) => {
-              if (e.id === debt.linkedExpenseId) {
+              if (e.id === linkedExpId) {
+                let updatedParticipants = e.participants;
+                if (Array.isArray(e.participants) && (selectedParticipantId || participantName)) {
+                  updatedParticipants = e.participants.map((p) => {
+                    if (p.id === selectedParticipantId || (participantName && p.name?.toLowerCase() === participantName.toLowerCase())) {
+                      return {
+                        ...p,
+                        paid: true,
+                        paidAmount: amount,
+                        paidAt: expense.date || new Date().toISOString(),
+                      };
+                    }
+                    return p;
+                  });
+                }
+
                 const currentSettlements = Array.isArray(e.settlements) ? e.settlements : [];
                 const newSettlement = {
                   id: `stl_${Date.now()}`,
                   amount: amount,
                   date: expense.date || new Date().toISOString().slice(0, 10),
                   targetName: expense.paymentSource?.targetName || "Nómina Nu Débito",
-                  note: `Cobro asignado desde: ${expense.description || "Ingreso bancario"}`,
+                  participantId: selectedParticipantId || null,
+                  participantName: participantName || null,
+                  note: participantName
+                    ? `Pago de ${participantName} asignado desde extracto`
+                    : `Cobro asignado desde: ${expense.description || "Ingreso bancario"}`,
                   settledAt: new Date().toISOString(),
                 };
-                const totalSettledSoFar = currentSettlements.reduce((sum, s) => sum + (Number(s.amount) || 0), 0) + amount;
+                const totalSettledSoFar = currentSettlements.reduce((sum, s) => sum + (Number(s.amount) || 0), 0) + (alreadyRegisteredInDebt ? 0 : amount);
+                const allPartsPaid = Array.isArray(updatedParticipants) && updatedParticipants.filter((p) => !p.isUser).every((p) => p.paid);
+
                 return {
                   ...e,
-                  loanStatus: newRemaining <= 0 ? "settled" : "partially_settled",
-                  remainingLoan: newRemaining,
+                  participants: updatedParticipants,
+                  loanStatus: allPartsPaid || newRemaining <= 0 ? "settled" : "partially_settled",
+                  remainingLoan: allPartsPaid ? 0 : newRemaining,
                   totalSettled: totalSettledSoFar,
-                  settlements: [newSettlement, ...currentSettlements],
+                  settlements: alreadyRegisteredInDebt ? currentSettlements : [newSettlement, ...currentSettlements],
                 };
               }
               return e;
             });
           }
 
-          set({ debts: updatedDebts, expensesLog: updatedExpenses, inflows: updatedInflows });
+          // If debt has participants, also mark that participant in debts
+          let finalDebts = updatedDebts.map((d) => {
+            if (d.id === debt.id && Array.isArray(d.participants) && (selectedParticipantId || participantName)) {
+              const updatedParts = d.participants.map((p) => {
+                if (p.id === selectedParticipantId || (participantName && p.name?.toLowerCase() === participantName.toLowerCase())) {
+                  return {
+                    ...p,
+                    paid: true,
+                    paidAmount: amount,
+                    paidAt: expense.date || new Date().toISOString(),
+                  };
+                }
+                return p;
+              });
+              return {
+                ...d,
+                participants: updatedParts,
+              };
+            }
+            return d;
+          });
+          finalDebts = syncExpenseLoansToDebts(updatedExpenses, finalDebts);
+
+          set({ debts: finalDebts, expensesLog: updatedExpenses, inflows: updatedInflows });
           try {
             localStorage.setItem("titanes_cash_flow_store_v2", JSON.stringify({ ...state, debts: updatedDebts, expensesLog: updatedExpenses }));
           } catch {}

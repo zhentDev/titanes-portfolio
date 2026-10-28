@@ -1,6 +1,7 @@
 import React from "react";
 import { formatCashFlowMoney } from "../../utils/cashFlowFormatters";
 import { useTheme } from "../../context/ThemeContext";
+import { toastConfirm } from "../../utils/toastAlerts";
 import "./CashFlow.css";
 
 // Calculate active installment index for a given period
@@ -88,6 +89,28 @@ export default function CreditCardsSection({
   const isOverSafeLimit = totalCreditLimit > maxSafeCreditLimit;
   const excessAmount = Math.max(0, totalCreditLimit - maxSafeCreditLimit);
   const remainingSafeRoom = Math.max(0, maxSafeCreditLimit - totalCreditLimit);
+
+  const handleDeletePurchase = async (purchase) => {
+    const title = purchase.description || "esta compra a cuotas";
+    const formattedAmt = formatMoney(purchase.monthlyInstallment || purchase.totalAmount, currency);
+    const ok = await toastConfirm(
+      `¿Estás seguro de que deseas eliminar la compra diferida "${title}" (${formattedAmt})?\n\nEl cupo utilizado de la tarjeta se liberará automáticamente.`
+    );
+    if (ok && onDeletePurchase) {
+      onDeletePurchase(purchase.id);
+    }
+  };
+
+  const handleDeletePayment = async (payment) => {
+    const cardTitle = payment.cardName || "tarjeta";
+    const formattedAmt = formatMoney(payment.amount, currency);
+    const ok = await toastConfirm(
+      `¿Estás seguro de que deseas eliminar el abono a "${cardTitle}" por ${formattedAmt}?`
+    );
+    if (ok && onDeletePayment) {
+      onDeletePayment(payment.id);
+    }
+  };
 
   return (
     <div className="cashflow-credit-section" style={{ marginTop: 8 }}>
@@ -457,7 +480,7 @@ export default function CreditCardsSection({
                     {onDeletePurchase && (
                       <button
                         type="button"
-                        onClick={() => onDeletePurchase(purchase.id)}
+                        onClick={() => handleDeletePurchase(purchase)}
                         style={{
                           background: "transparent",
                           border: "none",
@@ -522,7 +545,7 @@ export default function CreditCardsSection({
                     {onDeletePayment && (
                       <button
                         type="button"
-                        onClick={() => onDeletePayment(payment.id)}
+                        onClick={() => handleDeletePayment(payment)}
                         style={{
                           background: "transparent",
                           border: "none",
