@@ -65,7 +65,7 @@
       "id": "in_stock_div",
       "name": "Ingreso por Renta Variable",
       "category": "passive_equity",
-      "amount": 35964,
+      "amount": 35957,
       "currency": "COP",
       "isPassive": true,
       "isAutoSynced": true,
@@ -240,7 +240,7 @@
       "category": "equity_investment",
       "targetAmount": 30000000,
       "monthlyContribution": 500000,
-      "currentBalance": 21578219,
+      "currentBalance": 21574196,
       "currency": "COP",
       "linkedModule": "variable_income",
       "paymentSource": {
@@ -256,7 +256,7 @@
       "category": "fixed_savings",
       "targetAmount": 15000000,
       "monthlyContribution": 300000,
-      "currentBalance": 7844975,
+      "currentBalance": 7844747,
       "currency": "COP",
       "linkedModule": "fixed_income",
       "paymentSource": {
@@ -301,6 +301,92 @@
     }
   ],
   "expensesLog": [
+    {
+      "id": "cf_tx_mb_1793226274257_9a8d93",
+      "period": "2026-11",
+      "budgetItemId": null,
+      "budgetItemName": "Compra en MERCADO PAGO POSEIDONS",
+      "budgetItemType": "wants",
+      "description": "Compra en MERCADO PAGO POSEIDONS",
+      "amount": 69800.0,
+      "currency": "COP",
+      "date": "2026-10-28",
+      "time": "17:24:34",
+      "type": "debit",
+      "paymentSource": {
+        "type": "credit_card",
+        "targetId": "cc_rappi",
+        "targetName": "RappiCard Visa (MSI)",
+        "installments": 1
+      },
+      "createdAt": "2026-10-28T17:24:34.257188-05:00"
+    },
+    {
+      "id": "cf_tx_mb_1793221937650_a8e832",
+      "period": "2026-11",
+      "budgetItemId": "need_utilities",
+      "budgetItemName": "Servicios Públicos, Luz & Fibra Óptica",
+      "budgetItemType": "needs",
+      "description": "Pago a Acueducto De Bogota",
+      "amount": 162130.0,
+      "currency": "COP",
+      "date": "2026-10-28",
+      "time": "16:12:17",
+      "type": "debit",
+      "cascaded": false,
+      "shortfall": 0.0,
+      "fallbackAccountName": null,
+      "paymentSource": {
+        "type": "payroll",
+        "targetId": "acc_nu_debito",
+        "targetName": "Cuenta Nu Débito (Nómina)"
+      },
+      "createdAt": "2026-10-28T16:12:17.650214-05:00"
+    },
+    {
+      "id": "cf_tx_mb_1793215858505_9a7363",
+      "period": "2026-11",
+      "budgetItemId": null,
+      "budgetItemName": "Consignación JHON RIOS",
+      "budgetItemType": "income",
+      "description": "Consignación JHON RIOS",
+      "amount": 43860.0,
+      "currency": "COP",
+      "date": "2026-10-28",
+      "time": "14:30:58",
+      "type": "credit",
+      "cascaded": false,
+      "shortfall": 0.0,
+      "fallbackAccountName": null,
+      "paymentSource": {
+        "type": "payroll",
+        "targetId": "acc_nu_debito",
+        "targetName": "Cuenta Nu Débito (Nómina)"
+      },
+      "createdAt": "2026-10-28T14:30:58.505524-05:00"
+    },
+    {
+      "id": "cf_tx_mb_1793210112833_e70d1a",
+      "period": "2026-11",
+      "budgetItemId": null,
+      "budgetItemName": "Consignación JOHANN EDUARDO ESTUPINAN LOZANO",
+      "budgetItemType": "income",
+      "description": "Consignación JOHANN EDUARDO ESTUPINAN LOZANO",
+      "amount": 14412.0,
+      "currency": "COP",
+      "date": "2026-10-28",
+      "time": "12:55:12",
+      "type": "credit",
+      "cascaded": false,
+      "shortfall": 0.0,
+      "fallbackAccountName": null,
+      "paymentSource": {
+        "type": "payroll",
+        "targetId": "acc_nu_debito",
+        "targetName": "Cuenta Nu Débito (Nómina)"
+      },
+      "createdAt": "2026-10-28T12:55:12.833512-05:00"
+    },
     {
       "id": "cf_tx_mb_1793196353362_c59efd",
       "period": "2026-11",
@@ -463,26 +549,6 @@
       "createdAt": "2026-10-27T22:19:55.802995-05:00"
     },
     {
-      "id": "cf_tx_mb_1793143745550_ad067e",
-      "period": "2026-11",
-      "budgetItemId": "need_groceries",
-      "budgetItemName": "Alimentación & Supermercado",
-      "budgetItemType": "needs",
-      "description": "Compra en SURTIMAYORISTA AVENIDA",
-      "amount": 42455,
-      "currency": "COP",
-      "date": "2026-10-27",
-      "time": "18:29:05",
-      "type": "debit",
-      "paymentSource": {
-        "type": "payroll",
-        "targetId": "acc_nu_debito",
-        "targetName": "Cuenta Nu Débito (Nómina)"
-      },
-      "createdAt": "2026-10-27T18:29:05.550418-05:00",
-      "itemType": "expense"
-    },
-    {
       "id": "cf_tx_mb_1793141750382_de0beb",
       "period": "2026-11",
       "budgetItemId": null,
@@ -591,6 +657,26 @@
       "userIncluded": false,
       "userShare": 0,
       "participants": []
+    },
+    {
+      "id": "cf_tx_mb_1793135853228_123ad8",
+      "period": "2026-11",
+      "budgetItemId": null,
+      "budgetItemName": "Compra en D1",
+      "budgetItemType": "wants",
+      "description": "Compra en D1",
+      "amount": 1000.0,
+      "currency": "COP",
+      "date": "2026-10-27",
+      "time": "16:17:33",
+      "type": "debit",
+      "paymentSource": {
+        "type": "credit_card",
+        "targetId": "cc_nu",
+        "targetName": "Tarjeta Nu Mastercard",
+        "installments": 1
+      },
+      "createdAt": "2026-10-27T16:17:33.228502-05:00"
     },
     {
       "id": "cf_tx_mb_1793196416104_be1347",
@@ -2587,36 +2673,39 @@
     }
   ],
   "deletedExpenseIds": [
-    "pay_split_1792875528218_ykk7e_split_1_1793229404896",
-    "tx_1792909650611",
-    "exp_transfer_mike_cajita_202611_split_1",
-    "pay_conv_1792863163027_gx31h_split_0_1792875528218",
-    "pay_conv_1792863163027_gx31h_split_1_1792875528218",
-    "cf_tx_mb_rappi_emergency_150k_202611",
+    "pay_split_1792875528218_ykk7e_split_0_1793229404896",
+    "exp_transfer_mike_cajita_202611_split_0_1792908328343",
     "cf_tx_mb_1793135518637_73deb8",
-    "pay_split_1792875528218_ykk7e_split_2_1793229404896",
-    "exp_transfer_mike_cajita_202611_split_0",
+    "pay_conv_1792863163027_gx31h_split_0_1792875528218",
+    "exp_transfer_mike_cajita_202611_split_1",
+    "exp_transfer_mike_cajita_202611",
+    "cf_tx_1793019639815",
+    "tx_1792909650611_split_1_1792909698846",
     "pay_split_1792875528218_ykk7e_split_3_1793229404896",
+    "exp_transfer_mike_cajita_202611_split_0",
+    "tx_1792909650611",
+    "cf_tx_mb_rappi_emergency_150k_202611",
+    "pay_conv_1792863163027_gx31h_split_1_1792875528218",
     "cf_tx_cajita_viaje_150k_202611",
     "pay_conv_1792863163027_gx31h_split_3_1792875528218",
-    "exp_transfer_mike_cajita_202611",
-    "cf_tx_plenti_broker_funding_200k_202611",
     "tx_1792909650611_split_0_1792909698846",
-    "pay_split_1792875528218_ykk7e_split_0_1793229404896",
-    "tx_transfer_nu_to_cajita_deudas_210k",
-    "exp_transfer_mike_cajita_202611_split_0_1792908328343",
-    "pay_conv_1792863163027_gx31h_split_2_1792875528218",
+    "pay_split_1792875528218_ykk7e_split_1_1793229404896",
+    "pay_split_1792875528218_ykk7e_split_2_1793229404896",
     "exp_transfer_mike_cajita_202611_split_1_1792908328343",
+    "tx_transfer_nu_to_cajita_deudas_210k",
+    "cf_tx_plenti_broker_funding_200k_202611",
     "pay_split_1792875528218_ykk7e_split_4_1793229404896",
+    "cf_tx_mb_1793143745550_ad067e",
     "exp_transfer_mike_cajita_202611_split_wealth_60k",
-    "tx_1792909650611_split_1_1792909698846"
+    "pay_conv_1792863163027_gx31h_split_2_1792875528218",
+    "cp_tx_mb_1793143745550_ad067e"
   ],
   "deletedDebtIds": [
-    "debt_loan_carlos_2026",
-    "debt_mike_nu_2026"
+    "debt_mike_nu_2026",
+    "debt_loan_carlos_2026"
   ],
   "deletedCreditCardPaymentIds": [
-    "pay_split_1792875528218_ykk7e",
-    "ccpay_split_1792875528218"
+    "ccpay_split_1792875528218",
+    "pay_split_1792875528218_ykk7e"
   ]
 }

@@ -292,7 +292,7 @@ def sync_cash_flow_state(payload: CashFlowSyncPayload, request: Request):
     if payload.creditCards is not None:
         db["creditCards"] = [dump_val(x) for x in payload.creditCards]
     if payload.creditPurchases is not None:
-        db["creditPurchases"] = [dump_val(x) for x in payload.creditPurchases]
+        db["creditPurchases"] = merge_lists_by_id(db.get("creditPurchases", []), payload.creditPurchases)
     # Persistent tombstone tracking for deleted transactions
     del_exp_set = set(db.get("deletedExpenseIds") or [])
     if payload.deletedExpenseIds:
@@ -313,6 +313,10 @@ def sync_cash_flow_state(payload: CashFlowSyncPayload, request: Request):
                         continue
                     seen_ids.add(iid)
                 clean_expenses.append(item)
+        clean_expenses.sort(
+            key=lambda x: (x.get("date") or "", x.get("time") or "", x.get("createdAt") or ""),
+            reverse=True,
+        )
         db["expensesLog"] = clean_expenses
     elif del_exp_set:
         db["expensesLog"] = [x for x in db.get("expensesLog", []) if x.get("id") not in del_exp_set]

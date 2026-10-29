@@ -820,6 +820,50 @@ export const useCashFlowStore = create(
           }
         });
 
+        // Reverse reconciliation: Ensure every active creditPurchase in sanitizedCreditPurchases also exists in sanitizedExpensesLog!
+        sanitizedCreditPurchases.forEach((cp) => {
+          if (!cp || !cp.id) return;
+          const cleanId = cp.id.startsWith("cp_") ? cp.id.replace("cp_", "") : cp.id;
+          const cfId = cleanId.startsWith("cf_") ? cleanId : `cf_${cleanId}`;
+          if (deletedExpenseIds.has(cfId) || deletedExpenseIds.has(cleanId) || deletedExpenseIds.has(cp.id)) return;
+          const amt = Number(cp.totalAmount) || Number(cp.amount) || Number(cp.monthlyInstallment) || 0;
+          const existsInLog = sanitizedExpensesLog.some(
+            (e) =>
+              e.id === cfId ||
+              e.id === cleanId ||
+              e.id === cp.id ||
+              (e.date === cp.date &&
+                Math.abs(Number(e.amount) - amt) < 1 &&
+                (e.description || "").toLowerCase().trim() === (cp.description || "").toLowerCase().trim())
+          );
+          if (!existsInLog) {
+            const cardObj = (mergedCreditCards || []).find((c) => c.id === cp.cardId);
+            const cardName = cardObj?.name || (cp.cardId === "cc_rappi" ? "RappiCard Visa (MSI)" : "Tarjeta Nu Mastercard");
+            const timePart = cp.createdAt && cp.createdAt.includes("T") ? cp.createdAt.split("T")[1].slice(0, 8) : null;
+            sanitizedExpensesLog.push({
+              id: cfId,
+              period: cp.startPeriod || activeP,
+              budgetItemId: cp.budgetItemId || null,
+              budgetItemName: cp.budgetItemName || cp.description || "Compra con Tarjeta",
+              budgetItemType: cp.budgetItemType || "wants",
+              description: cp.description || "Compra con Tarjeta",
+              amount: amt,
+              currency: "COP",
+              date: cp.date || "2026-10-28",
+              time: cp.time || timePart,
+              type: "debit",
+              paymentSource: {
+                type: "credit_card",
+                targetId: cp.cardId || "cc_rappi",
+                targetName: cardName,
+                installments: Number(cp.installmentsCount) || 1,
+              },
+              createdAt: cp.createdAt || new Date().toISOString(),
+            });
+          }
+        });
+        sanitizedExpensesLog = sortMovementsByDateTimeDesc(sanitizedExpensesLog);
+
         // Sync credit cards usedLimit directly with actual active purchases
         const syncedCreditCards = (mergedCreditCards || []).map((card) => {
           const cardPurchasesTotal = sanitizedCreditPurchases
