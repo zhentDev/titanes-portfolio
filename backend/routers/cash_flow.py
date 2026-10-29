@@ -218,6 +218,7 @@ class CashFlowSyncPayload(BaseModel):
     expensesLog: list[dict] | None = None
     deletedExpenseIds: list[str] | None = None
     deletedDebtIds: list[str] | None = None
+    deletedCreditCardPaymentIds: list[str] | None = None
     creditCardPayments: list[dict] | None = None
     debts: list[dict] | None = None
     periodsData: dict | None = None
@@ -314,8 +315,26 @@ def sync_cash_flow_state(payload: CashFlowSyncPayload, request: Request):
         db["expensesLog"] = clean_expenses
     elif del_exp_set:
         db["expensesLog"] = [x for x in db.get("expensesLog", []) if x.get("id") not in del_exp_set]
+    del_pay_set = set(db.get("deletedCreditCardPaymentIds") or [])
+    if payload.deletedCreditCardPaymentIds:
+        del_pay_set.update(payload.deletedCreditCardPaymentIds)
+    db["deletedCreditCardPaymentIds"] = list(del_pay_set)
+
     if payload.creditCardPayments is not None:
-        db["creditCardPayments"] = merge_lists_by_id(db.get("creditCardPayments", []), payload.creditCardPayments)
+        incoming_pays = [dump_val(x) for x in payload.creditCardPayments]
+        seen_pay_ids = set()
+        clean_pays = []
+        for p in incoming_pays:
+            if isinstance(p, dict):
+                pid = p.get("id")
+                if pid:
+                    if pid in del_pay_set or pid in seen_pay_ids:
+                        continue
+                    seen_pay_ids.add(pid)
+                clean_pays.append(p)
+        db["creditCardPayments"] = clean_pays
+    elif del_pay_set:
+        db["creditCardPayments"] = [x for x in db.get("creditCardPayments", []) if x.get("id") not in del_pay_set]
 
     # Persistent tombstone tracking for deleted debts
     del_debt_set = set(db.get("deletedDebtIds") or [])

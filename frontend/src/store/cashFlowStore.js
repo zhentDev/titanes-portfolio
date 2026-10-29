@@ -297,9 +297,23 @@ export const useCashFlowStore = create(
         ];
         const deletedPaymentIds = new Set(combinedDeletedPaymentIds);
 
-        const sanitizedCreditCardPayments = mergedCreditCardPayments.filter(
-          (p) => p && p.id && !deletedPaymentIds.has(p.id)
-        );
+        // Filter deleted payments and deduplicate distributed payments by (cardId + date + amount), keeping newest
+        const rawActivePayments = mergedCreditCardPayments
+          .filter((p) => p && p.id && !deletedPaymentIds.has(p.id))
+          .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
+        const seenPaymentSignatures = new Set();
+        const sanitizedCreditCardPayments = [];
+        for (const p of rawActivePayments) {
+          const sig = `${p.cardId || p.cardName || ""}___${p.date || ""}___${Math.round(Number(p.amount) || 0)}`;
+          if (seenPaymentSignatures.has(sig)) {
+            combinedDeletedPaymentIds.push(p.id);
+            deletedPaymentIds.add(p.id);
+            continue;
+          }
+          seenPaymentSignatures.add(sig);
+          sanitizedCreditCardPayments.push(p);
+        }
 
         // Permanent tombstones for deleted transactions: combine backend and local storage
         const KNOWN_PHANTOM_EXPENSE_IDS = [
@@ -555,8 +569,89 @@ export const useCashFlowStore = create(
             sanitizedExpensesLog.push(exp);
           }
         }
+        // Reconcile & deduplicate split deduction children against active creditCardPayments and distributed parents
+        // so editing a distribution never leaves duplicate or orphaned child rows in budget categories.
+        const claimedCardDeductions = new Set();
+        const claimedParentDeductions = new Set();
+        const distributedParentsById = new Map(
+          sanitizedExpensesLog.filter((e) => e.isDistributed).map((e) => [e.id, e])
+        );
+        const sortedForReconcile = [...sanitizedExpensesLog].sort(
+          (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+        );
+        const reconciledExpenses = [];
+        let purgedAnyDuplicates = false;
+
+        for (const exp of sortedForReconcile) {
+          const isCardPayoffChild = Boolean(
+            exp.isCreditCardPayoff ||
+            exp.creditCardPaymentId ||
+            ((exp.description || "").includes("Pago ") && (exp.description || "").includes("(Descontado de"))
+          );
+
+          if (isCardPayoffChild) {
+            const parentPay = sanitizedCreditCardPayments.find(
+              (p) =>
+                p.id === exp.creditCardPaymentId ||
+                p.id === exp.splitParentId ||
+                ((exp.cardId === p.cardId || (p.cardName && (exp.description || "").includes(p.cardName))) &&
+                  exp.date === p.date)
+            );
+            if (!parentPay) {
+              combinedDeletedIds.push(exp.id);
+              deletedExpenseIds.add(exp.id);
+              purgedAnyDuplicates = true;
+              continue;
+            }
+            if (Array.isArray(parentPay.budgetDeductions) && parentPay.budgetDeductions.length > 0) {
+              const dedIdx = parentPay.budgetDeductions.findIndex(
+                (d, idx) =>
+                  !claimedCardDeductions.has(`${parentPay.id}_${idx}`) &&
+                  d.budgetItemId === exp.budgetItemId &&
+                  (d.subItemId || null) === (exp.subItemId || null) &&
+                  Math.abs(Number(d.amount) - Number(exp.amount)) < 1
+              );
+              if (dedIdx < 0) {
+                combinedDeletedIds.push(exp.id);
+                deletedExpenseIds.add(exp.id);
+                purgedAnyDuplicates = true;
+                continue;
+              }
+              claimedCardDeductions.add(`${parentPay.id}_${dedIdx}`);
+            }
+            reconciledExpenses.push({
+              ...exp,
+              creditCardPaymentId: parentPay.id,
+              splitParentId: parentPay.id,
+            });
+            continue;
+          }
+
+          if ((exp.isSplitChild || exp.isSplitDeductionChild || exp.splitParentId) && !exp.isDistributed) {
+            const distParent = distributedParentsById.get(exp.splitParentId);
+            if (distParent && Array.isArray(distParent.budgetDeductions) && distParent.budgetDeductions.length > 0) {
+              const dedIdx = distParent.budgetDeductions.findIndex(
+                (d, idx) =>
+                  !claimedParentDeductions.has(`${distParent.id}_${idx}`) &&
+                  d.budgetItemId === exp.budgetItemId &&
+                  (d.subItemId || null) === (exp.subItemId || null) &&
+                  Math.abs(Number(d.amount) - Number(exp.amount)) < 1
+              );
+              if (dedIdx < 0) {
+                combinedDeletedIds.push(exp.id);
+                deletedExpenseIds.add(exp.id);
+                purgedAnyDuplicates = true;
+                continue;
+              }
+              claimedParentDeductions.add(`${distParent.id}_${dedIdx}`);
+            }
+          }
+
+          reconciledExpenses.push(exp);
+        }
+
         // Always sort expenses strictly by date and time from most recent to oldest
-        sanitizedExpensesLog = sortMovementsByDateTimeDesc(sanitizedExpensesLog);
+        sanitizedExpensesLog = sortMovementsByDateTimeDesc(reconciledExpenses);
 
         const KNOWN_PHANTOM_DEBT_IDS = [
           "debt_mike_nu_2026",
@@ -742,6 +837,10 @@ export const useCashFlowStore = create(
         try {
           localStorage.setItem("titanes_cash_flow_store_v2", JSON.stringify(resolvedState));
         } catch {}
+
+        if (purgedAnyDuplicates) {
+          setTimeout(() => get().syncStateWithBackend(), 300);
+        }
       } catch (err) {
         console.error("[CashFlow] Failed to load data from backend database:", err);
         set({ isInitialized: true });
@@ -1258,19 +1357,51 @@ export const useCashFlowStore = create(
           updatedPayments = [paymentRecord, ...updatedPayments];
         }
 
-        const filteredExpenses = (state.expensesLog || []).filter(
-          (e) => e.id !== movementId && e.splitParentId !== movementId && e.parentId !== movementId
-        );
+        const parentKey = paymentRecord ? paymentRecord.id : movementId;
+        const paymentDate = sourceItem.date || new Date().toISOString().split("T")[0];
 
+        const isOldSplitChild = (e) => {
+          if (!e) return false;
+          if (
+            e.id === movementId ||
+            e.id === parentKey ||
+            e.splitParentId === movementId ||
+            e.splitParentId === parentKey ||
+            e.parentId === movementId ||
+            e.parentId === parentKey ||
+            e.creditCardPaymentId === movementId ||
+            e.creditCardPaymentId === parentKey
+          ) {
+            return true;
+          }
+          if (
+            card &&
+            (e.isCreditCardPayoff ||
+              Boolean(e.creditCardPaymentId) ||
+              ((e.description || "").includes(`Pago ${card.name}`) && (e.description || "").includes("(Descontado de"))) &&
+            e.date === paymentDate
+          ) {
+            return true;
+          }
+          return false;
+        };
+
+        const removedChildIds = (state.expensesLog || [])
+          .filter((e) => isOldSplitChild(e) && e.id !== movementId)
+          .map((e) => e.id);
+
+        const filteredExpenses = (state.expensesLog || []).filter((e) => !isOldSplitChild(e));
+
+        const batchTs = Date.now();
         const newExpenseEntries = distributions
           .filter((d) => Number(d.amount) > 0)
           .map((d, idx) => ({
-            id: `${movementId}_split_${idx}_${Date.now()}`,
-            splitParentId: movementId,
+            id: `${parentKey}_split_${idx}_${batchTs}`,
+            splitParentId: parentKey,
             isSplitChild: true,
             isSplitDeductionChild: true,
             period: sourceItem.period || state.activePeriod,
-            date: sourceItem.date || new Date().toISOString().split("T")[0],
+            date: paymentDate,
             time: sourceItem.time || null,
             amount: Number(d.amount),
             currency: sourceItem.currency || state.currency,
@@ -1315,7 +1446,7 @@ export const useCashFlowStore = create(
               amount: Number(d.amount),
               subItemId: d.subItemId || null,
               subItemName: d.subItemName || null,
-              isEmergencySavingsDeduction: d.budgetItemType === "wealth",
+              isEmergencySavingsDeduction: false,
             })),
             description: (sourceItem.description || "Movimiento").includes("Distribuido")
               ? sourceItem.description
@@ -1324,10 +1455,15 @@ export const useCashFlowStore = create(
           finalExpenses = [distributedParent, ...finalExpenses];
         }
 
+        const nextDeletedExpenseIds = [
+          ...new Set([...(state.deletedExpenseIds || []), ...removedChildIds]),
+        ];
+
         set({
           creditCards: updatedCards,
           creditCardPayments: updatedPayments,
           expensesLog: finalExpenses,
+          deletedExpenseIds: nextDeletedExpenseIds,
         });
 
         try {
@@ -1338,6 +1474,7 @@ export const useCashFlowStore = create(
               creditCards: updatedCards,
               creditCardPayments: updatedPayments,
               expensesLog: finalExpenses,
+              deletedExpenseIds: nextDeletedExpenseIds,
             })
           );
         } catch {}
