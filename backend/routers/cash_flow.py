@@ -300,11 +300,12 @@ def sync_cash_flow_state(payload: CashFlowSyncPayload, request: Request):
     db["deletedExpenseIds"] = list(del_exp_set)
 
     if payload.expensesLog is not None:
-        # Authoritative client sync: do NOT merge old deleted transactions back.
-        incoming_dumped = [dump_val(x) for x in payload.expensesLog]
+        # Lossless union across browsers/devices: merge existing server movements with incoming client movements,
+        # and only remove items explicitly recorded in deletedExpenseIds.
+        merged_expenses = merge_lists_by_id(db.get("expensesLog", []), payload.expensesLog)
         seen_ids = set()
         clean_expenses = []
-        for item in incoming_dumped:
+        for item in merged_expenses:
             if isinstance(item, dict):
                 iid = item.get("id")
                 if iid:
@@ -315,16 +316,17 @@ def sync_cash_flow_state(payload: CashFlowSyncPayload, request: Request):
         db["expensesLog"] = clean_expenses
     elif del_exp_set:
         db["expensesLog"] = [x for x in db.get("expensesLog", []) if x.get("id") not in del_exp_set]
+
     del_pay_set = set(db.get("deletedCreditCardPaymentIds") or [])
     if payload.deletedCreditCardPaymentIds:
         del_pay_set.update(payload.deletedCreditCardPaymentIds)
     db["deletedCreditCardPaymentIds"] = list(del_pay_set)
 
     if payload.creditCardPayments is not None:
-        incoming_pays = [dump_val(x) for x in payload.creditCardPayments]
+        merged_pays = merge_lists_by_id(db.get("creditCardPayments", []), payload.creditCardPayments)
         seen_pay_ids = set()
         clean_pays = []
-        for p in incoming_pays:
+        for p in merged_pays:
             if isinstance(p, dict):
                 pid = p.get("id")
                 if pid:
@@ -343,7 +345,8 @@ def sync_cash_flow_state(payload: CashFlowSyncPayload, request: Request):
     db["deletedDebtIds"] = list(del_debt_set)
 
     if payload.debts is not None:
-        db["debts"] = [dump_val(x) for x in payload.debts if dump_val(x).get("id") != "debt_mike_nu_2026" and dump_val(x).get("id") not in del_debt_set]
+        merged_debts = merge_lists_by_id(db.get("debts", []), payload.debts)
+        db["debts"] = [x for x in merged_debts if isinstance(x, dict) and x.get("id") != "debt_mike_nu_2026" and x.get("id") not in del_debt_set]
     elif del_debt_set:
         db["debts"] = [x for x in db.get("debts", []) if x.get("id") not in del_debt_set]
     if payload.periodsData is not None:

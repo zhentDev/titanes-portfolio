@@ -158,13 +158,13 @@ async function fetchWithFallback(endpoint, staticFile, options = {}) {
 
   // 1. Primary backend try
   const isRenderPrimary = ACTIVE_BASE === RENDER_BACKEND_BASE;
-  const timeout = options.timeoutMs || (isRenderPrimary ? 15000 : (IS_LOCAL_HOST ? 15000 : TIMEOUT_MS));
-  // If we are already pointing to Render, give it 2 retries to wake up
-  resultData = await tryFetchBase(ACTIVE_BASE, timeout, isRenderPrimary ? 2 : 0);
+  const timeout = options.timeoutMs || (isRenderPrimary ? 22000 : (IS_LOCAL_HOST ? 15000 : TIMEOUT_MS));
+  // If we are already pointing to Render, give it 3 retries to wake up from cold start
+  resultData = await tryFetchBase(ACTIVE_BASE, timeout, isRenderPrimary ? 3 : 0);
 
   // 2. If localhost was used and failed, automatically try Render cloud backend with wake-up retries!
   if (!resultData && ACTIVE_BASE === LOCAL_BACKEND_BASE) {
-    resultData = await tryFetchBase(RENDER_BACKEND_BASE, 15000, 2);
+    resultData = await tryFetchBase(RENDER_BACKEND_BASE, 22000, 3);
     if (resultData) {
       // Switch active base so subsequent calls don't hang waiting for dead localhost
       ACTIVE_BASE = RENDER_BACKEND_BASE;
@@ -184,12 +184,17 @@ async function fetchWithFallback(endpoint, staticFile, options = {}) {
   }
 
   // 3. Seamless static fallback
+  let isStaticFallback = false;
   if (!resultData && staticFile) {
     try {
       const staticUrl = getStaticDataPath(staticFile);
       const staticRes = await fetch(staticUrl);
       if (staticRes.ok) {
         resultData = await staticRes.json();
+        if (resultData && typeof resultData === "object") {
+          resultData._isStaticFallback = true;
+          isStaticFallback = true;
+        }
       }
     } catch {
       // ignore static error
@@ -197,8 +202,10 @@ async function fetchWithFallback(endpoint, staticFile, options = {}) {
   }
 
   if (resultData != null) {
-    // Store in client memory cache
-    API_CACHE.set(cacheKey, { timestamp: now, data: resultData });
+    // Only cache live server responses, never cache static fallback over live endpoints
+    if (!isStaticFallback) {
+      API_CACHE.set(cacheKey, { timestamp: now, data: resultData });
+    }
     return resultData;
   }
 
@@ -952,11 +959,12 @@ export async function fetchCashFlowData(options = {}) {
 }
 
 export async function syncCashFlowStateApi(payload) {
-  const res = await safeFetch(`${BASE}/cash-flow/sync`, {
+  const res = await safeFetch(`${getBase()}/cash-flow/sync`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
-  });
+    timeoutMs: 22000,
+  }, 3, 1500);
   if (!res.ok) throw new Error("Error al sincronizar el estado de Flujo de Caja");
   return res.json();
 }

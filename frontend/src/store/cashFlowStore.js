@@ -346,20 +346,17 @@ export const useCashFlowStore = create(
             id !== "cp_tx_mb_1793143745550_ad067e"
         );
         const deletedExpenseIds = new Set(combinedDeletedIds);
-        // Remote expensesLog is authoritative when available from server.
-        // Never resurrect stale deleted transactions from cachedLocal unless they are genuine offline drafts.
         const isTestExpense = (e) => {
           const desc = ((e?.description || '') + ' ' + (e?.budgetItemName || '')).toLowerCase();
           return desc.includes('test abono') || desc.includes('test sobregiro') || desc.includes('reversión test') || desc.includes('reversion test');
         };
 
-        const rawServerExpenses = Array.isArray(source?.expensesLog) ? source.expensesLog : [];
-        const localDrafts = (cachedLocal?.expensesLog || []).filter(
-          (e) => e && e.id && e._isLocalOfflineDraft && !rawServerExpenses.some((se) => se.id === e.id)
-        );
-        const baseExpenses = Array.isArray(source?.expensesLog)
-          ? [...rawServerExpenses, ...localDrafts]
-          : (cachedLocal?.expensesLog || []);
+        // Lossless union across server and local cache: if server fell back to static JSON, local edits take priority;
+        // if server is live, server edits take priority while preserving any unsynced local movements not in deletedExpenseIds!
+        const isStaticFallback = Boolean(source?._isStaticFallback);
+        const baseExpenses = isStaticFallback
+          ? unionById(cachedLocal?.expensesLog, source?.expensesLog)
+          : unionById(source?.expensesLog, cachedLocal?.expensesLog);
 
         // Explicitly guarantee SURTIMAYORISTA 42.455 COP in Nómina exists and is never lost
         const SURTIMAYORISTA_42K_EXPENSE = {
@@ -569,8 +566,8 @@ export const useCashFlowStore = create(
             sanitizedExpensesLog.push(exp);
           }
         }
-        // Reconcile & deduplicate split deduction children against active creditCardPayments and distributed parents
-        // so editing a distribution never leaves duplicate or orphaned child rows in budget categories.
+        // Reconcile & deduplicate split deduction children against active creditCardPayments and distributed parents,
+        // AND synthesize any missing split child rows if a creditCardPayment has budgetDeductions whose child expenses are missing!
         const claimedCardDeductions = new Set();
         const claimedParentDeductions = new Set();
         const distributedParentsById = new Map(
@@ -580,7 +577,6 @@ export const useCashFlowStore = create(
           (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
         );
         const reconciledExpenses = [];
-        let purgedAnyDuplicates = false;
 
         for (const exp of sortedForReconcile) {
           const isCardPayoffChild = Boolean(
@@ -598,9 +594,6 @@ export const useCashFlowStore = create(
                   exp.date === p.date)
             );
             if (!parentPay) {
-              combinedDeletedIds.push(exp.id);
-              deletedExpenseIds.add(exp.id);
-              purgedAnyDuplicates = true;
               continue;
             }
             if (Array.isArray(parentPay.budgetDeductions) && parentPay.budgetDeductions.length > 0) {
@@ -612,9 +605,6 @@ export const useCashFlowStore = create(
                   Math.abs(Number(d.amount) - Number(exp.amount)) < 1
               );
               if (dedIdx < 0) {
-                combinedDeletedIds.push(exp.id);
-                deletedExpenseIds.add(exp.id);
-                purgedAnyDuplicates = true;
                 continue;
               }
               claimedCardDeductions.add(`${parentPay.id}_${dedIdx}`);
@@ -638,9 +628,6 @@ export const useCashFlowStore = create(
                   Math.abs(Number(d.amount) - Number(exp.amount)) < 1
               );
               if (dedIdx < 0) {
-                combinedDeletedIds.push(exp.id);
-                deletedExpenseIds.add(exp.id);
-                purgedAnyDuplicates = true;
                 continue;
               }
               claimedParentDeductions.add(`${distParent.id}_${dedIdx}`);
@@ -648,6 +635,50 @@ export const useCashFlowStore = create(
           }
 
           reconciledExpenses.push(exp);
+        }
+
+        // Synthesize any missing split deduction children from active creditCardPayments so budget rubros and all browsers always match 100%
+        for (const p of sanitizedCreditCardPayments) {
+          if (Array.isArray(p.budgetDeductions) && p.budgetDeductions.length > 0) {
+            p.budgetDeductions.forEach((d, idx) => {
+              const claimKey = `${p.id}_${idx}`;
+              if (!claimedCardDeductions.has(claimKey) && Number(d.amount) > 0) {
+                const synthId = `${p.id}_split_${idx}`;
+                reconciledExpenses.push({
+                  id: synthId,
+                  splitParentId: p.id,
+                  isSplitChild: true,
+                  isSplitDeductionChild: true,
+                  period: p.period || activeP,
+                  date: p.date || "2026-10-24",
+                  time: p.time || null,
+                  amount: Number(d.amount),
+                  currency: p.currency || "COP",
+                  type: "debit",
+                  budgetItemId: d.budgetItemId,
+                  budgetItemName: d.budgetItemName,
+                  budgetItemType: d.budgetItemType || "wants",
+                  subItemId: d.subItemId || null,
+                  subItemName: d.subItemName || null,
+                  description: `💳 Pago ${p.cardName || "Tarjeta"} (Descontado de ${d.budgetItemName})`,
+                  paymentSource: {
+                    type: p.sourceType || "payroll",
+                    targetId: p.sourceAccountId || "acc_nu_debito",
+                    targetName: p.sourceAccount || "Nu Colombia (Cuenta Nu Débito)",
+                  },
+                  creditCardPaymentId: p.id,
+                  isCreditCardPayoff: true,
+                  cardId: p.cardId || null,
+                  isEmergencySavingsDeduction: false,
+                  itemType: d.budgetItemType === "wealth" ? "wealth_saving" : "expense",
+                  destinationAccountId: d.destinationAccountId || null,
+                  destinationAccountName: d.destinationAccountName || null,
+                  createdAt: p.createdAt || new Date().toISOString(),
+                });
+                claimedCardDeductions.add(claimKey);
+              }
+            });
+          }
         }
 
         // Always sort expenses strictly by date and time from most recent to oldest
@@ -837,10 +868,6 @@ export const useCashFlowStore = create(
         try {
           localStorage.setItem("titanes_cash_flow_store_v2", JSON.stringify(resolvedState));
         } catch {}
-
-        if (purgedAnyDuplicates) {
-          setTimeout(() => get().syncStateWithBackend(), 300);
-        }
       } catch (err) {
         console.error("[CashFlow] Failed to load data from backend database:", err);
         set({ isInitialized: true });

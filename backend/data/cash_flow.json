@@ -11,6 +11,25 @@
   "emergencyFundTargetMonths": 6,
   "inflows": [
     {
+      "id": "in_mov_mb_1793020231371_461300",
+      "linkedMovementId": "cf_tx_mb_1793020231371_461300",
+      "name": "Venta Impresión 3D: Base para celular Tony Chopper (Johan)",
+      "category": "other",
+      "amount": 70000,
+      "currency": "COP",
+      "isPassive": false,
+      "isExplicitBudgetIncome": true,
+      "frequency": "one_time",
+      "period": "2026-11",
+      "paymentSource": {
+        "type": "savings",
+        "targetId": "acc_rappi_principal",
+        "targetName": "Cuenta RappiPay (Principal)"
+      },
+      "icon": "💰",
+      "createdAt": "2026-10-28T22:02:50.618Z"
+    },
+    {
       "id": "in_salary",
       "name": "Salario Neto (Nómina)",
       "category": "salary",
@@ -29,7 +48,7 @@
       "id": "in_fixed_yield",
       "name": "Ingreso por Renta Fija",
       "category": "passive_fixed",
-      "amount": 29401,
+      "amount": 29403,
       "currency": "COP",
       "isPassive": true,
       "isAutoSynced": true,
@@ -46,7 +65,7 @@
       "id": "in_stock_div",
       "name": "Ingreso por Renta Variable",
       "category": "passive_equity",
-      "amount": 35944,
+      "amount": 35964,
       "currency": "COP",
       "isPassive": true,
       "isAutoSynced": true,
@@ -221,7 +240,7 @@
       "category": "equity_investment",
       "targetAmount": 30000000,
       "monthlyContribution": 500000,
-      "currentBalance": 21566354,
+      "currentBalance": 21578219,
       "currency": "COP",
       "linkedModule": "variable_income",
       "paymentSource": {
@@ -237,7 +256,7 @@
       "category": "fixed_savings",
       "targetAmount": 15000000,
       "monthlyContribution": 300000,
-      "currentBalance": 7844302,
+      "currentBalance": 7844975,
       "currency": "COP",
       "linkedModule": "fixed_income",
       "paymentSource": {
@@ -1344,6 +1363,130 @@
       ]
     },
     {
+      "id": "pay_split_1793229404896_1s1l8_split_0",
+      "splitParentId": "pay_split_1793229404896_1s1l8",
+      "isSplitChild": true,
+      "isSplitDeductionChild": true,
+      "period": "2026-11",
+      "date": "2026-10-24",
+      "time": null,
+      "amount": 150000,
+      "currency": "COP",
+      "type": "debit",
+      "budgetItemId": "wealth_travel_goal",
+      "budgetItemName": "Meta Viaje / Estudio",
+      "budgetItemType": "wealth",
+      "subItemId": null,
+      "subItemName": null,
+      "description": "💳 Pago RappiCard Visa (MSI) (Descontado de Meta Viaje / Estudio)",
+      "paymentSource": {
+        "type": "payroll",
+        "targetId": "acc_nu_debito",
+        "targetName": "Nu Colombia (Cuenta Nu Débito)"
+      },
+      "creditCardPaymentId": "pay_split_1793229404896_1s1l8",
+      "isCreditCardPayoff": true,
+      "cardId": "cc_rappi",
+      "isEmergencySavingsDeduction": false,
+      "itemType": "wealth_saving",
+      "destinationAccountId": null,
+      "destinationAccountName": null,
+      "createdAt": "2026-10-28T23:16:44.896Z"
+    },
+    {
+      "id": "pay_split_1793229404896_1s1l8_split_1",
+      "splitParentId": "pay_split_1793229404896_1s1l8",
+      "isSplitChild": true,
+      "isSplitDeductionChild": true,
+      "period": "2026-11",
+      "date": "2026-10-24",
+      "time": null,
+      "amount": 30123,
+      "currency": "COP",
+      "type": "debit",
+      "budgetItemId": "want_dining",
+      "budgetItemName": "Restaurantes, Cafés & Salidas",
+      "budgetItemType": "wants",
+      "subItemId": null,
+      "subItemName": null,
+      "description": "💳 Pago RappiCard Visa (MSI) (Descontado de Restaurantes, Cafés & Salidas)",
+      "paymentSource": {
+        "type": "payroll",
+        "targetId": "acc_nu_debito",
+        "targetName": "Nu Colombia (Cuenta Nu Débito)"
+      },
+      "creditCardPaymentId": "pay_split_1793229404896_1s1l8",
+      "isCreditCardPayoff": true,
+      "cardId": "cc_rappi",
+      "isEmergencySavingsDeduction": false,
+      "itemType": "expense",
+      "destinationAccountId": null,
+      "destinationAccountName": null,
+      "createdAt": "2026-10-28T23:16:44.896Z"
+    },
+    {
+      "id": "pay_split_1793229404896_1s1l8_split_2",
+      "splitParentId": "pay_split_1793229404896_1s1l8",
+      "isSplitChild": true,
+      "isSplitDeductionChild": true,
+      "period": "2026-11",
+      "date": "2026-10-24",
+      "time": null,
+      "amount": 251276,
+      "currency": "COP",
+      "type": "debit",
+      "budgetItemId": "wealth_tech_etf",
+      "budgetItemName": "Portafolio Renta Variable (Al día / Tiempo Real)",
+      "budgetItemType": "wealth",
+      "subItemId": null,
+      "subItemName": null,
+      "description": "💳 Pago RappiCard Visa (MSI) (Descontado de Portafolio Renta Variable (Al día / Tiempo Real))",
+      "paymentSource": {
+        "type": "payroll",
+        "targetId": "acc_nu_debito",
+        "targetName": "Nu Colombia (Cuenta Nu Débito)"
+      },
+      "creditCardPaymentId": "pay_split_1793229404896_1s1l8",
+      "isCreditCardPayoff": true,
+      "cardId": "cc_rappi",
+      "isEmergencySavingsDeduction": false,
+      "itemType": "wealth_saving",
+      "destinationAccountId": null,
+      "destinationAccountName": null,
+      "createdAt": "2026-10-28T23:16:44.896Z"
+    },
+    {
+      "id": "pay_split_1793229404896_1s1l8_split_3",
+      "splitParentId": "pay_split_1793229404896_1s1l8",
+      "isSplitChild": true,
+      "isSplitDeductionChild": true,
+      "period": "2026-11",
+      "date": "2026-10-24",
+      "time": null,
+      "amount": 161151,
+      "currency": "COP",
+      "type": "debit",
+      "budgetItemId": "wealth_high_yield",
+      "budgetItemName": "Ahorro Alto Rendimiento (Nu / Plenti / CDTs)",
+      "budgetItemType": "wealth",
+      "subItemId": null,
+      "subItemName": null,
+      "description": "💳 Pago RappiCard Visa (MSI) (Descontado de Ahorro Alto Rendimiento (Nu / Plenti / CDTs))",
+      "paymentSource": {
+        "type": "payroll",
+        "targetId": "acc_nu_debito",
+        "targetName": "Nu Colombia (Cuenta Nu Débito)"
+      },
+      "creditCardPaymentId": "pay_split_1793229404896_1s1l8",
+      "isCreditCardPayoff": true,
+      "cardId": "cc_rappi",
+      "isEmergencySavingsDeduction": false,
+      "itemType": "wealth_saving",
+      "destinationAccountId": null,
+      "destinationAccountName": null,
+      "createdAt": "2026-10-28T23:16:44.896Z"
+    },
+    {
       "id": "cf_tx_mb_1792810591520_fdef77",
       "period": "2026-11",
       "date": "2026-10-23",
@@ -1525,7 +1668,7 @@
       "color": "#ff441f",
       "icon": "🧡",
       "totalLimit": 800000,
-      "usedLimit": 757326,
+      "usedLimit": 827126,
       "closingDay": 20,
       "paymentDay": 1,
       "rateEA": 24,
@@ -1535,6 +1678,60 @@
     }
   ],
   "creditCardPayments": [
+    {
+      "id": "pay_split_1793229404896_1s1l8",
+      "period": "2026-11",
+      "cardId": "cc_rappi",
+      "cardName": "RappiCard Visa (MSI)",
+      "amount": 592550,
+      "currency": "COP",
+      "date": "2026-10-24",
+      "time": null,
+      "description": "Pago RappiCard Visa (MSI) (Distribuido en 4 rubros)",
+      "sourceType": "payroll",
+      "sourceAccountId": null,
+      "sourceAccount": "Nu Colombia (Cuenta Nu Débito)",
+      "notes": "Distribuido desde: Pago RappiCard Visa (MSI) (Distribuido en 5 rubros)",
+      "budgetDeductions": [
+        {
+          "budgetItemId": "wealth_travel_goal",
+          "budgetItemName": "Meta Viaje / Estudio",
+          "budgetItemType": "wealth",
+          "amount": 150000,
+          "subItemId": null,
+          "subItemName": null,
+          "isEmergencySavingsDeduction": false
+        },
+        {
+          "budgetItemId": "want_dining",
+          "budgetItemName": "Restaurantes, Cafés & Salidas",
+          "budgetItemType": "wants",
+          "amount": 30123,
+          "subItemId": null,
+          "subItemName": null,
+          "isEmergencySavingsDeduction": false
+        },
+        {
+          "budgetItemId": "wealth_tech_etf",
+          "budgetItemName": "Portafolio Renta Variable (Al día / Tiempo Real)",
+          "budgetItemType": "wealth",
+          "amount": 251276,
+          "subItemId": null,
+          "subItemName": null,
+          "isEmergencySavingsDeduction": false
+        },
+        {
+          "budgetItemId": "wealth_high_yield",
+          "budgetItemName": "Ahorro Alto Rendimiento (Nu / Plenti / CDTs)",
+          "budgetItemType": "wealth",
+          "amount": 161151,
+          "subItemId": null,
+          "subItemName": null,
+          "isEmergencySavingsDeduction": false
+        }
+      ],
+      "createdAt": "2026-10-28T23:16:44.896Z"
+    },
     {
       "id": "pay_tx_mb_1792789337918_65be26",
       "period": "2026-11",
@@ -1951,12 +2148,12 @@
       "cardId": "cc_rappi",
       "description": "Cumpleaños Campo",
       "amount": 129700,
-      "totalAmount": 129700,
       "installmentsCount": 1,
       "startPeriod": "2026-11",
       "monthlyInstallment": 129700,
-      "date": "2026-10-26",
-      "createdAt": "2026-10-26T20:00:00.000Z"
+      "date": "2026-10-25",
+      "createdAt": "2026-10-26T13:00:39.815Z",
+      "totalAmount": 129700
     },
     {
       "id": "cp_tx_mb_1793136598344_4a7534",
@@ -1969,18 +2166,6 @@
       "date": "2026-10-27",
       "createdAt": "2026-10-27T16:29:58.344081-05:00",
       "totalAmount": 627626
-    },
-    {
-      "id": "cp_tx_mb_1793135853228_123ad8",
-      "cardId": "cc_nu",
-      "description": "Compra en D1",
-      "amount": 1000,
-      "installmentsCount": 1,
-      "startPeriod": "2026-11",
-      "monthlyInstallment": 1000,
-      "date": "2026-10-27",
-      "createdAt": "2026-10-27T16:17:33.228502-05:00",
-      "totalAmount": 1000
     },
     {
       "id": "cp_tx_mb_1793157595802_f27553",
@@ -2005,6 +2190,30 @@
       "date": "2026-10-25",
       "createdAt": "2026-10-25T11:11:34.475447-05:00",
       "totalAmount": 31392
+    },
+    {
+      "id": "cp_tx_mb_1793226274257_9a8d93",
+      "cardId": "cc_rappi",
+      "description": "Compra en MERCADO PAGO POSEIDONS",
+      "amount": 69800,
+      "installmentsCount": 1,
+      "startPeriod": "2026-11",
+      "monthlyInstallment": 69800,
+      "date": "2026-10-28",
+      "createdAt": "2026-10-28T17:24:34.257188-05:00",
+      "totalAmount": 69800
+    },
+    {
+      "id": "cp_tx_mb_1793135853228_123ad8",
+      "cardId": "cc_nu",
+      "description": "Compra en D1",
+      "amount": 1000,
+      "installmentsCount": 1,
+      "startPeriod": "2026-11",
+      "monthlyInstallment": 1000,
+      "date": "2026-10-27",
+      "createdAt": "2026-10-27T16:17:33.228502-05:00",
+      "totalAmount": 1000
     }
   ],
   "debts": [
@@ -2054,31 +2263,14 @@
       "createdAt": "2026-10-27T14:28:21.169Z"
     },
     {
-      "id": "debt_1792784275907_r2b4",
-      "concept": "Cálculo de: Declaración de renta.",
-      "creditor": "Maye",
-      "totalAmount": 190000,
-      "remainingAmount": 0,
-      "paymentMethod": "Nómina / Débito directa",
-      "paymentSourceId": null,
-      "paymentFrequency": "one_time",
-      "installmentAmount": 0,
-      "dueDate": null,
-      "nextPaymentDate": "2026-10-23",
-      "status": "paid",
-      "notes": "",
-      "paymentsLog": [],
-      "createdAt": "2026-10-23T19:37:55.907Z"
-    },
-    {
       "id": "debt_tx_cf_tx_mb_1793157932032_c0a937",
       "debtType": "receivable",
       "linkedExpenseId": "cf_tx_mb_1793157932032_c0a937",
       "concept": "Préstamo: CRI******** DAZ*** (Andre)",
       "debtor": "Andre",
       "creditor": "Yo",
-      "totalAmount": 8000.0,
-      "remainingAmount": 0.0,
+      "totalAmount": 8000,
+      "remainingAmount": 0,
       "status": "paid",
       "paymentMethod": "Nu Colombia (Cuenta Nu Débito)",
       "paymentFrequency": "one_time",
@@ -2100,7 +2292,7 @@
       "paymentsLog": [
         {
           "id": "stl_1793196309821",
-          "amount": 8000.0,
+          "amount": 8000,
           "date": "2026-10-28",
           "paymentMethod": "Disponible Nequi",
           "note": "Pago cuota de Andre (Gasto compartido: CRI******** DAZ***)",
@@ -2116,8 +2308,8 @@
       "concept": "Préstamo: Compra en WOMPI IMPEBENECER SA (María)",
       "debtor": "María",
       "creditor": "Yo",
-      "totalAmount": 627626.0,
-      "remainingAmount": 449626.0,
+      "totalAmount": 627626,
+      "remainingAmount": 449626,
       "status": "active",
       "paymentMethod": "RappiCard Visa (MSI) (1 cuota 0%)",
       "paymentFrequency": "one_time",
@@ -2127,7 +2319,7 @@
       "paymentsLog": [
         {
           "id": "stl_1793195781151",
-          "amount": 178000.0,
+          "amount": 178000,
           "date": "2026-10-28",
           "paymentMethod": "Nu Colombia (Cuenta Nu Débito)",
           "note": "Abono de María",
@@ -2143,8 +2335,8 @@
       "concept": "Préstamo: Salida en PRESEA ROOFTOP (Tarjeta Débito Nu) (Julian, David, Juana, Prima de Juana, Gabriela, Amiga de Gabriela, John, Yuli)",
       "debtor": "Julian, David, Juana, Prima de Juana, Gabriela, Amiga de Gabriela, John, Yuli",
       "creditor": "Yo",
-      "totalAmount": 235552.0,
-      "remainingAmount": 135552.0,
+      "totalAmount": 235552,
+      "remainingAmount": 135552,
       "status": "active",
       "paymentMethod": "Nu Colombia (Cuenta Nu Débito)",
       "paymentFrequency": "one_time",
@@ -2203,7 +2395,7 @@
       "paymentsLog": [
         {
           "id": "stl_presea_100k_cash",
-          "amount": 100000.0,
+          "amount": 100000,
           "date": "2026-10-24",
           "paymentMethod": "Efectivo Físico (Billetera)",
           "note": "Abono recibido en efectivo ($100.000 COP) de los $265.000 prestados en Presea Rooftop",
@@ -2219,8 +2411,8 @@
       "concept": "Préstamo: Pan (Mike, Julian, Primi, Walter, Sebas, Sebas porto)",
       "debtor": "Mike, Julian, Primi, Walter, Sebas, Sebas porto",
       "creditor": "Yo",
-      "totalAmount": 17142.0,
-      "remainingAmount": 14285.0,
+      "totalAmount": 17142,
+      "remainingAmount": 14285,
       "status": "active",
       "paymentMethod": "Nu Colombia (Cuenta Nu Débito)",
       "paymentFrequency": "one_time",
@@ -2277,14 +2469,15 @@
       "paymentsLog": [
         {
           "id": "stl_1793141813256",
-          "amount": 2857.0,
+          "amount": 2857,
           "date": "2026-10-27",
           "paymentMethod": "Registrado previamente",
           "note": "Pago cuota de Primi (Gasto compartido: Arriendo / Vivienda & Admin)",
           "createdAt": "2026-10-27T22:56:53.256Z"
         }
       ],
-      "createdAt": "2026-10-26T13:02:01.410Z"
+      "createdAt": "2026-10-26T13:02:01.410Z",
+      "notes": "Pagos directos a Mike (3 cuotas de $210.000)."
     },
     {
       "id": "debt_tx_tx_1793019639815",
@@ -2293,8 +2486,8 @@
       "concept": "Préstamo: Cumpleaños Campo (Mike, John, Walter, Nicolás, Johan, Sebas porto, Primi, Norbert)",
       "debtor": "Mike, John, Walter, Nicolás, Johan, Sebas porto, Primi, Norbert",
       "creditor": "Yo",
-      "totalAmount": 115288.0,
-      "remainingAmount": 100877.0,
+      "totalAmount": 115288,
+      "remainingAmount": 100877,
       "status": "active",
       "paymentMethod": "RappiCard Visa (MSI) (1 cuota 0%)",
       "paymentFrequency": "one_time",
@@ -2365,42 +2558,65 @@
       "paymentsLog": [
         {
           "id": "stl_1793141795721",
-          "amount": 14411.0,
+          "amount": 14411,
           "date": "2026-10-27",
           "paymentMethod": "Registrado previamente",
           "note": "Pago cuota de Primi (Gasto compartido: Cumpleaños Campo)",
           "createdAt": "2026-10-27T22:56:35.721Z"
         }
       ],
-      "createdAt": "2026-10-26T13:00:39.815Z"
+      "createdAt": "2026-10-26T13:00:39.815Z",
+      "notes": "Pagos directos a Mike (3 cuotas de $210.000)."
+    },
+    {
+      "id": "debt_1792784275907_r2b4",
+      "concept": "Cálculo de: Declaración de renta.",
+      "creditor": "Maye",
+      "totalAmount": 190000,
+      "remainingAmount": 0,
+      "paymentMethod": "Nómina / Débito directa",
+      "paymentSourceId": null,
+      "paymentFrequency": "one_time",
+      "installmentAmount": 0,
+      "dueDate": null,
+      "nextPaymentDate": "2026-10-23",
+      "status": "paid",
+      "notes": "",
+      "paymentsLog": [],
+      "createdAt": "2026-10-23T19:37:55.907Z"
     }
   ],
   "deletedExpenseIds": [
-    "cf_tx_cajita_viaje_150k_202611",
-    "cf_tx_mb_1793135518637_73deb8",
-    "cf_tx_mb_rappi_emergency_150k_202611",
-    "cf_tx_plenti_broker_funding_200k_202611",
-    "exp_transfer_mike_cajita_202611",
-    "exp_transfer_mike_cajita_202611_split_0",
-    "exp_transfer_mike_cajita_202611_split_0_1792908328343",
+    "pay_split_1792875528218_ykk7e_split_1_1793229404896",
+    "tx_1792909650611",
     "exp_transfer_mike_cajita_202611_split_1",
-    "exp_transfer_mike_cajita_202611_split_1_1792908328343",
-    "exp_transfer_mike_cajita_202611_split_wealth_60k",
     "pay_conv_1792863163027_gx31h_split_0_1792875528218",
     "pay_conv_1792863163027_gx31h_split_1_1792875528218",
-    "pay_conv_1792863163027_gx31h_split_2_1792875528218",
+    "cf_tx_mb_rappi_emergency_150k_202611",
+    "cf_tx_mb_1793135518637_73deb8",
+    "pay_split_1792875528218_ykk7e_split_2_1793229404896",
+    "exp_transfer_mike_cajita_202611_split_0",
+    "pay_split_1792875528218_ykk7e_split_3_1793229404896",
+    "cf_tx_cajita_viaje_150k_202611",
     "pay_conv_1792863163027_gx31h_split_3_1792875528218",
-    "tx_1792909650611",
+    "exp_transfer_mike_cajita_202611",
+    "cf_tx_plenti_broker_funding_200k_202611",
     "tx_1792909650611_split_0_1792909698846",
-    "tx_1792909650611_split_1_1792909698846",
-    "tx_transfer_nu_to_cajita_deudas_210k"
+    "pay_split_1792875528218_ykk7e_split_0_1793229404896",
+    "tx_transfer_nu_to_cajita_deudas_210k",
+    "exp_transfer_mike_cajita_202611_split_0_1792908328343",
+    "pay_conv_1792863163027_gx31h_split_2_1792875528218",
+    "exp_transfer_mike_cajita_202611_split_1_1792908328343",
+    "pay_split_1792875528218_ykk7e_split_4_1793229404896",
+    "exp_transfer_mike_cajita_202611_split_wealth_60k",
+    "tx_1792909650611_split_1_1792909698846"
   ],
   "deletedDebtIds": [
     "debt_loan_carlos_2026",
     "debt_mike_nu_2026"
   ],
   "deletedCreditCardPaymentIds": [
-    "ccpay_split_1792875528218",
-    "pay_split_1792875528218_ykk7e"
+    "pay_split_1792875528218_ykk7e",
+    "ccpay_split_1792875528218"
   ]
 }
